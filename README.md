@@ -45,4 +45,4 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 
 ## Related Repo
 
-Backend: [salon-platform-backend](https://github.com/sumitkumarbharti/salon-platform-backend)
+Backend: [salon-platform-backend](https://github.com/sumitsuri/salon-platform-backend)
