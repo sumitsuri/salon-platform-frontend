@@ -1,0 +1,8 @@
+{
+  "name": "Salon Platform",
+  "short_name": "Salon",
+  "start_url": "/manager",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1"
+}
