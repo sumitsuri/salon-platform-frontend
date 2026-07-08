@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, ClipboardList, Building2, LogOut, Sparkles, Scissors, Users } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, LogOut, Sparkles, Scissors, Users, IndianRupee } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ const nav = [
   { href: "/admin/services", label: "Services", shortLabel: "Sales", icon: Scissors },
   { href: "/admin/bookings", label: "Bookings", shortLabel: "Book", icon: ClipboardList },
   { href: "/admin/employees", label: "Employees", shortLabel: "Staff", icon: Users },
+  { href: "/admin/finance", label: "Finance", shortLabel: "P&L", icon: IndianRupee },
   { href: "/admin/branches", label: "Organization", shortLabel: "Org", icon: Building2 },
 ];
 

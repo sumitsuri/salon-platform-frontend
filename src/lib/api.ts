@@ -364,6 +364,38 @@ export const api = {
     return request<StaffTargetTrends>(`/api/v1/staff/performance/trends${q}`);
   },
 
+  getPlSummary: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<PlSummaryResponse>(`/api/v1/analytics/pl${q}`);
+  },
+
+  getExpenditures: (opts?: { branchId?: string; fromMonth?: string; toMonth?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.branchId) params.set("branchId", opts.branchId);
+    if (opts?.fromMonth) params.set("fromMonth", opts.fromMonth);
+    if (opts?.toMonth) params.set("toMonth", opts.toMonth);
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<ExpenditureItem[]>(`/api/v1/expenditures${q}`);
+  },
+
+  createExpenditure: (data: CreateExpenditureRequest) =>
+    request<ExpenditureItem>("/api/v1/expenditures", { method: "POST", body: JSON.stringify(data) }),
+
+  updateExpenditure: (id: string, data: UpdateExpenditureRequest) =>
+    request<ExpenditureItem>(`/api/v1/expenditures/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  deactivateExpenditure: (id: string) =>
+    request<void>(`/api/v1/expenditures/${id}`, { method: "DELETE" }),
+
+  syncPayrollExpenditures: (expenseMonth: string) =>
+    request<ExpenditureItem[]>(`/api/v1/expenditures/sync-payroll?expenseMonth=${expenseMonth}`, {
+      method: "POST",
+    }),
+
   getInvoices: () => request<Invoice[]>("/api/v1/invoices"),
 
   getInvoicePdfUrl: (invoiceId: string) => `${API_BASE}/api/v1/invoices/${invoiceId}/pdf`,
@@ -938,4 +970,67 @@ export interface CreatePlatformUserRequest {
   password: string;
   role: UserRole;
   branchId?: string;
+}
+
+export type ExpenditureCategory =
+  | "EMPLOYEE_SALARY"
+  | "RENT"
+  | "PRODUCT_COST"
+  | "EMPLOYEE_ACCOMMODATION_RENT"
+  | "MISCELLANEOUS";
+
+export interface ExpenditureItem {
+  id: string;
+  branchId: string;
+  branchName: string;
+  category: ExpenditureCategory;
+  expenseMonth: string;
+  amount: number;
+  description?: string;
+  createdAt?: string;
+}
+
+export interface CreateExpenditureRequest {
+  branchId: string;
+  category: ExpenditureCategory;
+  expenseMonth: string;
+  amount: number;
+  description?: string;
+}
+
+export interface UpdateExpenditureRequest {
+  branchId?: string;
+  category?: ExpenditureCategory;
+  expenseMonth?: string;
+  amount?: number;
+  description?: string;
+}
+
+export interface PlCategoryAmount {
+  category: ExpenditureCategory;
+  amount: number;
+}
+
+export interface BranchPlSummary {
+  branchId: string;
+  branchName: string;
+  revenue: number;
+  expensesByCategory: PlCategoryAmount[];
+  totalExpenses: number;
+  netProfit: number;
+  marginPercent: number;
+}
+
+export interface BrandPlSummary {
+  revenue: number;
+  expensesByCategory: PlCategoryAmount[];
+  totalExpenses: number;
+  netProfit: number;
+  marginPercent: number;
+}
+
+export interface PlSummaryResponse {
+  periodLabel: string;
+  brand: BrandPlSummary;
+  branches: BranchPlSummary[];
 }
