@@ -2,15 +2,21 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Home, UserPlus, ClipboardList, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Home, UserPlus, ClipboardList, LogOut, Fingerprint, Sparkles, Scissors } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
+import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
+import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
+import { MobileBottomNav, MOBILE_NAV_MAIN_PADDING_FAB } from "@/components/MobileBottomNav";
 
 const nav = [
-  { href: "/manager", label: "Home", icon: Home, exact: true },
-  { href: "/manager/walk-in", label: "Walk-in", icon: UserPlus },
-  { href: "/manager/bookings", label: "Bookings", icon: ClipboardList },
+  { href: "/manager", label: "Home", shortLabel: "Home", icon: Home, exact: true },
+  { href: "/manager/attendance", label: "Staff", shortLabel: "Staff", icon: Fingerprint },
+  { href: "/manager/walk-in", label: "Walk-in", shortLabel: "Walk-in", icon: UserPlus, fab: true },
+  { href: "/manager/bookings", label: "Bookings", shortLabel: "Book", icon: ClipboardList },
+  { href: "/manager/insights", label: "Insights", shortLabel: "Tips", icon: Sparkles },
+  { href: "/manager/services", label: "Services", shortLabel: "Sales", icon: Scissors },
 ];
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +25,8 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const themeSettings = useThemeStore();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -27,8 +35,11 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Loading...
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[var(--brand)] animate-pulse" />
+          <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -38,63 +49,71 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
 
+  const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Top app bar — Amazon / Flipkart style */}
-      <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4">
-          {/* Row 1: Brand + Nav + User */}
-          <div className="flex items-center gap-6 h-14">
-            <Link href="/manager" className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                {(user.tenantName || "S")[0]}
-              </div>
-              <span className="font-semibold text-slate-900 hidden sm:block">
-                {user.tenantName || "Salon"}
-              </span>
-            </Link>
-
-            <nav className="flex items-center gap-1 flex-1">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href, item.exact);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                      active
-                        ? "text-indigo-700 bg-indigo-50 border-b-2 border-indigo-600 rounded-b-none"
-                        : "text-slate-600 hover:text-indigo-600 hover:bg-slate-50"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <button
-              onClick={() => { logout(); router.push("/login"); }}
-              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-red-600 shrink-0"
+    <div className="min-h-screen bg-[var(--surface-muted)] flex flex-col">
+      <header className="bg-[var(--header-bg)] border-b border-[var(--border)] sticky top-0 z-40">
+        <div className="px-3 sm:px-4 lg:px-6 flex items-center justify-between h-14 max-w-7xl mx-auto w-full min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shrink-0"
+              style={{ backgroundColor: brandColor }}
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+              {(user.tenantName || "S")[0]}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">
+                {user.branchName || user.tenantName}
+              </p>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">{user.name}</p>
+            </div>
           </div>
-
-          {/* Row 2: Context breadcrumb */}
-          <div className="pb-2 text-xs text-slate-500 flex items-center gap-1">
-            <span className="font-medium text-slate-700">{user.branchName}</span>
-            <span>·</span>
-            <span>{user.name}</span>
+          <div className="flex items-center gap-1">
+            <SettingsButton onClick={() => setSettingsOpen(true)} />
+            <button
+              onClick={() => {
+                logout();
+                router.push("/login");
+              }}
+              className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+              aria-label="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-5">{children}</main>
+      <div className="hidden lg:block bg-[var(--surface)]/95 backdrop-blur border-b border-[var(--border)] sticky top-14 z-30">
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 py-2">
+          {nav.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href, item.exact);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition",
+                  active ? "bg-[var(--brand-light)] text-[var(--brand-text)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <main className={cn("flex-1 w-full px-3 sm:px-4 lg:px-6 py-4 max-w-7xl mx-auto min-w-0", MOBILE_NAV_MAIN_PADDING_FAB)}>
+        {children}
+      </main>
+
+      <MobileBottomNav items={nav} isActive={isActive} fabColor={brandColor} />
+
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

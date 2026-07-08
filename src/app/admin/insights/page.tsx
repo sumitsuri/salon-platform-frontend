@@ -1,0 +1,101 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
+import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { RecommendationsPanel } from "@/components/RecommendationsPanel";
+import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
+import { PageHeader, StatCard, EmptyState, selectClass } from "@/components/ui";
+import {
+  countInsights,
+  flattenInsights,
+  insightPeriodToRange,
+  INSIGHT_PERIOD_LABELS,
+  InsightPeriod,
+} from "@/lib/insights-utils";
+
+export default function AdminInsightsPage() {
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [period, setPeriod] = useState<InsightPeriod>("days60");
+  const [initialized, setInitialized] = useState(false);
+  const dateRange = insightPeriodToRange(period);
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => api.getBranches(),
+  });
+
+  useEffect(() => {
+    if (branches.length > 0 && !initialized) {
+      setSelectedBranches(branches.map((b) => b.id));
+      setInitialized(true);
+    }
+  }, [branches, initialized]);
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ["recommendations", selectedBranches, period],
+    queryFn: () =>
+      api.getRecommendations({
+        ...dateRange,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const items = flattenInsights(data);
+  const highCount = items.filter((i) => i.severity === "HIGH").length;
+  const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
+
+  if (!initialized) {
+    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading...</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        title="Insights"
+        subtitle={`${INSIGHT_PERIOD_LABELS[period]}${isFetching && !isLoading ? " · updating" : ""}`}
+        action={
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
+            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
+          >
+            {(Object.keys(INSIGHT_PERIOD_LABELS) as InsightPeriod[]).map((p) => (
+              <option key={p} value={p}>
+                {INSIGHT_PERIOD_LABELS[p]}
+              </option>
+            ))}
+          </select>
+        }
+      />
+
+      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+
+      {selectedBranches.length === 0 ? (
+        <EmptyState title="Select at least one branch" description="Choose branches to view insights" />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <StatCard label="Total tips" value={countInsights(data)} icon={Lightbulb} accent="brand" />
+            <StatCard label="High priority" value={highCount} icon={AlertTriangle} accent="amber" />
+            <StatCard label="Medium" value={mediumCount} icon={Sparkles} accent="violet" />
+          </div>
+
+          <WeekdayBoostPanel
+            insights={data?.weekdayInsights}
+            loading={isLoading}
+            variant="ceo"
+          />
+
+          <RecommendationsPanel data={data} loading={isLoading} variant="ceo" />
+        </>
+      )}
+    </div>
+  );
+}

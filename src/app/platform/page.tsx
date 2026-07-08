@@ -3,13 +3,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+  ArrowLeft,
   Building2,
   ChevronRight,
   Plus,
   Trash2,
   UserPlus,
   Users,
-  X,
 } from "lucide-react";
 import {
   api,
@@ -22,8 +22,27 @@ import {
   UserRole,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import {
+  PageHeader,
+  Card,
+  SegmentedControl,
+  ListRow,
+  EmptyState,
+  AlertBanner,
+  SideSheet,
+  DetailField,
+  inputClass,
+  selectClass,
+  btnPrimary,
+  btnSecondary,
+  StatusBadge,
+} from "@/components/ui";
 
 type Tab = "branches" | "employees";
+
+type TenantDrawerState = { mode: "create" };
+type BranchDrawerState = { mode: "create" } | { mode: "view"; branch: PlatformBranch };
+type UserDrawerState = { mode: "create" } | { mode: "view"; user: PlatformUser };
 
 const ROLE_LABELS: Record<UserRole, string> = {
   PLATFORM_SUPER_ADMIN: "Platform Admin",
@@ -34,16 +53,34 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 const ONBOARD_ROLES: UserRole[] = ["BRAND_ADMIN", "BRANCH_MANAGER", "SALON_MANAGER"];
 
-const inputClass =
-  "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500";
+const btnViolet = `${btnPrimary} bg-violet-600 hover:bg-violet-700 active:bg-violet-800 shadow-violet-600/20`;
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider pt-2 pb-1">
+      {children}
+    </p>
+  );
+}
 
 export default function PlatformPage() {
   const queryClient = useQueryClient();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const [tab, setTab] = useState<Tab>("branches");
-  const [showAddTenant, setShowAddTenant] = useState(false);
-  const [showAddBranch, setShowAddBranch] = useState(false);
-  const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [tenantDrawer, setTenantDrawer] = useState<TenantDrawerState | null>(null);
+  const [branchDrawer, setBranchDrawer] = useState<BranchDrawerState | null>(null);
+  const [userDrawer, setUserDrawer] = useState<UserDrawerState | null>(null);
+  const [error, setError] = useState("");
 
   const { data: tenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ["tenants"],
@@ -75,14 +112,20 @@ export default function PlatformPage() {
     onSuccess: (tenant) => {
       invalidateTenantData(tenant.id);
       setSelectedTenantId(tenant.id);
-      setShowAddTenant(false);
+      setMobileShowDetail(true);
+      setTenantDrawer(null);
+      setError("");
     },
+    onError: (e: Error) => setError(e.message),
   });
 
   const deactivateTenantMutation = useMutation({
     mutationFn: (tenantId: string) => api.deactivateTenant(tenantId),
     onSuccess: (_, tenantId) => {
-      if (selectedTenantId === tenantId) setSelectedTenantId(null);
+      if (selectedTenantId === tenantId) {
+        setSelectedTenantId(null);
+        setMobileShowDetail(false);
+      }
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
     },
   });
@@ -92,14 +135,20 @@ export default function PlatformPage() {
       api.createPlatformBranch(tenantId, data),
     onSuccess: (_, { tenantId }) => {
       invalidateTenantData(tenantId);
-      setShowAddBranch(false);
+      setBranchDrawer(null);
+      setError("");
     },
+    onError: (e: Error) => setError(e.message),
   });
 
   const deactivateBranchMutation = useMutation({
     mutationFn: ({ tenantId, branchId }: { tenantId: string; branchId: string }) =>
       api.deactivatePlatformBranch(tenantId, branchId),
-    onSuccess: (_, { tenantId }) => invalidateTenantData(tenantId),
+    onSuccess: (_, { tenantId }) => {
+      invalidateTenantData(tenantId);
+      setBranchDrawer(null);
+    },
+    onError: (e: Error) => setError(e.message),
   });
 
   const createUserMutation = useMutation({
@@ -107,56 +156,65 @@ export default function PlatformPage() {
       api.createPlatformUser(tenantId, data),
     onSuccess: (_, { tenantId }) => {
       invalidateTenantData(tenantId);
-      setShowAddEmployee(false);
+      setUserDrawer(null);
+      setError("");
     },
+    onError: (e: Error) => setError(e.message),
   });
 
   const deactivateUserMutation = useMutation({
     mutationFn: ({ tenantId, userId }: { tenantId: string; userId: string }) =>
       api.deactivatePlatformUser(tenantId, userId),
-    onSuccess: (_, { tenantId }) => invalidateTenantData(tenantId),
+    onSuccess: (_, { tenantId }) => {
+      invalidateTenantData(tenantId);
+      setUserDrawer(null);
+    },
+    onError: (e: Error) => setError(e.message),
   });
 
   const activeBranches = branches.filter((b) => b.status === "ACTIVE");
 
+  function selectTenant(id: string) {
+    setSelectedTenantId(id);
+    setMobileShowDetail(true);
+    setTab("branches");
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Platform Admin</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Manage tenants, branches, and onboard employees with roles
+    <div className="space-y-4">
+      <PageHeader
+        title="Platform admin"
+        subtitle="Manage tenants, branches & employees"
+        action={
+          !mobileShowDetail && (
+            <button onClick={() => setTenantDrawer({ mode: "create" })} className={`${btnViolet} py-2.5 px-4`}>
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add tenant</span>
+            </button>
+          )
+        }
+      />
+
+      {error && <AlertBanner variant="error">{error}</AlertBanner>}
+
+      <div className="grid lg:grid-cols-3 gap-4 min-w-0">
+        <section className={cn("lg:col-span-1 min-w-0", mobileShowDetail && "hidden lg:block")}>
+          <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 px-0.5">
+            Tenants ({tenants.length})
           </p>
-        </div>
-        <button
-          onClick={() => setShowAddTenant(true)}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700"
-        >
-          <Plus className="w-4 h-4" />
-          Add Tenant
-        </button>
-      </div>
-
-      {showAddTenant && (
-        <AddTenantForm
-          onSubmit={(data) => createTenantMutation.mutate(data)}
-          onCancel={() => setShowAddTenant(false)}
-          loading={createTenantMutation.isPending}
-          error={createTenantMutation.error?.message}
-        />
-      )}
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-1">
-          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
-            Tenants
-          </h2>
           {tenantsLoading ? (
-            <p className="text-sm text-slate-400">Loading...</p>
+            <p className="text-sm text-[var(--text-tertiary)]">Loading...</p>
           ) : tenants.length === 0 ? (
-            <p className="text-sm text-slate-400 bg-white rounded-xl p-6 border">
-              No tenants yet. Add your first tenant to get started.
-            </p>
+            <EmptyState
+              title="No tenants yet"
+              description="Add your first salon brand to get started"
+              action={
+                <button onClick={() => setTenantDrawer({ mode: "create" })} className={btnViolet}>
+                  <Plus className="w-4 h-4" />
+                  Add tenant
+                </button>
+              }
+            />
           ) : (
             <div className="space-y-2">
               {tenants.map((tenant) => (
@@ -164,147 +222,134 @@ export default function PlatformPage() {
                   key={tenant.id}
                   tenant={tenant}
                   selected={selectedTenantId === tenant.id}
-                  onSelect={() => setSelectedTenantId(tenant.id)}
+                  onSelect={() => selectTenant(tenant.id)}
                   onRemove={() => {
-                    if (
-                      window.confirm(
-                        `Deactivate "${tenant.name}"? All users will be deactivated.`
-                      )
-                    ) {
+                    if (window.confirm(`Deactivate "${tenant.name}"? All users will be deactivated.`)) {
                       deactivateTenantMutation.mutate(tenant.id);
                     }
                   }}
-                  removing={deactivateTenantMutation.isPending}
                 />
               ))}
             </div>
           )}
         </section>
 
-        <section className="lg:col-span-2">
+        <section className={cn("lg:col-span-2 min-w-0", !mobileShowDetail && !selectedTenant && "hidden lg:block")}>
           {!selectedTenant ? (
-            <div className="bg-white rounded-2xl border p-12 text-center text-slate-400">
-              <Building2 className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>Select a tenant to manage branches and employees</p>
-            </div>
+            <Card>
+              <EmptyState
+                title="Select a tenant"
+                description="Choose a brand from the list to manage branches and employees"
+                action={<Building2 className="w-10 h-10 mx-auto text-[var(--text-tertiary)]" />}
+              />
+            </Card>
           ) : (
-            <div className="bg-white rounded-2xl border overflow-hidden">
-              <div className="px-6 py-4 border-b bg-slate-50">
-                <h2 className="font-bold text-lg">{selectedTenant.name}</h2>
-                <p className="text-sm text-slate-500">
-                  {selectedTenant.slug} · {selectedTenant.status}
-                </p>
+            <Card padding={false}>
+              <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-3">
+                <button
+                  onClick={() => setMobileShowDetail(false)}
+                  className="lg:hidden p-2 -ml-1 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+                  aria-label="Back to tenants"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-bold text-[var(--text-primary)] truncate">{selectedTenant.name}</h2>
+                  <p className="text-xs text-[var(--text-secondary)] truncate">
+                    {selectedTenant.slug} · {selectedTenant.status}
+                  </p>
+                </div>
+                {tab === "branches" && (
+                  <button
+                    onClick={() => setBranchDrawer({ mode: "create" })}
+                    className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add branch</span>
+                  </button>
+                )}
+                {tab === "employees" && (
+                  <button
+                    onClick={() => setUserDrawer({ mode: "create" })}
+                    className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Onboard</span>
+                  </button>
+                )}
               </div>
 
-              <div className="flex border-b">
-                <TabButton
-                  active={tab === "branches"}
-                  onClick={() => setTab("branches")}
-                  icon={<Building2 className="w-4 h-4" />}
-                  label="Branches"
-                  count={activeBranches.length}
-                />
-                <TabButton
-                  active={tab === "employees"}
-                  onClick={() => setTab("employees")}
-                  icon={<Users className="w-4 h-4" />}
-                  label="Employees"
-                  count={users.filter((u) => u.active).length}
+              <div className="p-4">
+                <SegmentedControl
+                  options={[
+                    { id: "branches" as Tab, label: "Branches", icon: Building2 },
+                    { id: "employees" as Tab, label: "Employees", icon: Users },
+                  ]}
+                  value={tab}
+                  onChange={setTab}
                 />
               </div>
 
-              <div className="p-6">
+              <div className="px-4 pb-4">
                 {tab === "branches" ? (
-                  <BranchesPanel
+                  <BranchesList
                     branches={branches}
                     loading={branchesLoading}
-                    showAdd={showAddBranch}
-                    onToggleAdd={() => setShowAddBranch((v) => !v)}
-                    onAdd={(data) =>
-                      createBranchMutation.mutate({ tenantId: selectedTenant.id, data })
-                    }
-                    onRemove={(branchId) => {
-                      const branch = branches.find((b) => b.id === branchId);
-                      if (
-                        window.confirm(
-                          `Deactivate branch "${branch?.name}"? Assigned managers will be deactivated.`
-                        )
-                      ) {
-                        deactivateBranchMutation.mutate({
-                          tenantId: selectedTenant.id,
-                          branchId,
-                        });
-                      }
-                    }}
-                    addLoading={createBranchMutation.isPending}
-                    addError={createBranchMutation.error?.message}
+                    selectedId={branchDrawer && branchDrawer.mode === "view" ? branchDrawer.branch.id : null}
+                    onSelect={(branch) => setBranchDrawer({ mode: "view", branch })}
                   />
                 ) : (
-                  <EmployeesPanel
+                  <UsersList
                     users={users}
-                    branches={activeBranches}
                     loading={usersLoading}
-                    showAdd={showAddEmployee}
-                    onToggleAdd={() => setShowAddEmployee((v) => !v)}
-                    onAdd={(data) =>
-                      createUserMutation.mutate({ tenantId: selectedTenant.id, data })
-                    }
-                    onRemove={(userId) => {
-                      const u = users.find((x) => x.id === userId);
-                      if (window.confirm(`Deactivate "${u?.name}" (${u?.email})?`)) {
-                        deactivateUserMutation.mutate({
-                          tenantId: selectedTenant.id,
-                          userId,
-                        });
-                      }
-                    }}
-                    addLoading={createUserMutation.isPending}
-                    addError={createUserMutation.error?.message}
+                    selectedId={userDrawer && userDrawer.mode === "view" ? userDrawer.user.id : null}
+                    onSelect={(user) => setUserDrawer({ mode: "view", user })}
                   />
                 )}
               </div>
-            </div>
+            </Card>
           )}
         </section>
       </div>
-    </div>
-  );
-}
 
-function TabButton({
-  active,
-  onClick,
-  icon,
-  label,
-  count,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors",
-        active
-          ? "border-violet-600 text-violet-700 bg-white"
-          : "border-transparent text-slate-500 hover:text-slate-700"
+      <TenantDrawer
+        drawer={tenantDrawer}
+        loading={createTenantMutation.isPending}
+        error={createTenantMutation.error?.message}
+        onClose={() => setTenantDrawer(null)}
+        onCreate={(data) => createTenantMutation.mutate(data)}
+      />
+
+      {selectedTenant && (
+        <>
+          <PlatformBranchDrawer
+            drawer={branchDrawer}
+            loading={createBranchMutation.isPending}
+            onClose={() => setBranchDrawer(null)}
+            onCreate={(data) => createBranchMutation.mutate({ tenantId: selectedTenant.id, data })}
+            onDeactivate={() => {
+              if (branchDrawer && branchDrawer.mode === "view" && window.confirm(`Deactivate branch "${branchDrawer.branch.name}"?`)) {
+                deactivateBranchMutation.mutate({ tenantId: selectedTenant.id, branchId: branchDrawer.branch.id });
+              }
+            }}
+          />
+
+          <PlatformUserDrawer
+            drawer={userDrawer}
+            branches={activeBranches}
+            loading={createUserMutation.isPending}
+            onClose={() => setUserDrawer(null)}
+            onCreate={(data) => createUserMutation.mutate({ tenantId: selectedTenant.id, data })}
+            onDeactivate={() => {
+              if (userDrawer && userDrawer.mode === "view" && userDrawer.user.active &&
+                window.confirm(`Deactivate "${userDrawer.user.name}" (${userDrawer.user.email})?`)) {
+                deactivateUserMutation.mutate({ tenantId: selectedTenant.id, userId: userDrawer.user.id });
+              }
+            }}
+          />
+        </>
       )}
-    >
-      {icon}
-      {label}
-      <span
-        className={cn(
-          "text-xs px-1.5 py-0.5 rounded-full",
-          active ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-500"
-        )}
-      >
-        {count}
-      </span>
-    </button>
+    </div>
   );
 }
 
@@ -313,65 +358,147 @@ function TenantCard({
   selected,
   onSelect,
   onRemove,
-  removing,
 }: {
   tenant: Tenant;
   selected: boolean;
   onSelect: () => void;
   onRemove: () => void;
-  removing: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "bg-white rounded-xl border p-4 flex items-center gap-3 cursor-pointer transition-all",
-        selected ? "border-violet-400 ring-2 ring-violet-100" : "hover:border-slate-300"
-      )}
+    <button
       onClick={onSelect}
+      className={cn(
+        "w-full bg-[var(--surface)] rounded-2xl border p-4 flex items-center gap-3 text-left transition active:scale-[0.98]",
+        selected ? "border-violet-400 ring-2 ring-violet-100" : "border-[var(--border)] hover:border-[var(--border-strong)]"
+      )}
     >
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold truncate">{tenant.name}</p>
-        <p className="text-xs text-slate-500">
-          {tenant.slug} ·{" "}
-          <span
-            className={cn(
-              tenant.status === "ACTIVE" ? "text-emerald-600" : "text-amber-600"
-            )}
-          >
-            {tenant.status}
-          </span>
-        </p>
+      <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+        <span className="font-bold text-violet-700">{tenant.name[0]}</span>
       </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold truncate text-sm">{tenant.name}</p>
+        <p className="text-xs text-[var(--text-secondary)] truncate">{tenant.slug}</p>
+      </div>
+      <StatusBadge
+        status={tenant.status === "ACTIVE" ? "APPROVED" : "PENDING"}
+        className={tenant.status === "ACTIVE" ? "!bg-emerald-50 !text-emerald-700 !border-emerald-200" : ""}
+      />
       {tenant.status === "ACTIVE" && (
-        <button
+        <span
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
-          disabled={removing}
-          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-          title="Deactivate tenant"
+          onKeyDown={(e) => e.key === "Enter" && (e.stopPropagation(), onRemove())}
+          className="p-1.5 text-[var(--text-tertiary)] hover:text-red-600 hover:bg-red-50 rounded-lg"
         >
           <Trash2 className="w-4 h-4" />
-        </button>
+        </span>
       )}
-      <ChevronRight
-        className={cn("w-4 h-4 text-slate-300", selected && "text-violet-500")}
-      />
-    </div>
+      <ChevronRight className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0", selected && "text-violet-500")} />
+    </button>
   );
 }
 
-function AddTenantForm({
-  onSubmit,
-  onCancel,
+function BranchesList({
+  branches,
+  loading,
+  selectedId,
+  onSelect,
+}: {
+  branches: PlatformBranch[];
+  loading: boolean;
+  selectedId: string | null;
+  onSelect: (branch: PlatformBranch) => void;
+}) {
+  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">Loading branches...</p>;
+  if (branches.length === 0) return <div className="mt-4"><EmptyState title="No branches yet" /></div>;
+
+  return (
+    <Card padding={false} className="mt-4">
+      <div className="px-4 py-3 border-b border-[var(--border)]">
+        <p className="text-xs text-[var(--text-tertiary)]">
+          {branches.filter((b) => b.status === "ACTIVE").length} active · Tap to view details
+        </p>
+      </div>
+      <div className="divide-y divide-[var(--border)]">
+        {branches.map((branch) => (
+          <ListRow
+            key={branch.id}
+            title={branch.name}
+            subtitle={`${branch.code}${branch.societyDefault ? ` · ${branch.societyDefault}` : ""}`}
+            onClick={() => onSelect(branch)}
+            trailing={
+              <div className="flex items-center gap-2">
+                <StatusBadge
+                  status={branch.status === "ACTIVE" ? "APPROVED" : "PENDING"}
+                  className={branch.status === "ACTIVE" ? "!bg-emerald-50 !text-emerald-700 !border-emerald-200" : ""}
+                />
+                <ChevronRight className={cn("w-4 h-4", selectedId === branch.id ? "text-violet-600" : "text-[var(--text-tertiary)]")} />
+              </div>
+            }
+          />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function UsersList({
+  users,
+  loading,
+  selectedId,
+  onSelect,
+}: {
+  users: PlatformUser[];
+  loading: boolean;
+  selectedId: string | null;
+  onSelect: (user: PlatformUser) => void;
+}) {
+  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">Loading employees...</p>;
+  if (users.length === 0) return <div className="mt-4"><EmptyState title="No employees yet" /></div>;
+
+  return (
+    <Card padding={false} className="mt-4">
+      <div className="px-4 py-3 border-b border-[var(--border)]">
+        <p className="text-xs text-[var(--text-tertiary)]">
+          {users.filter((u) => u.active).length} active · Tap to view details
+        </p>
+      </div>
+      <div className="divide-y divide-[var(--border)]">
+        {users.map((user) => (
+          <ListRow
+            key={user.id}
+            title={user.name}
+            subtitle={`${user.email} · ${ROLE_LABELS[user.role]}${user.branchName ? ` · ${user.branchName}` : ""}`}
+            onClick={() => onSelect(user)}
+            trailing={
+              <div className="flex items-center gap-2">
+                {!user.active && <StatusBadge status="CANCELLED" />}
+                <ChevronRight className={cn("w-4 h-4", selectedId === user.id ? "text-violet-600" : "text-[var(--text-tertiary)]")} />
+              </div>
+            }
+          />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function TenantDrawer({
+  drawer,
   loading,
   error,
+  onClose,
+  onCreate,
 }: {
-  onSubmit: (data: CreateTenantRequest) => void;
-  onCancel: () => void;
+  drawer: TenantDrawerState | null;
   loading: boolean;
   error?: string;
+  onClose: () => void;
+  onCreate: (data: CreateTenantRequest) => void;
 }) {
   const [form, setForm] = useState<CreateTenantRequest>({
     name: "",
@@ -382,120 +509,73 @@ function AddTenantForm({
     adminPassword: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(form);
-  };
+  if (!drawer) return null;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white rounded-2xl border p-6 space-y-4"
+    <SideSheet
+      open
+      onClose={onClose}
+      title="New tenant"
+      subtitle="Creates the brand and a CEO account for onboarding"
+      wide
     >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">New Tenant</h3>
-        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      <p className="text-sm text-slate-500">
-        Creates the tenant and a Brand Admin (CEO) account for onboarding.
-      </p>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Brand Name">
-          <input
-            className={inputClass}
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </Field>
-        <Field label="Slug">
-          <input
-            className={inputClass}
-            required
-            placeholder="my-brand"
-            value={form.slug}
-            onChange={(e) =>
-              setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })
-            }
-          />
-        </Field>
-        <Field label="CEO Name">
-          <input
-            className={inputClass}
-            required
-            value={form.adminName}
-            onChange={(e) => setForm({ ...form, adminName: e.target.value })}
-          />
-        </Field>
-        <Field label="CEO Email">
-          <input
-            className={inputClass}
-            type="email"
-            required
-            value={form.adminEmail}
-            onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
-          />
-        </Field>
-        <Field label="CEO Password">
-          <input
-            className={inputClass}
-            type="password"
-            required
-            minLength={6}
-            value={form.adminPassword}
-            onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
-          />
-        </Field>
-        <Field label="Brand Color">
-          <input
-            className={inputClass}
-            type="color"
-            value={form.primaryColor}
-            onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-          />
-        </Field>
-      </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
-        >
-          {loading ? "Creating..." : "Create Tenant"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onCreate(form);
+        }}
+        className="space-y-4 pb-2"
+      >
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Brand name">
+            <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </Field>
+          <Field label="Slug">
+            <input
+              className={inputClass}
+              required
+              placeholder="my-brand"
+              value={form.slug}
+              onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
+            />
+          </Field>
+          <Field label="CEO name">
+            <input className={inputClass} required value={form.adminName} onChange={(e) => setForm({ ...form, adminName: e.target.value })} />
+          </Field>
+          <Field label="CEO email">
+            <input className={inputClass} type="email" required value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
+          </Field>
+          <Field label="CEO password">
+            <input className={inputClass} type="password" required minLength={6} value={form.adminPassword} onChange={(e) => setForm({ ...form, adminPassword: e.target.value })} />
+          </Field>
+          <Field label="Brand color">
+            <input className={inputClass} type="color" value={form.primaryColor} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
+          </Field>
+        </div>
+        {error && <AlertBanner variant="error">{error}</AlertBanner>}
+        <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
+          <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+          <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
+            {loading ? "Creating…" : "Create tenant"}
+          </button>
+        </div>
+      </form>
+    </SideSheet>
   );
 }
 
-function BranchesPanel({
-  branches,
+function PlatformBranchDrawer({
+  drawer,
   loading,
-  showAdd,
-  onToggleAdd,
-  onAdd,
-  onRemove,
-  addLoading,
-  addError,
+  onClose,
+  onCreate,
+  onDeactivate,
 }: {
-  branches: PlatformBranch[];
+  drawer: BranchDrawerState | null;
   loading: boolean;
-  showAdd: boolean;
-  onToggleAdd: () => void;
-  onAdd: (data: CreatePlatformBranchRequest) => void;
-  onRemove: (branchId: string) => void;
-  addLoading: boolean;
-  addError?: string;
+  onClose: () => void;
+  onCreate: (data: CreatePlatformBranchRequest) => void;
+  onDeactivate: () => void;
 }) {
   const [form, setForm] = useState<CreatePlatformBranchRequest>({
     name: "",
@@ -505,35 +585,49 @@ function BranchesPanel({
     phone: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onAdd(form);
-    setForm({ name: "", code: "", address: "", societyDefault: "", phone: "" });
-  };
+  if (!drawer) return null;
+
+  const isView = drawer.mode === "view";
+  const branch = isView ? drawer.branch : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">Add and manage salon branches for this tenant</p>
-        <button
-          onClick={onToggleAdd}
-          className="flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-800"
+    <SideSheet
+      open
+      onClose={onClose}
+      title={isView ? branch!.name : "New branch"}
+      subtitle={isView ? `${branch!.code}${branch!.societyDefault ? ` · ${branch!.societyDefault}` : ""}` : "Add a branch for this tenant"}
+      wide
+      footer={
+        isView && branch!.status === "ACTIVE" ? (
+          <button onClick={onDeactivate} className={`${btnSecondary} w-full text-red-600 border-red-200 hover:bg-red-50`}>
+            <Trash2 className="w-4 h-4" />
+            Deactivate branch
+          </button>
+        ) : undefined
+      }
+    >
+      {isView && branch ? (
+        <div className="space-y-5">
+          <SectionTitle>Branch</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label="Code" value={branch.code} />
+            <DetailField label="Status" value={branch.status} />
+            <DetailField label="Address" value={branch.address} />
+            <DetailField label="Default society" value={branch.societyDefault} />
+            <DetailField label="Phone" value={branch.phone} />
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onCreate(form);
+          }}
+          className="space-y-4 pb-2"
         >
-          <Plus className="w-4 h-4" />
-          {showAdd ? "Cancel" : "Add Branch"}
-        </button>
-      </div>
-
-      {showAdd && (
-        <form onSubmit={handleSubmit} className="bg-slate-50 rounded-xl p-4 space-y-3 border">
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Branch Name">
-              <input
-                className={inputClass}
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+            <Field label="Branch name">
+              <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
             <Field label="Code">
               <input
@@ -541,107 +635,45 @@ function BranchesPanel({
                 required
                 placeholder="LITHOS"
                 value={form.code}
-                onChange={(e) =>
-                  setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "") })
-                }
+                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "") })}
               />
             </Field>
             <Field label="Address">
-              <input
-                className={inputClass}
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-              />
+              <input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
-            <Field label="Default Society">
-              <input
-                className={inputClass}
-                value={form.societyDefault}
-                onChange={(e) => setForm({ ...form, societyDefault: e.target.value })}
-              />
+            <Field label="Default society">
+              <input className={inputClass} value={form.societyDefault} onChange={(e) => setForm({ ...form, societyDefault: e.target.value })} />
             </Field>
             <Field label="Phone">
-              <input
-                className={inputClass}
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
+              <input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </Field>
           </div>
-          {addError && <p className="text-sm text-red-600">{addError}</p>}
-          <button
-            type="submit"
-            disabled={addLoading}
-            className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
-          >
-            {addLoading ? "Adding..." : "Add Branch"}
-          </button>
+          <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
+            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+            <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
+              {loading ? "Adding…" : "Add branch"}
+            </button>
+          </div>
         </form>
       )}
-
-      {loading ? (
-        <p className="text-sm text-slate-400">Loading branches...</p>
-      ) : branches.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No branches yet</p>
-      ) : (
-        <div className="divide-y border rounded-xl overflow-hidden">
-          {branches.map((branch) => (
-            <div
-              key={branch.id}
-              className="flex items-center gap-4 px-4 py-3 hover:bg-slate-50"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{branch.name}</p>
-                <p className="text-xs text-slate-500">
-                  {branch.code}
-                  {branch.societyDefault ? ` · ${branch.societyDefault}` : ""}
-                  {" · "}
-                  <span
-                    className={cn(
-                      branch.status === "ACTIVE" ? "text-emerald-600" : "text-amber-600"
-                    )}
-                  >
-                    {branch.status}
-                  </span>
-                </p>
-              </div>
-              {branch.status === "ACTIVE" && (
-                <button
-                  onClick={() => onRemove(branch.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                  title="Deactivate branch"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </SideSheet>
   );
 }
 
-function EmployeesPanel({
-  users,
+function PlatformUserDrawer({
+  drawer,
   branches,
   loading,
-  showAdd,
-  onToggleAdd,
-  onAdd,
-  onRemove,
-  addLoading,
-  addError,
+  onClose,
+  onCreate,
+  onDeactivate,
 }: {
-  users: PlatformUser[];
+  drawer: UserDrawerState | null;
   branches: PlatformBranch[];
   loading: boolean;
-  showAdd: boolean;
-  onToggleAdd: () => void;
-  onAdd: (data: CreatePlatformUserRequest) => void;
-  onRemove: (userId: string) => void;
-  addLoading: boolean;
-  addError?: string;
+  onClose: () => void;
+  onCreate: (data: CreatePlatformUserRequest) => void;
+  onDeactivate: () => void;
 }) {
   const [form, setForm] = useState<CreatePlatformUserRequest>({
     name: "",
@@ -651,156 +683,94 @@ function EmployeesPanel({
     branchId: "",
   });
 
-  const needsBranch =
-    form.role === "BRANCH_MANAGER" || form.role === "SALON_MANAGER";
+  if (!drawer) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onAdd({
-      ...form,
-      branchId: needsBranch ? form.branchId : undefined,
-    });
-    setForm({ name: "", email: "", password: "", role: "BRANCH_MANAGER", branchId: "" });
-  };
+  const isView = drawer.mode === "view";
+  const user = isView ? drawer.user : null;
+  const needsBranch = form.role === "BRANCH_MANAGER" || form.role === "SALON_MANAGER";
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">
-          Onboard employees and assign roles (CEO, Branch Manager, Salon Manager)
-        </p>
-        <button
-          onClick={onToggleAdd}
-          className="flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-800"
+    <SideSheet
+      open
+      onClose={onClose}
+      title={isView ? user!.name : "Onboard employee"}
+      subtitle={isView ? `${user!.email} · ${ROLE_LABELS[user!.role]}` : "Create a manager login for this tenant"}
+      wide
+      footer={
+        isView && user!.active ? (
+          <button onClick={onDeactivate} className={`${btnSecondary} w-full text-red-600 border-red-200 hover:bg-red-50`}>
+            <Trash2 className="w-4 h-4" />
+            Deactivate account
+          </button>
+        ) : undefined
+      }
+    >
+      {isView && user ? (
+        <div className="space-y-5">
+          <SectionTitle>Account</SectionTitle>
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label="Email" value={user.email} />
+            <DetailField label="Role" value={ROLE_LABELS[user.role]} />
+            <DetailField label="Branch" value={user.branchName} />
+            <DetailField label="Status" value={user.active ? "Active" : "Inactive"} />
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onCreate({ ...form, branchId: needsBranch ? form.branchId : undefined });
+          }}
+          className="space-y-4 pb-2"
         >
-          <UserPlus className="w-4 h-4" />
-          {showAdd ? "Cancel" : "Onboard Employee"}
-        </button>
-      </div>
-
-      {showAdd && (
-        <form onSubmit={handleSubmit} className="bg-slate-50 rounded-xl p-4 space-y-3 border">
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Full Name">
-              <input
-                className={inputClass}
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
+            <Field label="Full name">
+              <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
             <Field label="Email">
-              <input
-                className={inputClass}
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
+              <input className={inputClass} type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </Field>
             <Field label="Password">
-              <input
-                className={inputClass}
-                type="password"
-                required
-                minLength={6}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <input className={inputClass} type="password" required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </Field>
             <Field label="Role">
               <select
-                className={inputClass}
+                className={selectClass}
                 value={form.role}
-                onChange={(e) =>
-                  setForm({ ...form, role: e.target.value as UserRole, branchId: "" })
-                }
+                onChange={(e) => setForm({ ...form, role: e.target.value as UserRole, branchId: "" })}
               >
                 {ONBOARD_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </option>
+                  <option key={role} value={role}>{ROLE_LABELS[role]}</option>
                 ))}
               </select>
             </Field>
             {needsBranch && (
               <Field label="Branch">
                 <select
-                  className={inputClass}
+                  className={selectClass}
                   required
                   value={form.branchId}
                   onChange={(e) => setForm({ ...form, branchId: e.target.value })}
                 >
                   <option value="">Select branch</option>
                   {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.code})
-                    </option>
+                    <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
                   ))}
                 </select>
               </Field>
             )}
           </div>
           {needsBranch && branches.length === 0 && (
-            <p className="text-sm text-amber-600">
-              Add at least one active branch before onboarding branch/salon managers.
-            </p>
+            <AlertBanner variant="warning">Add an active branch before onboarding managers.</AlertBanner>
           )}
-          {addError && <p className="text-sm text-red-600">{addError}</p>}
-          <button
-            type="submit"
-            disabled={addLoading || (needsBranch && branches.length === 0)}
-            className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
-          >
-            {addLoading ? "Onboarding..." : "Onboard Employee"}
-          </button>
+          <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
+            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+            <button type="submit" disabled={loading || (needsBranch && branches.length === 0)} className={`${btnViolet} flex-1`}>
+              {loading ? "Onboarding…" : "Onboard employee"}
+            </button>
+          </div>
         </form>
       )}
-
-      {loading ? (
-        <p className="text-sm text-slate-400">Loading employees...</p>
-      ) : users.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No employees yet</p>
-      ) : (
-        <div className="divide-y border rounded-xl overflow-hidden">
-          {users.map((user) => (
-            <div
-              key={user.id}
-              className={cn(
-                "flex items-center gap-4 px-4 py-3",
-                !user.active && "opacity-50 bg-slate-50"
-              )}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{user.name}</p>
-                <p className="text-xs text-slate-500">
-                  {user.email} · {ROLE_LABELS[user.role]}
-                  {user.branchName ? ` · ${user.branchName}` : ""}
-                  {!user.active && " · INACTIVE"}
-                </p>
-              </div>
-              {user.active && (
-                <button
-                  onClick={() => onRemove(user.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                  title="Deactivate user"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1">
-      <span className="text-xs font-medium text-slate-600">{label}</span>
-      {children}
-    </label>
+    </SideSheet>
   );
 }

@@ -60,7 +60,7 @@ interface ChangeBadgeProps {
 
 export function ChangeBadge({ pct, className }: ChangeBadgeProps) {
   if (pct == null) {
-    return <span className={cn("text-xs text-slate-400", className)}>—</span>;
+    return <span className={cn("text-xs text-[var(--text-tertiary)]", className)}>—</span>;
   }
   const up = pct >= 0;
   return (

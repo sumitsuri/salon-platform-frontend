@@ -2,8 +2,10 @@
 
 import { BranchTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { BRANCH_COLORS, MetricChart } from "@/components/LineChart";
+import { seriesColor, BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
+import { MetricChart } from "@/components/LineChart";
 import { TrendingUp } from "lucide-react";
+import { Card, EmptyState } from "@/components/ui";
 
 interface BranchTrendsProps {
   trends: BranchTrend[];
@@ -28,10 +30,9 @@ const CHANGE_KEYS: Record<MetricKey, keyof BranchTrend> = {
 export function BranchTrends({ trends }: BranchTrendsProps) {
   if (trends.length === 0) {
     return (
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-        <h2 className="font-semibold text-slate-800">Branch Trends</h2>
-        <p className="text-slate-400 text-sm py-6">No trend data for selected branches</p>
-      </div>
+      <Card>
+        <EmptyState title="No trend data" description="For selected branches in this period" />
+      </Card>
     );
   }
 
@@ -43,28 +44,33 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-indigo-600" />
-        <h2 className="font-semibold text-slate-800">Branch Trends</h2>
-        <span className="text-xs text-slate-400 ml-1">
-          {dateLabels.length > 0 && `${dateLabels[0]} – ${dateLabels[dateLabels.length - 1]}`}
-        </span>
+      <div className="flex items-center gap-2 px-0.5">
+        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
+        <div className="min-w-0">
+          <h2 className="font-semibold text-sm text-[var(--text-primary)]">Branch performance trends</h2>
+          {dateLabels.length > 0 && (
+            <p className="text-xs text-[var(--text-secondary)] truncate">
+              {dateLabels[0]} – {dateLabels[dateLabels.length - 1]}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
         {METRICS.map((metric) => (
-          <MetricChart
-            key={metric.key}
+          <Card key={metric.key}>
+            <MetricChart
             title={metric.title}
             labels={dateLabels}
             formatValue={metric.format}
             series={trends.map((trend, idx) => ({
               name: trend.branchName,
-              color: BRANCH_COLORS[idx % BRANCH_COLORS.length],
+              color: seriesColor(idx, BRANCH_SERIES_COLORS),
               values: trend.points.map((p) => p[metric.key] as number),
               changePct: trend[CHANGE_KEYS[metric.key]] as number | null,
             }))}
-          />
+            />
+          </Card>
         ))}
       </div>
     </div>

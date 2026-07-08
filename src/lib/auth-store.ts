@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, AuthUser } from "./api";
+import { clearStoredAuth } from "./auth-session";
 
 interface AuthState {
   user: AuthUser | null;
@@ -20,7 +21,10 @@ export const useAuthStore = create<AuthState>()(
         const user = await api.login(email, password);
         set({ user });
       },
-      logout: () => set({ user: null }),
+      logout: () => {
+        clearStoredAuth();
+        set({ user: null });
+      },
       setUser: (user) => set({ user }),
     }),
     { name: "auth" }

@@ -1,3 +1,12 @@
+import {
+  clearStoredAuth,
+  getStoredUser,
+  isAccessTokenExpired,
+  patchStoredUser,
+  redirectToLogin,
+  syncAuthStore,
+} from "./auth-session";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export type UserRole = "PLATFORM_SUPER_ADMIN" | "BRAND_ADMIN" | "BRANCH_MANAGER" | "SALON_MANAGER";
@@ -24,18 +33,56 @@ interface ApiWrapper<T> {
 }
 
 function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("auth");
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed?.state?.user?.accessToken ?? parsed?.accessToken ?? null;
-  } catch {
-    return null;
-  }
+  return getStoredUser()?.accessToken ?? null;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const user = getStoredUser();
+    if (!user?.refreshToken) return null;
+
+    const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: user.refreshToken }),
+    });
+
+    const text = await res.text();
+    let body: ApiWrapper<AuthUser> = { success: false, data: undefined as unknown as AuthUser };
+    if (text) {
+      try {
+        body = JSON.parse(text);
+      } catch {
+        return null;
+      }
+    }
+
+    if (!res.ok || !body.data?.accessToken) return null;
+
+    const updated = patchStoredUser({
+      accessToken: body.data.accessToken,
+      refreshToken: body.data.refreshToken ?? user.refreshToken,
+    });
+    if (updated) await syncAuthStore(updated);
+    return body.data.accessToken;
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
+}
+
+async function handleSessionExpired() {
+  clearStoredAuth();
+  await syncAuthStore(null);
+  redirectToLogin(true);
+}
+
+async function request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -55,10 +102,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
   }
 
+  if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
+    if (!retried) {
+      const newToken = await refreshAccessToken();
+      if (newToken) return request<T>(path, options, true);
+    }
+    await handleSessionExpired();
+    throw new Error("Session expired. Please sign in again.");
+  }
+
   if (!res.ok) {
     throw new Error(body.message || `Request failed (${res.status})`);
   }
   return body.data;
+}
+
+/** Refresh access token if expired or near expiry. Call on app load. */
+export async function ensureValidSession(): Promise<boolean> {
+  const user = getStoredUser();
+  if (!user?.accessToken || !user.refreshToken) return false;
+  if (!isAccessTokenExpired(user.accessToken)) return true;
+  const token = await refreshAccessToken();
+  return token != null;
 }
 
 export const api = {
@@ -90,6 +155,8 @@ export const api = {
     if (params?.branchId) search.set("branchId", params.branchId);
     if (params?.customer) search.set("customer", params.customer);
     if (params?.branch) search.set("branch", params.branch);
+    if (params?.service) search.set("service", params.service);
+    if (params?.stylist) search.set("stylist", params.stylist);
     if (params?.status) search.set("status", params.status);
     if (params?.minAmount != null) search.set("minAmount", String(params.minAmount));
     if (params?.maxAmount != null) search.set("maxAmount", String(params.maxAmount));
@@ -112,7 +179,190 @@ export const api = {
     return request<Dashboard>(`/api/v1/analytics/dashboard${q}`);
   },
 
+  getRecommendations: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<RecommendationsResponse>(`/api/v1/analytics/recommendations${q}`);
+  },
+
+  getServiceContribution: (opts?: {
+    startDate?: string;
+    endDate?: string;
+    branchIds?: string[];
+    serviceName?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    if (opts?.serviceName) params.set("serviceName", opts.serviceName);
+    params.set("page", String(opts?.page ?? 0));
+    params.set("size", String(opts?.size ?? 20));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<ServiceContributionResponse>(`/api/v1/analytics/services${q}`);
+  },
+
+  getAttendanceDashboard: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<AttendanceDashboard>(`/api/v1/analytics/attendance${q}`);
+  },
+
+  biometricPunch: (biometricId: string) =>
+    request<PunchResult>("/api/v1/attendance/biometric/punch", {
+      method: "POST",
+      body: JSON.stringify({ biometricId }),
+    }),
+
+  manualAttendance: (data: ManualAttendanceRequest) =>
+    request<AttendanceRecord>("/api/v1/attendance/manual", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getAttendance: (params?: {
+    branchId?: string;
+    staff?: string;
+    branch?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.branchId) search.set("branchId", params.branchId);
+    if (params?.staff) search.set("staff", params.staff);
+    if (params?.branch) search.set("branch", params.branch);
+    if (params?.status) search.set("status", params.status);
+    if (params?.startDate) search.set("startDate", params.startDate);
+    if (params?.endDate) search.set("endDate", params.endDate);
+    search.set("page", String(params?.page ?? 0));
+    search.set("size", String(params?.size ?? 20));
+    const q = search.toString() ? `?${search.toString()}` : "";
+    return request<PageResult<AttendanceRecord>>(`/api/v1/attendance${q}`);
+  },
+
+  getTodayAttendance: (branchId: string) =>
+    request<AttendanceRecord[]>(`/api/v1/attendance/today?branchId=${branchId}`),
+
+  createLeave: (data: CreateLeaveRequest) =>
+    request<LeaveRecord>("/api/v1/leave", { method: "POST", body: JSON.stringify(data) }),
+
+  getLeaves: (params?: {
+    branchId?: string;
+    staff?: string;
+    branch?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.branchId) search.set("branchId", params.branchId);
+    if (params?.staff) search.set("staff", params.staff);
+    if (params?.branch) search.set("branch", params.branch);
+    if (params?.status) search.set("status", params.status);
+    if (params?.startDate) search.set("startDate", params.startDate);
+    if (params?.endDate) search.set("endDate", params.endDate);
+    search.set("page", String(params?.page ?? 0));
+    search.set("size", String(params?.size ?? 20));
+    const q = search.toString() ? `?${search.toString()}` : "";
+    return request<PageResult<LeaveRecord>>(`/api/v1/leave${q}`);
+  },
+
+  approveLeave: (leaveId: string) =>
+    request<LeaveRecord>(`/api/v1/leave/${leaveId}/approve`, { method: "POST" }),
+
+  rejectLeave: (leaveId: string) =>
+    request<LeaveRecord>(`/api/v1/leave/${leaveId}/reject`, { method: "POST" }),
+
   getBranches: () => request<Branch[]>("/api/v1/branches"),
+
+  createBranch: (data: CreateBranchRequest) =>
+    request<Branch>("/api/v1/branches", { method: "POST", body: JSON.stringify(data) }),
+
+  updateBranch: (branchId: string, data: UpdateBranchRequest) =>
+    request<Branch>(`/api/v1/branches/${branchId}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  deactivateBranch: (branchId: string) =>
+    request<void>(`/api/v1/branches/${branchId}`, { method: "DELETE" }),
+
+  getBranchTargetPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<BranchTargetPerformance>(`/api/v1/branches/performance/targets${q}`);
+  },
+
+  getBranchTargetTrends: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<BranchTargetTrends>(`/api/v1/branches/performance/trends${q}`);
+  },
+
+  getTenant: () => request<Tenant>("/api/v1/tenant"),
+
+  updateTenant: (data: UpdateTenantRequest) =>
+    request<Tenant>("/api/v1/tenant", { method: "PUT", body: JSON.stringify(data) }),
+
+  getBrandUsers: () => request<PlatformUser[]>("/api/v1/users"),
+
+  createBrandUser: (data: CreatePlatformUserRequest) =>
+    request<PlatformUser>("/api/v1/users", { method: "POST", body: JSON.stringify(data) }),
+
+  updateBrandUser: (userId: string, data: UpdatePlatformUserRequest) =>
+    request<PlatformUser>(`/api/v1/users/${userId}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  deactivateBrandUser: (userId: string) =>
+    request<void>(`/api/v1/users/${userId}`, { method: "DELETE" }),
+
+  getAllStaff: (branchId?: string) => {
+    const params = new URLSearchParams({ all: "true" });
+    if (branchId) params.set("branchId", branchId);
+    return request<EmployeeDetail[]>(`/api/v1/staff?${params.toString()}`);
+  },
+
+  createEmployee: (data: CreateEmployeeRequest) =>
+    request<EmployeeDetail>("/api/v1/staff", { method: "POST", body: JSON.stringify(data) }),
+
+  updateEmployee: (staffId: string, data: UpdateEmployeeRequest) =>
+    request<EmployeeDetail>(`/api/v1/staff/${staffId}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  deactivateEmployee: (staffId: string) =>
+    request<void>(`/api/v1/staff/${staffId}`, { method: "DELETE" }),
+
+  getStaffTargetPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<StaffTargetPerformance>(`/api/v1/staff/performance/targets${q}`);
+  },
+
+  getStaffTargetTrends: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<StaffTargetTrends>(`/api/v1/staff/performance/trends${q}`);
+  },
 
   getInvoices: () => request<Invoice[]>("/api/v1/invoices"),
 
@@ -183,12 +433,117 @@ export interface StaffItem {
   id: string;
   name: string;
   branchId: string;
+  biometricId?: string;
+}
+
+export type StaffRole = "STYLIST" | "BRANCH_MANAGER" | "SALON_MANAGER";
+
+/** Full employee record — sensitive fields only returned for CEO (BRAND_ADMIN) */
+export interface EmployeeDetail {
+  id: string;
+  name: string;
+  phone?: string;
+  branchId: string;
+  branchName?: string;
+  role: StaffRole;
+  skills?: string;
+  biometricId?: string;
+  active: boolean;
+  salary?: number;
+  joiningDate?: string;
+  idProofCollected?: boolean;
+  idProofReference?: string;
+  monthlySalesTarget?: number;
+  incentivePercent?: number;
+}
+
+export interface CreateEmployeeRequest {
+  name: string;
+  phone?: string;
+  branchId: string;
+  role?: StaffRole;
+  skills?: string;
+  biometricId?: string;
+  salary?: number;
+  joiningDate?: string;
+  idProofCollected?: boolean;
+  idProofReference?: string;
+  monthlySalesTarget?: number;
+  incentivePercent?: number;
+}
+
+export interface UpdateEmployeeRequest {
+  name?: string;
+  phone?: string;
+  branchId?: string;
+  role?: StaffRole;
+  skills?: string;
+  biometricId?: string;
+  salary?: number;
+  joiningDate?: string;
+  idProofCollected?: boolean;
+  idProofReference?: string;
+  monthlySalesTarget?: number;
+  incentivePercent?: number;
+  active?: boolean;
+}
+
+export interface StaffTargetPerformanceItem {
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName: string;
+  monthlySalesTarget: number;
+  actualSales: number;
+  achievementPercent: number;
+  meetingTarget: boolean;
+  onTrack: boolean;
+  incentivePercent: number;
+  projectedIncentive: number;
+}
+
+export interface StaffTargetPerformance {
+  periodLabel: string;
+  meetingTargetCount: number;
+  belowTargetCount: number;
+  staff: StaffTargetPerformanceItem[];
+}
+
+export interface StaffTargetTrendPoint {
+  date: string;
+  actualCumulative: number;
+  idealCumulative: number;
+  gap: number;
+}
+
+export interface StaffTargetTrend {
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName: string;
+  monthlySalesTarget: number;
+  points: StaffTargetTrendPoint[];
+  actualChangePct: number | null;
+  gapChangePct: number | null;
+}
+
+export interface BranchStaffTargetTrends {
+  branchId: string;
+  branchName: string;
+  staff: StaffTargetTrend[];
+}
+
+export interface StaffTargetTrends {
+  periodLabel: string;
+  branches: BranchStaffTargetTrends[];
 }
 
 export interface BookingListParams {
   branchId?: string;
   customer?: string;
   branch?: string;
+  service?: string;
+  stylist?: string;
   status?: string;
   minAmount?: number;
   maxAmount?: number;
@@ -257,7 +612,94 @@ export interface Branch {
   id: string;
   name: string;
   code: string;
+  address?: string;
   societyDefault?: string;
+  gstin?: string;
+  phone?: string;
+  openTime?: string;
+  closeTime?: string;
+  monthlySalesTarget?: number;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface CreateBranchRequest {
+  name: string;
+  code: string;
+  address?: string;
+  societyDefault?: string;
+  gstin?: string;
+  phone?: string;
+  openTime?: string;
+  closeTime?: string;
+  monthlySalesTarget?: number;
+  status?: string;
+}
+
+export interface UpdateBranchRequest {
+  name?: string;
+  code?: string;
+  address?: string;
+  societyDefault?: string;
+  gstin?: string;
+  phone?: string;
+  openTime?: string;
+  closeTime?: string;
+  monthlySalesTarget?: number;
+  status?: string;
+}
+
+export interface BranchTargetPerformanceItem {
+  branchId: string;
+  branchName: string;
+  monthlySalesTarget: number;
+  actualSales: number;
+  achievementPercent: number;
+  meetingTarget: boolean;
+  onTrack: boolean;
+}
+
+export interface BranchTargetPerformance {
+  periodLabel: string;
+  meetingTargetCount: number;
+  belowTargetCount: number;
+  branches: BranchTargetPerformanceItem[];
+}
+
+export interface BranchTargetTrendPoint {
+  date: string;
+  actualCumulative: number;
+  idealCumulative: number;
+  gap: number;
+}
+
+export interface BranchTargetTrend {
+  branchId: string;
+  branchName: string;
+  monthlySalesTarget: number;
+  points: BranchTargetTrendPoint[];
+  actualChangePct: number | null;
+  gapChangePct: number | null;
+}
+
+export interface BranchTargetTrends {
+  periodLabel: string;
+  branches: BranchTargetTrend[];
+}
+
+export interface UpdateTenantRequest {
+  name?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+}
+
+export interface UpdatePlatformUserRequest {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: UserRole;
+  branchId?: string;
+  active?: boolean;
 }
 
 export interface TrendPoint {
@@ -288,6 +730,151 @@ export interface Dashboard {
   topServices: { serviceName: string; revenue: number; count: number }[];
   topStaff: { staffId: string; staffName: string; branchName: string; revenue: number }[];
   paymentMix: { cash: number; upi: number; card: number };
+}
+
+export interface Recommendation {
+  id: string;
+  category: string;
+  severity: "HIGH" | "MEDIUM" | "LOW" | "INFO";
+  title: string;
+  message: string;
+  branchId?: string;
+  branchName?: string;
+  metricLabel?: string;
+  metricValue?: string;
+}
+
+export interface BranchRecommendations {
+  branchId: string;
+  branchName: string;
+  items: Recommendation[];
+}
+
+export interface RecommendationsResponse {
+  brandWide: Recommendation[];
+  branches: BranchRecommendations[];
+  weekdayInsights?: WeekdaySalesInsight[];
+}
+
+export interface DayOfWeekStat {
+  day: string;
+  dayLabel: string;
+  revenue: number;
+  visits: number;
+  avgRevenuePerDay: number;
+  vsWeeklyAvgPct: number;
+  slowDay: boolean;
+}
+
+export interface SlowDayAction {
+  day: string;
+  dayLabel: string;
+  severity: "HIGH" | "MEDIUM" | "LOW";
+  headline: string;
+  insight: string;
+  metricLabel?: string;
+  metricValue?: string;
+  actions: string[];
+}
+
+export interface WeekdaySalesInsight {
+  branchId: string;
+  branchName: string;
+  dayStats: DayOfWeekStat[];
+  slowDayActions: SlowDayAction[];
+}
+
+export interface ServiceContributionItem {
+  serviceName: string;
+  revenue: number;
+  count: number;
+  revenueSharePct: number;
+  countSharePct: number;
+}
+
+export interface ServiceContributionResponse {
+  totalRevenue: number;
+  serviceRevenue: number;
+  totalServiceCount: number;
+  services: ServiceContributionItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName: string;
+  workDate: string;
+  entryTime?: string;
+  exitTime?: string;
+  entryMethod?: "BIOMETRIC" | "MANUAL";
+  exitMethod?: "BIOMETRIC" | "MANUAL";
+  manualReason?: string;
+  hoursWorked?: number;
+  status: string;
+}
+
+export interface PunchResult {
+  action: "CHECK_IN" | "CHECK_OUT";
+  record: AttendanceRecord;
+  message: string;
+}
+
+export interface ManualAttendanceRequest {
+  staffId: string;
+  workDate: string;
+  entryTime?: string;
+  exitTime?: string;
+  reason?: string;
+}
+
+export interface LeaveRecord {
+  id: string;
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName: string;
+  startDate: string;
+  endDate: string;
+  leaveType: "FULL_DAY" | "HALF_DAY";
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reason?: string;
+  createdAt?: string;
+}
+
+export interface CreateLeaveRequest {
+  staffId: string;
+  startDate: string;
+  endDate: string;
+  leaveType?: "FULL_DAY" | "HALF_DAY";
+  reason?: string;
+}
+
+export interface AttendanceDashboard {
+  totalStaff: number;
+  presentToday: number;
+  onLeaveToday: number;
+  absentToday: number;
+  avgHoursPerStaff: number;
+  dailyTrends: { date: string; presentCount: number; leaveCount: number; avgHours: number }[];
+  staffSummaries: {
+    staffId: string;
+    staffName: string;
+    branchName: string;
+    daysPresent: number;
+    daysLeave: number;
+    totalHours: number;
+    avgHoursPerDay: number;
+    lateArrivals: number;
+    performanceScore: number;
+  }[];
+  recentRecords: AttendanceRecord[];
+  leaves: LeaveRecord[];
 }
 
 export interface Invoice {

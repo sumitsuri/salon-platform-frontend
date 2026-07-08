@@ -2,8 +2,10 @@
 
 import { useState, useRef, type MouseEvent } from "react";
 import { ChangeBadge } from "@/components/Sparkline";
+import { BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 
-export const BRANCH_COLORS = ["#4f46e5", "#7c3aed", "#0891b2", "#059669", "#d97706", "#dc2626"];
+/** @deprecated Import from @/lib/chart-colors */
+export const BRANCH_COLORS = BRANCH_SERIES_COLORS;
 
 export type ChartType = "line" | "bar" | "pie";
 
@@ -12,6 +14,8 @@ export interface ChartSeries {
   color: string;
   values: number[];
   changePct?: number | null;
+  /** Dashed line for ideal/target pace overlays */
+  dashed?: boolean;
 }
 
 interface MetricChartProps {
@@ -36,10 +40,17 @@ const CHART_HEIGHT = 220;
 
 function ChartLegend({ series }: { series: ChartSeries[] }) {
   return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 pt-3 border-t border-slate-100">
+    <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 pt-3 border-t border-[var(--border)]">
       {series.map((s) => (
-        <div key={s.name} className="flex items-center gap-2 text-xs text-slate-600">
-          <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+        <div key={s.name} className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+          {s.dashed ? (
+            <div
+              className="w-5 h-0 border-t-[2.5px] border-dashed shrink-0 rounded-full"
+              style={{ borderColor: s.color }}
+            />
+          ) : (
+            <div className="w-3 h-3 rounded-sm shrink-0 ring-1 ring-black/5" style={{ backgroundColor: s.color }} />
+          )}
           <span className="font-medium">{s.name}</span>
           <ChangeBadge pct={s.changePct} />
         </div>
@@ -70,7 +81,7 @@ function ChartTooltip({
           <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tooltip.color }} />
           <span className="font-semibold">{tooltip.series}</span>
         </div>
-        <p className="text-slate-400">{tooltip.label}</p>
+        <p className="text-[var(--text-tertiary)]">{tooltip.label}</p>
         <p className="font-bold text-sm mt-0.5">{formatValue(tooltip.value)}</p>
       </div>
     </div>
@@ -142,7 +153,7 @@ function LineChartView({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full min-w-[320px]"
+        className="w-full min-w-0 sm:min-w-[280px]"
       >
         {yTicks.map((tick) => {
           const y = toY(tick);
@@ -170,9 +181,11 @@ function LineChartView({
                 points={coords.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill="none"
                 stroke={s.color}
-                strokeWidth={2.5}
+                strokeWidth={s.dashed ? 2 : 3}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                strokeDasharray={s.dashed ? "6 4" : undefined}
+                opacity={s.dashed ? 0.85 : 1}
               />
               {coords.map((p) => (
                 <g key={p.i}>
@@ -190,6 +203,7 @@ function LineChartView({
                     r={tooltip?.series === s.name && tooltip?.label === labels[p.i] ? 5 : 3}
                     fill={s.color}
                     className="pointer-events-none transition-all"
+                    opacity={s.dashed ? 0.7 : 1}
                   />
                 </g>
               ))}
@@ -230,7 +244,7 @@ function BarChartView({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full min-w-[320px]"
+        className="w-full min-w-0 sm:min-w-[280px]"
       >
         {yTicks.map((tick) => {
           const y = toY(tick);
@@ -336,7 +350,7 @@ function PieChartView({
       <svg
         ref={svgRef}
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        className="w-full min-w-[320px]"
+        className="w-full min-w-0 sm:min-w-[280px]"
       >
         {!hasData ? (
           <text x={cx} y={cy} textAnchor="middle" className="fill-slate-400 text-sm">
@@ -400,13 +414,13 @@ export function MetricChart({ title, labels, series, formatValue = (v) => String
   const [chartType, setChartType] = useState<ChartType>("line");
 
   return (
-    <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+    <div className="bg-[var(--surface)] rounded-xl p-5 border border-[var(--border)] shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h3 className="font-semibold text-slate-800">{title}</h3>
+        <h3 className="font-semibold text-[var(--text-primary)]">{title}</h3>
         <select
           value={chartType}
           onChange={(e) => setChartType(e.target.value as ChartType)}
-          className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:border-indigo-300 shadow-sm transition shrink-0"
+          className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--brand)] shadow-sm transition shrink-0"
           aria-label={`Chart type for ${title}`}
         >
           <option value="line">Line Chart</option>

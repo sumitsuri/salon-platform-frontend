@@ -20,7 +20,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-slate-400">Loading...</div>
+      <div className="animate-pulse text-[var(--text-tertiary)]">Loading...</div>
     </div>
   );
 }

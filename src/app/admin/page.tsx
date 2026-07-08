@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { TrendingUp, Users, Receipt, Tag, Building2, Target } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { BranchTrends } from "@/components/BranchTrends";
+import { BranchTargetTrends } from "@/components/BranchTargetTrends";
+import { EmployeeTargetTrends } from "@/components/EmployeeTargetTrends";
+import { InsightsTeaser } from "@/components/InsightsTeaser";
+import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
+import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction } from "@/components/ui";
 
 type Period = "all" | "days60" | "month" | "week" | "today";
 
@@ -30,10 +36,10 @@ function periodToRange(period: Period): { startDate?: string; endDate?: string }
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
-  all: "All Time",
-  days60: "Last 60 Days",
-  month: "This Month",
-  week: "Last 7 Days",
+  all: "All time",
+  days60: "Last 60 days",
+  month: "This month",
+  week: "Last 7 days",
   today: "Today",
 };
 
@@ -42,17 +48,21 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState<Period>("days60");
   const [initialized, setInitialized] = useState(false);
 
-  const { data: branches = [] } = useQuery({
+  const { data: branches = [], isLoading: branchesLoading, isError: branchesError } = useQuery({
     queryKey: ["branches"],
     queryFn: () => api.getBranches(),
+    retry: 2,
   });
 
   useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      setSelectedBranches(branches.map((b) => b.id));
+    if (branchesLoading) return;
+    if (!initialized) {
+      if (branches.length > 0) {
+        setSelectedBranches(branches.map((b) => b.id));
+      }
       setInitialized(true);
     }
-  }, [branches, initialized]);
+  }, [branches, branchesLoading, initialized]);
 
   const dateRange = periodToRange(period);
 
@@ -69,20 +79,87 @@ export default function AdminDashboardPage() {
     enabled: initialized && selectedBranches.length > 0,
   });
 
-  if (!initialized) return <p className="text-slate-400">Loading dashboard...</p>;
+  const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
+    queryKey: ["recommendations", selectedBranches, period],
+    queryFn: () =>
+      api.getRecommendations({
+        ...dateRange,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const { data: serviceContribution, isLoading: servicesLoading } = useQuery({
+    queryKey: ["service-contribution", selectedBranches, period],
+    queryFn: () =>
+      api.getServiceContribution({
+        ...dateRange,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const monthRange = period === "month" || period === "today" || period === "week"
+    ? dateRange
+    : periodToRange("month");
+
+  const { data: staffTargetTrends, isLoading: staffTrendsLoading } = useQuery({
+    queryKey: ["staff-target-trends", selectedBranches, monthRange.startDate, monthRange.endDate],
+    queryFn: () =>
+      api.getStaffTargetTrends({
+        startDate: monthRange.startDate,
+        endDate: monthRange.endDate,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const { data: branchTargetTrends, isLoading: branchTrendsLoading } = useQuery({
+    queryKey: ["branch-target-trends", selectedBranches, monthRange.startDate, monthRange.endDate],
+    queryFn: () =>
+      api.getBranchTargetTrends({
+        startDate: monthRange.startDate,
+        endDate: monthRange.endDate,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  if (!initialized || branchesLoading) {
+    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading dashboard...</p>;
+  }
+
+  if (branchesError) {
+    return (
+      <EmptyState
+        title="Could not load branches"
+        description="Check that the backend is running and try refreshing the page."
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">CEO Dashboard</h1>
-        <div className="flex items-center gap-3">
-          {isFetching && !isLoading && (
-            <span className="text-xs text-slate-400">Updating...</span>
-          )}
+    <div className="space-y-5">
+      <PageHeader
+        title="CEO Dashboard"
+        subtitle={isFetching && !isLoading ? "Updating..." : PERIOD_LABELS[period]}
+        action={
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as Period)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:border-indigo-300 shadow-sm transition"
+            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
           >
             {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
               <option key={p} value={p}>
@@ -90,111 +167,143 @@ export default function AdminDashboardPage() {
               </option>
             ))}
           </select>
-          <BranchMultiSelect
-            branches={branches}
-            selected={selectedBranches}
-            onChange={setSelectedBranches}
-          />
-        </div>
+        }
+      />
+
+      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <QuickAction href="/admin/employees" icon={Target} label="Employees" description="Targets & incentives" />
+        <QuickAction href="/admin/branches" icon={Building2} label="Organization" description="Branches & managers" />
       </div>
 
       {selectedBranches.length === 0 ? (
-        <div className="bg-white rounded-xl border p-10 text-center text-slate-400">
-          Select at least one branch to view data
-        </div>
+        <EmptyState title="Select at least one branch" description="Choose branches above to view analytics" />
       ) : isLoading || !dashboard ? (
-        <p className="text-slate-400">Loading dashboard...</p>
+        <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading dashboard...</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: "Total Revenue", value: formatCurrency(dashboard.totalRevenue) },
-              { label: "Visits", value: dashboard.totalVisits },
-              { label: "Avg Ticket", value: formatCurrency(dashboard.avgTicketSize) },
-              { label: "Discounts", value: formatCurrency(dashboard.totalDiscounts) },
-            ].map((s) => (
-              <div key={s.label} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-                <p className="text-sm text-slate-500">{s.label}</p>
-                <p className="text-2xl font-bold mt-1 text-slate-900">{s.value}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard label="Total Revenue" value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
+            <StatCard label="Visits" value={dashboard.totalVisits} icon={Users} accent="brand" />
+            <StatCard label="Avg Ticket" value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
+            <StatCard label="Discounts" value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" className="col-span-2 lg:col-span-1" />
           </div>
+
+          <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
+
+          <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
 
           {dashboard.branchTrends && dashboard.branchTrends.length > 0 && (
             <BranchTrends trends={dashboard.branchTrends} />
           )}
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-              <h2 className="font-semibold mb-4 text-slate-800">Branch Comparison</h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500">
-                    <th className="pb-2">Branch</th>
-                    <th>Revenue</th>
-                    <th>Visits</th>
-                    <th>Avg</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dashboard.branchStats.map((b) => (
-                    <tr key={b.branchId} className="border-t border-slate-50">
-                      <td className="py-2 font-medium">{b.branchName}</td>
-                      <td>{formatCurrency(b.revenue)}</td>
-                      <td>{b.visits}</td>
-                      <td>{formatCurrency(b.avgTicket)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {!branchTrendsLoading && branchTargetTrends && branchTargetTrends.branches.length > 0 && (
+            <BranchTargetTrends
+              branches={branchTargetTrends.branches}
+              periodLabel={branchTargetTrends.periodLabel}
+            />
+          )}
 
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-              <h2 className="font-semibold mb-4 text-slate-800">Staff Leaderboard</h2>
-              {dashboard.topStaff.length === 0 && (
-                <p className="text-slate-400 text-sm py-4">No staff data for selected branches</p>
-              )}
-              {dashboard.topStaff.map((s, i) => (
-                <div key={s.staffId} className="flex justify-between py-2 border-t border-slate-50 text-sm">
-                  <span>
-                    {i + 1}. {s.staffName}{" "}
-                    <span className="text-slate-400">({s.branchName})</span>
-                  </span>
-                  <span className="font-semibold">{formatCurrency(s.revenue)}</span>
-                </div>
-              ))}
-            </div>
+          {!staffTrendsLoading && staffTargetTrends && staffTargetTrends.branches.length > 0 && (
+            <EmployeeTargetTrends
+              branches={staffTargetTrends.branches}
+              periodLabel={staffTargetTrends.periodLabel}
+              compact
+            />
+          )}
 
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-              <h2 className="font-semibold mb-4 text-slate-800">Top Services</h2>
-              {dashboard.topServices.length === 0 && (
-                <p className="text-slate-400 text-sm py-4">No service data for selected branches</p>
-              )}
-              {dashboard.topServices.map((s) => (
-                <div key={s.serviceName} className="flex justify-between py-2 border-t border-slate-50 text-sm">
-                  <span>{s.serviceName} ({s.count})</span>
-                  <span className="font-semibold">{formatCurrency(s.revenue)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-              <h2 className="font-semibold mb-4 text-slate-800">Payment Mix</h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between py-1">
-                  <span>Cash</span>
-                  <span className="font-semibold">{formatCurrency(dashboard.paymentMix.cash)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>UPI</span>
-                  <span className="font-semibold">{formatCurrency(dashboard.paymentMix.upi)}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Card</span>
-                  <span className="font-semibold">{formatCurrency(dashboard.paymentMix.card)}</span>
-                </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card padding={false}>
+              <div className="px-4 py-3.5 border-b border-[var(--border)]">
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Branch comparison</h2>
               </div>
-            </div>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)]">
+                      <th className="px-4 py-2 font-medium">Branch</th>
+                      <th className="px-4 py-2 font-medium">Revenue</th>
+                      <th className="px-4 py-2 font-medium">Visits</th>
+                      <th className="px-4 py-2 font-medium">Avg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dashboard.branchStats.map((b) => (
+                      <tr key={b.branchId} className="border-t border-[var(--border)]">
+                        <td className="px-4 py-2.5 font-medium">{b.branchName}</td>
+                        <td className="px-4 py-2.5">{formatCurrency(b.revenue)}</td>
+                        <td className="px-4 py-2.5">{b.visits}</td>
+                        <td className="px-4 py-2.5">{formatCurrency(b.avgTicket)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="md:hidden divide-y divide-[var(--border)]">
+                {dashboard.branchStats.map((b) => (
+                  <ListRow
+                    key={b.branchId}
+                    title={b.branchName}
+                    subtitle={`${b.visits} visits`}
+                    trailing={
+                      <div className="text-right">
+                        <p className="text-sm font-bold">{formatCurrency(b.revenue)}</p>
+                        <p className="text-xs text-[var(--text-tertiary)]">avg {formatCurrency(b.avgTicket)}</p>
+                      </div>
+                    }
+                  />
+                ))}
+              </div>
+            </Card>
+
+            <Card padding={false}>
+              <div className="px-4 py-3.5 border-b border-[var(--border)]">
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Staff leaderboard</h2>
+              </div>
+              {dashboard.topStaff.length === 0 ? (
+                <EmptyState title="No staff data" description="For selected branches in this period" />
+              ) : (
+                <div className="divide-y divide-[var(--border)]">
+                  {dashboard.topStaff.map((s, i) => (
+                    <ListRow
+                      key={s.staffId}
+                      title={`${i + 1}. ${s.staffName}`}
+                      subtitle={s.branchName}
+                      trailing={<span className="text-sm font-bold text-[var(--brand-text)]">{formatCurrency(s.revenue)}</span>}
+                    />
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card padding={false}>
+              <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Payment mix</h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {[
+                  { label: "Cash", value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
+                  { label: "UPI", value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
+                  { label: "Card", value: dashboard.paymentMix.card, color: "bg-violet-500" },
+                ].map((p) => {
+                  const total =
+                    dashboard.paymentMix.cash + dashboard.paymentMix.upi + dashboard.paymentMix.card || 1;
+                  const pct = Math.round((p.value / total) * 100);
+                  return (
+                    <div key={p.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-[var(--text-secondary)]">{p.label}</span>
+                        <span className="font-semibold">{formatCurrency(p.value)}</span>
+                      </div>
+                      <div className="h-2 bg-[var(--surface-muted)] rounded-full overflow-hidden">
+                        <div className={cn("h-full rounded-full", p.color)} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
           </div>
         </>
       )}

@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Building2, LogOut, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, LogOut } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
+import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 
-const nav = [
-  { href: "/platform", label: "Tenants", icon: Building2, exact: true },
-];
+const nav = [{ href: "/platform", label: "Tenants", icon: Building2, exact: true }];
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
@@ -17,6 +16,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
   const pathname = usePathname();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -26,8 +26,11 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
 
   if (!hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Loading...
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
+          <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -38,59 +41,58 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     exact ? pathname === href : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-6 h-14">
-            <Link href="/platform" className="flex items-center gap-2 shrink-0">
-              <div className="w-8 h-8 bg-violet-500 rounded-lg flex items-center justify-center font-bold text-sm">
-                P
-              </div>
-              <div>
-                <p className="font-semibold text-sm leading-tight">Salon Platform</p>
-                <p className="text-[10px] text-slate-400 leading-tight">Platform Admin</p>
-              </div>
-            </Link>
-
-            <nav className="flex items-center gap-1 flex-1">
-              {nav.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href, item.exact);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                      active
-                        ? "bg-violet-600 text-white"
-                        : "text-slate-300 hover:text-white hover:bg-slate-800"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-xs text-slate-400 hidden sm:flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                {user.name}
-              </span>
-              <button
-                onClick={() => { logout(); router.push("/login"); }}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-white"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+    <div className="min-h-screen bg-[var(--surface-muted)] flex flex-col">
+      <header className="bg-[var(--header-bg)] border-b border-[var(--border)] sticky top-0 z-40">
+        <div className="px-3 sm:px-4 lg:px-6 flex items-center justify-between h-14 max-w-7xl mx-auto w-full min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center font-bold text-sm shadow-md shrink-0 text-white">
+              P
             </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">Salon Platform</p>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">Platform Admin · {user.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <SettingsButton onClick={() => setSettingsOpen(true)} />
+            <button
+              onClick={() => {
+                logout();
+                router.push("/login");
+              }}
+              className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+              aria-label="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">{children}</main>
+      <div className="hidden lg:block bg-[var(--surface)]/95 backdrop-blur border-b border-[var(--border)] sticky top-14 z-30">
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 py-2">
+          {nav.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href, item.exact);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition",
+                  active ? "bg-violet-600 text-white" : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      <main className="flex-1 w-full px-3 sm:px-4 lg:px-6 py-4 pb-6 max-w-7xl mx-auto min-w-0">{children}</main>
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

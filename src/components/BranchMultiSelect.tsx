@@ -9,9 +9,10 @@ interface BranchMultiSelectProps {
   branches: Branch[];
   selected: string[];
   onChange: (ids: string[]) => void;
+  className?: string;
 }
 
-export function BranchMultiSelect({ branches, selected, onChange }: BranchMultiSelectProps) {
+export function BranchMultiSelect({ branches, selected, onChange, className }: BranchMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,10 +26,10 @@ export function BranchMultiSelect({ branches, selected, onChange }: BranchMultiS
 
   const allSelected = selected.length === branches.length;
   const label = allSelected
-    ? "All Branches"
+    ? "All branches"
     : selected.length === 0
-    ? "No branches selected"
-    : `${selected.length} branch${selected.length > 1 ? "es" : ""} selected`;
+      ? "Select branches"
+      : `${selected.length} branch${selected.length > 1 ? "es" : ""}`;
 
   function toggle(id: string) {
     if (selected.includes(id)) {
@@ -43,26 +44,30 @@ export function BranchMultiSelect({ branches, selected, onChange }: BranchMultiS
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className={cn("relative", className)} ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:border-indigo-300 shadow-sm transition min-w-[180px]"
+        className="flex items-center gap-2 w-full px-3.5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-primary)] hover:border-[var(--brand)] shadow-sm transition"
       >
-        <span className="flex-1 text-left">{label}</span>
-        <ChevronDown className={cn("w-4 h-4 text-slate-400 transition", open && "rotate-180")} />
+        <span className="flex-1 text-left truncate">{label}</span>
+        <ChevronDown className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0 transition", open && "rotate-180")} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1">
+        <div className="absolute left-0 right-0 lg:right-auto lg:min-w-[16rem] mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
           <button
             onClick={toggleAll}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100"
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--text-primary)]"
           >
-            <div className={cn("w-4 h-4 rounded border flex items-center justify-center",
-              allSelected ? "bg-indigo-600 border-indigo-600" : "border-slate-300")}>
-              {allSelected && <Check className="w-3 h-3 text-white" />}
+            <div
+              className={cn(
+                "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                allSelected ? "bg-[var(--brand)] border-[var(--brand)]" : "border-[var(--border-strong)]"
+              )}
+            >
+              {allSelected && <Check className="w-3 h-3 text-[var(--brand-on-brand)]" />}
             </div>
-            <span className="font-medium">All Branches</span>
+            <span className="font-medium">All branches</span>
           </button>
           {branches.map((b) => {
             const checked = selected.includes(b.id);
@@ -70,13 +75,17 @@ export function BranchMultiSelect({ branches, selected, onChange }: BranchMultiS
               <button
                 key={b.id}
                 onClick={() => toggle(b.id)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] text-[var(--text-primary)]"
               >
-                <div className={cn("w-4 h-4 rounded border flex items-center justify-center",
-                  checked ? "bg-indigo-600 border-indigo-600" : "border-slate-300")}>
-                  {checked && <Check className="w-3 h-3 text-white" />}
+                <div
+                  className={cn(
+                    "w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                    checked ? "bg-[var(--brand)] border-[var(--brand)]" : "border-[var(--border-strong)]"
+                  )}
+                >
+                  {checked && <Check className="w-3 h-3 text-[var(--brand-on-brand)]" />}
                 </div>
-                <span>{b.name}</span>
+                <span className="truncate">{b.name}</span>
               </button>
             );
           })}
