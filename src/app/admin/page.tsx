@@ -11,6 +11,7 @@ import { BranchTargetTrends } from "@/components/BranchTargetTrends";
 import { EmployeeTargetTrends } from "@/components/EmployeeTargetTrends";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
+import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction } from "@/components/ui";
 
@@ -152,6 +153,20 @@ export default function AdminDashboardPage() {
     enabled: initialized && selectedBranches.length > 0,
   });
 
+  const inventoryMonth = monthRange.startDate?.slice(0, 8) + "01";
+  const { data: inventoryOverview, isLoading: inventoryLoading } = useQuery({
+    queryKey: ["inventory-overview", inventoryMonth, selectedBranches],
+    queryFn: () =>
+      api.getInventoryOverview({
+        month: inventoryMonth,
+        branchIds:
+          selectedBranches.length > 0 && selectedBranches.length < branches.length
+            ? selectedBranches
+            : undefined,
+      }),
+    enabled: initialized && selectedBranches.length > 0 && !!inventoryMonth,
+  });
+
   if (!initialized || branchesLoading) {
     return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading dashboard...</p>;
   }
@@ -208,6 +223,8 @@ export default function AdminDashboardPage() {
           <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
 
           <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />
+
+          <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" />
 
           <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
 

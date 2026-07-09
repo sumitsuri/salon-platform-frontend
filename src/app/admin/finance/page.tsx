@@ -31,6 +31,7 @@ import {
   parseMonth,
   toMonthIso,
 } from "@/components/MonthYearPicker";
+import { FinanceTrends } from "@/components/FinanceTrends";
 import {
   PageHeader,
   Card,
@@ -141,6 +142,17 @@ export default function AdminFinancePage() {
         branchIds: branchFilter,
       }),
     enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const { data: plTrends, isLoading: plTrendsLoading } = useQuery({
+    queryKey: ["pl-trends", selectedMonth, selectedBranches],
+    queryFn: () =>
+      api.getPlTrends({
+        endMonth: selectedMonth,
+        months: 6,
+        branchIds: branchFilter,
+      }),
+    enabled: initialized && selectedBranches.length > 0 && tab === "overview",
   });
 
   const { data: yearExpenditures = [], isLoading: expLoading } = useQuery({
@@ -313,6 +325,12 @@ export default function AdminFinancePage() {
               />
               <StatCard label="Margin" value={`${brand!.marginPercent.toFixed(1)}%`} icon={IndianRupee} accent="violet" />
             </div>
+
+            {plTrendsLoading ? (
+              <p className="text-[var(--text-tertiary)] text-sm py-4 text-center">Loading trends...</p>
+            ) : plTrends && plTrends.branches.length > 0 ? (
+              <FinanceTrends branches={plTrends.branches} periodLabel={plTrends.periodLabel} />
+            ) : null}
 
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">

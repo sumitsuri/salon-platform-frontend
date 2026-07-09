@@ -373,6 +373,15 @@ export const api = {
     return request<PlSummaryResponse>(`/api/v1/analytics/pl${q}`);
   },
 
+  getPlTrends: (opts?: { endMonth?: string; months?: number; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.endMonth) params.set("endMonth", opts.endMonth);
+    if (opts?.months != null) params.set("months", String(opts.months));
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<PlTrendsResponse>(`/api/v1/analytics/pl/trends${q}`);
+  },
+
   getExpenditures: (opts?: { branchId?: string; fromMonth?: string; toMonth?: string }) => {
     const params = new URLSearchParams();
     if (opts?.branchId) params.set("branchId", opts.branchId);
@@ -395,6 +404,56 @@ export const api = {
     request<ExpenditureItem[]>(`/api/v1/expenditures/sync-payroll?expenseMonth=${expenseMonth}`, {
       method: "POST",
     }),
+
+  getInventoryVendors: () => request<VendorItem[]>("/api/v1/inventory/vendors"),
+  createInventoryVendor: (data: CreateVendorRequest) =>
+    request<VendorItem>("/api/v1/inventory/vendors", { method: "POST", body: JSON.stringify(data) }),
+  updateInventoryVendor: (id: string, data: UpdateVendorRequest) =>
+    request<VendorItem>(`/api/v1/inventory/vendors/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deactivateInventoryVendor: (id: string) =>
+    request<void>(`/api/v1/inventory/vendors/${id}`, { method: "DELETE" }),
+
+  getInventoryProducts: () => request<InventoryProductItem[]>("/api/v1/inventory/products"),
+  createInventoryProduct: (data: CreateInventoryProductRequest) =>
+    request<InventoryProductItem>("/api/v1/inventory/products", { method: "POST", body: JSON.stringify(data) }),
+  updateInventoryProduct: (id: string, data: UpdateInventoryProductRequest) =>
+    request<InventoryProductItem>(`/api/v1/inventory/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deactivateInventoryProduct: (id: string) =>
+    request<void>(`/api/v1/inventory/products/${id}`, { method: "DELETE" }),
+
+  getInventoryStock: (branchId?: string) => {
+    const q = branchId ? `?branchId=${branchId}` : "";
+    return request<StockItem[]>(`/api/v1/inventory/stock${q}`);
+  },
+
+  getInventoryMovements: (opts?: { branchId?: string; fromDate?: string; toDate?: string }) => {
+    const params = new URLSearchParams();
+    if (opts?.branchId) params.set("branchId", opts.branchId);
+    if (opts?.fromDate) params.set("fromDate", opts.fromDate);
+    if (opts?.toDate) params.set("toDate", opts.toDate);
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<InventoryMovementItem[]>(`/api/v1/inventory/movements${q}`);
+  },
+
+  createInventoryMovement: (data: CreateInventoryMovementRequest) =>
+    request<InventoryMovementItem>("/api/v1/inventory/movements", { method: "POST", body: JSON.stringify(data) }),
+
+  getInventoryOverview: (opts?: { month?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.month) params.set("month", opts.month);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<InventoryOverview>(`/api/v1/inventory/analytics/overview${q}`);
+  },
+
+  getInventoryTrends: (opts?: { endMonth?: string; months?: number; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.endMonth) params.set("endMonth", opts.endMonth);
+    if (opts?.months != null) params.set("months", String(opts.months));
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<InventoryTrendsResponse>(`/api/v1/inventory/analytics/trends${q}`);
+  },
 
   getInvoices: () => request<Invoice[]>("/api/v1/invoices"),
 
@@ -1033,4 +1092,175 @@ export interface PlSummaryResponse {
   periodLabel: string;
   brand: BrandPlSummary;
   branches: BranchPlSummary[];
+}
+
+export interface PlTrendPoint {
+  month: string;
+  revenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  marginPercent: number;
+}
+
+export interface BranchPlTrend {
+  branchId: string;
+  branchName: string;
+  points: PlTrendPoint[];
+  revenueChangePct: number | null;
+  expensesChangePct: number | null;
+  netProfitChangePct: number | null;
+  marginChangePct: number | null;
+}
+
+export interface PlTrendsResponse {
+  periodLabel: string;
+  branches: BranchPlTrend[];
+}
+
+export type ProductCategory = "CONSUMABLE" | "RETAIL" | "EQUIPMENT";
+export type InventoryUnit = "ML" | "G" | "PCS" | "BOTTLE";
+export type MovementType = "RESTOCK" | "USAGE" | "WASTAGE" | "RETAIL_SALE" | "ADJUSTMENT";
+
+export interface VendorItem {
+  id: string;
+  name: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+export interface CreateVendorRequest {
+  name: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+export interface UpdateVendorRequest {
+  name?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  notes?: string;
+}
+
+export interface InventoryProductItem {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  name: string;
+  sku?: string;
+  category: ProductCategory;
+  unit: InventoryUnit;
+  unitCost: number;
+  retailPrice?: number;
+  reorderLevel?: number;
+}
+
+export interface CreateInventoryProductRequest {
+  vendorId: string;
+  name: string;
+  sku?: string;
+  category: ProductCategory;
+  unit: InventoryUnit;
+  unitCost: number;
+  retailPrice?: number;
+  reorderLevel?: number;
+}
+
+export interface UpdateInventoryProductRequest {
+  vendorId?: string;
+  name?: string;
+  sku?: string;
+  category?: ProductCategory;
+  unit?: InventoryUnit;
+  unitCost?: number;
+  retailPrice?: number;
+  reorderLevel?: number;
+}
+
+export interface StockItem {
+  id: string;
+  branchId: string;
+  branchName: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  category: ProductCategory;
+  unit: InventoryUnit;
+  vendorId: string;
+  vendorName: string;
+  quantity: number;
+  reorderLevel?: number;
+  unitCost: number;
+  stockValue: number;
+  lowStock: boolean;
+  outOfStock: boolean;
+}
+
+export interface InventoryMovementItem {
+  id: string;
+  branchId: string;
+  branchName: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  vendorId?: string;
+  vendorName?: string;
+  movementType: MovementType;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  movementDate: string;
+  note?: string;
+  recordedByName?: string;
+}
+
+export interface CreateInventoryMovementRequest {
+  branchId: string;
+  productId: string;
+  movementType: MovementType;
+  quantity: number;
+  unitCost?: number;
+  movementDate: string;
+  note?: string;
+}
+
+export interface BranchInventorySummary {
+  branchId: string;
+  branchName: string;
+  productCost: number;
+  stockValue: number;
+  lowStockCount: number;
+  movementCount: number;
+}
+
+export interface InventoryOverview {
+  periodLabel: string;
+  totalProductCost: number;
+  totalStockValue: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  topCostProductName?: string;
+  topCostProductAmount: number;
+  branches: BranchInventorySummary[];
+}
+
+export interface InventoryTrendPoint {
+  month: string;
+  productCost: number;
+  stockValue: number;
+  usageCost: number;
+  wastageCost: number;
+}
+
+export interface BranchInventoryTrend {
+  branchId: string;
+  branchName: string;
+  points: InventoryTrendPoint[];
+  costChangePct: number | null;
+}
+
+export interface InventoryTrendsResponse {
+  periodLabel: string;
+  branches: BranchInventoryTrend[];
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, UserPlus, ClipboardList, LogOut, Fingerprint, Sparkles, Scissors } from "lucide-react";
+import { Home, UserPlus, ClipboardList, LogOut, Fingerprint, Sparkles, Scissors, Package } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const nav = [
   { href: "/manager/attendance", label: "Staff", shortLabel: "Staff", icon: Fingerprint },
   { href: "/manager/walk-in", label: "Walk-in", shortLabel: "Walk-in", icon: UserPlus, fab: true },
   { href: "/manager/bookings", label: "Bookings", shortLabel: "Book", icon: ClipboardList },
+  { href: "/manager/inventory", label: "Inventory", shortLabel: "Stock", icon: Package },
   { href: "/manager/insights", label: "Insights", shortLabel: "Tips", icon: Sparkles },
   { href: "/manager/services", label: "Services", shortLabel: "Sales", icon: Scissors },
 ];
