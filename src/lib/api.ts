@@ -7,7 +7,18 @@ import {
   syncAuthStore,
 } from "./auth-session";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+function resolveApiBase(): string {
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_API_URL || "";
+  }
+  return (
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8080"
+  );
+}
+
+const API_BASE = resolveApiBase();
 
 export type UserRole = "PLATFORM_SUPER_ADMIN" | "BRAND_ADMIN" | "BRANCH_MANAGER" | "SALON_MANAGER";
 
@@ -165,6 +176,20 @@ export const api = {
     search.set("page", String(params?.page ?? 0));
     search.set("size", String(params?.size ?? 20));
     return request<PageResult<Booking>>(`/api/v1/bookings?${search.toString()}`);
+  },
+
+  getEnquiries: (params?: EnquiryListParams) => {
+    const search = new URLSearchParams();
+    if (params?.name) search.set("name", params.name);
+    if (params?.society) search.set("society", params.society);
+    if (params?.email) search.set("email", params.email);
+    if (params?.mobile) search.set("mobile", params.mobile);
+    if (params?.message) search.set("message", params.message);
+    if (params?.dateFrom) search.set("dateFrom", params.dateFrom);
+    if (params?.dateTo) search.set("dateTo", params.dateTo);
+    search.set("page", String(params?.page ?? 0));
+    search.set("size", String(params?.size ?? 20));
+    return request<PageResult<Lead>>(`/api/v1/enquiries?${search.toString()}`);
   },
 
   payBooking: (id: string, data: PaymentRequest) =>
@@ -650,6 +675,28 @@ export interface PageResult<T> {
   size: number;
   totalElements: number;
   totalPages: number;
+}
+
+export interface EnquiryListParams {
+  name?: string;
+  society?: string;
+  email?: string;
+  mobile?: string;
+  message?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  society?: string;
+  email: string;
+  mobile: string;
+  message: string;
+  createdAt: string;
 }
 
 export interface BookingLine {
