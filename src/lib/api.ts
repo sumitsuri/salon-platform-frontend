@@ -338,6 +338,7 @@ export const api = {
     if (data.latitude != null) form.append("latitude", String(data.latitude));
     if (data.longitude != null) form.append("longitude", String(data.longitude));
     if (data.accuracyMeters != null) form.append("accuracyMeters", String(data.accuracyMeters));
+    if (data.locationHighAccuracy != null) form.append("locationHighAccuracy", String(data.locationHighAccuracy));
     const file =
       photo instanceof File
         ? photo
@@ -1183,6 +1184,7 @@ export interface VerifiedPunchRequest {
   latitude?: number;
   longitude?: number;
   accuracyMeters?: number;
+  locationHighAccuracy?: boolean;
 }
 
 export interface ManualAttendanceRequest {

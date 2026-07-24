@@ -4,11 +4,13 @@ export interface LocationFix {
   latitude: number;
   longitude: number;
   accuracyMeters: number;
+  /** True when fix came from device GPS; false for Wi‑Fi / IP network location. */
+  highAccuracy: boolean;
 }
 
 type GeoErrorKey = "gpsPermissionDenied" | "gpsTimeout" | "gpsUnavailable";
 
-function getCurrentPosition(options: PositionOptions): Promise<LocationFix> {
+function getCurrentPosition(options: PositionOptions): Promise<Omit<LocationFix, "highAccuracy">> {
   return new Promise((resolve, reject) => {
     navigator.geolocation.getCurrentPosition(
       (pos) =>
@@ -23,24 +25,39 @@ function getCurrentPosition(options: PositionOptions): Promise<LocationFix> {
   });
 }
 
+/** Phones/tablets used for branch punch; desktops lack GPS and need different strategy. */
+export function isLikelyMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  );
+}
+
 /**
- * Tiered geolocation: network/Wi‑Fi first (works on desktop), then GPS chip (mobile).
- * Root cause of desktop timeouts: enableHighAccuracy:true waits for hardware GPS Macs lack.
+ * Geolocation for attendance geofence.
+ * - Mobile: GPS chip first, network fallback (fallback is approximate — not used for geofence OUT).
+ * - Desktop: GPS attempt first, then network for display only (never flags false OUT).
+ *
+ * Previous network-first tier caused 10km+ false "Outside geofence" on laptops (IP/Wi‑Fi geolocation).
  */
 export async function acquireLocation(): Promise<LocationFix> {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     throw Object.assign(new Error("GPS_UNSUPPORTED"), { code: 0 });
   }
 
-  const tiers: PositionOptions[] = [
-    { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 },
-    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+  const tiers: Array<{ options: PositionOptions; highAccuracy: boolean }> = [
+    { options: { enableHighAccuracy: true, timeout: isLikelyMobileDevice() ? 20000 : 15000, maximumAge: 0 }, highAccuracy: true },
+    { options: { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 }, highAccuracy: false },
   ];
 
+  const mobile = isLikelyMobileDevice();
   let lastError: unknown;
-  for (const options of tiers) {
+  for (const tier of tiers) {
     try {
-      return await getCurrentPosition(options);
+      const fix = await getCurrentPosition(tier.options);
+      // Desktop/macOS may satisfy enableHighAccuracy with Wi‑Fi — never trust for geofence OUT.
+      return { ...fix, highAccuracy: mobile && tier.highAccuracy };
     } catch (err) {
       lastError = err;
     }

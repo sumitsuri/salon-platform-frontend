@@ -9,19 +9,15 @@ import {
   acquireLocation,
   classifyCameraError,
   geolocationErrorKey,
+  isLikelyMobileDevice,
   normalizePhotoToJpeg,
   openCameraStream,
+  type LocationFix,
 } from "@/lib/attendance-punch-media";
 import { cn } from "@/lib/utils";
 import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
 
 type CameraMode = "choose" | "live";
-
-interface LocationFix {
-  latitude: number;
-  longitude: number;
-  accuracyMeters: number;
-}
 
 interface Props {
   staff: StaffItem;
@@ -72,8 +68,14 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   const isCheckOut = action === "CHECK_OUT";
   const secureContext = typeof window !== "undefined" ? window.isSecureContext : true;
 
-  const liveGeo = evaluateGeofence(location?.latitude, location?.longitude, branch);
+  const geofenceCapableDevice = isLikelyMobileDevice();
+  const liveGeo = evaluateGeofence(location?.latitude, location?.longitude, branch, {
+    accuracyMeters: location?.accuracyMeters,
+    highAccuracy: location?.highAccuracy,
+    geofenceCapableDevice,
+  });
   const outOfGeofence = liveGeo.status === "OUT_OF_GEOFENCE";
+  const approximateLocation = liveGeo.approximateLocation === true;
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -187,6 +189,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
           latitude: location?.latitude,
           longitude: location?.longitude,
           accuracyMeters: location?.accuracyMeters,
+          locationHighAccuracy: geofenceCapableDevice && location?.highAccuracy === true,
         },
         jpeg
       );
@@ -271,10 +274,17 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
                 {t("allowedRadius")}: {branch.geofenceRadiusMeters ?? 150}m
               </p>
               {location ? (
-                <p className={cn("font-medium", outOfGeofence ? "text-amber-700" : "text-emerald-700")}>
+                <p
+                  className={cn(
+                    "font-medium",
+                    outOfGeofence ? "text-amber-700" : approximateLocation ? "text-[var(--text-secondary)]" : "text-emerald-700"
+                  )}
+                >
                   {t("yourLocation")}: {formatCoords(location.latitude, location.longitude)} ·{" "}
-                  {t("gpsReady", { accuracy: Math.round(location.accuracyMeters) })} ·{" "}
-                  {liveGeo.distanceMeters != null ? `${liveGeo.distanceMeters}m ${t("fromBranch")}` : geoStatusLabel(liveGeo.status)} ·{" "}
+                  {approximateLocation
+                    ? t("gpsApproximate", { accuracy: Math.round(location.accuracyMeters) })
+                    : t("gpsReady", { accuracy: Math.round(location.accuracyMeters) })}{" "}
+                  {liveGeo.distanceMeters != null ? `· ${liveGeo.distanceMeters}m ${t("fromBranch")}` : ""} ·{" "}
                   {geoStatusLabel(liveGeo.status)}
                 </p>
               ) : locationLoading ? (
@@ -299,6 +309,16 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
             </div>
           )}
 
+
+          {approximateLocation && (
+            <AlertBanner variant="warning">
+              <p className="font-medium flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                {t("approximateLocationWarning")}
+              </p>
+              <p className="text-sm mt-1">{t("approximateLocationDetail")}</p>
+            </AlertBanner>
+          )}
 
           {outOfGeofence && (
             <AlertBanner variant="warning">
