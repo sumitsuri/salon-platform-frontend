@@ -38,6 +38,7 @@ import {
   btnSecondary,
   StatusBadge,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "branches" | "employees";
 
@@ -207,6 +208,8 @@ export default function PlatformPage() {
           )
         }
       />
+
+      <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

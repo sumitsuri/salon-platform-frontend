@@ -42,6 +42,7 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const STAFF_ROLES: StaffRole[] = ["STYLIST", "BRANCH_MANAGER", "SALON_MANAGER"];
 
@@ -201,6 +202,8 @@ export default function AdminEmployeesPage() {
           </div>
         }
       />
+
+      <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

@@ -8,6 +8,9 @@ import { useTranslations } from "next-intl";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
+import { PulseStatCard, PageLoader, enterpriseTableHead } from "@/components/enterprise-ui";
+
+export { PageLoader, PulseStatCard } from "@/components/enterprise-ui";
 
 export const inputClass =
   "w-full px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm";
@@ -83,7 +86,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm",
+        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition hover:shadow-md",
         padding && "p-4 sm:p-5",
         className
       )}
@@ -96,7 +99,7 @@ export function Card({
 export function StatCard({
   label,
   value,
-  icon: Icon,
+  icon,
   accent = "brand",
   trend,
   className,
@@ -108,33 +111,15 @@ export function StatCard({
   trend?: string;
   className?: string;
 }) {
-  const accents = {
-    brand: "bg-[var(--brand)] shadow-[var(--brand)]/25",
-    emerald: "from-emerald-500 to-emerald-600 shadow-emerald-500/25",
-    amber: "from-amber-500 to-amber-600 shadow-amber-500/25",
-    violet: "from-violet-500 to-violet-600 shadow-violet-500/25",
-  };
-
   return (
-    <div className={cn("bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-4 shadow-sm min-w-0", className)}>
-      <div className="flex items-start justify-between gap-2">
-        <div
-          className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg text-white",
-            accent === "brand" ? accents.brand : `bg-gradient-to-br ${accents[accent]}`
-          )}
-        >
-          <Icon className="w-5 h-5" />
-        </div>
-        {trend && (
-          <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 px-1.5 py-0.5 rounded-full">
-            {trend}
-          </span>
-        )}
-      </div>
-      <p className="text-2xl font-bold text-[var(--text-primary)] mt-3 tracking-tight">{value}</p>
-      <p className="text-xs text-[var(--text-secondary)] mt-0.5 font-medium">{label}</p>
-    </div>
+    <PulseStatCard
+      label={label}
+      value={value}
+      icon={icon}
+      accent={accent}
+      trend={trend}
+      className={className}
+    />
   );
 }
 
@@ -162,7 +147,7 @@ export function QuickAction({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl border transition active:scale-[0.98]",
+        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] mp-animate-in",
         colors[color]
       )}
     >
@@ -309,7 +294,8 @@ export function ListRow({
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-3 px-4 py-3 text-left transition border-b border-[var(--border)] last:border-0",
-        onClick && "hover:bg-[var(--surface-muted)] active:bg-[var(--brand-light)]"
+        onClick && "hover:bg-[var(--surface-muted)] active:bg-[var(--brand-light)]",
+        !onClick && "hover:bg-[var(--surface-muted)]/50"
       )}
     >
       {meta}
@@ -332,12 +318,12 @@ export function DataTable({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("responsive-table-wrap", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)] bg-[var(--surface-muted)]">
+          <tr className="text-left border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/60 to-violet-50/40 dark:from-indigo-950/25 dark:to-violet-950/15">
             {headers.map((h) => (
-              <th key={h} className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+              <th key={h} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
                 {h}
               </th>
             ))}
@@ -445,7 +431,12 @@ export function HeroBanner({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("hero-banner rounded-2xl p-5 shadow-lg", className)}>{children}</div>;
+  return (
+    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-5 shadow-xl mp-animate-in", className)}>
+      <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/10 blur-2xl mp-pulse-glow" />
+      <div className="relative">{children}</div>
+    </div>
+  );
 }
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -533,12 +524,12 @@ export function FilterableTable({
   const hasFilters = columns.some((c) => c.filter && c.filter.type !== "none");
 
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("responsive-table-wrap", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)] bg-[var(--surface-muted)]">
+          <tr className="text-left border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/60 to-violet-50/40 dark:from-indigo-950/25 dark:to-violet-950/15">
             {columns.map((col) => (
-              <th key={col.label} className="px-4 py-2.5 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+              <th key={col.label} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
                 {col.label}
               </th>
             ))}

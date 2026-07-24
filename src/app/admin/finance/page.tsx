@@ -48,6 +48,7 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "overview" | "expenditures";
 type ExpView = "months" | "detail";
@@ -288,6 +289,8 @@ export default function AdminFinancePage() {
         }
       />
 
+      <MissionStrip />
+
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       <SegmentedControl
@@ -357,7 +360,7 @@ export default function AdminFinancePage() {
                 <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("branchPl")}</h2>
                 <p className="text-xs text-[var(--text-secondary)] mt-0.5">{formatMonthYear(selectedMonth)}</p>
               </div>
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block responsive-table-wrap">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)]">

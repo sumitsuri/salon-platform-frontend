@@ -8,7 +8,9 @@ import { api } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
-import { PageHeader, StatCard, EmptyState, selectClass } from "@/components/ui";
+import { PageHeader, StatCard, EmptyState, selectClass, PageLoader } from "@/components/ui";
+import { DashboardHero } from "@/components/enterprise-ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 import { countInsights, flattenInsights, insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
 
 const INSIGHT_PERIODS: InsightPeriod[] = ["days60", "month", "week"];
@@ -53,11 +55,11 @@ export default function AdminInsightsPage() {
   const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
 
   if (!initialized) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tCommon("loading")}</p>;
+    return <PageLoader label={tCommon("loading")} />;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title={t("title")}
         subtitle={`${tPeriods(period)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
@@ -76,12 +78,28 @@ export default function AdminInsightsPage() {
         }
       />
 
+      <MissionStrip />
+
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranchesInsights")} />
       ) : (
         <>
+          <DashboardHero
+            title={t("title")}
+            subtitle={tPeriods(period)}
+            metric={countInsights(data)}
+            metricLabel={t("totalTips")}
+            badge={
+              highCount > 0 ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/20">
+                  {t("highPriority")}: {highCount}
+                </span>
+              ) : undefined
+            }
+          />
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <StatCard label={t("totalTips")} value={countInsights(data)} icon={Lightbulb} accent="brand" />
             <StatCard label={t("highPriority")} value={highCount} icon={AlertTriangle} accent="amber" />

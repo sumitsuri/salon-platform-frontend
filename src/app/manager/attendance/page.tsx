@@ -10,6 +10,8 @@ import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 import { AttendancePunchModal } from "@/components/AttendancePunchModal";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
+import { DashboardHero } from "@/components/enterprise-ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 import {
   PageHeader,
   Card,
@@ -171,7 +173,7 @@ export default function ManagerAttendancePage() {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle", {
@@ -180,6 +182,23 @@ export default function ManagerAttendancePage() {
           total: staff.length,
         })}
       />
+
+      <DashboardHero
+        eyebrow={user?.branchName}
+        title={t("title")}
+        subtitle={t("readyToCheckIn")}
+        metric={`${presentCount}/${staff.length}`}
+        metricLabel={t("tabs.checkin")}
+        badge={
+          presentCount === staff.length && staff.length > 0 ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-white text-xs font-bold border border-emerald-300/30">
+              All present
+            </span>
+          ) : undefined
+        }
+      />
+
+      <MissionStrip />
 
       <SegmentedControl options={tabs} value={tab} onChange={setTab} />
 

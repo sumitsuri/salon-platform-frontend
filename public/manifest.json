@@ -1,7 +1,7 @@
 {
-  "name": "Salon Platform",
-  "short_name": "Salon",
-  "description": "Multi-tenant salon chain management",
+  "name": "Pravaah",
+  "short_name": "Pravaah",
+  "description": "The flow of salon success — multi-branch operations platform",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

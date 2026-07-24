@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Trash2, Plus, Check } from "lucide-react";
+import { Trash2, Plus } from "lucide-react";
 import { api, BillPreview, BranchServiceItem, StaffItem } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { WizardSteps } from "@/components/enterprise-ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Step = 1 | 2 | 3;
 
@@ -38,7 +40,7 @@ export default function WalkInPage() {
   const [phone, setPhone] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [society, setSociety] = useState(user?.branchName?.includes("Lithos") ? "Mantri Lithos" : "Mantri Webcity");
+  const [society, setSociety] = useState(user?.branchName ?? "");
   const [flat, setFlat] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
@@ -151,29 +153,9 @@ export default function WalkInPage() {
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={user?.branchName} />
 
-      <div className="flex items-center gap-2">
-        {steps.map((label, i) => {
-          const num = i + 1;
-          const done = step > num;
-          const active = step === num;
-          return (
-            <div key={label} className="flex items-center gap-2 flex-1 min-w-0">
-              <div
-                className={cn(
-                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                  done ? "bg-emerald-500 text-white" : active ? "bg-[var(--brand)] text-[var(--brand-on-brand)]" : "bg-[var(--border)] text-[var(--text-secondary)]"
-                )}
-              >
-                {done ? <Check className="w-3.5 h-3.5" /> : num}
-              </div>
-              <span className={cn("text-xs font-medium truncate", active ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]")}>
-                {label}
-              </span>
-              {i < 2 && <div className={cn("flex-1 h-0.5 rounded-full", done ? "bg-emerald-400" : "bg-[var(--border)]")} />}
-            </div>
-          );
-        })}
-      </div>
+      <WizardSteps steps={steps} current={step} />
+
+      <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

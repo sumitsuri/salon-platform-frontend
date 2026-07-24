@@ -17,6 +17,7 @@ import {
   TablePagination,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
 
@@ -156,6 +157,8 @@ export default function AdminBookingsPage() {
           </button>
         }
       />
+
+      <MissionStrip />
 
       {hasFilters && (
         <button

@@ -11,14 +11,8 @@ import {
 } from "lucide-react";
 import { BranchRecommendations, Recommendation, RecommendationsResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Card, StatusBadge } from "@/components/ui";
-
-const SEVERITY_STYLES: Record<string, string> = {
-  HIGH: "severity-high",
-  MEDIUM: "severity-medium",
-  LOW: "severity-low",
-  INFO: "severity-info",
-};
+import { StatusBadge } from "@/components/ui";
+import { PanelShell, PageLoader } from "@/components/enterprise-ui";
 
 const CATEGORY_ICONS: Record<string, typeof TrendingUp> = {
   SALES: TrendingUp,
@@ -31,8 +25,14 @@ const CATEGORY_ICONS: Record<string, typeof TrendingUp> = {
 
 function RecommendationCard({ item }: { item: Recommendation }) {
   const Icon = CATEGORY_ICONS[item.category] ?? Lightbulb;
+  const borderClass =
+    item.severity === "HIGH"
+      ? "border-l-4 border-l-amber-500 severity-high"
+      : item.severity === "MEDIUM"
+        ? "border-l-4 border-l-violet-500 severity-medium"
+        : "border-l-4 border-l-sky-400 severity-info";
   return (
-    <div className={cn("rounded-xl border p-4 flex gap-3", SEVERITY_STYLES[item.severity] ?? SEVERITY_STYLES.INFO)}>
+    <div className={cn("rounded-xl border p-4 flex gap-3 shadow-sm hover:shadow-md transition mp-animate-in", borderClass)}>
       <div className="w-9 h-9 rounded-lg bg-[var(--surface)] flex items-center justify-center shrink-0 border border-[var(--border)]">
         <Icon className="w-4 h-4 text-[var(--text-primary)]" />
       </div>
@@ -80,9 +80,9 @@ export function RecommendationsPanel({
 
   if (loading) {
     return (
-      <Card>
-        <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
-      </Card>
+      <PanelShell title={t("title")} icon={Lightbulb} accent="brand">
+        <PageLoader label={t("loading")} />
+      </PanelShell>
     );
   }
 
@@ -92,28 +92,20 @@ export function RecommendationsPanel({
 
   if (!hasContent) {
     return (
-      <Card>
-        <div className="flex items-center gap-2 mb-2">
-          <Lightbulb className="w-5 h-5 text-[var(--brand-text)]" />
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-        </div>
+      <PanelShell title={t("title")} icon={Lightbulb} accent="brand">
         <p className="text-sm text-[var(--text-secondary)]">{t("empty")}</p>
-      </Card>
+      </PanelShell>
     );
   }
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-2">
-        <Lightbulb className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
-        <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-          <p className="text-xs text-[var(--text-secondary)] truncate">
-            {variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
-          </p>
-        </div>
-      </div>
-
+    <PanelShell
+      title={t("title")}
+      subtitle={variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
+      icon={Lightbulb}
+      accent="brand"
+      padding={false}
+    >
       <div className="p-4 space-y-5">
         {brandWide.length > 0 && (
           <div className="space-y-3">
@@ -136,6 +128,6 @@ export function RecommendationsPanel({
           branches.map((branch) => <BranchSection key={branch.branchId} branch={branch} />)
         )}
       </div>
-    </Card>
+    </PanelShell>
   );
 }

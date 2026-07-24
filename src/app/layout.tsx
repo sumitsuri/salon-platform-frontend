@@ -72,13 +72,13 @@ const fontVariables = [
 ].join(" ");
 
 export const metadata: Metadata = {
-  title: "Salon Platform",
-  description: "Multi-tenant salon chain management",
+  title: "Pravaah",
+  description: "The flow of salon success — multi-branch salon operations platform",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Salon Platform",
+    title: "Pravaah",
   },
   icons: {
     icon: [

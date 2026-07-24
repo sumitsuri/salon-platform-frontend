@@ -3,11 +3,12 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone, TrendingUp } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { MOBILE_MAIN_PADDING } from "@/components/app-nav";
+import { PravaahLoading } from "@/components/brand/PravaahLoading";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("admin.layout");
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const nav = useMemo(
     () => [
       { href: "/admin", label: t("nav.overview"), shortLabel: t("nav.home"), icon: LayoutDashboard, exact: true },
+      { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
       { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
       { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
       { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
@@ -43,14 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [user, router, hydrated]);
 
   if (!hydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg)]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand)] animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-        </div>
-      </div>
-    );
+    return <PravaahLoading label={tCommon("loading")} />;
   }
 
   if (!user || (user.role !== "BRAND_ADMIN" && user.role !== "PLATFORM_SUPER_ADMIN")) return null;

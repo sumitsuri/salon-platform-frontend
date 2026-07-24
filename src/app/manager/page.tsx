@@ -30,6 +30,7 @@ import {
   HeroBanner,
   SectionLabel,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 function useGreeting() {
   const t = useTranslations("manager.home");
@@ -43,6 +44,7 @@ export default function ManagerHomePage() {
   const t = useTranslations("manager.home");
   const tNav = useTranslations("manager.nav");
   const tCommon = useTranslations("common");
+  const tBrand = useTranslations("brand");
   const greeting = useGreeting();
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
@@ -77,11 +79,14 @@ export default function ManagerHomePage() {
         <p className="hero-muted text-sm font-medium">{greeting}</p>
         <h1 className="text-xl font-bold mt-0.5">{user?.name?.split(" ")[0] || t("manager")}</h1>
         <p className="hero-subtitle text-sm mt-1">{user?.branchName}</p>
+        <p className="hero-muted text-xs mt-2 font-medium opacity-90">{tBrand("taglineShort")}</p>
         <Link href="/manager/walk-in" className="hero-cta mt-4 w-full sm:w-auto">
           <UserPlus className="w-4 h-4" />
           {t("newWalkIn")}
         </Link>
       </HeroBanner>
+
+      <MissionStrip variant="accent" />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard label={t("todayRevenue")} value={formatCurrency(todayRevenue)} icon={TrendingUp} accent="emerald" />
@@ -105,8 +110,8 @@ export default function ManagerHomePage() {
       <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/manager/services" />
 
       <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("recentVisits")}</h2>
+        <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20 flex items-center justify-between">
+          <h2 className="font-bold text-[var(--text-primary)] text-sm">{t("recentVisits")}</h2>
           <Link href="/manager/bookings" className="link-brand text-xs">
             {tCommon("viewAll")}
           </Link>

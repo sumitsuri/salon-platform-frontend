@@ -14,6 +14,7 @@ import {
   btnSecondary,
   inputClass,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const emptyForm: CreateCampaignRequest = {
   name: "",
@@ -66,6 +67,8 @@ export default function AdminCampaignsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      <MissionStrip />
 
       <Card className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">

@@ -189,3 +189,290 @@ html {
 [data-theme="dark"] .badge-high { background-color: rgba(127, 29, 29, 0.5); color: #fca5a5; }
 [data-theme="dark"] .badge-medium { background-color: rgba(120, 53, 15, 0.5); color: #fcd34d; }
 [data-theme="dark"] .badge-low { background-color: rgba(30, 58, 138, 0.5); color: #93c5fd; }
+
+/* Horizontal scroll tables — touch-friendly on mobile/tablet */
+.responsive-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
+}
+
+.responsive-table-wrap::-webkit-scrollbar {
+  height: 4px;
+}
+
+.responsive-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+
+/* Market Pulse — entrance & comparison animations */
+@keyframes mp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mp-bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes mp-pulse-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes mp-score-draw {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+
+.mp-animate-in {
+  opacity: 0;
+  animation: mp-fade-up 0.5s ease-out forwards;
+}
+
+.mp-stagger-2 {
+  animation-delay: 0.08s;
+}
+
+.mp-stagger-3 {
+  animation-delay: 0.14s;
+}
+
+.mp-bar-fill {
+  transform-origin: left center;
+  animation: mp-bar-grow 0.7s ease-out forwards;
+}
+
+.mp-pulse-glow {
+  animation: mp-pulse-glow 4s ease-in-out infinite;
+}
+
+.mp-score-ring {
+  animation: mp-score-draw 1s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-animate-in,
+  .mp-bar-fill,
+  .mp-pulse-glow,
+  .mp-score-ring,
+  .pravaah-login-bg,
+  .pravaah-orb,
+  .pravaah-wave-path,
+  .pravaah-flow-stroke,
+  .pravaah-flow-dot,
+  .pravaah-logo-glow,
+  .pravaah-loading-pulse,
+  .pravaah-form-card::before,
+  .pravaah-form-orb {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Pravaah brand: login hero & motion ── */
+.pravaah-login-bg {
+  background: linear-gradient(135deg, #312e81 0%, #4f46e5 35%, #7c3aed 70%, #4338ca 100%);
+  background-size: 200% 200%;
+  animation: pravaah-gradient-shift 12s ease infinite;
+}
+
+@keyframes pravaah-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.pravaah-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.pravaah-orb-1 {
+  width: 280px;
+  height: 280px;
+  background: #818cf8;
+  top: -80px;
+  right: -60px;
+  animation: pravaah-float 8s ease-in-out infinite;
+}
+
+.pravaah-orb-2 {
+  width: 200px;
+  height: 200px;
+  background: #c084fc;
+  bottom: 20%;
+  left: -40px;
+  animation: pravaah-float 10s ease-in-out infinite reverse;
+}
+
+.pravaah-orb-3 {
+  width: 160px;
+  height: 160px;
+  background: #6366f1;
+  bottom: -40px;
+  right: 20%;
+  animation: pravaah-float 7s ease-in-out infinite 1s;
+}
+
+@keyframes pravaah-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12px, -16px) scale(1.06);
+  }
+}
+
+.pravaah-wave {
+  animation: pravaah-wave-drift 14s ease-in-out infinite;
+}
+
+@keyframes pravaah-wave-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2%);
+  }
+}
+
+.pravaah-flow-stroke {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: pravaah-draw-flow 2.5s ease forwards;
+}
+
+.pravaah-flow-dot {
+  animation: pravaah-pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pravaah-draw-flow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pravaah-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.15);
+  }
+}
+
+.pravaah-logo-glow {
+  animation: pravaah-logo-glow 3s ease-in-out infinite;
+}
+
+@keyframes pravaah-logo-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 24px 4px rgba(255, 255, 255, 0.12);
+  }
+}
+
+.pravaah-loading-pulse {
+  animation: pravaah-loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes pravaah-loading-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.pravaah-login-form-side {
+  background: radial-gradient(ellipse 80% 60% at 70% 20%, rgba(99, 102, 241, 0.08), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(124, 58, 237, 0.06), transparent 50%);
+}
+
+.pravaah-form-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pravaah-form-orb-1 {
+  width: 220px;
+  height: 220px;
+  background: rgba(99, 102, 241, 0.25);
+  top: 10%;
+  right: 5%;
+  animation: pravaah-float 9s ease-in-out infinite;
+}
+
+.pravaah-form-orb-2 {
+  width: 180px;
+  height: 180px;
+  background: rgba(167, 139, 250, 0.2);
+  bottom: 15%;
+  left: 0;
+  animation: pravaah-float 11s ease-in-out infinite reverse;
+}
+
+.pravaah-form-card {
+  position: relative;
+  isolation: isolate;
+}
+
+.pravaah-form-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(124, 58, 237, 0.25), rgba(99, 102, 241, 0.15));
+  background-size: 200% 200%;
+  animation: pravaah-gradient-shift 8s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: -1;
+}

@@ -535,6 +535,40 @@ export const api = {
     return request<PlTrendsResponse>(`/api/v1/analytics/pl/trends${q}`);
   },
 
+  getBenchmark: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<BenchmarkResponse>(`/api/v1/analytics/benchmark${q}`);
+  },
+
+  getBenchmarkSettings: () => request<BenchmarkSettings>("/api/v1/analytics/benchmark/settings"),
+
+  updateBenchmarkSettings: (data: Partial<BenchmarkSettings>) =>
+    request<BenchmarkSettings>("/api/v1/analytics/benchmark/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  getLocalCompetitors: () => request<LocalCompetitorRow[]>("/api/v1/analytics/benchmark/local-competitors"),
+
+  createLocalCompetitor: (data: UpsertLocalCompetitorRequest) =>
+    request<LocalCompetitorRow>("/api/v1/analytics/benchmark/local-competitors", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateLocalCompetitor: (id: string, data: UpsertLocalCompetitorRequest) =>
+    request<LocalCompetitorRow>(`/api/v1/analytics/benchmark/local-competitors/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  deleteLocalCompetitor: (id: string) =>
+    request<void>(`/api/v1/analytics/benchmark/local-competitors/${id}`, { method: "DELETE" }),
+
   getExpenditures: (opts?: { branchId?: string; fromMonth?: string; toMonth?: string }) => {
     const params = new URLSearchParams();
     if (opts?.branchId) params.set("branchId", opts.branchId);
@@ -1568,3 +1602,109 @@ export interface InventoryTrendsResponse {
   periodLabel: string;
   branches: BranchInventoryTrend[];
 }
+
+export interface BenchmarkMetricComparison {
+  key: string;
+  label: string;
+  yourValue: number;
+  peerMedian?: number | null;
+  topQuartile?: number | null;
+  gapToMedian?: number | null;
+  gapToTopQuartile?: number | null;
+  unit: string;
+  direction: string;
+  status: string;
+  percentileRank?: number | null;
+}
+
+export interface BranchBenchmarkRow {
+  branchId: string;
+  branchName: string;
+  revenuePerBranchDay: number;
+  avgTicket: number;
+  visitsPerBranchDay: number;
+  netMarginPercent: number;
+  retailAttachPercent: number;
+  repeatVisitRate: number;
+  discountLeakagePercent: number;
+  rankInBrand?: number;
+  branchCount?: number;
+  brandPercentileLabel?: string;
+}
+
+export interface PeerBenchmarkRow {
+  peerLabel: string;
+  tierLabel: string;
+  branchCount: number;
+  revenuePerBranchDay: number;
+  avgTicket: number;
+  retailAttachPercent: number;
+  netMarginPercent: number;
+  repeatVisitRate: number;
+  isYou: boolean;
+}
+
+export interface LocalCompetitorRow {
+  id: string;
+  name: string;
+  competitorType: string;
+  branchId?: string;
+  branchName?: string;
+  revenuePerBranchDay?: number;
+  avgTicket?: number;
+  retailAttachPercent?: number;
+  netMarginPercent?: number;
+  repeatVisitRate?: number;
+  address?: string;
+  notes?: string;
+}
+
+export interface BenchmarkPlaybookItem {
+  id: string;
+  severity: string;
+  title: string;
+  message: string;
+  metricKey: string;
+  estimatedMonthlyImpact?: number;
+  actionModule: string;
+  actionLabel: string;
+}
+
+export interface BenchmarkResponse {
+  periodLabel: string;
+  brandName: string;
+  marketCity: string;
+  cohortLabel: string;
+  cohortSize: number;
+  brandRank?: number | null;
+  metricsAboveMedian: number;
+  totalMetrics: number;
+  estimatedMonthlyOpportunity: number;
+  heroMetrics: BenchmarkMetricComparison[];
+  allMetrics: BenchmarkMetricComparison[];
+  branchRankings: BranchBenchmarkRow[];
+  networkPeers: PeerBenchmarkRow[];
+  localCompetitors: LocalCompetitorRow[];
+  playbook: BenchmarkPlaybookItem[];
+  benchmarkOptIn: boolean;
+}
+
+export interface BenchmarkSettings {
+  benchmarkOptIn: boolean;
+  marketCity: string;
+  salonTier: string;
+}
+
+export interface UpsertLocalCompetitorRequest {
+  name: string;
+  competitorType?: string;
+  branchId?: string;
+  address?: string;
+  notes?: string;
+  revenuePerBranchDay?: number;
+  avgTicket?: number;
+  retailAttachPercent?: number;
+  netMarginPercent?: number;
+  repeatVisitRate?: number;
+}
+

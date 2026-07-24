@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Scissors, ChevronRight, TrendingUp } from "lucide-react";
 import { ServiceContributionResponse } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { Card } from "@/components/ui";
+import { PanelShell, PanelLink } from "@/components/enterprise-ui";
 
 interface ServiceContributionTeaserProps {
   data?: ServiceContributionResponse;
@@ -20,27 +20,25 @@ export function ServiceContributionTeaser({ data, loading, href }: ServiceContri
   const laggard = data?.services.length ? data.services[data.services.length - 1] : undefined;
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Scissors className="w-5 h-5 text-[var(--brand-text)]" />
-          <div>
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-            <p className="text-xs text-[var(--text-secondary)]">
-              {loading
-                ? tCommon("loading")
-                : data
-                  ? t("summary", { services: data.services.length, sold: data.totalServiceCount })
-                  : t("noData")}
-            </p>
-          </div>
-        </div>
-        <Link href={href} className="link-brand text-xs flex items-center gap-0.5">
+    <PanelShell
+      title={t("title")}
+      subtitle={
+        loading
+          ? tCommon("loading")
+          : data
+            ? t("summary", { services: data.services.length, sold: data.totalServiceCount })
+            : t("noData")
+      }
+      icon={Scissors}
+      accent="violet"
+      padding={false}
+      action={
+        <PanelLink href={href}>
           {tCommon("viewAll")}
           <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
+        </PanelLink>
+      }
+    >
       {loading ? (
         <p className="p-4 text-sm text-[var(--text-secondary)]">{t("analyzing")}</p>
       ) : top.length === 0 ? (
@@ -51,39 +49,49 @@ export function ServiceContributionTeaser({ data, loading, href }: ServiceContri
             <Link
               key={s.serviceName}
               href={href}
-              className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--surface-muted)] transition"
+              className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-[var(--surface-muted)]/60 transition"
             >
-              <div className="flex items-center gap-2 min-w-0">
-                {i === 0 && <TrendingUp className="w-4 h-4 text-emerald-500 shrink-0" />}
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className={
+                    i === 0
+                      ? "w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center shrink-0"
+                      : "w-8 h-8 rounded-lg bg-[var(--surface-muted)] flex items-center justify-center shrink-0 text-xs font-bold text-[var(--text-tertiary)]"
+                  }
+                >
+                  {i === 0 ? <TrendingUp className="w-4 h-4 text-emerald-600" /> : i + 1}
+                </span>
                 <div className="min-w-0">
-                  <p className="font-medium text-sm text-[var(--text-primary)] truncate">{s.serviceName}</p>
+                  <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.serviceName}</p>
                   <p className="text-xs text-[var(--text-secondary)]">
                     {t("soldRevenue", { count: s.count, pct: s.revenueSharePct })}
                   </p>
                 </div>
               </div>
-              <span className="text-sm font-bold shrink-0">{formatCurrency(s.revenue)}</span>
+              <span className="text-sm font-bold shrink-0 tabular-nums text-violet-700 dark:text-violet-400">
+                {formatCurrency(s.revenue)}
+              </span>
             </Link>
           ))}
           {laggard && top.length >= 3 && laggard.serviceName !== top[0]?.serviceName && (
             <Link
               href={href}
-              className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--surface-muted)] transition bg-amber-50/50 dark:bg-amber-950/20"
+              className="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-amber-50/80 dark:hover:bg-amber-950/30 transition bg-amber-50/40 dark:bg-amber-950/15 border-l-4 border-l-amber-500"
             >
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide">
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wide">
                   {t("needsFocus")}
                 </p>
-                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{laggard.serviceName}</p>
+                <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{laggard.serviceName}</p>
                 <p className="text-xs text-[var(--text-secondary)]">
                   {t("share", { count: laggard.count, pct: laggard.revenueSharePct })}
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
+              <ChevronRight className="w-4 h-4 text-amber-600 shrink-0" />
             </Link>
           )}
         </div>
       )}
-    </Card>
+    </PanelShell>
   );
 }

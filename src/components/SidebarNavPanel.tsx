@@ -5,6 +5,7 @@ import { LogOut, Palette, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AppNavItem } from "@/components/app-nav";
+import { SidebarBrandFooter } from "@/components/brand/SidebarBrandFooter";
 
 export interface SidebarNavPanelProps {
   nav: AppNavItem[];
@@ -165,6 +166,7 @@ export function SidebarNavPanel({
           <LogOut className="w-[18px] h-[18px] shrink-0" />
           {!collapsed && <span>{logoutLabel}</span>}
         </button>
+        <SidebarBrandFooter collapsed={collapsed} />
       </div>
     </>
   );

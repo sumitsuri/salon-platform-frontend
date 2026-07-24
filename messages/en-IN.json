@@ -44,15 +44,45 @@
     "navigationMenu": "Navigation menu"
   },
   "auth": {
-    "title": "Salon Platform",
-    "subtitle": "Manage your salon from anywhere",
+    "title": "Pravaah",
+    "subtitle": "The flow of salon success",
     "email": "Email",
     "password": "Password",
     "signIn": "Sign in",
     "signingIn": "Signing in...",
     "sessionExpired": "Your session expired. Please sign in again.",
     "loginFailed": "Login failed",
-    "demoAccounts": "Demo accounts"
+    "demoAccounts": "Demo accounts",
+    "welcomeBack": "Welcome back",
+    "formHint": "Sign in to your salon command centre"
+  },
+  "brand": {
+    "name": "Pravaah",
+    "tagline": "The flow of salon success",
+    "taglineShort": "Flow smarter. Grow faster.",
+    "mission": "We help salon chains run smoother, grow faster, and delight customers at every visit.",
+    "footerTagline": "Built for Indian salon chains · Multi-branch · Real-time intelligence",
+    "pillars": {
+      "sync": {
+        "title": "Every branch in sync",
+        "desc": "Walk-ins, bookings, staff, and stock — one live view across your entire chain."
+      },
+      "insights": {
+        "title": "Data that drives action",
+        "desc": "Market Pulse, P&L, and AI tips turn numbers into decisions your team acts on today."
+      },
+      "delight": {
+        "title": "Delight at every touchpoint",
+        "desc": "From the front desk to the CEO dashboard — experiences that keep teams and customers coming back."
+      }
+    },
+    "missionStrip": {
+      "0": "Pravaah keeps your chain flowing — less chaos, more revenue per chair.",
+      "1": "Small daily improvements compound into market-leading salons.",
+      "2": "Your team sees clarity; your customers feel the difference.",
+      "3": "Growth isn't luck — it's the flow of great operations."
+    },
+    "poweredBy": "Powered by Pravaah"
   },
   "settings": {
     "title": "Settings",
@@ -618,6 +648,8 @@
       "nav": {
         "overview": "Overview",
         "home": "Home",
+        "marketPulse": "Market Pulse",
+        "pulse": "Pulse",
         "insights": "Insights",
         "tips": "Tips",
         "services": "Services",
@@ -999,6 +1031,56 @@
       "compensationTargets": "Compensation & targets",
       "addEmployeeBtn": "Add employee"
     },
+    "marketPulse": {
+      "title": "Market Pulse",
+      "loading": "Loading benchmark data...",
+      "optInHint": "Enable network benchmark sharing in settings to compare against peer brands in your city.",
+      "cohort": "Cohort",
+      "brandRank": "Rank #{rank} of {size} brands",
+      "city": "Market",
+      "tabs": {
+        "overview": "Overview",
+        "branches": "Branch rank",
+        "peers": "Network peers",
+        "local": "Local rivals",
+        "playbook": "Close the gap"
+      },
+      "metricsAboveMedian": "Metrics above median",
+      "monthlyOpportunity": "Monthly opportunity",
+      "networkPeers": "Network brands",
+      "localTracked": "Local rivals tracked",
+      "heroMetrics": "How you compare",
+      "heroMetricsHint": "You vs anonymized peer median and top quartile in your city",
+      "allMetrics": "All metrics",
+      "metric": "Metric",
+      "you": "You",
+      "peerMedian": "Peer median",
+      "topQuartile": "Top quartile",
+      "vsPeers": "Vs peers",
+      "gap": "Gap {value}",
+      "ahead": "Ahead",
+      "onPar": "On par",
+      "branch": "Branch",
+      "revPerDay": "Rev / branch / day",
+      "atv": "Avg ticket",
+      "retail": "Retail %",
+      "margin": "Net margin",
+      "rank": "Rank in brand",
+      "peersHint": "Anonymized brands on the platform in your city — never shows competitor raw data.",
+      "peer": "Peer",
+      "branches": "Branches",
+      "localHint": "Track up to 5 named salons near your branches (manual KPIs or estimates).",
+      "addCompetitor": "Add local rival",
+      "competitorName": "Salon name",
+      "name": "Name",
+      "type": "Type",
+      "playbookHint": "Prioritized actions to close gaps vs peers — linked to modules in this app.",
+      "noPlaybookTitle": "You're competitive",
+      "noPlaybookDesc": "No major gaps vs peer median for this period. Keep monitoring Market Pulse weekly.",
+      "viewActionPlan": "View action plan",
+      "competitiveScore": "Above median",
+      "percentile": "Percentile"
+    },
     "insights": {
       "title": "Insights",
       "totalTips": "Total tips",
@@ -1017,7 +1099,7 @@
   },
   "platform": {
     "layout": {
-      "title": "Salon Platform",
+      "title": "Pravaah Platform",
       "subtitle": "Platform Admin · {name}",
       "tenants": "Tenants"
     },

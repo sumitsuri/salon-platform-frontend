@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Lightbulb, ChevronRight } from "lucide-react";
 import { RecommendationsResponse } from "@/lib/api";
-import { Card, StatusBadge } from "@/components/ui";
+import { StatusBadge } from "@/components/ui";
+import { PanelShell, PanelLink } from "@/components/enterprise-ui";
 import { countInsights, flattenInsights } from "@/lib/insights-utils";
 
 interface InsightsTeaserProps {
@@ -20,23 +21,19 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
   const top = flattenInsights(data).slice(0, 2);
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Lightbulb className="w-5 h-5 text-[var(--brand-text)]" />
-          <div>
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-            <p className="text-xs text-[var(--text-secondary)]">
-              {loading ? tCommon("loading") : total > 0 ? t("tipsCount", { count: total }) : t("noTips")}
-            </p>
-          </div>
-        </div>
-        <Link href={href} className="link-brand text-xs flex items-center gap-0.5">
+    <PanelShell
+      title={t("title")}
+      subtitle={loading ? tCommon("loading") : total > 0 ? t("tipsCount", { count: total }) : t("noTips")}
+      icon={Lightbulb}
+      accent="brand"
+      padding={false}
+      action={
+        <PanelLink href={href}>
           {tCommon("viewAll")}
           <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
+        </PanelLink>
+      }
+    >
       {loading ? (
         <p className="p-4 text-sm text-[var(--text-secondary)]">{t("analyzing")}</p>
       ) : top.length === 0 ? (
@@ -47,17 +44,28 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
             <Link
               key={item.id}
               href={href}
-              className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-[var(--surface-muted)] transition"
+              className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-[var(--surface-muted)]/60 transition"
             >
-              <div className="min-w-0">
-                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{item.title}</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-1">{item.message}</p>
+              <div className="min-w-0 flex gap-3">
+                <span
+                  className={
+                    item.severity === "HIGH"
+                      ? "w-1 rounded-full bg-amber-500 shrink-0 self-stretch"
+                      : item.severity === "MEDIUM"
+                        ? "w-1 rounded-full bg-violet-500 shrink-0 self-stretch"
+                        : "w-1 rounded-full bg-sky-400 shrink-0 self-stretch"
+                  }
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{item.title}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-1">{item.message}</p>
+                </div>
               </div>
               <StatusBadge status={item.severity} />
             </Link>
           ))}
         </div>
       )}
-    </Card>
+    </PanelShell>
   );
 }

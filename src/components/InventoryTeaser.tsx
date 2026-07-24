@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { ChevronRight, Package } from "lucide-react";
 import { InventoryOverview } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { Card } from "@/components/ui";
+import { PanelShell, PanelLink } from "@/components/enterprise-ui";
 
 interface InventoryTeaserProps {
   data?: InventoryOverview;
@@ -19,43 +19,45 @@ export function InventoryTeaser({ data, loading, href }: InventoryTeaserProps) {
   const alertCount = (data?.lowStockCount ?? 0) + (data?.outOfStockCount ?? 0);
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="w-5 h-5 text-[var(--brand-text)]" />
-          <div>
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-            <p className="text-xs text-[var(--text-secondary)]">
-              {loading ? tCommon("loading") : data?.periodLabel ?? t("subtitleDefault")}
-            </p>
-          </div>
-        </div>
-        <Link href={href} className="link-brand text-xs flex items-center gap-0.5">
+    <PanelShell
+      title={t("title")}
+      subtitle={loading ? tCommon("loading") : data?.periodLabel ?? t("subtitleDefault")}
+      icon={Package}
+      accent="amber"
+      action={
+        <PanelLink href={href}>
           {t("manage")}
           <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
+        </PanelLink>
+      }
+    >
       {loading ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loading")}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
       ) : !data ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("empty")}</p>
       ) : (
-        <div className="p-4 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("productCost")}</p>
-            <p className="text-sm font-bold">{formatCurrency(data.totalProductCost)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("stockValue")}</p>
-            <p className="text-sm font-bold">{formatCurrency(data.totalStockValue)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("alerts")}</p>
-            <p className="text-sm font-bold text-amber-600">{t("itemsCount", { count: alertCount })}</p>
-          </div>
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-2 sm:gap-3">
+          {[
+            { label: t("productCost"), value: formatCurrency(data.totalProductCost), warn: false },
+            { label: t("stockValue"), value: formatCurrency(data.totalStockValue), warn: false },
+            { label: t("alerts"), value: t("itemsCount", { count: alertCount }), warn: alertCount > 0 },
+          ].map((cell) => (
+            <div
+              key={cell.label}
+              className={
+                cell.warn
+                  ? "rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/60 dark:bg-amber-950/20 p-3 text-center"
+                  : "rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-3 text-center"
+              }
+            >
+              <p className="text-[10px] uppercase tracking-wide font-bold text-[var(--text-tertiary)]">{cell.label}</p>
+              <p className={`text-sm font-bold tabular-nums mt-1 ${cell.warn ? "text-amber-700 dark:text-amber-400" : ""}`}>
+                {cell.value}
+              </p>
+            </div>
+          ))}
         </div>
       )}
-    </Card>
+    </PanelShell>
   );
 }

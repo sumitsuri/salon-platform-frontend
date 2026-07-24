@@ -33,6 +33,7 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "brand" | "branches" | "managers";
 
@@ -185,6 +186,8 @@ export default function AdminBranchesPage() {
           ) : undefined
         }
       />
+
+      <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

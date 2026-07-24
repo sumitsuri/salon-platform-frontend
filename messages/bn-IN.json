@@ -44,15 +44,17 @@
     "navigationMenu": "নেভিগেশন মেনু"
   },
   "auth": {
-    "title": "Salon Platform",
-    "subtitle": "যেকোনো জায়গা থেকে আপনার সেলুন পরিচালনা করুন",
-    "email": "ইমেল",
-    "password": "পাসওয়ার্ড",
-    "signIn": "সাইন ইন",
-    "signingIn": "সাইন ইন হচ্ছে...",
-    "sessionExpired": "আপনার সেশন শেষ হয়ে গেছে। অনুগ্রহ করে আবার সাইন ইন করুন।",
-    "loginFailed": "লগইন ব্যর্থ",
-    "demoAccounts": "ডেমো অ্যাকাউন্ট"
+    "title": "Pravaah",
+    "subtitle": "The flow of salon success",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "sessionExpired": "Your session expired. Please sign in again.",
+    "loginFailed": "Login failed",
+    "demoAccounts": "Demo accounts",
+    "welcomeBack": "Welcome back",
+    "formHint": "Sign in to your salon command centre"
   },
   "settings": {
     "title": "সেটিংস",
@@ -296,7 +298,10 @@
       "gpsProceedHint": "You can still punch in/out without GPS; the record will be flagged for review.",
       "selfieStepHint": "Take a selfie to verify identity. GPS helps geofence but is optional.",
       "photoDecodeFailed": "Could not read that photo — try JPEG/PNG or use Open camera",
-      "photoInvalidType": "Please choose a photo file (JPEG, PNG, or WebP)"
+      "photoInvalidType": "Please choose a photo file (JPEG, PNG, or WebP)",
+      "gpsApproximate": "Approximate (±{accuracy}m, Wi‑Fi/IP)",
+      "approximateLocationWarning": "Approximate location only",
+      "approximateLocationDetail": "This device used network location, which can be kilometers off. Geofence is not verified — use a phone at the branch for accurate check-in."
     },
     "insights": {
       "title": "ইনসাইট",
@@ -631,7 +636,9 @@
         "inventory": "ইনভেন্টরি",
         "stock": "স্টক",
         "organization": "সংগঠন",
-        "org": "অর্গ"
+        "org": "অর্গ",
+        "marketPulse": "Market Pulse",
+        "pulse": "Pulse"
       }
     },
     "common": {
@@ -1010,11 +1017,61 @@
       "topServicesHint": "শীর্ষ {count} সার্ভিস {percent}% সার্ভিস আয়ের — হিরো বনাম ফোকাস সার্ভিসে দলকে কোচ করতে এটি ব্যবহার করুন।",
       "loadErrorTitle": "সার্ভিস ডেটা লোড করা যায়নি",
       "loadErrorDesc": "অনুগ্রহ করে রিফ্রেশ করুন বা আবার চেষ্টা করুন।"
+    },
+    "marketPulse": {
+      "title": "Market Pulse",
+      "loading": "Loading benchmark data...",
+      "optInHint": "Enable network benchmark sharing in settings to compare against peer brands in your city.",
+      "cohort": "Cohort",
+      "brandRank": "Rank #{rank} of {size} brands",
+      "city": "Market",
+      "tabs": {
+        "overview": "Overview",
+        "branches": "Branch rank",
+        "peers": "Network peers",
+        "local": "Local rivals",
+        "playbook": "Close the gap"
+      },
+      "metricsAboveMedian": "Metrics above median",
+      "monthlyOpportunity": "Monthly opportunity",
+      "networkPeers": "Network brands",
+      "localTracked": "Local rivals tracked",
+      "heroMetrics": "How you compare",
+      "heroMetricsHint": "You vs anonymized peer median and top quartile in your city",
+      "allMetrics": "All metrics",
+      "metric": "Metric",
+      "you": "You",
+      "peerMedian": "Peer median",
+      "topQuartile": "Top quartile",
+      "vsPeers": "Vs peers",
+      "gap": "Gap {value}",
+      "ahead": "Ahead",
+      "onPar": "On par",
+      "branch": "Branch",
+      "revPerDay": "Rev / branch / day",
+      "atv": "Avg ticket",
+      "retail": "Retail %",
+      "margin": "Net margin",
+      "rank": "Rank in brand",
+      "peersHint": "Anonymized brands on the platform in your city — never shows competitor raw data.",
+      "peer": "Peer",
+      "branches": "Branches",
+      "localHint": "Track up to 5 named salons near your branches (manual KPIs or estimates).",
+      "addCompetitor": "Add local rival",
+      "competitorName": "Salon name",
+      "name": "Name",
+      "type": "Type",
+      "playbookHint": "Prioritized actions to close gaps vs peers — linked to modules in this app.",
+      "noPlaybookTitle": "You're competitive",
+      "noPlaybookDesc": "No major gaps vs peer median for this period. Keep monitoring Market Pulse weekly.",
+      "viewActionPlan": "View action plan",
+      "competitiveScore": "Above median",
+      "percentile": "Percentile"
     }
   },
   "platform": {
     "layout": {
-      "title": "Salon Platform",
+      "title": "Pravaah Platform",
       "subtitle": "Platform Admin · {name}",
       "tenants": "Tenants"
     },
@@ -1079,5 +1136,33 @@
         "SALON_MANAGER": "Salon Manager"
       }
     }
+  },
+  "brand": {
+    "name": "Pravaah",
+    "tagline": "The flow of salon success",
+    "taglineShort": "Flow smarter. Grow faster.",
+    "mission": "We help salon chains run smoother, grow faster, and delight customers at every visit.",
+    "footerTagline": "Built for Indian salon chains · Multi-branch · Real-time intelligence",
+    "pillars": {
+      "sync": {
+        "title": "Every branch in sync",
+        "desc": "Walk-ins, bookings, staff, and stock — one live view across your entire chain."
+      },
+      "insights": {
+        "title": "Data that drives action",
+        "desc": "Market Pulse, P&L, and AI tips turn numbers into decisions your team acts on today."
+      },
+      "delight": {
+        "title": "Delight at every touchpoint",
+        "desc": "From the front desk to the CEO dashboard — experiences that keep teams and customers coming back."
+      }
+    },
+    "missionStrip": {
+      "0": "Pravaah keeps your chain flowing — less chaos, more revenue per chair.",
+      "1": "Small daily improvements compound into market-leading salons.",
+      "2": "Your team sees clarity; your customers feel the difference.",
+      "3": "Growth isn't luck — it's the flow of great operations."
+    },
+    "poweredBy": "Powered by Pravaah"
   }
 }

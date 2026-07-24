@@ -15,6 +15,7 @@ import {
   TablePagination,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Filters = {
   name: string;
@@ -149,6 +150,8 @@ export default function AdminLeadsPage() {
           </button>
         }
       />
+
+      <MissionStrip />
 
       {hasFilters && (
         <button

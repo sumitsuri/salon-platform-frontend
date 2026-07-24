@@ -28,6 +28,7 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const LOG_TYPES: MovementType[] = ["RESTOCK", "USAGE", "WASTAGE", "RETAIL_SALE"];
 
@@ -96,6 +97,8 @@ export default function ManagerInventoryPage() {
   return (
     <div className="space-y-5">
       <PageHeader title={t("title")} subtitle={user?.branchName ?? t("subtitleDefault")} />
+
+      <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

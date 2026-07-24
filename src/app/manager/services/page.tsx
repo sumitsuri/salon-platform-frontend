@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
 import { PageHeader, StatCard, selectClass, EmptyState } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 import { insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
 import { formatCurrency } from "@/lib/utils";
 
@@ -61,6 +62,8 @@ export default function ManagerServicesPage() {
           </select>
         }
       />
+
+      <MissionStrip />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard

@@ -20,6 +20,7 @@ import {
   AvatarInitial,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
 
@@ -175,6 +176,8 @@ export default function ManagerBookingsPage() {
           </Link>
         }
       />
+
+      <MissionStrip />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard label={t("revenuePage")} value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />

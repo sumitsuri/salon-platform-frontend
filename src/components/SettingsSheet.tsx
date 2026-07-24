@@ -78,7 +78,7 @@ function ThemePreview({
           S
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold truncate" style={{ color: text }}>Salon Platform</p>
+          <p className="text-[10px] font-semibold truncate" style={{ color: text }}>Pravaah</p>
           <p className="text-[9px] truncate" style={{ color: subtext }}>Live preview</p>
         </div>
       </div>

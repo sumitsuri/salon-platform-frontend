@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
 import { PageHeader, StatCard, EmptyState, selectClass } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 import { formatCurrency } from "@/lib/utils";
 
 type Period = "all" | "days60" | "month" | "week" | "today";
@@ -101,6 +102,8 @@ export default function AdminServicesPage() {
           </select>
         }
       />
+
+      <MissionStrip />
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 

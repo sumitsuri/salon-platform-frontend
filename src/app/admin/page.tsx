@@ -14,7 +14,9 @@ import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
-import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction } from "@/components/ui";
+import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction, PageLoader } from "@/components/ui";
+import { DashboardHero, EnterpriseTableShell, LabeledProgressBar } from "@/components/enterprise-ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Period = "all" | "days60" | "month" | "week" | "today";
 const PERIODS: Period[] = ["all", "days60", "month", "week", "today"];
@@ -44,6 +46,7 @@ export default function AdminDashboardPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tPeriods = useTranslations("components.insights.periods");
+  const tBrand = useTranslations("brand");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [period, setPeriod] = useState<Period>("days60");
   const [initialized, setInitialized] = useState(false);
@@ -166,7 +169,7 @@ export default function AdminDashboardPage() {
   });
 
   if (!initialized || branchesLoading) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tAdmin("loadingDashboard")}</p>;
+    return <PageLoader label={tAdmin("loadingDashboard")} />;
   }
 
   if (branchesError) {
@@ -198,6 +201,8 @@ export default function AdminDashboardPage() {
         }
       />
 
+      <MissionStrip variant="accent" />
+
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -208,9 +213,22 @@ export default function AdminDashboardPage() {
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
       ) : isLoading || !dashboard ? (
-        <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tAdmin("loadingDashboard")}</p>
+        <PageLoader label={tAdmin("loadingDashboard")} />
       ) : (
         <>
+          <DashboardHero
+            eyebrow={tBrand("taglineShort")}
+            title={t("title")}
+            subtitle={tPeriods(period)}
+            metric={formatCurrency(dashboard.totalRevenue)}
+            metricLabel={t("totalRevenue")}
+            badge={
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/20">
+                {t("visits")}: {dashboard.totalVisits}
+              </span>
+            }
+          />
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 xl:gap-4">
             <StatCard label={t("totalRevenue")} value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
             <StatCard label={t("visits")} value={dashboard.totalVisits} icon={Users} accent="brand" />
@@ -248,27 +266,24 @@ export default function AdminDashboardPage() {
           )}
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <Card padding={false}>
-              <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("branchComparison")}</h2>
-              </div>
-              <div className="hidden md:block overflow-x-auto">
+            <EnterpriseTableShell title={t("branchComparison")} accent="brand">
+              <div className="hidden md:block">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)]">
-                      <th className="px-4 py-2 font-medium">{tCommon("branch")}</th>
-                      <th className="px-4 py-2 font-medium">{t("revenue")}</th>
-                      <th className="px-4 py-2 font-medium">{t("visits")}</th>
-                      <th className="px-4 py-2 font-medium">{t("avgTicket")}</th>
+                    <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]/40">
+                      <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{tCommon("branch")}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-emerald-600">{t("revenue")}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{t("visits")}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-violet-600">{t("avgTicket")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {dashboard.branchStats.map((b) => (
-                      <tr key={b.branchId} className="border-t border-[var(--border)]">
-                        <td className="px-4 py-2.5 font-medium">{b.branchName}</td>
-                        <td className="px-4 py-2.5">{formatCurrency(b.revenue)}</td>
-                        <td className="px-4 py-2.5">{b.visits}</td>
-                        <td className="px-4 py-2.5">{formatCurrency(b.avgTicket)}</td>
+                    {dashboard.branchStats.map((b, i) => (
+                      <tr key={b.branchId} className={cn("border-t border-[var(--border)]", i % 2 === 1 && "bg-[var(--surface-muted)]/30")}>
+                        <td className="px-4 py-2.5 font-semibold">{b.branchName}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">{formatCurrency(b.revenue)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{b.visits}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-violet-700 dark:text-violet-400">{formatCurrency(b.avgTicket)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -289,11 +304,11 @@ export default function AdminDashboardPage() {
                   />
                 ))}
               </div>
-            </Card>
+            </EnterpriseTableShell>
 
             <Card padding={false}>
-              <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
+              <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-violet-50/80 to-indigo-50/50 dark:from-violet-950/30 dark:to-indigo-950/20">
+                <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
               </div>
               {dashboard.topStaff.length === 0 ? (
                 <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} />
@@ -312,10 +327,10 @@ export default function AdminDashboardPage() {
             </Card>
 
             <Card padding={false}>
-              <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("paymentMix")}</h2>
+              <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20">
+                <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("paymentMix")}</h2>
               </div>
-              <div className="p-4 space-y-3">
+              <div className="p-4 space-y-4">
                 {[
                   { label: tCommon("cash"), value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
                   { label: tCommon("upi"), value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
@@ -323,17 +338,15 @@ export default function AdminDashboardPage() {
                 ].map((p) => {
                   const total =
                     dashboard.paymentMix.cash + dashboard.paymentMix.upi + dashboard.paymentMix.card || 1;
-                  const pct = Math.round((p.value / total) * 100);
                   return (
-                    <div key={p.label}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[var(--text-secondary)]">{p.label}</span>
-                        <span className="font-semibold">{formatCurrency(p.value)}</span>
-                      </div>
-                      <div className="h-2 bg-[var(--surface-muted)] rounded-full overflow-hidden">
-                        <div className={cn("h-full rounded-full", p.color)} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
+                    <LabeledProgressBar
+                      key={p.label}
+                      label={p.label}
+                      value={p.value}
+                      total={total}
+                      color={p.color}
+                      formatValue={formatCurrency}
+                    />
                   );
                 })}
               </div>

@@ -37,6 +37,7 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "overview" | "products" | "vendors" | "stock" | "movements";
 
@@ -279,6 +280,8 @@ export default function AdminInventoryPage() {
         subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : t("subtitleOverview")}
         action={tab === "overview" ? <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} /> : undefined}
       />
+
+      <MissionStrip />
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 

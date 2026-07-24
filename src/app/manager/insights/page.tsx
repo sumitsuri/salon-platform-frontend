@@ -9,6 +9,8 @@ import { useAuthStore } from "@/lib/auth-store";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
 import { PageHeader, StatCard, selectClass } from "@/components/ui";
+import { DashboardHero } from "@/components/enterprise-ui";
+import { MissionStrip } from "@/components/brand/MissionStrip";
 import {
   countInsights,
   flattenInsights,
@@ -37,7 +39,7 @@ export default function ManagerInsightsPage() {
   const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle", {
@@ -57,6 +59,23 @@ export default function ManagerInsightsPage() {
               </option>
             ))}
           </select>
+        }
+      />
+
+      <MissionStrip />
+
+      <DashboardHero
+        eyebrow={user?.branchName}
+        title={t("title")}
+        subtitle={tPeriods(period)}
+        metric={countInsights(data)}
+        metricLabel={t("totalTips")}
+        badge={
+          highCount > 0 ? (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/20">
+              {t("highPriority")}: {highCount}
+            </span>
+          ) : undefined
         }
       />
 

@@ -6,7 +6,8 @@ import { BranchTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { seriesColor, BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 import { MetricChart } from "@/components/LineChart";
-import { Card, EmptyState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
+import { PanelShell } from "@/components/enterprise-ui";
 
 interface BranchTrendsProps {
   trends: BranchTrend[];
@@ -34,9 +35,9 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
 
   if (trends.length === 0) {
     return (
-      <Card>
+      <PanelShell title={t("title")} icon={TrendingUp} accent="brand">
         <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
-      </Card>
+      </PanelShell>
     );
   }
 
@@ -47,22 +48,16 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
     }) ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 px-0.5">
-        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
-        <div className="min-w-0">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("title")}</h2>
-          {dateLabels.length > 0 && (
-            <p className="text-xs text-[var(--text-secondary)] truncate">
-              {dateLabels[0]} – {dateLabels[dateLabels.length - 1]}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-4">
+    <PanelShell
+      title={t("title")}
+      subtitle={dateLabels.length > 0 ? `${dateLabels[0]} – ${dateLabels[dateLabels.length - 1]}` : undefined}
+      icon={TrendingUp}
+      accent="brand"
+      padding={false}
+    >
+      <div className="p-4 grid lg:grid-cols-2 gap-4">
         {metrics.map((metric) => (
-          <Card key={metric.key}>
+          <div key={metric.key} className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/30 p-4">
             <MetricChart
               title={t(metric.titleKey)}
               labels={dateLabels}
@@ -74,9 +69,9 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
                 changePct: trend[CHANGE_KEYS[metric.key]] as number | null,
               }))}
             />
-          </Card>
+          </div>
         ))}
       </div>
-    </div>
+    </PanelShell>
   );
 }

@@ -1,5 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Salon Platform">
-  <rect width="512" height="512" rx="96" fill="#6366f1"/>
-  <circle cx="256" cy="200" r="72" fill="#ffffff" opacity="0.95"/>
-  <path d="M128 360c32-56 88-88 128-88s96 32 128 88" fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pravaah">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="50%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <path d="M96 320 C160 220, 224 200, 256 224 C288 248, 352 208, 416 288" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="256" cy="224" r="36" fill="#e0e7ff"/>
+  <circle cx="256" cy="224" r="20" fill="#ffffff" opacity="0.9"/>
 </svg>

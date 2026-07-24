@@ -8,6 +8,7 @@ import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { MOBILE_MAIN_PADDING_FAB } from "@/components/app-nav";
+import { PravaahLoading } from "@/components/brand/PravaahLoading";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("manager.nav");
@@ -39,14 +40,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   }, [user, router, hydrated]);
 
   if (!hydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg)]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand)] animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-        </div>
-      </div>
-    );
+    return <PravaahLoading label={tCommon("loading")} />;
   }
 
   if (!user) return null;

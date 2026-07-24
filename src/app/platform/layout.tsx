@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
+import { PravaahLoading } from "@/components/brand/PravaahLoading";
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("platform.layout");
@@ -29,14 +30,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   }, [user, router, hydrated]);
 
   if (!hydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg)]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-        </div>
-      </div>
-    );
+    return <PravaahLoading label={tCommon("loading")} />;
   }
 
   if (!user || user.role !== "PLATFORM_SUPER_ADMIN") return null;

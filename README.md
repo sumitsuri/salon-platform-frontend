@@ -1,6 +1,8 @@
-# Salon Platform — Frontend
+# Pravaah — Frontend
 
-Next.js web app for salon chain management — manager walk-in flow, brand admin dashboard, and platform admin.
+Next.js web app for salon chain management — manager walk-in flow, brand admin dashboard, Market Pulse intelligence, and platform admin.
+
+**Pravaah** (प्रवाह — *flow*) is the operating system for Indian salon chains: multi-branch sync, data-driven growth, and delightful customer experiences.
 
 ## Tech Stack
 
@@ -19,30 +21,14 @@ App: http://localhost:3000
 
 ### Environment
 
-Create `.env.local`:
+Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_API_URL` to your backend (default `http://localhost:8080`).
 
-```
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
+## Scripts
 
-## App Areas
-
-| Route | Role |
-|-------|------|
-| `/login` | All users |
-| `/manager` | Branch / Salon Manager — walk-in bookings |
-| `/admin` | Brand Admin — dashboard, bookings, branches |
-| `/platform` | Platform Admin — tenants, branches, employee onboarding |
-
-## Demo Accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Platform Admin | platform@salonplatform.local | admin123 |
-| Brand CEO | ceo@demo-brand.local | ceo123 |
-| Lithos Manager | manager.lithos@demo-brand.local | manager123 |
-| Webcity Manager | manager.webcity@demo-brand.local | manager123 |
-
-## Related Repo
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Dev server |
+| `npm run build` | Production build |
+| `npm run lint` | ESLint |
 
 Backend: [salon-platform-backend](https://github.com/sumitsuri/salon-platform-backend)

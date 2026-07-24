@@ -5,6 +5,7 @@ import { CalendarDays, TrendingDown, Zap } from "lucide-react";
 import { WeekdaySalesInsight } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card, StatusBadge } from "@/components/ui";
+import { PanelShell } from "@/components/enterprise-ui";
 
 const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
@@ -25,7 +26,7 @@ function DayTrendChart({ insight }: { insight: WeekdaySalesInsight }) {
               <div className="w-full flex items-end justify-center h-20">
                 <div
                   className={cn(
-                    "w-full max-w-[2.25rem] rounded-t-md transition-all",
+                    "w-full max-w-[2.25rem] rounded-t-md transition-all mp-bar-fill",
                     day.slowDay ? "bg-amber-400 dark:bg-amber-500" : "bg-[var(--brand)]"
                   )}
                   style={{ height: `${height}%` }}
@@ -47,7 +48,7 @@ function DayTrendChart({ insight }: { insight: WeekdaySalesInsight }) {
 function SlowDayCard({ action }: { action: WeekdaySalesInsight["slowDayActions"][0] }) {
   const t = useTranslations("components.weekdayBoostPanel");
   return (
-    <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-4">
+    <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-4 border-l-4 border-l-amber-500 mp-animate-in">
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex items-center justify-center shrink-0">
@@ -126,24 +127,21 @@ export function WeekdayBoostPanel({ insights = [], loading, variant = "ceo" }: W
   }
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-2">
-        <CalendarDays className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
-        <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
-          <p className="text-xs text-[var(--text-secondary)] truncate">
-            {variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
-          </p>
+    <PanelShell
+      title={t("title")}
+      subtitle={variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
+      icon={CalendarDays}
+      accent="amber"
+    >
+      {variant === "manager" && withData.length === 1 ? (
+        <BranchWeekdaySection insight={withData[0]} />
+      ) : (
+        <div className="space-y-5">
+          {withData.map((insight) => (
+            <BranchWeekdaySection key={insight.branchId} insight={insight} />
+          ))}
         </div>
-      </div>
-
-      <div className="p-4 space-y-5">
-        {variant === "manager" && withData.length === 1 ? (
-          <BranchWeekdaySection insight={withData[0]} />
-        ) : (
-          withData.map((insight) => <BranchWeekdaySection key={insight.branchId} insight={insight} />)
-        )}
-      </div>
-    </Card>
+      )}
+    </PanelShell>
   );
 }
