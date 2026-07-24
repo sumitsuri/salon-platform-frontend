@@ -5,8 +5,17 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Camera, Clock, LogOut, MapPin, Upload, UserCheck, X } from "lucide-react";
 import { api, AttendanceRecord, Branch, StaffItem } from "@/lib/api";
 import { evaluateGeofence, formatCoords, geoStatusLabel } from "@/lib/attendance-geo";
+import {
+  acquireLocation,
+  classifyCameraError,
+  geolocationErrorKey,
+  normalizePhotoToJpeg,
+  openCameraStream,
+} from "@/lib/attendance-punch-media";
 import { cn } from "@/lib/utils";
 import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
+
+type CameraMode = "choose" | "live";
 
 interface LocationFix {
   latitude: number;
@@ -22,45 +31,6 @@ interface Props {
   existingRecord?: AttendanceRecord | null;
   onClose: () => void;
   onSuccess: (message: string) => void;
-}
-
-function readLocation(): Promise<LocationFix> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("GPS_UNAVAILABLE"));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracyMeters: pos.coords.accuracy,
-        }),
-      (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  });
-}
-
-async function openCameraStream(): Promise<MediaStream> {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("CAMERA_UNSUPPORTED");
-  }
-  const attempts: MediaStreamConstraints[] = [
-    { video: { facingMode: { ideal: "user" } }, audio: false },
-    { video: { facingMode: "environment" }, audio: false },
-    { video: true, audio: false },
-  ];
-  let lastError: unknown;
-  for (const constraints of attempts) {
-    try {
-      return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (e) {
-      lastError = e;
-    }
-  }
-  throw lastError ?? new Error("CAMERA_DENIED");
 }
 
 function formatTime(iso?: string) {
@@ -89,34 +59,44 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [location, setLocation] = useState<LocationFix | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [cameraMode, setCameraMode] = useState<CameraMode>("choose");
   const [cameraError, setCameraError] = useState("");
-  const [useFileFallback, setUseFileFallback] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [confirmCheckout, setConfirmCheckout] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
 
   const isCheckOut = action === "CHECK_OUT";
   const secureContext = typeof window !== "undefined" ? window.isSecureContext : true;
 
   const liveGeo = evaluateGeofence(location?.latitude, location?.longitude, branch);
   const outOfGeofence = liveGeo.status === "OUT_OF_GEOFENCE";
-  const geoUnavailable = liveGeo.status === "GPS_UNAVAILABLE" && !locationError;
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
 
+  const resetCapture = useCallback(() => {
+    stopCamera();
+    setPreview(null);
+    setCameraMode("choose");
+    setCameraError("");
+    setConfirmCheckout(false);
+  }, [stopCamera]);
+
   const startCamera = useCallback(async () => {
     if (!secureContext) {
-      setUseFileFallback(true);
       setCameraError(t("cameraNeedsHttps"));
+      setCameraMode("choose");
       return;
     }
     setCameraError("");
-    setUseFileFallback(false);
+    setCameraStarting(true);
+    setCameraMode("live");
     try {
       const stream = await openCameraStream();
       streamRef.current = stream;
@@ -124,42 +104,42 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-    } catch {
-      setUseFileFallback(true);
-      setCameraError(t("cameraUnavailable"));
+    } catch (err) {
+      setCameraMode("choose");
+      setCameraError(t(classifyCameraError(err, secureContext)));
+    } finally {
+      setCameraStarting(false);
     }
   }, [secureContext, t]);
 
+  const refreshLocation = useCallback(() => {
+    setLocationLoading(true);
+    setLocationError("");
+    setLocation(null);
+    acquireLocation()
+      .then((fix) => {
+        setLocation(fix);
+        setLocationError("");
+      })
+      .catch((err) => {
+        setLocationError(t(geolocationErrorKey(err)));
+      })
+      .finally(() => setLocationLoading(false));
+  }, [t]);
+
   useEffect(() => {
     if (!open) {
-      stopCamera();
-      setPreview(null);
+      resetCapture();
       setLocation(null);
+      setLocationLoading(false);
       setLocationError("");
-      setCameraError("");
-      setUseFileFallback(false);
       setSubmitError("");
-      setConfirmCheckout(false);
       return;
     }
+    refreshLocation();
+  }, [open, refreshLocation, resetCapture]);
 
-    let active = true;
-
-    readLocation()
-      .then((fix) => {
-        if (active) setLocation(fix);
-      })
-      .catch(() => {
-        if (active) setLocationError(t("gpsUnavailable"));
-      });
-
-    void startCamera();
-
-    return () => {
-      active = false;
-      stopCamera();
-    };
-  }, [open, stopCamera, startCamera, t]);
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -172,17 +152,25 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     setPreview(canvas.toDataURL("image/jpeg", 0.85));
     stopCamera();
+    setCameraMode("choose");
   }
 
   function handleFileSelected(file: File | null) {
     if (!file) return;
+    if (!file.type.startsWith("image/") && !file.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)) {
+      setSubmitError(t("photoInvalidType"));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setPreview(reader.result);
         stopCamera();
+        setCameraMode("choose");
+        setSubmitError("");
       }
     };
+    reader.onerror = () => setSubmitError(t("photoDecodeFailed"));
     reader.readAsDataURL(file);
   }
 
@@ -191,8 +179,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     setSubmitting(true);
     setSubmitError("");
     try {
-      const res = await fetch(preview);
-      const blob = await res.blob();
+      const jpeg = await normalizePhotoToJpeg(preview);
       const result = await api.verifiedPunch(
         {
           staffId: staff.id,
@@ -201,12 +188,17 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
           longitude: location?.longitude,
           accuracyMeters: location?.accuracyMeters,
         },
-        blob
+        jpeg
       );
       onSuccess(result.message);
       onClose();
     } catch (e) {
-      setSubmitError(e instanceof Error ? e.message : tCommon("failed"));
+      const msg = e instanceof Error ? e.message : tCommon("failed");
+      if (msg.includes("PHOTO") || msg.includes("Photo")) {
+        setSubmitError(t("photoDecodeFailed"));
+      } else {
+        setSubmitError(msg);
+      }
     } finally {
       setSubmitting(false);
       setConfirmCheckout(false);
@@ -281,14 +273,32 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
               {location ? (
                 <p className={cn("font-medium", outOfGeofence ? "text-amber-700" : "text-emerald-700")}>
                   {t("yourLocation")}: {formatCoords(location.latitude, location.longitude)} ·{" "}
+                  {t("gpsReady", { accuracy: Math.round(location.accuracyMeters) })} ·{" "}
                   {liveGeo.distanceMeters != null ? `${liveGeo.distanceMeters}m ${t("fromBranch")}` : geoStatusLabel(liveGeo.status)} ·{" "}
                   {geoStatusLabel(liveGeo.status)}
                 </p>
+              ) : locationLoading ? (
+                <p className="text-[var(--text-secondary)] flex items-center gap-2">
+                  <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
+                  {t("gpsLocating")}
+                </p>
               ) : (
-                <p className="text-amber-700">{locationError || t("gpsLocating")}</p>
+                <div className="space-y-1.5">
+                  <p className="text-amber-700 font-medium">{locationError || t("gpsUnavailable")}</p>
+                  <p className="text-[var(--text-secondary)]">{t("gpsProceedHint")}</p>
+                  <button
+                    type="button"
+                    onClick={refreshLocation}
+                    className="text-xs font-semibold text-[var(--brand-text)] hover:opacity-80"
+                    data-testid="gps-retry-button"
+                  >
+                    {t("retryGps")}
+                  </button>
+                </div>
               )}
             </div>
           )}
+
 
           {outOfGeofence && (
             <AlertBanner variant="warning">
@@ -305,7 +315,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
             </AlertBanner>
           )}
 
-          {cameraError && !useFileFallback && <AlertBanner variant="error">{cameraError}</AlertBanner>}
+          {cameraError && <AlertBanner variant="warning">{cameraError}</AlertBanner>}
           {submitError && <AlertBanner variant="error">{submitError}</AlertBanner>}
 
           {confirmCheckout && (
@@ -315,32 +325,52 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
             </AlertBanner>
           )}
 
-          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-black border border-[var(--border)]">
+          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[var(--surface-muted)] border border-[var(--border)]">
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt={t("capturedPhoto")} className="w-full h-full object-cover" />
-            ) : useFileFallback ? (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-4 bg-[var(--surface-muted)]">
-                <Upload className="w-10 h-10 text-[var(--text-tertiary)]" />
-                <p className="text-xs text-center text-[var(--text-secondary)]">{t("cameraFallbackHint")}</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  className="hidden"
-                  onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
-                />
-                <button type="button" onClick={() => fileInputRef.current?.click()} className={`${btnSecondary} text-sm`}>
-                  {t("uploadSelfie")}
-                </button>
-              </div>
+            ) : cameraMode === "live" ? (
+              <>
+                <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover mirror" />
+                {!cameraStarting && (
+                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                    <p className="text-xs text-white/90 text-center">{t("captureHint")}</p>
+                  </div>
+                )}
+              </>
             ) : (
-              <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover mirror" />
-            )}
-            {!preview && !useFileFallback && !cameraError && (
-              <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                <p className="text-xs text-white/90 text-center">{t("captureHint")}</p>
+              <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-4">
+                <p className="text-xs text-center text-[var(--text-secondary)] max-w-[16rem]">{t("selfieStepHint")}</p>
+                <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+                  <button
+                    type="button"
+                    onClick={() => void startCamera()}
+                    disabled={cameraStarting || submitting}
+                    className={`${btnPrimary} flex-1 text-sm`}
+                    data-testid="open-camera-button"
+                  >
+                    <Camera className="w-4 h-4" />
+                    {cameraStarting ? tCommon("processing") : t("openCamera")}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={submitting}
+                    className={`${btnSecondary} flex-1 text-sm`}
+                    data-testid="upload-selfie-button"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {t("uploadSelfie")}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -348,16 +378,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
           <div className="flex gap-2">
             {preview ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPreview(null);
-                    setConfirmCheckout(false);
-                    void startCamera();
-                  }}
-                  className={`${btnSecondary} flex-1`}
-                  disabled={submitting}
-                >
+                <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1`} disabled={submitting}>
                   {t("retakePhoto")}
                 </button>
                 <button
@@ -376,12 +397,12 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
                         : t("confirmPunch")}
                 </button>
               </>
-            ) : useFileFallback ? null : (
-              <button type="button" onClick={capturePhoto} disabled={!!cameraError || submitting} className={`${btnPrimary} w-full`}>
+            ) : cameraMode === "live" ? (
+              <button type="button" onClick={capturePhoto} disabled={cameraStarting || submitting} className={`${btnPrimary} w-full`}>
                 <Camera className="w-4 h-4" />
                 {t("capturePhoto")}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

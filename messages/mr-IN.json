@@ -286,7 +286,17 @@
       "outsideGeofenceDetail": "You are {distance}m away (limit {radius}m). Punch will be flagged.",
       "cameraNeedsHttps": "Camera requires HTTPS or localhost. Use upload selfie below.",
       "cameraFallbackHint": "Camera blocked on this device/browser. Upload a selfie instead.",
-      "uploadSelfie": "Upload selfie"
+      "uploadSelfie": "Upload selfie",
+      "gpsPermissionDenied": "स्थान परवानगी नाकारली — ब्राउझर सेटिंग्जमध्ये अनुमती द्या",
+      "gpsTimeout": "GPS वेळ संपली — पुन्हा प्रयत्न करा",
+      "retryGps": "GPS पुन्हा प्रयत्न",
+      "openCamera": "Open camera",
+      "cameraPermissionDenied": "Camera permission denied — allow in browser settings or upload a selfie",
+      "cameraNotFound": "No camera found on this device — upload a selfie instead",
+      "gpsProceedHint": "You can still punch in/out without GPS; the record will be flagged for review.",
+      "selfieStepHint": "Take a selfie to verify identity. GPS helps geofence but is optional.",
+      "photoDecodeFailed": "Could not read that photo — try JPEG/PNG or use Open camera",
+      "photoInvalidType": "Please choose a photo file (JPEG, PNG, or WebP)"
     },
     "insights": {
       "title": "अंतर्दृष्टी",

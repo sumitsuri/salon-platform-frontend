@@ -338,7 +338,11 @@ export const api = {
     if (data.latitude != null) form.append("latitude", String(data.latitude));
     if (data.longitude != null) form.append("longitude", String(data.longitude));
     if (data.accuracyMeters != null) form.append("accuracyMeters", String(data.accuracyMeters));
-    form.append("photo", photo, "punch.jpg");
+    const file =
+      photo instanceof File
+        ? photo
+        : new File([photo], "punch.jpg", { type: photo.type || "image/jpeg" });
+    form.append("photo", file, "punch.jpg");
     return multipartRequest<PunchResult>("/api/v1/attendance/verified/punch", form);
   },
 

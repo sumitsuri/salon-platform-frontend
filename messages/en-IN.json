@@ -286,7 +286,17 @@
       "records": "{count} records",
       "noAttendanceTitle": "No attendance yet",
       "noAttendanceDesc": "Staff punches will appear here",
-      "inOut": "In {in} · Out {out}"
+      "inOut": "In {in} · Out {out}",
+      "gpsPermissionDenied": "Location permission denied — allow in browser settings, or punch will be flagged",
+      "gpsTimeout": "GPS timed out — check connection or retry",
+      "retryGps": "Retry GPS",
+      "openCamera": "Open camera",
+      "cameraPermissionDenied": "Camera permission denied — allow in browser settings or upload a selfie",
+      "cameraNotFound": "No camera found on this device — upload a selfie instead",
+      "gpsProceedHint": "You can still punch in/out without GPS; the record will be flagged for review.",
+      "selfieStepHint": "Take a selfie to verify identity. GPS helps geofence but is optional.",
+      "photoDecodeFailed": "Could not read that photo — try JPEG/PNG or use Open camera",
+      "photoInvalidType": "Please choose a photo file (JPEG, PNG, or WebP)"
     },
     "insights": {
       "title": "Insights",
