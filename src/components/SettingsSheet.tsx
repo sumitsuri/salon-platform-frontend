@@ -321,11 +321,17 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   );
 }
 
-export function SettingsButton({ onClick }: { onClick: () => void }) {
+export function SettingsButton({
+  onClick,
+  testId = "settings-button",
+}: {
+  onClick: () => void;
+  testId?: string | null;
+}) {
   return (
     <button
       onClick={onClick}
-      data-testid="settings-button"
+      {...(testId ? { "data-testid": testId } : {})}
       className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-light)] transition"
       aria-label="Settings"
     >

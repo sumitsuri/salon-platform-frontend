@@ -2,9 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  ArrowLeft,
   Building2,
   ChevronRight,
   Plus,
@@ -23,6 +22,7 @@ import {
   UserRole,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useSetPageBreadcrumbs } from "@/lib/breadcrumb-context";
 import {
   PageHeader,
   Card,
@@ -68,6 +68,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default function PlatformPage() {
   const t = useTranslations("platform.admin");
+  const tLayout = useTranslations("platform.layout");
   const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
@@ -170,6 +171,22 @@ export default function PlatformPage() {
 
   const activeBranches = branches.filter((b) => b.status === "ACTIVE");
 
+  const pageBreadcrumbs = useMemo(() => {
+    if (!selectedTenant) return null;
+    return [
+      {
+        label: tLayout("tenants"),
+        onClick: () => {
+          setSelectedTenantId(null);
+          setMobileShowDetail(false);
+        },
+      },
+      { label: selectedTenant.name },
+    ];
+  }, [selectedTenant?.id, selectedTenant?.name, tLayout]);
+
+  useSetPageBreadcrumbs(pageBreadcrumbs);
+
   function selectTenant(id: string) {
     setSelectedTenantId(id);
     setMobileShowDetail(true);
@@ -242,13 +259,6 @@ export default function PlatformPage() {
           ) : (
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-3">
-                <button
-                  onClick={() => setMobileShowDetail(false)}
-                  className="lg:hidden p-2 -ml-1 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
-                  aria-label={t("backToTenants")}
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
                 <div className="min-w-0 flex-1">
                   <h2 className="font-bold text-[var(--text-primary)] truncate">{selectedTenant.name}</h2>
                   <p className="text-xs text-[var(--text-secondary)] truncate">

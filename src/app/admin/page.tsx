@@ -200,7 +200,7 @@ export default function AdminDashboardPage() {
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <QuickAction href="/admin/employees" icon={Target} label={t("employeesQuick")} description={t("employeesQuickDesc")} />
         <QuickAction href="/admin/branches" icon={Building2} label={t("organizationQuick")} description={t("organizationQuickDesc")} />
       </div>
@@ -211,20 +211,22 @@ export default function AdminDashboardPage() {
         <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tAdmin("loadingDashboard")}</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 xl:gap-4">
             <StatCard label={t("totalRevenue")} value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
             <StatCard label={t("visits")} value={dashboard.totalVisits} icon={Users} accent="brand" />
             <StatCard label={t("avgTicket")} value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
-            <StatCard label={t("discounts")} value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" className="col-span-2 lg:col-span-1" />
+            <StatCard label={t("discounts")} value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" />
           </div>
 
-          <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
+            <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />
+          </div>
 
-          <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />
-
-          <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" />
-
-          <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" />
+            <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
+          </div>
 
           {dashboard.branchTrends && dashboard.branchTrends.length > 0 && (
             <BranchTrends trends={dashboard.branchTrends} />
@@ -245,7 +247,7 @@ export default function AdminDashboardPage() {
             />
           )}
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">
                 <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("branchComparison")}</h2>

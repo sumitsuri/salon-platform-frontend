@@ -1,26 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Fingerprint, PenLine, CalendarOff, List, Scan } from "lucide-react";
-import { api, StaffItem } from "@/lib/api";
+import { Camera, MapPin, PenLine, CalendarOff, List, UserCheck, LogOut, Clock } from "lucide-react";
+import { api, AttendanceRecord, StaffItem } from "@/lib/api";
+import { formatCoords, geoStatusLabel } from "@/lib/attendance-geo";
 import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
+import { AttendancePunchModal } from "@/components/AttendancePunchModal";
+import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import {
   PageHeader,
   Card,
   SegmentedControl,
   AlertBanner,
   StatusBadge,
-  ListRow,
   EmptyState,
   inputClass,
   selectClass,
   btnPrimary,
 } from "@/components/ui";
 
-type Tab = "biometric" | "manual" | "leave" | "log";
+type Tab = "checkin" | "manual" | "leave" | "log";
+type StaffPunchStatus = "NOT_STARTED" | "CHECKED_IN" | "COMPLETED";
+
+function getStaffPunchStatus(record?: AttendanceRecord): StaffPunchStatus {
+  if (!record?.entryTime) return "NOT_STARTED";
+  if (!record.exitTime) return "CHECKED_IN";
+  return "COMPLETED";
+}
+
+function formatDuration(minutes?: number | null) {
+  if (minutes == null || minutes <= 0) return "";
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
 
 function todayStr() {
   const d = new Date();
@@ -36,16 +53,37 @@ function formatTime(iso?: string) {
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
+function GeoBadge({ status }: { status?: AttendanceRecord["entryGeoStatus"] }) {
+  const t = useTranslations("manager.attendance");
+  if (!status) return null;
+  const labels: Record<string, string> = {
+    IN_GEOFENCE: t("geoIn"),
+    OUT_OF_GEOFENCE: t("geoOut"),
+    GPS_UNAVAILABLE: t("geoGpsOff"),
+  };
+  const colors: Record<string, string> = {
+    IN_GEOFENCE: "text-emerald-700 bg-emerald-50 border-emerald-200",
+    OUT_OF_GEOFENCE: "text-amber-700 bg-amber-50 border-amber-200",
+    GPS_UNAVAILABLE: "text-slate-600 bg-slate-50 border-slate-200",
+  };
+  return (
+    <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-medium", colors[status])}>
+      {labels[status]}
+    </span>
+  );
+}
+
 export default function ManagerAttendancePage() {
   const t = useTranslations("manager.attendance");
   const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("biometric");
-  const [scanMsg, setScanMsg] = useState("");
-  const [scanError, setScanError] = useState("");
-  const [scanning, setScanning] = useState(false);
+  const [tab, setTab] = useState<Tab>("checkin");
+  const [punchMsg, setPunchMsg] = useState("");
+  const [punchStaff, setPunchStaff] = useState<StaffItem | null>(null);
+  const [punchAction, setPunchAction] = useState<"CHECK_IN" | "CHECK_OUT">("CHECK_IN");
+  const [punchingStaffId, setPunchingStaffId] = useState<string | null>(null);
 
   const [manualStaffId, setManualStaffId] = useState("");
   const [manualDate, setManualDate] = useState(todayStr());
@@ -64,6 +102,12 @@ export default function ManagerAttendancePage() {
     enabled: !!branchId,
   });
 
+  const { data: branchGeo } = useQuery({
+    queryKey: ["branch-geofence", branchId],
+    queryFn: () => api.getBranch(branchId),
+    enabled: !!branchId,
+  });
+
   const { data: todayLog = [], isLoading: logLoading } = useQuery({
     queryKey: ["attendance-today", branchId],
     queryFn: () => api.getTodayAttendance(branchId),
@@ -72,18 +116,11 @@ export default function ManagerAttendancePage() {
 
   const presentCount = todayLog.filter((r) => r.status === "PRESENT" || r.status === "COMPLETED").length;
 
-  const punchMutation = useMutation({
-    mutationFn: (biometricId: string) => api.biometricPunch(biometricId),
-    onSuccess: (result) => {
-      setScanMsg(result.message);
-      setScanError("");
-      queryClient.invalidateQueries({ queryKey: ["attendance-today", branchId] });
-    },
-    onError: (e: Error) => {
-      setScanError(e.message);
-      setScanMsg("");
-    },
-  });
+  const recordByStaff = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    todayLog.forEach((r) => map.set(r.staffId, r));
+    return map;
+  }, [todayLog]);
 
   const manualMutation = useMutation({
     mutationFn: () =>
@@ -115,21 +152,19 @@ export default function ManagerAttendancePage() {
     },
   });
 
-  async function simulateScan(member: StaffItem) {
-    if (!member.biometricId) {
-      setScanError(t("noBiometric", { name: member.name }));
-      return;
-    }
-    setScanning(true);
-    setScanError("");
-    setScanMsg(t("scanning"));
-    await new Promise((r) => setTimeout(r, 600));
-    punchMutation.mutate(member.biometricId);
-    setScanning(false);
+  function openPunch(staffMember: StaffItem, action: "CHECK_IN" | "CHECK_OUT") {
+    const record = recordByStaff.get(staffMember.id);
+    const status = getStaffPunchStatus(record);
+    if (action === "CHECK_IN" && status !== "NOT_STARTED") return;
+    if (action === "CHECK_OUT" && status !== "CHECKED_IN") return;
+    if (punchStaff || punchingStaffId) return;
+    setPunchAction(action);
+    setPunchStaff(staffMember);
+    setPunchingStaffId(staffMember.id);
   }
 
   const tabs = [
-    { id: "biometric" as Tab, label: t("tabs.scan"), icon: Fingerprint },
+    { id: "checkin" as Tab, label: t("tabs.checkin"), icon: UserCheck },
     { id: "manual" as Tab, label: t("tabs.manual"), icon: PenLine },
     { id: "leave" as Tab, label: t("tabs.leave"), icon: CalendarOff },
     { id: "log" as Tab, label: t("tabs.today"), icon: List },
@@ -148,54 +183,122 @@ export default function ManagerAttendancePage() {
 
       <SegmentedControl options={tabs} value={tab} onChange={setTab} />
 
-      {tab === "biometric" && (
+      {tab === "checkin" && (
         <Card className="overflow-hidden">
           <div className="scan-zone -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 px-4 sm:px-5 pt-6 pb-5 text-center">
-            <div
-              className={cn(
-                "w-24 h-24 mx-auto rounded-2xl flex items-center justify-center border-2 transition shadow-inner",
-                scanning
-                  ? "border-[var(--brand)] bg-[var(--brand-light)] animate-pulse"
-                  : "border-[var(--border)] bg-[var(--surface)]"
-              )}
-            >
-              <Fingerprint className="w-12 h-12 text-[var(--brand-text)]" />
+            <div className="w-24 h-24 mx-auto rounded-2xl flex items-center justify-center border-2 border-[var(--brand)] bg-[var(--brand-light)] shadow-inner">
+              <Camera className="w-12 h-12 text-[var(--brand-text)]" />
             </div>
-            <p className="text-sm font-medium text-[var(--text-primary)] mt-4">{t("readyToScan")}</p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">{t("scanHint")}</p>
+            <p className="text-sm font-medium text-[var(--text-primary)] mt-4">{t("readyToCheckIn")}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">{t("checkInHint")}</p>
           </div>
 
-          {scanMsg && (
+          {punchMsg && (
             <div className="mb-4">
-              <AlertBanner variant="success">{scanMsg}</AlertBanner>
-            </div>
-          )}
-          {scanError && (
-            <div className="mb-4">
-              <AlertBanner variant="error">{scanError}</AlertBanner>
+              <AlertBanner variant="success">{punchMsg}</AlertBanner>
             </div>
           )}
 
           <p className="section-label mb-2">{t("staffRoster")}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {staff.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => simulateScan(s)}
-                disabled={scanning || punchMutation.isPending}
-                className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] text-left transition active:scale-[0.98] disabled:opacity-50"
-              >
-                <div className="w-9 h-9 rounded-full bg-[var(--brand-light)] flex items-center justify-center shrink-0">
-                  <Scan className="w-4 h-4 text-[var(--brand-text)]" />
+          <div className="space-y-2" data-testid="attendance-staff-roster">
+            {staff.map((s) => {
+              const record = recordByStaff.get(s.id);
+              const status = getStaffPunchStatus(record);
+              const isPunching = punchingStaffId === s.id;
+              return (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "rounded-xl border p-3",
+                    status === "COMPLETED"
+                      ? "border-[var(--border)] bg-[var(--surface-muted)]/60"
+                      : status === "CHECKED_IN"
+                        ? "border-amber-200 bg-amber-50/50"
+                        : "border-[var(--border)] bg-[var(--surface-muted)]"
+                  )}
+                  data-testid={`attendance-staff-${status.toLowerCase().replace("_", "-")}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-[var(--text-primary)]">{s.name}</p>
+                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                        {status === "COMPLETED"
+                          ? t("statusCompleted", { in: formatTime(record?.entryTime), out: formatTime(record?.exitTime) })
+                          : status === "CHECKED_IN"
+                            ? t("statusCheckedIn", { time: formatTime(record?.entryTime) })
+                            : t("notCheckedInToday")}
+                      </p>
+                      {record?.entryGeoStatus && status !== "NOT_STARTED" && (
+                        <p className={cn("text-[10px] mt-1 flex items-center gap-1", record.entryGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : "text-emerald-700")}>
+                          <MapPin className="w-3 h-3" />
+                          {t("checkInShort")}: {geoStatusLabel(record.entryGeoStatus)}
+                          {record.entryDistanceMeters != null && ` (${record.entryDistanceMeters}m)`}
+                        </p>
+                      )}
+                      {record?.exitGeoStatus && status === "COMPLETED" && (
+                        <p className={cn("text-[10px] mt-0.5 flex items-center gap-1", record.exitGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : "text-emerald-700")}>
+                          <MapPin className="w-3 h-3" />
+                          {t("checkOutShort")}: {geoStatusLabel(record.exitGeoStatus)}
+                          {record.exitDistanceMeters != null && ` (${record.exitDistanceMeters}m)`}
+                        </p>
+                      )}
+                    </div>
+                    <StatusBadge status={status === "NOT_STARTED" ? "ABSENT" : status === "CHECKED_IN" ? "PRESENT" : "COMPLETED"} />
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={status !== "NOT_STARTED" || !!punchStaff || isPunching}
+                      onClick={() => openPunch(s, "CHECK_IN")}
+                      className={cn(
+                        btnPrimary,
+                        "flex-1 py-2 text-xs",
+                        status !== "NOT_STARTED" && "opacity-40 cursor-not-allowed"
+                      )}
+                      data-testid={`check-in-${s.id}`}
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      {t("checkInBtn")}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={status !== "CHECKED_IN" || !!punchStaff || isPunching}
+                      onClick={() => openPunch(s, "CHECK_OUT")}
+                      className={cn(
+                        btnPrimary,
+                        "flex-1 py-2 text-xs bg-amber-600 hover:bg-amber-700 shadow-amber-600/20",
+                        status !== "CHECKED_IN" && "opacity-40 cursor-not-allowed"
+                      )}
+                      data-testid={`check-out-${s.id}`}
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      {t("checkOutBtn")}
+                    </button>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.name}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] truncate">{s.biometricId || t("noFp")}</p>
-                </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </Card>
+      )}
+
+      {punchStaff && (
+        <AttendancePunchModal
+          staff={punchStaff}
+          branch={branchGeo ?? null}
+          open={!!punchStaff}
+          action={punchAction}
+          existingRecord={recordByStaff.get(punchStaff.id)}
+          onClose={() => {
+            setPunchStaff(null);
+            setPunchingStaffId(null);
+          }}
+          onSuccess={(msg) => {
+            setPunchMsg(msg);
+            setPunchingStaffId(null);
+            queryClient.invalidateQueries({ queryKey: ["attendance-today", branchId] });
+          }}
+        />
       )}
 
       {tab === "manual" && (
@@ -287,12 +390,55 @@ export default function ManagerAttendancePage() {
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {todayLog.map((r) => (
-                <ListRow
-                  key={r.id}
-                  title={r.staffName}
-                  subtitle={t("inOut", { in: formatTime(r.entryTime), out: formatTime(r.exitTime) })}
-                  trailing={<StatusBadge status={r.status} />}
-                />
+                <div key={r.id} className="px-4 py-3 flex gap-3 items-start">
+                  {r.hasEntryPhoto ? (
+                    <AttendancePhotoThumb recordId={r.id} type="entry" className="w-12 h-12 shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] shrink-0 flex items-center justify-center">
+                      <Camera className="w-4 h-4 text-[var(--text-tertiary)]" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-sm text-[var(--text-primary)]">{r.staffName}</p>
+                      <StatusBadge status={r.status} />
+                    </div>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      {t("inOut", { in: formatTime(r.entryTime), out: formatTime(r.exitTime) })}
+                    </p>
+                    {(r.lateMinutes != null && r.lateMinutes > 0) || (r.earlyExitMinutes != null && r.earlyExitMinutes > 0) ? (
+                      <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {r.lateMinutes != null && r.lateMinutes > 0 && t("lateBy", { duration: formatDuration(r.lateMinutes) })}
+                        {r.lateMinutes != null && r.lateMinutes > 0 && r.earlyExitMinutes != null && r.earlyExitMinutes > 0 && " · "}
+                        {r.earlyExitMinutes != null && r.earlyExitMinutes > 0 && t("earlyBy", { duration: formatDuration(r.earlyExitMinutes) })}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {r.entryGeoStatus && (
+                        <span className="inline-flex items-center gap-0.5">
+                          <MapPin className="w-3 h-3 text-[var(--text-tertiary)]" />
+                          <GeoBadge status={r.entryGeoStatus} />
+                        </span>
+                      )}
+                      {r.late && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border text-amber-700 bg-amber-50 border-amber-200 font-medium">
+                          {t("lateFlag")}
+                        </span>
+                      )}
+                      {r.earlyExit && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border text-red-700 bg-red-50 border-red-200 font-medium">
+                          {t("earlyExitFlag")}
+                        </span>
+                      )}
+                      {r.entryVerified && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded border text-emerald-700 bg-emerald-50 border-emerald-200 font-medium">
+                          {t("verifiedFlag")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}

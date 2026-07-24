@@ -22,6 +22,10 @@
   --text-tertiary: #94a3b8;
   --header-bg: #ffffff;
   --nav-bg: #ffffff;
+  --sidebar-bg: #ffffff;
+  --sidebar-width: 15.5rem;
+  --sidebar-width-collapsed: 4.5rem;
+  --app-bg: #eef1f6;
   --shadow-color: rgba(15, 23, 42, 0.06);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -39,6 +43,8 @@
   --text-tertiary: #64748b;
   --header-bg: #1e293b;
   --nav-bg: #1e293b;
+  --sidebar-bg: #1e293b;
+  --app-bg: #0b1120;
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
@@ -46,7 +52,7 @@ body {
   font-family: var(--font-inter, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--surface-muted);
+  background: var(--app-bg);
   color: var(--text-primary);
   overflow-x: hidden;
 }
@@ -86,6 +92,12 @@ html[lang="pa-IN"] body {
 
 html {
   overflow-x: hidden;
+}
+
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: contain;
+  }
 }
 
 @media (hover: none) {
@@ -139,6 +151,12 @@ html {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-tertiary);
+}
+
+.enterprise-sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  box-shadow: 1px 0 0 var(--shadow-color);
 }
 
 .link-brand {

@@ -1,9 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useAppShell } from "@/lib/app-shell-context";
+import { useBreadcrumbs } from "@/lib/breadcrumb-context";
+import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
 
 export const inputClass =
   "w-full px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm";
@@ -20,18 +24,49 @@ export function PageHeader({
   title,
   subtitle,
   action,
+  showBack,
+  breadcrumbs: breadcrumbsOverride,
 }: {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
+  /** Override auto back link; set false to hide on sub-pages */
+  showBack?: boolean;
+  /** Override auto breadcrumbs entirely */
+  breadcrumbs?: BreadcrumbItem[];
 }) {
+  const tCommon = useTranslations("common");
+  const pathname = usePathname();
+  const { homeHref, homeLabel } = useAppShell();
+  const autoBreadcrumbs = useBreadcrumbs();
+  const breadcrumbs = breadcrumbsOverride ?? autoBreadcrumbs;
+  const isSubPage = pathname !== homeHref;
+  const shouldShowBack = (showBack ?? isSubPage) && breadcrumbs.length === 0;
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-      <div className="min-w-0 flex-1">
-        <h1 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] tracking-tight">{title}</h1>
-        {subtitle && <p className="text-sm text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:truncate">{subtitle}</p>}
+    <div className="space-y-2">
+      {breadcrumbs.length > 0 && (
+        <Breadcrumbs items={breadcrumbs} testId="page-breadcrumbs" className="hidden md:flex" />
+      )}
+      {shouldShowBack && (
+        <Link
+          href={homeHref}
+          data-testid="page-back-link"
+          className="hidden md:inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-text)] hover:opacity-80 touch-manipulation -ml-0.5"
+        >
+          <ChevronLeft className="w-4 h-4 shrink-0" />
+          <span>{tCommon("backTo", { page: homeLabel })}</span>
+        </Link>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] tracking-tight">{title}</h1>
+          {subtitle && (
+            <p className="text-sm text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:truncate">{subtitle}</p>
+          )}
+        </div>
+        {action && <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">{action}</div>}
       </div>
-      {action && <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">{action}</div>}
     </div>
   );
 }

@@ -147,6 +147,52 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   return body.data;
 }
 
+async function multipartRequest<T>(path: string, formData: FormData, retried = false): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (typeof document !== "undefined") {
+    const localeMatch = document.cookie.match(/(?:^|; )NEXT_LOCALE=([^;]*)/);
+    const locale = localeMatch ? decodeURIComponent(localeMatch[1]) : "en-IN";
+    headers["Accept-Language"] = locale;
+  }
+
+  const res = await fetch(`${apiBase()}${path}`, { method: "POST", headers, body: formData });
+  const text = await res.text();
+  let body: ApiWrapper<T> & { message?: string } = { success: false, data: undefined as T };
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(res.ok ? "Invalid server response" : `Request failed (${res.status})`);
+    }
+  }
+
+  if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
+    if (!retried) {
+      const newToken = await refreshAccessToken();
+      if (newToken) return multipartRequest<T>(path, formData, true);
+    }
+    await handleSessionExpired();
+    throw new Error("Session expired. Please sign in again.");
+  }
+
+  if (!res.ok) {
+    throw new Error(body.message || `Request failed (${res.status})`);
+  }
+  return body.data;
+}
+
+export async function fetchAttendancePhotoBlob(recordId: string, type: "entry" | "exit" = "entry"): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${apiBase()}/api/v1/attendance/${recordId}/photo?type=${type}`, { headers });
+  if (!res.ok) throw new Error("Photo unavailable");
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+
 /** Refresh access token if expired or near expiry. Call on app load. */
 export async function ensureValidSession(): Promise<boolean> {
   const user = getStoredUser();
@@ -285,6 +331,17 @@ export const api = {
       body: JSON.stringify({ biometricId }),
     }),
 
+  verifiedPunch: (data: VerifiedPunchRequest, photo: Blob) => {
+    const form = new FormData();
+    form.append("staffId", data.staffId);
+    if (data.action) form.append("action", data.action);
+    if (data.latitude != null) form.append("latitude", String(data.latitude));
+    if (data.longitude != null) form.append("longitude", String(data.longitude));
+    if (data.accuracyMeters != null) form.append("accuracyMeters", String(data.accuracyMeters));
+    form.append("photo", photo, "punch.jpg");
+    return multipartRequest<PunchResult>("/api/v1/attendance/verified/punch", form);
+  },
+
   manualAttendance: (data: ManualAttendanceRequest) =>
     request<AttendanceRecord>("/api/v1/attendance/manual", {
       method: "POST",
@@ -293,6 +350,7 @@ export const api = {
 
   getAttendance: (params?: {
     branchId?: string;
+    staffId?: string;
     staff?: string;
     branch?: string;
     status?: string;
@@ -303,6 +361,7 @@ export const api = {
   }) => {
     const search = new URLSearchParams();
     if (params?.branchId) search.set("branchId", params.branchId);
+    if (params?.staffId) search.set("staffId", params.staffId);
     if (params?.staff) search.set("staff", params.staff);
     if (params?.branch) search.set("branch", params.branch);
     if (params?.status) search.set("status", params.status);
@@ -313,6 +372,11 @@ export const api = {
     const q = search.toString() ? `?${search.toString()}` : "";
     return request<PageResult<AttendanceRecord>>(`/api/v1/attendance${q}`);
   },
+
+  resetAttendanceData: () =>
+    request<{ deletedRecords: number }>("/api/v1/attendance/reset", { method: "DELETE" }),
+
+  getBranch: (branchId: string) => request<Branch>(`/api/v1/branches/${branchId}`),
 
   getTodayAttendance: (branchId: string) =>
     request<AttendanceRecord[]>(`/api/v1/attendance/today?branchId=${branchId}`),
@@ -359,6 +423,27 @@ export const api = {
 
   deactivateBranch: (branchId: string) =>
     request<void>(`/api/v1/branches/${branchId}`, { method: "DELETE" }),
+
+  updateBranchGeofence: (branchId: string, data: UpdateBranchGeofenceRequest) =>
+    request<Branch>(`/api/v1/branches/${branchId}/geofence`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  createAttendanceIncident: (data: CreateAttendanceIncidentRequest) =>
+    request<AttendanceIncident>("/api/v1/attendance/incidents", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getAttendanceIncidents: (staffId: string, page = 0, size = 20) => {
+    const params = new URLSearchParams({
+      staffId,
+      page: String(page),
+      size: String(size),
+    });
+    return request<PageResult<AttendanceIncident>>(`/api/v1/attendance/incidents?${params}`);
+  },
 
   getBranchTargetPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
     const params = new URLSearchParams();
@@ -853,6 +938,10 @@ export interface Branch {
   phone?: string;
   openTime?: string;
   closeTime?: string;
+  latitude?: number;
+  longitude?: number;
+  geofenceRadiusMeters?: number;
+  attendanceGraceMinutes?: number;
   monthlySalesTarget?: number;
   status?: string;
   createdAt?: string;
@@ -1038,6 +1127,10 @@ export interface ServiceContributionResponse {
   totalPages: number;
 }
 
+export type GeoStatus = "IN_GEOFENCE" | "OUT_OF_GEOFENCE" | "GPS_UNAVAILABLE";
+export type AttendanceMethod = "BIOMETRIC" | "MANUAL" | "VERIFIED";
+export type IncidentType = "NOTE" | "PENALTY" | "IMPROVEMENT";
+
 export interface AttendanceRecord {
   id: string;
   staffId: string;
@@ -1047,17 +1140,45 @@ export interface AttendanceRecord {
   workDate: string;
   entryTime?: string;
   exitTime?: string;
-  entryMethod?: "BIOMETRIC" | "MANUAL";
-  exitMethod?: "BIOMETRIC" | "MANUAL";
+  entryMethod?: AttendanceMethod;
+  exitMethod?: AttendanceMethod;
   manualReason?: string;
   hoursWorked?: number;
   status: string;
+  entryGeoStatus?: GeoStatus;
+  exitGeoStatus?: GeoStatus;
+  entryVerified?: boolean;
+  exitVerified?: boolean;
+  hasEntryPhoto?: boolean;
+  hasExitPhoto?: boolean;
+  late?: boolean;
+  earlyExit?: boolean;
+  lateMinutes?: number | null;
+  earlyExitMinutes?: number | null;
+  complianceFlags?: string[];
+  branchLatitude?: number | null;
+  branchLongitude?: number | null;
+  geofenceRadiusMeters?: number | null;
+  entryLatitude?: number | null;
+  entryLongitude?: number | null;
+  exitLatitude?: number | null;
+  exitLongitude?: number | null;
+  entryDistanceMeters?: number | null;
+  exitDistanceMeters?: number | null;
 }
 
 export interface PunchResult {
   action: "CHECK_IN" | "CHECK_OUT";
   record: AttendanceRecord;
   message: string;
+}
+
+export interface VerifiedPunchRequest {
+  staffId: string;
+  action?: "CHECK_IN" | "CHECK_OUT";
+  latitude?: number;
+  longitude?: number;
+  accuracyMeters?: number;
 }
 
 export interface ManualAttendanceRequest {
@@ -1090,6 +1211,36 @@ export interface CreateLeaveRequest {
   reason?: string;
 }
 
+export interface AttendanceIncident {
+  id: string;
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  attendanceRecordId?: string;
+  workDate?: string;
+  type: IncidentType;
+  note: string;
+  penaltyAmount?: number;
+  createdByUserId?: string;
+  createdAt?: string;
+}
+
+export interface CreateAttendanceIncidentRequest {
+  staffId: string;
+  attendanceRecordId?: string;
+  workDate?: string;
+  type: IncidentType;
+  note: string;
+  penaltyAmount?: number;
+}
+
+export interface UpdateBranchGeofenceRequest {
+  latitude: number;
+  longitude: number;
+  geofenceRadiusMeters?: number;
+  attendanceGraceMinutes?: number;
+}
+
 export interface AttendanceDashboard {
   totalStaff: number;
   presentToday: number;
@@ -1106,7 +1257,10 @@ export interface AttendanceDashboard {
     totalHours: number;
     avgHoursPerDay: number;
     lateArrivals: number;
+    earlyExits: number;
+    geoFlags: number;
     performanceScore: number;
+    complianceScore: number;
   }[];
   recentRecords: AttendanceRecord[];
   leaves: LeaveRecord[];

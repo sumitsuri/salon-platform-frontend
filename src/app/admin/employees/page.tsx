@@ -86,7 +86,9 @@ export default function AdminEmployeesPage() {
   const [error, setError] = useState("");
 
   const range = monthRange();
-  const attendanceRange = range;
+  const [attendanceStart, setAttendanceStart] = useState(range.start);
+  const [attendanceEnd, setAttendanceEnd] = useState(range.end);
+  const attendanceRange = { start: attendanceStart, end: attendanceEnd };
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -119,11 +121,11 @@ export default function AdminEmployeesPage() {
   });
 
   const { data: attendanceDashboard, isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance-dashboard", branchFilter, range.start, range.end],
+    queryKey: ["attendance-dashboard", branchFilter, attendanceRange.start, attendanceRange.end],
     queryFn: () =>
       api.getAttendanceDashboard({
-        startDate: range.start,
-        endDate: range.end,
+        startDate: attendanceRange.start,
+        endDate: attendanceRange.end,
         branchIds: branchFilter ? [branchFilter] : undefined,
       }),
     enabled: sectionTab === "attendance",
@@ -280,13 +282,37 @@ export default function AdminEmployeesPage() {
       </Card>
         </>
       ) : (
-        <AttendanceDashboardSection
-          data={attendanceDashboard}
-          loading={attendanceLoading}
-          startDate={attendanceRange.start}
-          endDate={attendanceRange.end}
-          showPageHeader={false}
-        />
+        <>
+          <Card className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <Field label={t("attendanceFrom")}>
+                <input
+                  type="date"
+                  value={attendanceStart}
+                  onChange={(e) => setAttendanceStart(e.target.value)}
+                  className={inputClass}
+                  data-testid="attendance-date-from"
+                />
+              </Field>
+              <Field label={t("attendanceTo")}>
+                <input
+                  type="date"
+                  value={attendanceEnd}
+                  onChange={(e) => setAttendanceEnd(e.target.value)}
+                  className={inputClass}
+                  data-testid="attendance-date-to"
+                />
+              </Field>
+            </div>
+          </Card>
+          <AttendanceDashboardSection
+            data={attendanceDashboard}
+            loading={attendanceLoading}
+            startDate={attendanceRange.start}
+            endDate={attendanceRange.end}
+            showPageHeader={false}
+          />
+        </>
       )}
 
       {sectionTab === "targets" && (

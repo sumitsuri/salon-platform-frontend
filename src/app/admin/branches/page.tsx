@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, ChevronRight, Pencil, Plus, Target, Trash2, UserPlus, Users } from "lucide-react";
+import { Building2, ChevronRight, MapPin, Pencil, Plus, Target, Trash2, UserPlus, Users } from "lucide-react";
 import {
   api,
   Branch,
@@ -11,6 +11,7 @@ import {
   CreatePlatformUserRequest,
   PlatformUser,
   UpdateBranchRequest,
+  UpdateBranchGeofenceRequest,
   UpdatePlatformUserRequest,
   UpdateTenantRequest,
   UserRole,
@@ -286,8 +287,8 @@ export default function AdminBranchesPage() {
                   const perf = perfByBranch.get(b.id);
                   const isSelected = branchDrawer && branchDrawer.mode !== "create" && branchDrawer.branch.id === b.id;
                   return (
+                    <div key={b.id} data-testid="branch-list-row">
                     <ListRow
-                      key={b.id}
                       title={b.name}
                       subtitle={[
                         b.code,
@@ -303,6 +304,7 @@ export default function AdminBranchesPage() {
                         </div>
                       }
                     />
+                    </div>
                   );
                 })}
               </div>
@@ -570,6 +572,107 @@ function BranchDetailView({
           value={branch.monthlySalesTarget != null ? formatCurrency(branch.monthlySalesTarget) : undefined}
         />
       </div>
+
+      <BranchGeofencePanel branch={branch} />
+    </div>
+  );
+}
+
+function BranchGeofencePanel({ branch }: { branch: Branch }) {
+  const t = useTranslations("admin.organization");
+  const tCommon = useTranslations("common");
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [latitude, setLatitude] = useState(branch.latitude?.toString() ?? "");
+  const [longitude, setLongitude] = useState(branch.longitude?.toString() ?? "");
+  const [radius, setRadius] = useState(branch.geofenceRadiusMeters?.toString() ?? "150");
+  const [grace, setGrace] = useState(branch.attendanceGraceMinutes?.toString() ?? "15");
+
+  useEffect(() => {
+    setLatitude(branch.latitude?.toString() ?? "");
+    setLongitude(branch.longitude?.toString() ?? "");
+    setRadius(branch.geofenceRadiusMeters?.toString() ?? "150");
+    setGrace(branch.attendanceGraceMinutes?.toString() ?? "15");
+  }, [branch]);
+
+  const geofenceMutation = useMutation({
+    mutationFn: (data: UpdateBranchGeofenceRequest) => api.updateBranchGeofence(branch.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["branches"] });
+      setEditing(false);
+    },
+  });
+
+  function captureLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setLatitude(String(pos.coords.latitude));
+      setLongitude(String(pos.coords.longitude));
+    });
+  }
+
+  return (
+    <div className="space-y-3" data-testid="branch-geofence-panel">
+      <div className="flex items-center justify-between gap-2">
+        <SectionTitle>{t("geofenceTitle")}</SectionTitle>
+        {!editing && (
+          <button type="button" onClick={() => setEditing(true)} className="text-xs font-semibold text-[var(--brand-text)]">
+            {tCommon("edit")}
+          </button>
+        )}
+      </div>
+
+      {!editing ? (
+        <div className="grid grid-cols-2 gap-4">
+          <DetailField label={t("latitude")} value={branch.latitude?.toFixed(6)} />
+          <DetailField label={t("longitude")} value={branch.longitude?.toFixed(6)} />
+          <DetailField label={t("geofenceRadius")} value={branch.geofenceRadiusMeters ? `${branch.geofenceRadiusMeters}m` : undefined} />
+          <DetailField label={t("attendanceGrace")} value={branch.attendanceGraceMinutes != null ? `${branch.attendanceGraceMinutes} min` : undefined} />
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            geofenceMutation.mutate({
+              latitude: Number(latitude),
+              longitude: Number(longitude),
+              geofenceRadiusMeters: radius ? Number(radius) : undefined,
+              attendanceGraceMinutes: grace ? Number(grace) : undefined,
+            });
+          }}
+          className="space-y-3"
+        >
+          <button type="button" onClick={captureLocation} className={`${btnSecondary} w-full text-sm`}>
+            <MapPin className="w-4 h-4" />
+            {t("useMyLocation")}
+          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("latitude")}>
+              <input value={latitude} onChange={(e) => setLatitude(e.target.value)} className={inputClass} required type="number" step="any" />
+            </Field>
+            <Field label={t("longitude")}>
+              <input value={longitude} onChange={(e) => setLongitude(e.target.value)} className={inputClass} required type="number" step="any" />
+            </Field>
+            <Field label={t("geofenceRadius")}>
+              <input value={radius} onChange={(e) => setRadius(e.target.value)} className={inputClass} type="number" min={50} max={500} />
+            </Field>
+            <Field label={t("attendanceGrace")}>
+              <input value={grace} onChange={(e) => setGrace(e.target.value)} className={inputClass} type="number" min={0} max={120} />
+            </Field>
+          </div>
+          {geofenceMutation.error && (
+            <AlertBanner variant="error">{(geofenceMutation.error as Error).message}</AlertBanner>
+          )}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setEditing(false)} className={`${btnSecondary} flex-1`}>
+              {tCommon("cancel")}
+            </button>
+            <button type="submit" disabled={geofenceMutation.isPending} className={`${btnPrimary} flex-1`}>
+              {geofenceMutation.isPending ? tCommon("saving") : t("saveGeofence")}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
@@ -599,6 +702,8 @@ function BranchForm({
   const [monthlySalesTarget, setMonthlySalesTarget] = useState(
     initial?.monthlySalesTarget?.toString() ?? ""
   );
+  const [openTime, setOpenTime] = useState(initial?.openTime ?? "09:00");
+  const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "21:00");
 
   return (
     <form
@@ -611,6 +716,8 @@ function BranchForm({
           societyDefault: societyDefault || undefined,
           phone: phone || undefined,
           gstin: gstin || undefined,
+          openTime: openTime || undefined,
+          closeTime: closeTime || undefined,
           monthlySalesTarget: monthlySalesTarget ? Number(monthlySalesTarget) : undefined,
         });
       }}
@@ -641,6 +748,12 @@ function BranchForm({
         </Field>
         <Field label={t("gstin")}>
           <input value={gstin} onChange={(e) => setGstin(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label={t("openTime")}>
+          <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label={t("closeTime")}>
+          <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className={inputClass} />
         </Field>
         <Field label={t("monthlySalesTargetField")}>
           <input

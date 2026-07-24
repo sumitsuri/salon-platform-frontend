@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
-import { Users, UserCheck, CalendarOff, UserX, Clock } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Users, UserCheck, CalendarOff, UserX, Clock, ChevronRight } from "lucide-react";
 import { MetricChart } from "@/components/LineChart";
-import { api, AttendanceDashboard as AttendanceData } from "@/lib/api";
+import { api, AttendanceDashboard as AttendanceData, AttendanceRecord } from "@/lib/api";
+import { formatCoords, formatPunchGeo } from "@/lib/attendance-geo";
 import { ATTENDANCE_CHART_COLORS } from "@/lib/chart-colors";
+import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import {
   Card,
   StatCard,
@@ -17,6 +19,11 @@ import {
   FilterableTable,
   TablePagination,
   DEFAULT_PAGE_SIZE,
+  SideSheet,
+  inputClass,
+  selectClass,
+  btnPrimary,
+  btnSecondary,
 } from "@/components/ui";
 
 interface Props {
@@ -42,14 +49,19 @@ export function AttendanceDashboardSection({
   const locale = useLocale();
   const [staffPage, setStaffPage] = useState(0);
   const [staffSize, setStaffSize] = useState(DEFAULT_PAGE_SIZE);
-  const [logFilters, setLogFilters] = useState({ date: "", staff: "", branch: "", status: "" });
+  const [logFilters, setLogFilters] = useState({ date: "", staffId: "", branchId: "", status: "", compliance: "" });
   const [logDebounced, setLogDebounced] = useState(logFilters);
   const [logPage, setLogPage] = useState(0);
   const [logSize, setLogSize] = useState(DEFAULT_PAGE_SIZE);
-  const [leaveFilters, setLeaveFilters] = useState({ staff: "", branch: "", status: "" });
+  const [leaveFilters, setLeaveFilters] = useState({ staffId: "", branchId: "", status: "" });
   const [leaveDebounced, setLeaveDebounced] = useState(leaveFilters);
   const [leavePage, setLeavePage] = useState(0);
   const [leaveSize, setLeaveSize] = useState(DEFAULT_PAGE_SIZE);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [incidentType, setIncidentType] = useState<"NOTE" | "PENALTY" | "IMPROVEMENT">("NOTE");
+  const [incidentNote, setIncidentNote] = useState("");
+  const [incidentPenalty, setIncidentPenalty] = useState("");
+  const queryClient = useQueryClient();
 
   function formatTime(iso?: string) {
     if (!iso) return "—";
@@ -58,6 +70,14 @@ export function AttendanceDashboardSection({
 
   function formatDate(iso: string) {
     return new Date(iso + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" });
+  }
+
+  function formatDuration(minutes?: number | null) {
+    if (minutes == null || minutes <= 0) return "—";
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
   useEffect(() => {
@@ -78,14 +98,36 @@ export function AttendanceDashboardSection({
     setLeavePage(0);
   }, [leaveDebounced, leaveSize, startDate, endDate]);
 
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => api.getBranches(),
+    enabled: showLeaveAndLogs,
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employees-all"],
+    queryFn: () => api.getAllStaff(),
+    enabled: showLeaveAndLogs,
+  });
+
+  const staffOptions = useMemo(
+    () => employees.map((e) => ({ value: e.id, label: e.name })),
+    [employees]
+  );
+
+  const branchOptions = useMemo(
+    () => branches.map((b) => ({ value: b.id, label: b.name })),
+    [branches]
+  );
+
   const { data: logData, isLoading: logLoading } = useQuery({
     queryKey: ["attendance-log", startDate, endDate, logDebounced, logPage, logSize],
     queryFn: () =>
       api.getAttendance({
         startDate: logDebounced.date || startDate,
         endDate: logDebounced.date || endDate,
-        staff: logDebounced.staff || undefined,
-        branch: logDebounced.branch || undefined,
+        staffId: logDebounced.staffId || undefined,
+        branchId: logDebounced.branchId || undefined,
         status: logDebounced.status || undefined,
         page: logPage,
         size: logSize,
@@ -95,16 +137,23 @@ export function AttendanceDashboardSection({
 
   const { data: leaveData, isLoading: leaveLoading } = useQuery({
     queryKey: ["leave-log", startDate, endDate, leaveDebounced, leavePage, leaveSize],
-    queryFn: () =>
-      api.getLeaves({
+    queryFn: () => {
+      const staff = leaveDebounced.staffId
+        ? employees.find((e) => e.id === leaveDebounced.staffId)?.name
+        : undefined;
+      const branch = leaveDebounced.branchId
+        ? branches.find((b) => b.id === leaveDebounced.branchId)?.name
+        : undefined;
+      return api.getLeaves({
         startDate,
         endDate,
-        staff: leaveDebounced.staff || undefined,
-        branch: leaveDebounced.branch || undefined,
+        staff,
+        branch,
         status: leaveDebounced.status || undefined,
         page: leavePage,
         size: leaveSize,
-      }),
+      });
+    },
     enabled: showLeaveAndLogs && !!startDate && !!endDate,
   });
 
@@ -132,6 +181,40 @@ export function AttendanceDashboardSection({
   const staffSummaries = data?.staffSummaries ?? [];
   const staffTotalPages = Math.ceil(staffSummaries.length / staffSize) || 0;
   const staffSlice = staffSummaries.slice(staffPage * staffSize, staffPage * staffSize + staffSize);
+  const selectedStaff = staffSummaries.find((s) => s.staffId === selectedStaffId);
+
+  const { data: incidentData, isLoading: incidentsLoading } = useQuery({
+    queryKey: ["attendance-incidents", selectedStaffId],
+    queryFn: () => api.getAttendanceIncidents(selectedStaffId!, 0, 20),
+    enabled: !!selectedStaffId,
+  });
+
+  const incidentMutation = useMutation({
+    mutationFn: () =>
+      api.createAttendanceIncident({
+        staffId: selectedStaffId!,
+        type: incidentType,
+        note: incidentNote,
+        penaltyAmount: incidentType === "PENALTY" && incidentPenalty ? Number(incidentPenalty) : undefined,
+      }),
+    onSuccess: () => {
+      setIncidentNote("");
+      setIncidentPenalty("");
+      queryClient.invalidateQueries({ queryKey: ["attendance-incidents", selectedStaffId] });
+    },
+  });
+
+  const staffRecords = useMemo(() => {
+    if (!selectedStaffId || !data?.recentRecords) return [] as AttendanceRecord[];
+    return data.recentRecords.filter((r) => r.staffId === selectedStaffId);
+  }, [selectedStaffId, data?.recentRecords]);
+
+  const logRecords = useMemo(() => {
+    const rows = logData?.content ?? [];
+    if (logFilters.compliance === "late") return rows.filter((r) => r.late);
+    if (logFilters.compliance === "early") return rows.filter((r) => r.earlyExit);
+    return rows;
+  }, [logData?.content, logFilters.compliance]);
 
   if (loading) {
     return (
@@ -143,7 +226,6 @@ export function AttendanceDashboardSection({
 
   if (!data) return null;
 
-  const logRecords = logData?.content ?? [];
   const leaveRecords = leaveData?.content ?? [];
 
   return (
@@ -192,11 +274,17 @@ export function AttendanceDashboardSection({
               { label: t("leave"), filter: { type: "none" } },
               { label: t("hours"), filter: { type: "none" } },
               { label: t("late"), filter: { type: "none" } },
+              { label: t("geoFlags"), filter: { type: "none" } },
+              { label: t("compliance"), filter: { type: "none" } },
               { label: t("score"), filter: { type: "none" } },
             ]}
           >
             {staffSlice.map((s) => (
-              <tr key={s.staffId} className="border-t border-[var(--border)]">
+              <tr
+                key={s.staffId}
+                className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--surface-muted)]/60"
+                onClick={() => setSelectedStaffId(s.staffId)}
+              >
                 <td className="px-4 py-2.5">
                   <p className="font-medium">{s.staffName}</p>
                   <p className="text-xs text-[var(--text-tertiary)]">{s.branchName}</p>
@@ -205,6 +293,8 @@ export function AttendanceDashboardSection({
                 <td className="px-4 py-2.5">{s.daysLeave}</td>
                 <td className="px-4 py-2.5">{s.totalHours}h</td>
                 <td className="px-4 py-2.5">{s.lateArrivals}</td>
+                <td className="px-4 py-2.5">{s.geoFlags}</td>
+                <td className="px-4 py-2.5 font-semibold text-[var(--brand-text)]">{s.complianceScore}</td>
                 <td className="px-4 py-2.5 font-semibold">{s.performanceScore}</td>
               </tr>
             ))}
@@ -212,12 +302,23 @@ export function AttendanceDashboardSection({
         </div>
         <div className="md:hidden divide-y divide-[var(--border)]">
           {staffSlice.map((s) => (
-            <ListRow
+            <button
               key={s.staffId}
-              title={s.staffName}
-              subtitle={`${s.branchName} · ${t("daysHours", { days: s.daysPresent, hours: s.totalHours })}`}
-              trailing={<span className="text-sm font-bold text-[var(--brand-text)]">{s.performanceScore}</span>}
-            />
+              type="button"
+              className="w-full text-left"
+              onClick={() => setSelectedStaffId(s.staffId)}
+            >
+              <ListRow
+                title={s.staffName}
+                subtitle={`${s.branchName} · ${t("complianceScore", { score: s.complianceScore })}`}
+                trailing={
+                  <div className="flex items-center gap-1 text-sm font-bold text-[var(--brand-text)]">
+                    {s.performanceScore}
+                    <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                  </div>
+                }
+              />
+            </button>
           ))}
         </div>
         <TablePagination
@@ -240,18 +341,28 @@ export function AttendanceDashboardSection({
               <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("leaveRecords")}</h3>
             </div>
             <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-[var(--border)]">
-              <input
-                placeholder={t("staff")}
-                value={leaveFilters.staff}
-                onChange={(e) => setLeaveFilters((f) => ({ ...f, staff: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-              />
-              <input
-                placeholder={tCommon("branch")}
-                value={leaveFilters.branch}
-                onChange={(e) => setLeaveFilters((f) => ({ ...f, branch: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-              />
+              <select
+                value={leaveFilters.staffId}
+                onChange={(e) => setLeaveFilters((f) => ({ ...f, staffId: e.target.value }))}
+                className={selectClass}
+                data-testid="leave-staff-filter"
+              >
+                <option value="">{t("allStaff")}</option>
+                {staffOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <select
+                value={leaveFilters.branchId}
+                onChange={(e) => setLeaveFilters((f) => ({ ...f, branchId: e.target.value }))}
+                className={selectClass}
+                data-testid="leave-branch-filter"
+              >
+                <option value="">{t("allBranches")}</option>
+                {branchOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
               <select
                 value={leaveFilters.status}
                 onChange={(e) => setLeaveFilters((f) => ({ ...f, status: e.target.value }))}
@@ -295,6 +406,19 @@ export function AttendanceDashboardSection({
           <Card padding={false}>
             <div className="px-4 py-3.5 border-b border-[var(--border)]">
               <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("entryExitLog")}</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("entryExitLogHint")}</p>
+            </div>
+            <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 border-b border-[var(--border)]">
+              <select
+                value={logFilters.compliance}
+                onChange={(e) => setLogFilters((f) => ({ ...f, compliance: e.target.value }))}
+                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
+                data-testid="attendance-compliance-filter"
+              >
+                <option value="">{t("allRecords")}</option>
+                <option value="late">{t("lateOnly")}</option>
+                <option value="early">{t("earlyExitOnly")}</option>
+              </select>
             </div>
             {logLoading ? (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
@@ -316,24 +440,30 @@ export function AttendanceDashboardSection({
                       {
                         label: t("staff"),
                         filter: {
-                          type: "text",
-                          placeholder: t("staff"),
-                          value: logFilters.staff,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, staff: v })),
+                          type: "select",
+                          value: logFilters.staffId,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, staffId: v })),
+                          options: [{ value: "", label: t("allStaff") }, ...staffOptions],
                         },
                       },
                       {
                         label: tCommon("branch"),
                         filter: {
-                          type: "text",
-                          placeholder: tCommon("branch"),
-                          value: logFilters.branch,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, branch: v })),
+                          type: "select",
+                          value: logFilters.branchId,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, branchId: v })),
+                          options: [{ value: "", label: t("allBranches") }, ...branchOptions],
                         },
                       },
                       { label: t("entry"), filter: { type: "none" } },
                       { label: t("exit"), filter: { type: "none" } },
+                      { label: t("expectedLocation"), filter: { type: "none" } },
+                      { label: t("punchLocation"), filter: { type: "none" } },
+                      { label: t("geofenceCheck"), filter: { type: "none" } },
+                      { label: t("lateBy"), filter: { type: "none" } },
+                      { label: t("earlyBy"), filter: { type: "none" } },
                       { label: t("hours"), filter: { type: "none" } },
+                      { label: t("photo"), filter: { type: "none" } },
                       {
                         label: tCommon("status"),
                         filter: {
@@ -357,7 +487,43 @@ export function AttendanceDashboardSection({
                         <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.branchName}</td>
                         <td className="px-4 py-2.5">{formatTime(r.entryTime)}</td>
                         <td className="px-4 py-2.5">{formatTime(r.exitTime)}</td>
+                        <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
+                          {formatCoords(r.branchLatitude, r.branchLongitude)}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
+                          <div>{t("checkInShort")}: {formatCoords(r.entryLatitude, r.entryLongitude)}</div>
+                          <div>{t("checkOutShort")}: {formatCoords(r.exitLatitude, r.exitLongitude)}</div>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs">
+                          <div className={r.entryGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
+                            {t("checkInShort")}: {formatPunchGeo(r, "entry")}
+                          </div>
+                          <div className={r.exitGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
+                            {t("checkOutShort")}: {formatPunchGeo(r, "exit")}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {r.late ? (
+                            <span className="text-amber-700 font-medium">{formatDuration(r.lateMinutes)}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {r.earlyExit ? (
+                            <span className="text-red-700 font-medium">{formatDuration(r.earlyExitMinutes)}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</td>
+                        <td className="px-4 py-2.5">
+                          {r.hasEntryPhoto ? (
+                            <AttendancePhotoThumb recordId={r.id} type="entry" className="w-10 h-10" />
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">
                           <StatusBadge status={r.status} />
                         </td>
@@ -370,7 +536,7 @@ export function AttendanceDashboardSection({
                     <ListRow
                       key={r.id}
                       title={r.staffName}
-                      subtitle={`${formatDate(r.workDate)} · ${r.branchName}`}
+                      subtitle={`${formatDate(r.workDate)} · ${r.branchName}${r.late ? ` · ${t("lateByShort", { duration: formatDuration(r.lateMinutes) })}` : ""}${r.earlyExit ? ` · ${t("earlyByShort", { duration: formatDuration(r.earlyExitMinutes) })}` : ""}`}
                       trailing={
                         <div className="text-right">
                           <p className="text-xs text-[var(--text-secondary)]">
@@ -398,6 +564,140 @@ export function AttendanceDashboardSection({
           </Card>
         </>
       )}
+
+      <SideSheet
+        open={!!selectedStaff}
+        onClose={() => setSelectedStaffId(null)}
+        title={selectedStaff?.staffName ?? ""}
+        subtitle={selectedStaff ? `${selectedStaff.branchName} · ${t("complianceScore", { score: selectedStaff.complianceScore })}` : undefined}
+        wide
+      >
+        {selectedStaff && (
+          <div className="space-y-5 pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-xl border border-[var(--border)] p-3">
+                <p className="text-xs text-[var(--text-secondary)]">{t("late")}</p>
+                <p className="text-lg font-bold">{selectedStaff.lateArrivals}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--border)] p-3">
+                <p className="text-xs text-[var(--text-secondary)]">{t("earlyExits")}</p>
+                <p className="text-lg font-bold">{selectedStaff.earlyExits}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--border)] p-3">
+                <p className="text-xs text-[var(--text-secondary)]">{t("geoFlags")}</p>
+                <p className="text-lg font-bold">{selectedStaff.geoFlags}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--border)] p-3">
+                <p className="text-xs text-[var(--text-secondary)]">{t("compliance")}</p>
+                <p className="text-lg font-bold text-[var(--brand-text)]">{selectedStaff.complianceScore}</p>
+              </div>
+            </div>
+
+            {staffRecords.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-sm mb-2">{t("recentPunches")}</h4>
+                <div className="space-y-2">
+                  {staffRecords.map((r) => (
+                    <div key={r.id} className="flex gap-3 items-center p-2 rounded-lg border border-[var(--border)]">
+                      {r.hasEntryPhoto && (
+                        <AttendancePhotoThumb recordId={r.id} type="entry" className="w-12 h-12 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{formatDate(r.workDate)}</p>
+                        <p className="text-xs text-[var(--text-secondary)]">
+                          {formatTime(r.entryTime)} – {formatTime(r.exitTime)}
+                        </p>
+                        {(r.late || r.earlyExit || (r.complianceFlags?.length ?? 0) > 0) && (
+                          <p className="text-xs text-amber-700 mt-0.5">
+                            {[r.late && t("lateFlag"), r.earlyExit && t("earlyExitFlag"), ...(r.complianceFlags ?? [])]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </div>
+                      <StatusBadge status={r.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h4 className="font-semibold text-sm mb-2">{t("addIncident")}</h4>
+              <div className="space-y-3">
+                <select
+                  value={incidentType}
+                  onChange={(e) => setIncidentType(e.target.value as typeof incidentType)}
+                  className={selectClass}
+                >
+                  <option value="NOTE">{t("incidentNote")}</option>
+                  <option value="PENALTY">{t("incidentPenalty")}</option>
+                  <option value="IMPROVEMENT">{t("incidentImprovement")}</option>
+                </select>
+                <textarea
+                  value={incidentNote}
+                  onChange={(e) => setIncidentNote(e.target.value)}
+                  placeholder={t("incidentNotePlaceholder")}
+                  className={`${inputClass} min-h-[80px]`}
+                />
+                {incidentType === "PENALTY" && (
+                  <input
+                    type="number"
+                    min={0}
+                    value={incidentPenalty}
+                    onChange={(e) => setIncidentPenalty(e.target.value)}
+                    placeholder={t("penaltyAmount")}
+                    className={inputClass}
+                  />
+                )}
+                {incidentMutation.error && (
+                  <p className="text-sm text-red-600">{(incidentMutation.error as Error).message}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => incidentMutation.mutate()}
+                  disabled={!incidentNote.trim() || incidentMutation.isPending}
+                  className={`${btnPrimary} w-full`}
+                >
+                  {incidentMutation.isPending ? tCommon("saving") : t("saveIncident")}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-sm mb-2">{t("incidentHistory")}</h4>
+              {incidentsLoading ? (
+                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+              ) : (incidentData?.content.length ?? 0) === 0 ? (
+                <EmptyState title={t("noIncidents")} description={t("noIncidentsDesc")} />
+              ) : (
+                <div className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden">
+                  {incidentData?.content.map((inc) => (
+                    <div key={inc.id} className="px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold uppercase text-[var(--text-secondary)]">{inc.type}</span>
+                        {inc.penaltyAmount != null && (
+                          <span className="text-xs font-medium text-red-700">₹{inc.penaltyAmount}</span>
+                        )}
+                      </div>
+                      <p className="text-sm mt-1">{inc.note}</p>
+                      {inc.createdAt && (
+                        <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
+                          {new Date(inc.createdAt).toLocaleString(locale)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button type="button" onClick={() => setSelectedStaffId(null)} className={`${btnSecondary} w-full`}>
+              {tCommon("cancel")}
+            </button>
+          </div>
+        )}
+      </SideSheet>
     </section>
   );
 }
