@@ -1,6 +1,9 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export const inputClass =
   "w-full px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm";
@@ -173,6 +176,23 @@ export function SegmentedControl<T extends string>({
   );
 }
 
+const STATUS_KEYS = new Set([
+  "COMPLETED",
+  "IN_PROGRESS",
+  "READY_FOR_BILLING",
+  "CANCELLED",
+  "DRAFT",
+  "PRESENT",
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "ABSENT",
+  "HIGH",
+  "MEDIUM",
+  "LOW",
+  "INFO",
+]);
+
 export function StatusBadge({
   status,
   className,
@@ -180,7 +200,8 @@ export function StatusBadge({
   status: string;
   className?: string;
 }) {
-  const normalized = status.replace(/_/g, " ");
+  const t = useTranslations("components.status");
+  const label = STATUS_KEYS.has(status) ? t(status as "COMPLETED") : status.replace(/_/g, " ");
   const style =
     status === "COMPLETED"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800"
@@ -194,7 +215,7 @@ export function StatusBadge({
 
   return (
     <span className={cn("text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border", style, className)}>
-      {normalized}
+      {label}
     </span>
   );
 }
@@ -311,6 +332,7 @@ export function SideSheet({
   footer?: React.ReactNode;
   wide?: boolean;
 }) {
+  const t = useTranslations("components.ui");
   if (!open) return null;
 
   return (
@@ -319,7 +341,7 @@ export function SideSheet({
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
-        aria-label="Close panel"
+        aria-label={t("closePanel")}
       />
       <div
         className={cn(
@@ -338,7 +360,7 @@ export function SideSheet({
             type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] shrink-0"
-            aria-label="Close"
+            aria-label={t("close")}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -413,12 +435,13 @@ export function TablePagination({
   onPageChange: (page: number) => void;
   onSizeChange: (size: number) => void;
 }) {
+  const t = useTranslations("components.ui");
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-muted)]/50">
       <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-        <span>{totalElements} rows</span>
+        <span>{t("rows", { count: totalElements })}</span>
         <span className="text-[var(--text-tertiary)]">·</span>
-        <span>Per page:</span>
+        <span>{t("perPage")}</span>
         <select
           value={size}
           onChange={(e) => onSizeChange(Number(e.target.value))}
@@ -439,7 +462,7 @@ export function TablePagination({
           onClick={() => onPageChange(Math.max(0, page - 1))}
           disabled={page === 0}
           className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)]"
-          aria-label="Previous page"
+          aria-label={t("previousPage")}
         >
           ‹
         </button>
@@ -447,7 +470,7 @@ export function TablePagination({
           onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
           disabled={page >= totalPages - 1}
           className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)]"
-          aria-label="Next page"
+          aria-label={t("nextPage")}
         >
           ›
         </button>
@@ -471,6 +494,7 @@ export function FilterableTable({
   children: React.ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("components.ui");
   const hasFilters = columns.some((c) => c.filter && c.filter.type !== "none");
 
   return (
@@ -494,7 +518,7 @@ export function FilterableTable({
                     <input
                       value={filter.value}
                       onChange={(e) => filter.onChange(e.target.value)}
-                      placeholder={filter.placeholder ?? "Filter"}
+                      placeholder={filter.placeholder ?? t("filter")}
                       className={`${inputClass} py-1.5 text-xs w-full min-w-0`}
                     />
                   )}

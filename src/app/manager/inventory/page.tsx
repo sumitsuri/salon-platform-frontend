@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { ChevronRight, Plus } from "lucide-react";
 import {
   api,
@@ -28,21 +29,7 @@ import {
   btnSecondary,
 } from "@/components/ui";
 
-const MOVEMENT_LABELS: Record<MovementType, string> = {
-  RESTOCK: "Restock",
-  USAGE: "Usage",
-  WASTAGE: "Wastage",
-  RETAIL_SALE: "Retail sale",
-  ADJUSTMENT: "Adjustment",
-};
-
 const LOG_TYPES: MovementType[] = ["RESTOCK", "USAGE", "WASTAGE", "RETAIL_SALE"];
-
-const CATEGORY_LABELS: Record<ProductCategory, string> = {
-  CONSUMABLE: "Consumable",
-  RETAIL: "Retail",
-  EQUIPMENT: "Equipment",
-};
 
 type DrawerState =
   | { mode: "create"; productId?: string }
@@ -59,6 +46,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function ManagerInventoryPage() {
+  const t = useTranslations("manager.inventory");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
@@ -106,22 +95,22 @@ export default function ManagerInventoryPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Inventory" subtitle={user?.branchName ?? "Branch stock"} />
+      <PageHeader title={t("title")} subtitle={user?.branchName ?? t("subtitleDefault")} />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
       <button type="button" onClick={() => setDrawer({ mode: "create" })} className={btnPrimary}>
-        <Plus className="w-4 h-4" /> Log usage / restock
+        <Plus className="w-4 h-4" /> {t("logUsageRestock")}
       </button>
 
       <Card padding={false}>
         <div className="px-4 py-3 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-sm">Current stock</h2>
+          <h2 className="font-semibold text-sm">{t("currentStock")}</h2>
         </div>
         {stockLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">Loading...</p>
+          <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
         ) : stock.length === 0 ? (
-          <EmptyState title="No stock" description="Ask CEO to set up products, then log a restock" />
+          <EmptyState title={t("noStockTitle")} description={t("noStockDesc")} />
         ) : (
           <div className="divide-y divide-[var(--border)]">
             {stock.map((s) => (
@@ -137,7 +126,7 @@ export default function ManagerInventoryPage() {
                   trailing={
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-bold ${s.outOfStock ? "text-red-600" : s.lowStock ? "text-amber-600" : ""}`}>
-                        {s.outOfStock ? "Out" : s.lowStock ? "Low" : formatCurrency(s.stockValue)}
+                        {s.outOfStock ? t("out") : s.lowStock ? t("low") : formatCurrency(s.stockValue)}
                       </span>
                       <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
                     </div>
@@ -151,26 +140,17 @@ export default function ManagerInventoryPage() {
 
       <Card padding={false}>
         <div className="px-4 py-3 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-sm">This month&apos;s movements</h2>
+          <h2 className="font-semibold text-sm">{t("thisMonthMovements")}</h2>
         </div>
         {movLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">Loading...</p>
+          <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
         ) : movements.length === 0 ? (
-          <EmptyState title="No movements yet" description="Log daily usage or restock receipts" />
+          <EmptyState title={t("noMovementsTitle")} description={t("noMovementsDesc")} />
         ) : (
           <div className="divide-y divide-[var(--border)]">
             {movements.map((m) => (
               <button key={m.id} type="button" onClick={() => setDrawer({ mode: "view", movement: m })} className="w-full text-left">
-                <ListRow
-                  title={`${MOVEMENT_LABELS[m.movementType]} · ${m.productName}`}
-                  subtitle={m.movementDate}
-                  trailing={
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold">{formatCurrency(m.totalCost)}</span>
-                      <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                    </div>
-                  }
-                />
+                <MovementListRow movement={m} />
               </button>
             ))}
           </div>
@@ -202,6 +182,22 @@ export default function ManagerInventoryPage() {
   );
 }
 
+function MovementListRow({ movement }: { movement: InventoryMovementItem }) {
+  const t = useTranslations("manager.inventory.movementTypes");
+  return (
+    <ListRow
+      title={`${t(movement.movementType)} · ${movement.productName}`}
+      subtitle={movement.movementDate}
+      trailing={
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold">{formatCurrency(movement.totalCost)}</span>
+          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+        </div>
+      }
+    />
+  );
+}
+
 function MovementDrawer({
   drawer,
   branchId,
@@ -217,22 +213,24 @@ function MovementDrawer({
   onClose: () => void;
   onCreate: (data: CreateInventoryMovementRequest) => void;
 }) {
+  const t = useTranslations("manager.inventory");
+  const tTypes = useTranslations("manager.inventory.movementTypes");
   const movement = drawer.mode === "view" ? drawer.movement : null;
   const isView = drawer.mode === "view";
 
-  const title = isView ? MOVEMENT_LABELS[movement!.movementType] : "Log movement";
-  const subtitle = isView ? movement!.productName : "Updates branch stock and finance sync";
+  const title = isView ? tTypes(movement!.movementType) : t("logMovement");
+  const subtitle = isView ? movement!.productName : t("logMovementSubtitle");
 
   return (
     <SideSheet open onClose={onClose} title={title} subtitle={subtitle}>
       {isView && movement && (
         <div className="space-y-4">
-          <DetailField label="Product" value={movement.productName} />
-          <DetailField label="Vendor" value={movement.vendorName || "—"} />
-          <DetailField label="Quantity" value={String(movement.quantity)} />
-          <DetailField label="Cost" value={formatCurrency(movement.totalCost)} />
-          <DetailField label="Date" value={movement.movementDate} />
-          {movement.note && <DetailField label="Note" value={movement.note} />}
+          <DetailField label={t("fields.product")} value={movement.productName} />
+          <DetailField label={t("fields.vendor")} value={movement.vendorName || "—"} />
+          <DetailField label={t("fields.quantity")} value={String(movement.quantity)} />
+          <DetailField label={t("fields.cost")} value={formatCurrency(movement.totalCost)} />
+          <DetailField label={t("fields.date")} value={movement.movementDate} />
+          {movement.note && <DetailField label={t("fields.note")} value={movement.note} />}
         </div>
       )}
       {drawer.mode === "create" && (
@@ -264,6 +262,9 @@ function MovementForm({
   onCancel: () => void;
   onSubmit: (data: CreateInventoryMovementRequest) => void;
 }) {
+  const t = useTranslations("manager.inventory");
+  const tTypes = useTranslations("manager.inventory.movementTypes");
+  const tCommon = useTranslations("common");
   const today = new Date().toISOString().slice(0, 10);
   const [productId, setProductId] = useState(presetProductId ?? products[0]?.id ?? "");
   const [movementType, setMovementType] = useState<MovementType>("USAGE");
@@ -285,7 +286,7 @@ function MovementForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-2">
-      <Field label="Product">
+      <Field label={t("fields.product")}>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} className={selectClass} required>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
@@ -294,30 +295,30 @@ function MovementForm({
           ))}
         </select>
       </Field>
-      <Field label="Type">
+      <Field label={t("fields.type")}>
         <select value={movementType} onChange={(e) => setMovementType(e.target.value as MovementType)} className={selectClass}>
-          {LOG_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {MOVEMENT_LABELS[t]}
+          {LOG_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {tTypes(type)}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Quantity">
+      <Field label={t("fields.quantity")}>
         <input type="number" min="0.001" step="0.001" className={inputClass} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
       </Field>
-      <Field label="Date">
+      <Field label={t("fields.date")}>
         <input type="date" className={inputClass} value={movementDate} onChange={(e) => setMovementDate(e.target.value)} required />
       </Field>
-      <Field label="Note">
+      <Field label={t("fields.note")}>
         <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
       <div className="flex gap-2 pt-2">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>
-          Cancel
+          {tCommon("cancel")}
         </button>
         <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
-          {loading ? "Saving..." : "Save"}
+          {loading ? t("saving") : t("save")}
         </button>
       </div>
     </form>
@@ -333,6 +334,8 @@ function StockDrawer({
   onClose: () => void;
   onLogMovement: (productId: string) => void;
 }) {
+  const t = useTranslations("manager.inventory");
+  const tCategories = useTranslations("manager.inventory.categories");
   const s = drawer.item;
 
   return (
@@ -344,27 +347,29 @@ function StockDrawer({
       footer={
         <button type="button" onClick={() => onLogMovement(s.productId)} className={`${btnPrimary} w-full`}>
           <Plus className="w-4 h-4" />
-          Log movement
+          {t("logMovement")}
         </button>
       }
     >
       <div className="space-y-4">
         <div className="rounded-xl border border-[var(--border)] p-4 bg-[var(--surface-muted)]/40">
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-1">On hand</p>
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-1">{t("onHand")}</p>
           <p className="text-2xl font-bold text-[var(--text-primary)]">
             {s.quantity} {s.unit}
           </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Value: {formatCurrency(s.stockValue)}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            {t("value")}: {formatCurrency(s.stockValue)}
+          </p>
           {(s.lowStock || s.outOfStock) && (
             <p className={cn("text-xs font-semibold mt-2", s.outOfStock ? "text-red-600" : "text-amber-600")}>
-              {s.outOfStock ? "Out of stock" : "Low stock"}
+              {s.outOfStock ? t("outOfStock") : t("lowStock")}
             </p>
           )}
         </div>
-        <DetailField label="SKU" value={s.sku || "—"} />
-        <DetailField label="Category" value={CATEGORY_LABELS[s.category]} />
-        <DetailField label="Unit cost" value={formatCurrency(s.unitCost)} />
-        {s.reorderLevel != null && <DetailField label="Reorder level" value={String(s.reorderLevel)} />}
+        <DetailField label={t("fields.sku")} value={s.sku || "—"} />
+        <DetailField label={t("fields.category")} value={tCategories(s.category as ProductCategory)} />
+        <DetailField label={t("fields.unitCost")} value={formatCurrency(s.unitCost)} />
+        {s.reorderLevel != null && <DetailField label={t("fields.reorderLevel")} value={String(s.reorderLevel)} />}
       </div>
     </SideSheet>
   );

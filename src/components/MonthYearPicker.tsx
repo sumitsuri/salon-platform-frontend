@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { selectClass } from "@/components/ui";
-
-const MONTH_NAMES = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
 
 function parseMonth(iso: string) {
   const [year, month] = iso.split("-").map(Number);
@@ -19,9 +15,10 @@ function toMonthIso(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}-01`;
 }
 
-function formatMonthYear(iso: string) {
+function formatMonthYear(iso: string, locale = "en-IN") {
   const { year, month } = parseMonth(iso);
-  return `${MONTH_NAMES[month - 1]} ${year}`;
+  const d = new Date(year, month - 1, 1);
+  return d.toLocaleDateString(locale, { month: "short", year: "numeric" });
 }
 
 function currentMonthIso() {
@@ -50,6 +47,8 @@ export function MonthYearPicker({
   maxMonth = currentMonthIso(),
   minYear = 2020,
 }: MonthYearPickerProps) {
+  const t = useTranslations("components.monthYearPicker");
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { year, month } = parseMonth(value);
@@ -87,7 +86,7 @@ export function MonthYearPicker({
           onClick={() => canGoPrev && onChange(addMonths(value, -1))}
           disabled={!canGoPrev}
           className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-          aria-label="Previous month"
+          aria-label={t("previousMonth")}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -98,7 +97,7 @@ export function MonthYearPicker({
           className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--surface-muted)] transition min-w-[9.5rem]"
         >
           <Calendar className="w-4 h-4 text-[var(--brand-text)] shrink-0" />
-          <span className="text-sm font-semibold text-[var(--text-primary)]">{formatMonthYear(value)}</span>
+          <span className="text-sm font-semibold text-[var(--text-primary)]">{formatMonthYear(value, locale)}</span>
         </button>
 
         <button
@@ -106,7 +105,7 @@ export function MonthYearPicker({
           onClick={() => canGoNext && onChange(addMonths(value, 1))}
           disabled={!canGoNext}
           className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-          aria-label="Next month"
+          aria-label={t("nextMonth")}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -114,7 +113,7 @@ export function MonthYearPicker({
 
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 w-[min(100vw-2rem,18rem)] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lg p-4">
-          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">Year</label>
+          <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">{t("year")}</label>
           <select
             value={year}
             onChange={(e) => {
@@ -131,15 +130,16 @@ export function MonthYearPicker({
             ))}
           </select>
 
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">Month</p>
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">{t("month")}</p>
           <div className="grid grid-cols-3 gap-1.5">
-            {MONTH_NAMES.map((label, idx) => {
+            {Array.from({ length: 12 }, (_, idx) => {
               const m = idx + 1;
+              const label = t(`months.${m}` as "months.1");
               const disabled = isMonthDisabled(year, m);
               const active = m === month;
               return (
                 <button
-                  key={label}
+                  key={m}
                   type="button"
                   disabled={disabled}
                   onClick={() => {
@@ -182,6 +182,7 @@ export function YearPicker({
   minYear = 2020,
   maxYear = parseMonth(currentMonthIso()).year,
 }: YearPickerProps) {
+  const t = useTranslations("components.monthYearPicker");
   const years = useMemo(() => {
     const list: number[] = [];
     for (let y = maxYear; y >= minYear; y--) list.push(y);
@@ -195,7 +196,7 @@ export function YearPicker({
         onClick={() => onChange(value - 1)}
         disabled={value <= minYear}
         className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-        aria-label="Previous year"
+        aria-label={t("previousYear")}
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -215,7 +216,7 @@ export function YearPicker({
         onClick={() => onChange(value + 1)}
         disabled={value >= maxYear}
         className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-        aria-label="Next year"
+        aria-label={t("nextYear")}
       >
         <ChevronRight className="w-4 h-4" />
       </button>

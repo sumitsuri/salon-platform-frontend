@@ -6,6 +6,7 @@ import { ensureValidSession } from "@/lib/api";
 import { getStoredUser, redirectToLogin } from "@/lib/auth-session";
 import { useAuthHydrated, useAuthStore } from "@/lib/auth-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguagePickerModal, LocaleSync } from "@/components/LanguagePickerModal";
 
 function SessionKeeper() {
   const hydrated = useAuthHydrated();
@@ -32,6 +33,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <SessionKeeper />
+        <LocaleSync />
+        <LanguagePickerModal />
         {children}
       </ThemeProvider>
     </QueryClientProvider>

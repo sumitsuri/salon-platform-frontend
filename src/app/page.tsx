@@ -2,9 +2,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
 
 export default function HomePage() {
+  const t = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthHydrated();
   const router = useRouter();
@@ -20,7 +22,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-[var(--text-tertiary)]">Loading...</div>
+      <div className="animate-pulse text-[var(--text-tertiary)]">{t("loading")}</div>
     </div>
   );
 }

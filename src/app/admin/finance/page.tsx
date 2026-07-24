@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -67,14 +68,6 @@ const CATEGORY_STYLES: Record<ExpenditureCategory, string> = {
   MISCELLANEOUS: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700",
 };
 
-const CATEGORY_LABELS: Record<ExpenditureCategory, string> = {
-  EMPLOYEE_SALARY: "Employee salary",
-  RENT: "Rent",
-  PRODUCT_COST: "Product cost",
-  EMPLOYEE_ACCOMMODATION_RENT: "Employee accommodation rent",
-  MISCELLANEOUS: "Miscellaneous",
-};
-
 type DrawerState =
   | { mode: "create"; branchId?: string; expenseMonth?: string }
   | { mode: "view" | "edit"; item: ExpenditureItem };
@@ -104,6 +97,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function AdminFinancePage() {
+  const t = useTranslations("admin.finance");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(currentMonthIso);
   const [tab, setTab] = useState<Tab>("overview");
@@ -265,18 +261,19 @@ export default function AdminFinancePage() {
   };
 
   if (!initialized || branchesLoading) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading finance...</p>;
+    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{t("loading")}</p>;
   }
 
   const brand = pl?.brand;
+  const monthsWithDataCount = monthlySummaries.filter((m) => m.lineCount > 0).length;
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Finance & P&amp;L"
+        title={t("title")}
         subtitle={
           tab === "expenditures" && expView === "months"
-            ? `${selectedYear} expenditure summary`
+            ? t("expenditureSummary", { year: selectedYear })
             : formatMonthYear(selectedMonth)
         }
         action={
@@ -300,53 +297,53 @@ export default function AdminFinancePage() {
           if (t === "expenditures") setExpView("months");
         }}
         options={[
-          { id: "overview", label: "P&L overview" },
-          { id: "expenditures", label: "Expenditures" },
+          { id: "overview", label: t("tabs.overview") },
+          { id: "expenditures", label: t("tabs.expenditures") },
         ]}
       />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
       {selectedBranches.length === 0 ? (
-        <EmptyState title="Select at least one branch" description="Choose branches above to view P&L" />
+        <EmptyState title={tAdmin("selectBranch")} description={t("selectBranchDesc")} />
       ) : tab === "overview" ? (
         plLoading || !pl ? (
-          <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading P&amp;L...</p>
+          <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{t("loadingPl")}</p>
         ) : (
           <div className="space-y-5">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <StatCard label="Revenue" value={formatCurrency(brand!.revenue)} icon={TrendingUp} accent="emerald" />
-              <StatCard label="Total expenses" value={formatCurrency(brand!.totalExpenses)} icon={TrendingDown} accent="amber" />
+              <StatCard label={t("revenue")} value={formatCurrency(brand!.revenue)} icon={TrendingUp} accent="emerald" />
+              <StatCard label={t("totalExpenses")} value={formatCurrency(brand!.totalExpenses)} icon={TrendingDown} accent="amber" />
               <StatCard
-                label="Net P&L"
+                label={t("netPl")}
                 value={formatCurrency(brand!.netProfit)}
                 icon={IndianRupee}
                 accent={brand!.netProfit >= 0 ? "emerald" : "amber"}
               />
-              <StatCard label="Margin" value={`${brand!.marginPercent.toFixed(1)}%`} icon={IndianRupee} accent="violet" />
+              <StatCard label={t("margin")} value={`${brand!.marginPercent.toFixed(1)}%`} icon={IndianRupee} accent="violet" />
             </div>
 
             {plTrendsLoading ? (
-              <p className="text-[var(--text-tertiary)] text-sm py-4 text-center">Loading trends...</p>
+              <p className="text-[var(--text-tertiary)] text-sm py-4 text-center">{t("loadingTrends")}</p>
             ) : plTrends && plTrends.branches.length > 0 ? (
               <FinanceTrends branches={plTrends.branches} periodLabel={plTrends.periodLabel} />
             ) : null}
 
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Brand rollup</h2>
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("brandRollup")}</h2>
                 <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  {formatMonthYear(selectedMonth)} · aggregated across selected branches
+                  {t("aggregatedBranches", { month: formatMonthYear(selectedMonth) })}
                 </p>
               </div>
               <div className="p-4">
                 {brand!.expensesByCategory.length === 0 ? (
-                  <p className="text-sm text-[var(--text-secondary)]">No expenditures recorded for this month.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">{t("noExpenditures")}</p>
                 ) : (
                   <div className="space-y-2">
                     {brand!.expensesByCategory.map((c) => (
                       <div key={c.category} className="flex justify-between text-sm">
-                        <span className="text-[var(--text-secondary)]">{CATEGORY_LABELS[c.category]}</span>
+                        <span className="text-[var(--text-secondary)]">{t(`categories.${c.category}`)}</span>
                         <span className="font-semibold">{formatCurrency(c.amount)}</span>
                       </div>
                     ))}
@@ -357,18 +354,18 @@ export default function AdminFinancePage() {
 
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Branch P&amp;L</h2>
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("branchPl")}</h2>
                 <p className="text-xs text-[var(--text-secondary)] mt-0.5">{formatMonthYear(selectedMonth)}</p>
               </div>
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)]">
-                      <th className="px-4 py-2 font-medium">Branch</th>
-                      <th className="px-4 py-2 font-medium">Revenue</th>
-                      <th className="px-4 py-2 font-medium">Expenses</th>
-                      <th className="px-4 py-2 font-medium">Net P&amp;L</th>
-                      <th className="px-4 py-2 font-medium">Margin</th>
+                      <th className="px-4 py-2 font-medium">{tCommon("branch")}</th>
+                      <th className="px-4 py-2 font-medium">{t("revenue")}</th>
+                      <th className="px-4 py-2 font-medium">{t("expenses")}</th>
+                      <th className="px-4 py-2 font-medium">{t("netPl")}</th>
+                      <th className="px-4 py-2 font-medium">{t("margin")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -391,13 +388,13 @@ export default function AdminFinancePage() {
                   <ListRow
                     key={b.branchId}
                     title={b.branchName}
-                    subtitle={`Rev ${formatCurrency(b.revenue)} · Exp ${formatCurrency(b.totalExpenses)}`}
+                    subtitle={t("revExp", { revenue: formatCurrency(b.revenue), expenses: formatCurrency(b.totalExpenses) })}
                     trailing={
                       <div className="text-right">
                         <p className={cn("text-sm font-bold", b.netProfit >= 0 ? "text-emerald-600" : "text-red-600")}>
                           {formatCurrency(b.netProfit)}
                         </p>
-                        <p className="text-xs text-[var(--text-tertiary)]">{b.marginPercent.toFixed(1)}% margin</p>
+                        <p className="text-xs text-[var(--text-tertiary)]">{t("marginShort", { percent: b.marginPercent.toFixed(1) })}</p>
                       </div>
                     }
                   />
@@ -410,7 +407,7 @@ export default function AdminFinancePage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-[var(--text-secondary)]">
-              Tap a month to view branch-wise line items. Amounts vary month to month.
+              {t("monthsHint")}
             </p>
             <button
               type="button"
@@ -418,24 +415,25 @@ export default function AdminFinancePage() {
               className={btnPrimary}
             >
               <Plus className="w-4 h-4" />
-              Add expenditure
+              {t("addExpenditure")}
             </button>
           </div>
 
           {expLoading ? (
-            <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading expenditures...</p>
+            <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{t("loadingExpenditures")}</p>
           ) : (
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
                 <div>
-                  <h2 className="font-semibold text-sm text-[var(--text-primary)]">{selectedYear} months</h2>
+                  <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("yearMonths", { year: selectedYear })}</h2>
                   <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {monthlySummaries.filter((m) => m.lineCount > 0).length} month
-                    {monthlySummaries.filter((m) => m.lineCount > 0).length !== 1 ? "s" : ""} with data
+                    {monthsWithDataCount === 1
+                      ? tAdmin("monthsWithData", { count: monthsWithDataCount })
+                      : tAdmin("monthsWithDataPlural", { count: monthsWithDataCount })}
                   </p>
                 </div>
                 <p className="text-sm font-bold text-[var(--text-primary)]">
-                  {formatCurrency(monthlySummaries.reduce((s, m) => s + m.total, 0))} YTD
+                  {formatCurrency(monthlySummaries.reduce((s, m) => s + m.total, 0))} {tAdmin("ytd")}
                 </p>
               </div>
 
@@ -453,14 +451,14 @@ export default function AdminFinancePage() {
                           <p className="font-semibold text-[var(--text-primary)]">{summary.label}</p>
                           {summary.isCurrent && (
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--brand-light)] text-[var(--brand-text)]">
-                              Current
+                              {tAdmin("current")}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                           {summary.lineCount === 0
-                            ? "No line items"
-                            : `${summary.lineCount} line item${summary.lineCount !== 1 ? "s" : ""} · ${summary.branchCount} branch${summary.branchCount !== 1 ? "es" : ""}`}
+                            ? tAdmin("noLineItems")
+                            : `${summary.lineCount === 1 ? tAdmin("lineItems", { count: summary.lineCount }) : tAdmin("lineItemsPlural", { count: summary.lineCount })} · ${summary.branchCount === 1 ? tAdmin("branches", { count: summary.branchCount }) : tAdmin("branchesPlural", { count: summary.branchCount })}`}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -490,7 +488,7 @@ export default function AdminFinancePage() {
               className={cn(btnSecondary, "text-sm")}
             >
               <ArrowLeft className="w-4 h-4" />
-              All months
+              {t("allMonths")}
             </button>
             <div className="flex flex-wrap gap-2">
               <button
@@ -499,7 +497,7 @@ export default function AdminFinancePage() {
                 className={btnPrimary}
               >
                 <Plus className="w-4 h-4" />
-                Add for {formatMonthYear(selectedMonth)}
+                {t("addForMonth", { month: formatMonthYear(selectedMonth) })}
               </button>
               <button
                 type="button"
@@ -508,7 +506,7 @@ export default function AdminFinancePage() {
                 className={btnSecondary}
               >
                 <RefreshCw className={cn("w-4 h-4", syncMutation.isPending && "animate-spin")} />
-                Sync payroll
+                {t("syncPayroll")}
               </button>
             </div>
           </div>
@@ -517,14 +515,17 @@ export default function AdminFinancePage() {
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="font-semibold text-[var(--text-primary)]">{formatMonthYear(selectedMonth)}</span>
               <span className="text-[var(--text-secondary)]">
-                {detailExpenditures.length} line item{detailExpenditures.length !== 1 ? "s" : ""} ·{" "}
+                {detailExpenditures.length === 1
+                  ? tAdmin("lineItems", { count: detailExpenditures.length })
+                  : tAdmin("lineItemsPlural", { count: detailExpenditures.length })}{" "}
+                ·{" "}
                 <span className="font-semibold text-[var(--text-primary)]">{formatCurrency(expenditureGrandTotal)}</span>
               </span>
             </div>
           </Card>
 
           {expLoading ? (
-            <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading expenditures...</p>
+            <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{t("loadingExpenditures")}</p>
           ) : (
             <div className="grid gap-4">
               {expendituresByBranch.map(({ branch, items, total }) => (
@@ -538,8 +539,10 @@ export default function AdminFinancePage() {
                         <h3 className="font-semibold text-[var(--text-primary)] truncate">{branch.name}</h3>
                         <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                           {items.length === 0
-                            ? `No expenditures · ${formatMonthYear(selectedMonth)}`
-                            : `${items.length} line item${items.length !== 1 ? "s" : ""}`}
+                            ? t("noExpendituresBranch", { month: formatMonthYear(selectedMonth) })
+                            : items.length === 1
+                              ? tAdmin("lineItems", { count: items.length })
+                              : tAdmin("lineItemsPlural", { count: items.length })}
                         </p>
                       </div>
                     </div>
@@ -554,7 +557,7 @@ export default function AdminFinancePage() {
                         }
                         className="text-xs font-semibold text-[var(--brand-text)] hover:underline px-2 py-1"
                       >
-                        + Add
+                        {t("addShort")}
                       </button>
                     </div>
                   </div>
@@ -562,7 +565,7 @@ export default function AdminFinancePage() {
                   {items.length === 0 ? (
                     <div className="px-4 py-8 text-center">
                       <p className="text-sm text-[var(--text-secondary)]">
-                        No line items for {formatMonthYear(selectedMonth)}.
+                        {t("noLineItemsMonth", { month: formatMonthYear(selectedMonth) })}
                       </p>
                       <button
                         type="button"
@@ -572,7 +575,7 @@ export default function AdminFinancePage() {
                         className={cn(btnSecondary, "mt-3 mx-auto")}
                       >
                         <Plus className="w-4 h-4" />
-                        Add for {branch.name}
+                        {t("addForBranch", { branch: branch.name })}
                       </button>
                     </div>
                   ) : (
@@ -593,7 +596,7 @@ export default function AdminFinancePage() {
                                     CATEGORY_STYLES[item.category]
                                   )}
                                 >
-                                  {CATEGORY_LABELS[item.category]}
+                                  {t(`categories.${item.category}`)}
                                 </span>
                                 {item.description && (
                                   <p className="text-xs text-[var(--text-secondary)] mt-1 truncate">{item.description}</p>
@@ -608,7 +611,7 @@ export default function AdminFinancePage() {
                         ))}
                       </div>
                       <div className="px-4 py-2.5 border-t border-[var(--border)] bg-[var(--surface-muted)]/40 flex justify-between text-sm">
-                        <span className="text-[var(--text-secondary)] font-medium">Branch subtotal</span>
+                        <span className="text-[var(--text-secondary)] font-medium">{t("branchSubtotal")}</span>
                         <span className="font-bold tabular-nums">{formatCurrency(total)}</span>
                       </div>
                     </div>
@@ -658,6 +661,10 @@ function ExpenditureDrawer({
   saving: boolean;
   deleting: boolean;
 }) {
+  const t = useTranslations("admin.finance");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
+  const tCategory = useTranslations("admin.inventory");
   const isCreate = drawer.mode === "create";
   const item = drawer.mode !== "create" ? drawer.item : null;
   const isView = drawer.mode === "view";
@@ -697,12 +704,12 @@ function ExpenditureDrawer({
       <SideSheet
         open
         onClose={onClose}
-        title={CATEGORY_LABELS[item.category]}
+        title={t(`categories.${item.category}`)}
         footer={
           <div className="flex gap-2">
             <button type="button" onClick={() => onEdit(item)} className={btnPrimary}>
               <Pencil className="w-4 h-4" />
-              Edit
+              {tCommon("edit")}
             </button>
             <button
               type="button"
@@ -711,16 +718,16 @@ function ExpenditureDrawer({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
             >
               <Trash2 className="w-4 h-4" />
-              {deleting ? "Removing..." : "Remove"}
+              {deleting ? tCommon("removing") : tCommon("remove")}
             </button>
           </div>
         }
       >
-        <DetailField label="Branch" value={item.branchName} />
-        <DetailField label="Category" value={CATEGORY_LABELS[item.category]} />
-        <DetailField label="Month" value={formatMonthYear(item.expenseMonth)} />
-        <DetailField label="Amount" value={formatCurrency(item.amount)} />
-        {item.description && <DetailField label="Description" value={item.description} />}
+        <DetailField label={tCommon("branch")} value={item.branchName} />
+        <DetailField label={tCategory("category")} value={t(`categories.${item.category}`)} />
+        <DetailField label={tCommon("month")} value={formatMonthYear(item.expenseMonth)} />
+        <DetailField label={tCommon("amount")} value={formatCurrency(item.amount)} />
+        {item.description && <DetailField label={tCommon("description")} value={item.description} />}
       </SideSheet>
     );
   }
@@ -729,20 +736,20 @@ function ExpenditureDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title={isCreate ? "Add expenditure" : "Edit expenditure"}
+      title={isCreate ? t("addExpenditureTitle") : t("editExpenditureTitle")}
       footer={
         <button type="submit" form="exp-form" disabled={saving} className={btnPrimary}>
-          {saving ? "Saving..." : isCreate ? "Add expenditure" : "Save changes"}
+          {saving ? tCommon("saving") : isCreate ? t("addExpenditureBtn") : tAdmin("saveChanges")}
         </button>
       }
     >
       <form id="exp-form" onSubmit={handleSubmit} className="space-y-4">
         {!isCreate && item && (
           <button type="button" onClick={() => onEdit(item)} className="text-xs link-brand">
-            ← Back to details
+            {t("backToDetailsLink")}
           </button>
         )}
-        <Field label="Branch">
+        <Field label={tCommon("branch")}>
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={selectClass} required>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -751,16 +758,16 @@ function ExpenditureDrawer({
             ))}
           </select>
         </Field>
-        <Field label="Category">
+        <Field label={tCategory("category")}>
           <select value={category} onChange={(e) => setCategory(e.target.value as ExpenditureCategory)} className={selectClass}>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {CATEGORY_LABELS[c]}
+                {t(`categories.${c}`)}
               </option>
             ))}
           </select>
         </Field>
-        <Field label="Month">
+        <Field label={tCommon("month")}>
           <input
             type="month"
             value={monthInputValue}
@@ -769,7 +776,7 @@ function ExpenditureDrawer({
             required
           />
         </Field>
-        <Field label="Amount (₹)">
+        <Field label={t("amountField")}>
           <input
             type="number"
             min="0"
@@ -780,13 +787,13 @@ function ExpenditureDrawer({
             required
           />
         </Field>
-        <Field label="Description (optional)">
+        <Field label={t("descriptionOptional")}>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className={inputClass}
-            placeholder="e.g. July shop rent"
+            placeholder={t("descriptionPlaceholder")}
           />
         </Field>
       </form>

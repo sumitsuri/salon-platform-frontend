@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, type MouseEvent } from "react";
+import { useTranslations } from "next-intl";
 import { ChangeBadge } from "@/components/Sparkline";
 import { BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 
@@ -306,6 +307,7 @@ function PieChartView({
   series: ChartSeries[];
   formatValue: (v: number) => string;
 }) {
+  const t = useTranslations("components.lineChart");
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const totals = series.map((s) => ({
@@ -354,7 +356,7 @@ function PieChartView({
       >
         {!hasData ? (
           <text x={cx} y={cy} textAnchor="middle" className="fill-slate-400 text-sm">
-            No data
+            {t("noData")}
           </text>
         ) : (
           <>
@@ -369,7 +371,7 @@ function PieChartView({
                   onMouseEnter={(e) =>
                     showTooltip(
                       e,
-                      { series: s.name, label: "Period total", value: s.total, color: s.color },
+                      { series: s.name, label: t("periodTotal"), value: s.total, color: s.color },
                       svgRef.current,
                       setTooltip
                     )
@@ -377,7 +379,12 @@ function PieChartView({
                   onMouseMove={(e) =>
                     showTooltip(
                       e,
-                      { series: s.name, label: `Period total (${s.pct}%)`, value: s.total, color: s.color },
+                      {
+                        series: s.name,
+                        label: t("periodTotalWithPct", { percent: s.pct }),
+                        value: s.total,
+                        color: s.color,
+                      },
                       svgRef.current,
                       setTooltip
                     )
@@ -403,7 +410,7 @@ function PieChartView({
           </>
         )}
         <text x={cx} y={CHART_HEIGHT - 12} textAnchor="middle" className="fill-slate-400 text-[10px]">
-          Share by branch (period total)
+          {t("shareByBranch")}
         </text>
       </svg>
     </ChartContainer>
@@ -411,6 +418,7 @@ function PieChartView({
 }
 
 export function MetricChart({ title, labels, series, formatValue = (v) => String(v) }: MetricChartProps) {
+  const t = useTranslations("components.lineChart");
   const [chartType, setChartType] = useState<ChartType>("line");
 
   return (
@@ -421,11 +429,11 @@ export function MetricChart({ title, labels, series, formatValue = (v) => String
           value={chartType}
           onChange={(e) => setChartType(e.target.value as ChartType)}
           className="px-2.5 py-1.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--brand)] shadow-sm transition shrink-0"
-          aria-label={`Chart type for ${title}`}
+          aria-label={t("chartTypeAria", { title })}
         >
-          <option value="line">Line Chart</option>
-          <option value="bar">Bar Chart</option>
-          <option value="pie">Pie Chart</option>
+          <option value="line">{t("lineChart")}</option>
+          <option value="bar">{t("barChart")}</option>
+          <option value="pie">{t("pieChart")}</option>
         </select>
       </div>
 

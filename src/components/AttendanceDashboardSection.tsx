@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Users, UserCheck, CalendarOff, UserX, Clock } from "lucide-react";
 import { MetricChart } from "@/components/LineChart";
@@ -17,15 +18,6 @@ import {
   TablePagination,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
-
-function formatTime(iso?: string) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
-}
 
 interface Props {
   data?: AttendanceData;
@@ -44,6 +36,10 @@ export function AttendanceDashboardSection({
   showPageHeader = true,
   showLeaveAndLogs = true,
 }: Props) {
+  const t = useTranslations("components.attendanceDashboard");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("components.status");
+  const locale = useLocale();
   const [staffPage, setStaffPage] = useState(0);
   const [staffSize, setStaffSize] = useState(DEFAULT_PAGE_SIZE);
   const [logFilters, setLogFilters] = useState({ date: "", staff: "", branch: "", status: "" });
@@ -55,14 +51,23 @@ export function AttendanceDashboardSection({
   const [leavePage, setLeavePage] = useState(0);
   const [leaveSize, setLeaveSize] = useState(DEFAULT_PAGE_SIZE);
 
+  function formatTime(iso?: string) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatDate(iso: string) {
+    return new Date(iso + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" });
+  }
+
   useEffect(() => {
-    const t = setTimeout(() => setLogDebounced(logFilters), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setLogDebounced(logFilters), 300);
+    return () => clearTimeout(timer);
   }, [logFilters]);
 
   useEffect(() => {
-    const t = setTimeout(() => setLeaveDebounced(leaveFilters), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setLeaveDebounced(leaveFilters), 300);
+    return () => clearTimeout(timer);
   }, [leaveFilters]);
 
   useEffect(() => {
@@ -104,24 +109,24 @@ export function AttendanceDashboardSection({
   });
 
   const trendLabels = useMemo(
-    () => data?.dailyTrends.map((t) => formatDate(t.date)) ?? [],
-    [data]
+    () => data?.dailyTrends.map((entry) => formatDate(entry.date)) ?? [],
+    [data, locale]
   );
 
   const presentSeries = useMemo(
     () =>
       data
-        ? [{ name: "Present", color: ATTENDANCE_CHART_COLORS.present, values: data.dailyTrends.map((t) => t.presentCount) }]
+        ? [{ name: t("presentSeries"), color: ATTENDANCE_CHART_COLORS.present, values: data.dailyTrends.map((entry) => entry.presentCount) }]
         : [],
-    [data]
+    [data, t]
   );
 
   const hoursSeries = useMemo(
     () =>
       data
-        ? [{ name: "Avg hours", color: ATTENDANCE_CHART_COLORS.hours, values: data.dailyTrends.map((t) => t.avgHours) }]
+        ? [{ name: t("avgHoursSeries"), color: ATTENDANCE_CHART_COLORS.hours, values: data.dailyTrends.map((entry) => entry.avgHours) }]
         : [],
-    [data]
+    [data, t]
   );
 
   const staffSummaries = data?.staffSummaries ?? [];
@@ -131,7 +136,7 @@ export function AttendanceDashboardSection({
   if (loading) {
     return (
       <Card>
-        <p className="text-sm text-[var(--text-tertiary)]">Loading attendance analytics...</p>
+        <p className="text-sm text-[var(--text-tertiary)]">{t("loading")}</p>
       </Card>
     );
   }
@@ -143,17 +148,15 @@ export function AttendanceDashboardSection({
 
   return (
     <section className="space-y-4">
-      {showPageHeader && (
-        <PageHeader title="Attendance & leave" subtitle="Entry/exit tracking and performance scores" />
-      )}
+      {showPageHeader && <PageHeader title={t("title")} subtitle={t("subtitle")} />}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <StatCard label="Total Staff" value={data.totalStaff} icon={Users} accent="brand" />
-        <StatCard label="Present Today" value={data.presentToday} icon={UserCheck} accent="emerald" />
-        <StatCard label="On Leave" value={data.onLeaveToday} icon={CalendarOff} accent="amber" />
-        <StatCard label="Absent Today" value={data.absentToday} icon={UserX} accent="violet" />
+        <StatCard label={t("totalStaff")} value={data.totalStaff} icon={Users} accent="brand" />
+        <StatCard label={t("presentToday")} value={data.presentToday} icon={UserCheck} accent="emerald" />
+        <StatCard label={t("onLeave")} value={data.onLeaveToday} icon={CalendarOff} accent="amber" />
+        <StatCard label={t("absentToday")} value={data.absentToday} icon={UserX} accent="violet" />
         <StatCard
-          label="Avg Hours"
+          label={t("avgHours")}
           value={`${data.avgHoursPerStaff}h`}
           icon={Clock}
           accent="brand"
@@ -164,11 +167,11 @@ export function AttendanceDashboardSection({
       {data.dailyTrends.length > 0 && (
         <div className="grid lg:grid-cols-2 gap-4">
           <Card>
-            <MetricChart title="Daily present count" labels={trendLabels} series={presentSeries} />
+            <MetricChart title={t("dailyPresentCount")} labels={trendLabels} series={presentSeries} />
           </Card>
           <Card>
             <MetricChart
-              title="Avg working hours"
+              title={t("avgWorkingHours")}
               labels={trendLabels}
               series={hoursSeries}
               formatValue={(v) => `${v.toFixed(1)}h`}
@@ -179,17 +182,17 @@ export function AttendanceDashboardSection({
 
       <Card padding={false}>
         <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)]">Staff performance</h3>
+          <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffPerformance")}</h3>
         </div>
         <div className="hidden md:block">
           <FilterableTable
             columns={[
-              { label: "Staff", filter: { type: "none" } },
-              { label: "Days", filter: { type: "none" } },
-              { label: "Leave", filter: { type: "none" } },
-              { label: "Hours", filter: { type: "none" } },
-              { label: "Late", filter: { type: "none" } },
-              { label: "Score", filter: { type: "none" } },
+              { label: t("staff"), filter: { type: "none" } },
+              { label: t("days"), filter: { type: "none" } },
+              { label: t("leave"), filter: { type: "none" } },
+              { label: t("hours"), filter: { type: "none" } },
+              { label: t("late"), filter: { type: "none" } },
+              { label: t("score"), filter: { type: "none" } },
             ]}
           >
             {staffSlice.map((s) => (
@@ -212,7 +215,7 @@ export function AttendanceDashboardSection({
             <ListRow
               key={s.staffId}
               title={s.staffName}
-              subtitle={`${s.branchName} · ${s.daysPresent} days · ${s.totalHours}h`}
+              subtitle={`${s.branchName} · ${t("daysHours", { days: s.daysPresent, hours: s.totalHours })}`}
               trailing={<span className="text-sm font-bold text-[var(--brand-text)]">{s.performanceScore}</span>}
             />
           ))}
@@ -232,167 +235,167 @@ export function AttendanceDashboardSection({
 
       {showLeaveAndLogs && (
         <>
-      <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)]">Leave records</h3>
-        </div>
-        <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-[var(--border)]">
-          <input
-            placeholder="Staff"
-            value={leaveFilters.staff}
-            onChange={(e) => setLeaveFilters((f) => ({ ...f, staff: e.target.value }))}
-            className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-          />
-          <input
-            placeholder="Branch"
-            value={leaveFilters.branch}
-            onChange={(e) => setLeaveFilters((f) => ({ ...f, branch: e.target.value }))}
-            className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-          />
-          <select
-            value={leaveFilters.status}
-            onChange={(e) => setLeaveFilters((f) => ({ ...f, status: e.target.value }))}
-            className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-          >
-            <option value="">All statuses</option>
-            <option value="APPROVED">Approved</option>
-            <option value="PENDING">Pending</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
-        </div>
-        {leaveLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">Loading...</p>
-        ) : leaveRecords.length === 0 ? (
-          <EmptyState title="No leave records" description="In this period" />
-        ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {leaveRecords.map((l) => (
-              <ListRow
-                key={l.id}
-                title={l.staffName}
-                subtitle={`${formatDate(l.startDate)} – ${formatDate(l.endDate)} · ${l.branchName}`}
-                trailing={<StatusBadge status={l.status} />}
+          <Card padding={false}>
+            <div className="px-4 py-3.5 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("leaveRecords")}</h3>
+            </div>
+            <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-[var(--border)]">
+              <input
+                placeholder={t("staff")}
+                value={leaveFilters.staff}
+                onChange={(e) => setLeaveFilters((f) => ({ ...f, staff: e.target.value }))}
+                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
               />
-            ))}
-          </div>
-        )}
-        <TablePagination
-          page={leavePage}
-          size={leaveSize}
-          totalPages={leaveData?.totalPages ?? 0}
-          totalElements={leaveData?.totalElements ?? 0}
-          onPageChange={setLeavePage}
-          onSizeChange={(s) => {
-            setLeaveSize(s);
-            setLeavePage(0);
-          }}
-        />
-      </Card>
-
-      <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)]">Entry / exit log</h3>
-        </div>
-        {logLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">Loading...</p>
-        ) : logRecords.length === 0 ? (
-          <EmptyState title="No attendance records" description="Adjust filters or date range" />
-        ) : (
-          <>
-            <div className="hidden lg:block">
-              <FilterableTable
-                columns={[
-                  {
-                    label: "Date",
-                    filter: {
-                      type: "date",
-                      value: logFilters.date,
-                      onChange: (v) => setLogFilters((f) => ({ ...f, date: v })),
-                    },
-                  },
-                  {
-                    label: "Staff",
-                    filter: {
-                      type: "text",
-                      placeholder: "Staff",
-                      value: logFilters.staff,
-                      onChange: (v) => setLogFilters((f) => ({ ...f, staff: v })),
-                    },
-                  },
-                  {
-                    label: "Branch",
-                    filter: {
-                      type: "text",
-                      placeholder: "Branch",
-                      value: logFilters.branch,
-                      onChange: (v) => setLogFilters((f) => ({ ...f, branch: v })),
-                    },
-                  },
-                  { label: "Entry", filter: { type: "none" } },
-                  { label: "Exit", filter: { type: "none" } },
-                  { label: "Hours", filter: { type: "none" } },
-                  {
-                    label: "Status",
-                    filter: {
-                      type: "select",
-                      value: logFilters.status,
-                      onChange: (v) => setLogFilters((f) => ({ ...f, status: v })),
-                      options: [
-                        { value: "", label: "All" },
-                        { value: "COMPLETED", label: "Completed" },
-                        { value: "PRESENT", label: "Present" },
-                        { value: "ABSENT", label: "Absent" },
-                      ],
-                    },
-                  },
-                ]}
+              <input
+                placeholder={tCommon("branch")}
+                value={leaveFilters.branch}
+                onChange={(e) => setLeaveFilters((f) => ({ ...f, branch: e.target.value }))}
+                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
+              />
+              <select
+                value={leaveFilters.status}
+                onChange={(e) => setLeaveFilters((f) => ({ ...f, status: e.target.value }))}
+                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
               >
-                {logRecords.map((r) => (
-                  <tr key={r.id} className="border-t border-[var(--border)]">
-                    <td className="px-4 py-2.5">{formatDate(r.workDate)}</td>
-                    <td className="px-4 py-2.5 font-medium">{r.staffName}</td>
-                    <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.branchName}</td>
-                    <td className="px-4 py-2.5">{formatTime(r.entryTime)}</td>
-                    <td className="px-4 py-2.5">{formatTime(r.exitTime)}</td>
-                    <td className="px-4 py-2.5">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</td>
-                    <td className="px-4 py-2.5">
-                      <StatusBadge status={r.status} />
-                    </td>
-                  </tr>
+                <option value="">{t("allStatuses")}</option>
+                <option value="APPROVED">{tStatus("APPROVED")}</option>
+                <option value="PENDING">{tStatus("PENDING")}</option>
+                <option value="REJECTED">{tStatus("REJECTED")}</option>
+              </select>
+            </div>
+            {leaveLoading ? (
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+            ) : leaveRecords.length === 0 ? (
+              <EmptyState title={t("noLeaveRecords")} description={t("inThisPeriod")} />
+            ) : (
+              <div className="divide-y divide-[var(--border)]">
+                {leaveRecords.map((l) => (
+                  <ListRow
+                    key={l.id}
+                    title={l.staffName}
+                    subtitle={`${formatDate(l.startDate)} – ${formatDate(l.endDate)} · ${l.branchName}`}
+                    trailing={<StatusBadge status={l.status} />}
+                  />
                 ))}
-              </FilterableTable>
+              </div>
+            )}
+            <TablePagination
+              page={leavePage}
+              size={leaveSize}
+              totalPages={leaveData?.totalPages ?? 0}
+              totalElements={leaveData?.totalElements ?? 0}
+              onPageChange={setLeavePage}
+              onSizeChange={(s) => {
+                setLeaveSize(s);
+                setLeavePage(0);
+              }}
+            />
+          </Card>
+
+          <Card padding={false}>
+            <div className="px-4 py-3.5 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("entryExitLog")}</h3>
             </div>
-            <div className="lg:hidden divide-y divide-[var(--border)]">
-              {logRecords.map((r) => (
-                <ListRow
-                  key={r.id}
-                  title={r.staffName}
-                  subtitle={`${formatDate(r.workDate)} · ${r.branchName}`}
-                  trailing={
-                    <div className="text-right">
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        {formatTime(r.entryTime)} – {formatTime(r.exitTime)}
-                      </p>
-                      <StatusBadge status={r.status} />
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-          </>
-        )}
-        <TablePagination
-          page={logPage}
-          size={logSize}
-          totalPages={logData?.totalPages ?? 0}
-          totalElements={logData?.totalElements ?? 0}
-          onPageChange={setLogPage}
-          onSizeChange={(s) => {
-            setLogSize(s);
-            setLogPage(0);
-          }}
-        />
-      </Card>
+            {logLoading ? (
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+            ) : logRecords.length === 0 ? (
+              <EmptyState title={t("noAttendanceRecords")} description={t("adjustFilters")} />
+            ) : (
+              <>
+                <div className="hidden lg:block">
+                  <FilterableTable
+                    columns={[
+                      {
+                        label: t("date"),
+                        filter: {
+                          type: "date",
+                          value: logFilters.date,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, date: v })),
+                        },
+                      },
+                      {
+                        label: t("staff"),
+                        filter: {
+                          type: "text",
+                          placeholder: t("staff"),
+                          value: logFilters.staff,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, staff: v })),
+                        },
+                      },
+                      {
+                        label: tCommon("branch"),
+                        filter: {
+                          type: "text",
+                          placeholder: tCommon("branch"),
+                          value: logFilters.branch,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, branch: v })),
+                        },
+                      },
+                      { label: t("entry"), filter: { type: "none" } },
+                      { label: t("exit"), filter: { type: "none" } },
+                      { label: t("hours"), filter: { type: "none" } },
+                      {
+                        label: tCommon("status"),
+                        filter: {
+                          type: "select",
+                          value: logFilters.status,
+                          onChange: (v) => setLogFilters((f) => ({ ...f, status: v })),
+                          options: [
+                            { value: "", label: tCommon("all") },
+                            { value: "COMPLETED", label: tStatus("COMPLETED") },
+                            { value: "PRESENT", label: tStatus("PRESENT") },
+                            { value: "ABSENT", label: tStatus("ABSENT") },
+                          ],
+                        },
+                      },
+                    ]}
+                  >
+                    {logRecords.map((r) => (
+                      <tr key={r.id} className="border-t border-[var(--border)]">
+                        <td className="px-4 py-2.5">{formatDate(r.workDate)}</td>
+                        <td className="px-4 py-2.5 font-medium">{r.staffName}</td>
+                        <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.branchName}</td>
+                        <td className="px-4 py-2.5">{formatTime(r.entryTime)}</td>
+                        <td className="px-4 py-2.5">{formatTime(r.exitTime)}</td>
+                        <td className="px-4 py-2.5">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</td>
+                        <td className="px-4 py-2.5">
+                          <StatusBadge status={r.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </FilterableTable>
+                </div>
+                <div className="lg:hidden divide-y divide-[var(--border)]">
+                  {logRecords.map((r) => (
+                    <ListRow
+                      key={r.id}
+                      title={r.staffName}
+                      subtitle={`${formatDate(r.workDate)} · ${r.branchName}`}
+                      trailing={
+                        <div className="text-right">
+                          <p className="text-xs text-[var(--text-secondary)]">
+                            {formatTime(r.entryTime)} – {formatTime(r.exitTime)}
+                          </p>
+                          <StatusBadge status={r.status} />
+                        </div>
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            <TablePagination
+              page={logPage}
+              size={logSize}
+              totalPages={logData?.totalPages ?? 0}
+              totalElements={logData?.totalElements ?? 0}
+              onPageChange={setLogPage}
+              onSizeChange={(s) => {
+                setLogSize(s);
+                setLogPage(0);
+              }}
+            />
+          </Card>
         </>
       )}
     </section>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api } from "@/lib/api";
 import {
@@ -34,6 +35,9 @@ const emptyFilters: Filters = {
 };
 
 export default function AdminLeadsPage() {
+  const t = useTranslations("admin.leads");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
@@ -41,8 +45,8 @@ export default function AdminLeadsPage() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(filters), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(filters), 300);
+    return () => clearTimeout(timer);
   }, [filters]);
 
   useEffect(() => {
@@ -77,52 +81,52 @@ export default function AdminLeadsPage() {
 
   const columns = [
     {
-      label: "Name",
+      label: tCommon("name"),
       filter: {
         type: "text" as const,
-        placeholder: "Name",
+        placeholder: tCommon("name"),
         value: filters.name,
         onChange: (v: string) => updateFilter("name", v),
       },
     },
     {
-      label: "Society",
+      label: t("society"),
       filter: {
         type: "text" as const,
-        placeholder: "Society",
+        placeholder: t("society"),
         value: filters.society,
         onChange: (v: string) => updateFilter("society", v),
       },
     },
     {
-      label: "Email",
+      label: tCommon("email"),
       filter: {
         type: "text" as const,
-        placeholder: "Email",
+        placeholder: tCommon("email"),
         value: filters.email,
         onChange: (v: string) => updateFilter("email", v),
       },
     },
     {
-      label: "Mobile",
+      label: t("mobile"),
       filter: {
         type: "text" as const,
-        placeholder: "Mobile",
+        placeholder: t("mobile"),
         value: filters.mobile,
         onChange: (v: string) => updateFilter("mobile", v),
       },
     },
     {
-      label: "Message",
+      label: t("message"),
       filter: {
         type: "text" as const,
-        placeholder: "Message",
+        placeholder: t("message"),
         value: filters.message,
         onChange: (v: string) => updateFilter("message", v),
       },
     },
     {
-      label: "Date",
+      label: tCommon("date"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -134,8 +138,8 @@ export default function AdminLeadsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Leads"
-        subtitle={`${totalElements} enquiries from the marketing website${isFetching && !isLoading ? " · updating" : ""}`}
+        title={t("title")}
+        subtitle={`${t("subtitle", { count: totalElements })}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -151,15 +155,15 @@ export default function AdminLeadsPage() {
           onClick={() => setFilters(emptyFilters)}
           className="text-sm font-semibold text-[var(--brand-text)]"
         >
-          Clear filters
+          {tAdmin("clearFilters")}
         </button>
       )}
 
       <Card padding={false}>
         {isLoading ? (
-          <p className="p-4 text-[var(--text-tertiary)] text-sm">Loading leads...</p>
+          <p className="p-4 text-[var(--text-tertiary)] text-sm">{t("loading")}</p>
         ) : leads.length === 0 ? (
-          <EmptyState title="No leads match" description="Try adjusting your filters or check back after new enquiries arrive" />
+          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
           <>
             <div className="lg:hidden divide-y divide-[var(--border)]">

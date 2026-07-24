@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ChevronRight, IndianRupee } from "lucide-react";
 import { PlSummaryResponse } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ interface PlTeaserProps {
 }
 
 export function PlTeaser({ data, loading, href }: PlTeaserProps) {
+  const t = useTranslations("components.plTeaser");
+  const tCommon = useTranslations("common");
   const brand = data?.brand;
   const topBranches = data?.branches.slice(0, 2) ?? [];
   const profit = brand?.netProfit ?? 0;
@@ -24,37 +27,35 @@ export function PlTeaser({ data, loading, href }: PlTeaserProps) {
         <div className="flex items-center gap-2">
           <IndianRupee className="w-5 h-5 text-[var(--brand-text)]" />
           <div>
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm">P&amp;L</h2>
+            <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
             <p className="text-xs text-[var(--text-secondary)]">
-              {loading ? "Loading..." : data?.periodLabel ?? "Revenue vs expenses"}
+              {loading ? tCommon("loading") : data?.periodLabel ?? t("subtitleDefault")}
             </p>
           </div>
         </div>
         <Link href={href} className="link-brand text-xs flex items-center gap-0.5">
-          View finance
+          {t("viewFinance")}
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {loading ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">Calculating profit &amp; loss...</p>
+        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("calculating")}</p>
       ) : !brand ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">
-          Add expenditure line items to see branch and brand-level P&amp;L.
-        </p>
+        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
       ) : (
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Revenue</p>
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("revenue")}</p>
               <p className="text-sm font-bold text-emerald-600">{formatCurrency(brand.revenue)}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Expenses</p>
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("expenses")}</p>
               <p className="text-sm font-bold text-red-600">{formatCurrency(brand.totalExpenses)}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">Net P&amp;L</p>
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">{t("netPl")}</p>
               <p className={cn("text-sm font-bold", profit >= 0 ? "text-emerald-600" : "text-red-600")}>
                 {formatCurrency(profit)}
               </p>
@@ -79,7 +80,7 @@ export function PlTeaser({ data, loading, href }: PlTeaserProps) {
           )}
 
           <p className="text-xs text-[var(--text-tertiary)] text-center">
-            Brand margin {margin.toFixed(1)}%
+            {t("brandMargin", { percent: margin.toFixed(1) })}
           </p>
         </div>
       )}

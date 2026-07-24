@@ -9,7 +9,17 @@ import {
 
 function resolveApiBase(): string {
   if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL || "";
+    const configured = process.env.NEXT_PUBLIC_API_URL || "";
+    // Production is served behind nginx on the same host — never call localhost from a remote origin.
+    if (
+      configured &&
+      (configured.includes("localhost") || configured.includes("127.0.0.1")) &&
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1"
+    ) {
+      return "";
+    }
+    return configured;
   }
   return (
     process.env.INTERNAL_API_URL ||
@@ -18,7 +28,9 @@ function resolveApiBase(): string {
   );
 }
 
-const API_BASE = resolveApiBase();
+function apiBase(): string {
+  return resolveApiBase();
+}
 
 export type UserRole = "PLATFORM_SUPER_ADMIN" | "BRAND_ADMIN" | "BRANCH_MANAGER" | "SALON_MANAGER";
 
@@ -35,6 +47,7 @@ export interface AuthUser {
   branchName?: string;
   primaryColor?: string;
   logoUrl?: string;
+  preferredLocale?: string | null;
 }
 
 interface ApiWrapper<T> {
@@ -56,7 +69,7 @@ async function refreshAccessToken(): Promise<string | null> {
     const user = getStoredUser();
     if (!user?.refreshToken) return null;
 
-    const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+    const res = await fetch(`${apiBase()}/api/v1/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: user.refreshToken }),
@@ -101,7 +114,13 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (typeof document !== "undefined") {
+    const localeMatch = document.cookie.match(/(?:^|; )NEXT_LOCALE=([^;]*)/);
+    const locale = localeMatch ? decodeURIComponent(localeMatch[1]) : "en-IN";
+    headers["Accept-Language"] = locale;
+  }
+
+  const res = await fetch(`${apiBase()}${path}`, { ...options, headers });
   const text = await res.text();
 
   let body: ApiWrapper<T> & { message?: string } = { success: false, data: undefined as T };
@@ -142,6 +161,14 @@ export const api = {
     request<AuthUser>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 
   me: () => request<AuthUser>("/api/v1/auth/me"),
+
+  getLocales: () => request<LocaleInfo[]>("/api/v1/meta/locales"),
+
+  updateLocale: (locale: string) =>
+    request<AuthUser>("/api/v1/users/me/locale", {
+      method: "PATCH",
+      body: JSON.stringify({ locale }),
+    }),
 
   searchCustomers: (q: string) =>
     request<Customer[]>(`/api/v1/customers/search?q=${encodeURIComponent(q)}`),
@@ -191,6 +218,17 @@ export const api = {
     search.set("size", String(params?.size ?? 20));
     return request<PageResult<Lead>>(`/api/v1/enquiries?${search.toString()}`);
   },
+
+  getCampaigns: () => request<Campaign[]>("/api/v1/campaigns"),
+
+  previewCampaign: (data: CreateCampaignRequest) =>
+    request<CampaignPreview>("/api/v1/campaigns/preview", { method: "POST", body: JSON.stringify(data) }),
+
+  createCampaign: (data: CreateCampaignRequest) =>
+    request<Campaign>("/api/v1/campaigns", { method: "POST", body: JSON.stringify(data) }),
+
+  sendCampaign: (id: string) =>
+    request<Campaign>(`/api/v1/campaigns/${id}/send`, { method: "POST" }),
 
   payBooking: (id: string, data: PaymentRequest) =>
     request<Booking>(`/api/v1/bookings/${id}/payments`, { method: "POST", body: JSON.stringify(data) }),
@@ -482,7 +520,7 @@ export const api = {
 
   getInvoices: () => request<Invoice[]>("/api/v1/invoices"),
 
-  getInvoicePdfUrl: (invoiceId: string) => `${API_BASE}/api/v1/invoices/${invoiceId}/pdf`,
+  getInvoicePdfUrl: (invoiceId: string) => `${apiBase()}/api/v1/invoices/${invoiceId}/pdf`,
 
   getTenants: () => request<Tenant[]>("/api/v1/platform/tenants"),
 
@@ -689,6 +727,17 @@ export interface EnquiryListParams {
   size?: number;
 }
 
+export interface LocaleInfo {
+  code: string;
+  label: string;
+  nativeLabel: string;
+  stateCode?: string;
+  stateName?: string;
+  stateNameNative?: string;
+  regionGroup?: string;
+  sortOrder?: number;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -696,6 +745,52 @@ export interface Lead {
   email: string;
   mobile: string;
   message: string;
+  createdAt: string;
+}
+
+export type CampaignChannel = "WHATSAPP" | "SMS";
+export type CampaignStatus = "DRAFT" | "SENDING" | "COMPLETED" | "FAILED";
+
+export interface CreateCampaignRequest {
+  name: string;
+  channel: CampaignChannel;
+  messageText: string;
+  filterName?: string;
+  filterSociety?: string;
+  filterPhone?: string;
+  filterMinVisitCount?: number;
+  filterMaxVisitCount?: number;
+  filterMinLifetimeSpend?: number;
+  filterMaxLifetimeSpend?: number;
+  filterLastVisitFrom?: string;
+  filterLastVisitTo?: string;
+  filterWhatsappOptInOnly?: boolean;
+  filterSmsOptInOnly?: boolean;
+}
+
+export interface CampaignPreview {
+  matchingCustomers: number;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  channel: CampaignChannel;
+  status: CampaignStatus;
+  messageText: string;
+  filterName?: string;
+  filterSociety?: string;
+  filterPhone?: string;
+  filterMinVisitCount?: number;
+  filterMaxVisitCount?: number;
+  filterMinLifetimeSpend?: number;
+  filterMaxLifetimeSpend?: number;
+  filterLastVisitFrom?: string;
+  filterLastVisitTo?: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  sentAt?: string;
   createdAt: string;
 }
 
@@ -728,6 +823,8 @@ export interface Booking {
   status: string;
   lines: BookingLine[];
   billPreview?: BillPreview;
+  invoiceId?: string;
+  receiptQueued?: boolean;
   createdAt: string;
 }
 

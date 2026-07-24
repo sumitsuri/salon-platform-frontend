@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -10,20 +11,13 @@ import {
 } from "lucide-react";
 import { BranchRecommendations, Recommendation, RecommendationsResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui";
+import { Card, StatusBadge } from "@/components/ui";
 
 const SEVERITY_STYLES: Record<string, string> = {
   HIGH: "severity-high",
   MEDIUM: "severity-medium",
   LOW: "severity-low",
   INFO: "severity-info",
-};
-
-const SEVERITY_BADGE: Record<string, string> = {
-  HIGH: "badge-high",
-  MEDIUM: "badge-medium",
-  LOW: "badge-low",
-  INFO: "badge-info",
 };
 
 const CATEGORY_ICONS: Record<string, typeof TrendingUp> = {
@@ -45,14 +39,7 @@ function RecommendationCard({ item }: { item: Recommendation }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className="font-semibold text-sm text-[var(--text-primary)]">{item.title}</p>
-          <span
-            className={cn(
-              "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full font-semibold shrink-0",
-              SEVERITY_BADGE[item.severity] ?? SEVERITY_BADGE.INFO
-            )}
-          >
-            {item.severity}
-          </span>
+          <StatusBadge status={item.severity} className="shrink-0" />
         </div>
         <p className="text-sm text-[var(--text-secondary)] mt-1 leading-relaxed">{item.message}</p>
         {item.metricLabel && item.metricValue && (
@@ -89,10 +76,12 @@ export function RecommendationsPanel({
   loading,
   variant = "ceo",
 }: RecommendationsPanelProps) {
+  const t = useTranslations("components.recommendationsPanel");
+
   if (loading) {
     return (
       <Card>
-        <p className="text-sm text-[var(--text-secondary)]">Loading recommendations...</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
       </Card>
     );
   }
@@ -106,11 +95,9 @@ export function RecommendationsPanel({
       <Card>
         <div className="flex items-center gap-2 mb-2">
           <Lightbulb className="w-5 h-5 text-[var(--brand-text)]" />
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">Recommendations</h2>
+          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
         </div>
-        <p className="text-sm text-[var(--text-secondary)]">
-          No actionable insights for this period yet. Check back after more visits are recorded.
-        </p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("empty")}</p>
       </Card>
     );
   }
@@ -120,11 +107,9 @@ export function RecommendationsPanel({
       <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-2">
         <Lightbulb className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">Recommendations</h2>
+          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
           <p className="text-xs text-[var(--text-secondary)] truncate">
-            {variant === "manager"
-              ? "Sales, staff & service insights for your branch"
-              : "Brand-wide and per-branch insights"}
+            {variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
           </p>
         </div>
       </div>
@@ -132,7 +117,7 @@ export function RecommendationsPanel({
       <div className="p-4 space-y-5">
         {brandWide.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Brand-wide</h3>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t("brandWide")}</h3>
             <div className="grid gap-3">
               {brandWide.map((item) => (
                 <RecommendationCard key={item.id} item={item} />

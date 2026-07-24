@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { UserPlus, IndianRupee, Clock, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -49,6 +50,9 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 }
 
 export default function ManagerBookingsPage() {
+  const t = useTranslations("manager.bookings");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("components.status");
   const branchId = useAuthStore((s) => s.user?.branchId) || "";
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
@@ -56,8 +60,8 @@ export default function ManagerBookingsPage() {
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(filters), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(filters), 300);
+    return () => clearTimeout(timer);
   }, [filters]);
 
   useEffect(() => {
@@ -98,52 +102,55 @@ export default function ManagerBookingsPage() {
 
   const columns = [
     {
-      label: "Customer",
+      label: t("columns.customer"),
       filter: {
         type: "text" as const,
-        placeholder: "Name/phone",
+        placeholder: t("filters.namePhone"),
         value: filters.customer,
         onChange: (v: string) => updateFilter("customer", v),
       },
     },
     {
-      label: "Services",
+      label: t("columns.services"),
       filter: {
         type: "text" as const,
-        placeholder: "Service",
+        placeholder: t("filters.service"),
         value: filters.service,
         onChange: (v: string) => updateFilter("service", v),
       },
     },
     {
-      label: "Stylist",
+      label: t("columns.stylist"),
       filter: {
         type: "text" as const,
-        placeholder: "Stylist",
+        placeholder: t("filters.stylist"),
         value: filters.stylist,
         onChange: (v: string) => updateFilter("stylist", v),
       },
     },
     {
-      label: "Amount",
+      label: t("columns.amount"),
       filter: {
         type: "text" as const,
-        placeholder: "Amount",
+        placeholder: t("filters.amount"),
         value: filters.amount,
         onChange: (v: string) => updateFilter("amount", v),
       },
     },
     {
-      label: "Status",
+      label: t("columns.status"),
       filter: {
         type: "select" as const,
         value: filters.status,
         onChange: (v: string) => updateFilter("status", v),
-        options: STATUSES.map((s) => ({ value: s, label: s || "All" })),
+        options: STATUSES.map((s) => ({
+          value: s,
+          label: s ? tStatus(s as "COMPLETED") : t("filters.all"),
+        })),
       },
     },
     {
-      label: "Time",
+      label: t("columns.time"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -155,32 +162,36 @@ export default function ManagerBookingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Bookings"
-        subtitle={`${totalElements} visits · page ${totalPages === 0 ? 0 : page + 1}/${totalPages || 1}`}
+        title={t("title")}
+        subtitle={t("subtitle", {
+          count: totalElements,
+          page: totalPages === 0 ? 0 : page + 1,
+          totalPages: totalPages || 1,
+        })}
         action={
           <Link href="/manager/walk-in" className={`${btnPrimary} py-2.5 px-4 hidden sm:inline-flex`}>
             <UserPlus className="w-4 h-4" />
-            Walk-in
+            {t("walkIn")}
           </Link>
         }
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard label="Revenue (page)" value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />
-        <StatCard label="Completed" value={completed.length} icon={CheckCircle2} accent="emerald" />
-        <StatCard label="Active" value={active.length} icon={Clock} accent="amber" />
+        <StatCard label={t("revenuePage")} value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />
+        <StatCard label={t("completed")} value={completed.length} icon={CheckCircle2} accent="emerald" />
+        <StatCard label={t("active")} value={active.length} icon={Clock} accent="amber" />
       </div>
 
       <Card padding={false}>
-        {isLoading && <p className="p-4 text-[var(--text-secondary)] text-sm">Loading...</p>}
+        {isLoading && <p className="p-4 text-[var(--text-secondary)] text-sm">{tCommon("loading")}</p>}
         {!isLoading && bookings.length === 0 ? (
           <EmptyState
-            title="No bookings yet"
-            description="Walk-in customers will show up here"
+            title={t("noBookingsTitle")}
+            description={t("noBookingsDesc")}
             action={
               <Link href="/manager/walk-in" className={btnPrimary}>
                 <UserPlus className="w-4 h-4" />
-                New Walk-in
+                {t("newWalkIn")}
               </Link>
             }
           />

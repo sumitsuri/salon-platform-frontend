@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronRight, Pencil, Plus, Target, Trash2, UserPlus, Users } from "lucide-react";
 import {
@@ -39,12 +40,6 @@ type ManagerDrawerState = { mode: "create" } | { mode: "view" | "edit"; manager:
 type BrandDrawerState = { mode: "view" | "edit" };
 
 const ONBOARD_ROLES: UserRole[] = ["BRAND_ADMIN", "BRANCH_MANAGER", "SALON_MANAGER"];
-const ROLE_LABELS: Record<UserRole, string> = {
-  PLATFORM_SUPER_ADMIN: "Platform Admin",
-  BRAND_ADMIN: "Brand Admin (CEO)",
-  BRANCH_MANAGER: "Branch Manager",
-  SALON_MANAGER: "Salon Manager",
-};
 
 function monthRange() {
   const now = new Date();
@@ -71,6 +66,9 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function AdminBranchesPage() {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("brand");
   const [error, setError] = useState("");
@@ -170,18 +168,18 @@ export default function AdminBranchesPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Organization"
-        subtitle="Brand profile, branches & manager accounts"
+        title={t("title")}
+        subtitle={t("subtitle")}
         action={
           tab === "branches" ? (
             <button onClick={() => setBranchDrawer({ mode: "create" })} className={`${btnPrimary} py-2.5 px-4 shrink-0`}>
               <Plus className="w-4 h-4" />
-              Add branch
+              {t("addBranch")}
             </button>
           ) : tab === "managers" ? (
             <button onClick={() => setManagerDrawer({ mode: "create" })} className={`${btnPrimary} py-2.5 px-4 shrink-0`}>
               <UserPlus className="w-4 h-4" />
-              Onboard manager
+              {t("onboardManager")}
             </button>
           ) : undefined
         }
@@ -191,9 +189,9 @@ export default function AdminBranchesPage() {
 
       <SegmentedControl
         options={[
-          { id: "brand" as Tab, label: "Brand", icon: Building2 },
-          { id: "branches" as Tab, label: "Branches", icon: Building2 },
-          { id: "managers" as Tab, label: "Managers", icon: Users },
+          { id: "brand" as Tab, label: t("tabs.brand"), icon: Building2 },
+          { id: "branches" as Tab, label: t("tabs.branches"), icon: Building2 },
+          { id: "managers" as Tab, label: t("tabs.managers"), icon: Users },
         ]}
         value={tab}
         onChange={setTab}
@@ -211,13 +209,13 @@ export default function AdminBranchesPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <StatCard
-              label="Branches meeting target"
+              label={t("meetingTarget")}
               value={perfLoading ? "…" : (branchPerformance?.meetingTargetCount ?? 0)}
               icon={Target}
               accent="emerald"
             />
             <StatCard
-              label="Branches below target"
+              label={t("belowTarget")}
               value={perfLoading ? "…" : (branchPerformance?.belowTargetCount ?? 0)}
               icon={Target}
               accent="amber"
@@ -228,7 +226,7 @@ export default function AdminBranchesPage() {
             <div className="px-4 py-3.5 border-b border-[var(--border)]">
               <h2 className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
                 <Target className="w-4 h-4 text-[var(--brand-text)]" />
-                Monthly branch targets
+                {t("monthlyTargets")}
                 {branchPerformance?.periodLabel && (
                   <span className="text-xs font-normal text-[var(--text-tertiary)]">
                     · {branchPerformance.periodLabel}
@@ -237,9 +235,9 @@ export default function AdminBranchesPage() {
               </h2>
             </div>
             {perfLoading ? (
-              <p className="p-4 text-sm text-[var(--text-secondary)]">Loading performance...</p>
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingPerformance")}</p>
             ) : !branchPerformance?.branches.length ? (
-              <p className="p-4 text-sm text-[var(--text-secondary)]">No branch target data</p>
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{t("noTargetData")}</p>
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {branchPerformance.branches.map((p) => {
@@ -250,8 +248,12 @@ export default function AdminBranchesPage() {
                       title={p.branchName}
                       subtitle={
                         p.monthlySalesTarget > 0
-                          ? `${formatCurrency(p.actualSales)} of ${formatCurrency(p.monthlySalesTarget)} · ${p.achievementPercent}%`
-                          : "No monthly target set"
+                          ? t("salesOfTarget", {
+                              actual: formatCurrency(p.actualSales),
+                              target: formatCurrency(p.monthlySalesTarget),
+                              percent: p.achievementPercent,
+                            })
+                          : t("noMonthlyTarget")
                       }
                       onClick={() => branch && setBranchDrawer({ mode: "view", branch })}
                       trailing={
@@ -271,13 +273,13 @@ export default function AdminBranchesPage() {
 
           <Card padding={false}>
             <div className="px-4 py-3.5 border-b border-[var(--border)]">
-              <h2 className="font-semibold text-sm text-[var(--text-primary)]">All branches</h2>
-              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Tap a branch to view details</p>
+              <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("allBranches")}</h2>
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{t("tapBranch")}</p>
             </div>
             {branchesLoading ? (
-              <p className="p-4 text-sm text-[var(--text-secondary)]">Loading branches...</p>
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingBranches")}</p>
             ) : branches.length === 0 ? (
-              <EmptyState title="No branches" description="Add your first branch location" />
+              <EmptyState title={t("noBranchesTitle")} description={t("noBranchesDesc")} />
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {branches.map((b) => {
@@ -290,8 +292,8 @@ export default function AdminBranchesPage() {
                       subtitle={[
                         b.code,
                         b.societyDefault,
-                        b.monthlySalesTarget ? `Target ${formatCurrency(b.monthlySalesTarget)}/mo` : null,
-                        perf && perf.monthlySalesTarget > 0 ? `${perf.achievementPercent}% achieved` : null,
+                        b.monthlySalesTarget ? t("targetPerMonth", { amount: formatCurrency(b.monthlySalesTarget) }) : null,
+                        perf && perf.monthlySalesTarget > 0 ? t("achieved", { percent: perf.achievementPercent }) : null,
                       ].filter(Boolean).join(" · ")}
                       onClick={() => setBranchDrawer({ mode: "view", branch: b })}
                       trailing={
@@ -312,13 +314,13 @@ export default function AdminBranchesPage() {
       {tab === "managers" && (
         <Card padding={false}>
           <div className="px-4 py-3.5 border-b border-[var(--border)]">
-            <h2 className="font-semibold text-sm text-[var(--text-primary)]">Manager accounts</h2>
-            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Tap an account to view details</p>
+            <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("managerAccounts")}</h2>
+            <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{t("tapAccount")}</p>
           </div>
           {managersLoading ? (
-            <p className="p-4 text-sm text-[var(--text-secondary)]">Loading managers...</p>
+            <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingManagers")}</p>
           ) : managers.length === 0 ? (
-            <EmptyState title="No manager accounts" description="Onboard branch managers to log in" />
+            <EmptyState title={t("noManagersTitle")} description={t("noManagersDesc")} />
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {managers.map((u) => {
@@ -327,7 +329,7 @@ export default function AdminBranchesPage() {
                   <ListRow
                     key={u.id}
                     title={u.name}
-                    subtitle={`${u.email} · ${ROLE_LABELS[u.role]}${u.branchName ? ` · ${u.branchName}` : ""}`}
+                    subtitle={`${u.email} · ${t(`roles.${u.role}`)}${u.branchName ? ` · ${u.branchName}` : ""}`}
                     onClick={() => setManagerDrawer({ mode: "view", manager: u })}
                     trailing={
                       <div className="flex items-center gap-2">
@@ -351,7 +353,7 @@ export default function AdminBranchesPage() {
         onEdit={() => branchDrawer && branchDrawer.mode === "view" && setBranchDrawer({ mode: "edit", branch: branchDrawer.branch })}
         onBackToView={() => branchDrawer && branchDrawer.mode === "edit" && setBranchDrawer({ mode: "view", branch: branchDrawer.branch })}
         onDeactivate={() => {
-          if (branchDrawer && branchDrawer.mode !== "create" && window.confirm(`Deactivate branch "${branchDrawer.branch.name}"?`)) {
+          if (branchDrawer && branchDrawer.mode !== "create" && window.confirm(t("deactivateBranchConfirm", { name: branchDrawer.branch.name }))) {
             deactivateBranchMutation.mutate(branchDrawer.branch.id);
           }
         }}
@@ -368,7 +370,7 @@ export default function AdminBranchesPage() {
         onBackToView={() => managerDrawer && managerDrawer.mode === "edit" && setManagerDrawer({ mode: "view", manager: managerDrawer.manager })}
         onDeactivate={() => {
           if (managerDrawer && managerDrawer.mode !== "create" && managerDrawer.manager.role !== "BRAND_ADMIN" && managerDrawer.manager.active &&
-            window.confirm(`Deactivate "${managerDrawer.manager.name}"?`)) {
+            window.confirm(t("deactivateManagerConfirm", { name: managerDrawer.manager.name }))) {
             deactivateManagerMutation.mutate(managerDrawer.manager.id);
           }
         }}
@@ -391,12 +393,13 @@ export default function AdminBranchesPage() {
 }
 
 function BranchTargetBadge({ meeting, onTrack }: { meeting: boolean; onTrack: boolean }) {
+  const tAdmin = useTranslations("admin.common");
   const cls = meeting
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
     : onTrack
       ? "bg-sky-50 text-sky-700 border-sky-200"
       : "bg-amber-50 text-amber-700 border-amber-200";
-  const label = meeting ? "Target met" : onTrack ? "On track" : "Behind";
+  const label = meeting ? tAdmin("targetMet") : onTrack ? tAdmin("onTrack") : tAdmin("behind");
   return (
     <span className={cn("text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border", cls)}>
       {label}
@@ -413,14 +416,15 @@ function BrandSummaryCard({
   loading: boolean;
   onView: () => void;
 }) {
+  const t = useTranslations("admin.organization");
   if (loading) {
-    return <Card><p className="text-sm text-[var(--text-secondary)]">Loading brand...</p></Card>;
+    return <Card><p className="text-sm text-[var(--text-secondary)]">{t("loadingBrand")}</p></Card>;
   }
 
   return (
     <Card padding={false}>
       <ListRow
-        title={tenant?.name ?? "Brand"}
+        title={tenant?.name ?? t("brand")}
         subtitle={`${tenant?.slug ?? "—"} · ${tenant?.status ?? "—"}`}
         onClick={onView}
         trailing={
@@ -457,18 +461,21 @@ function BranchDrawer({
   onCreate: (data: CreateBranchRequest) => void;
   onUpdate: (id: string, data: UpdateBranchRequest) => void;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   if (!drawer) return null;
 
   const branch = drawer.mode !== "create" ? drawer.branch : null;
   const isView = drawer.mode === "view";
   const isForm = drawer.mode === "create" || drawer.mode === "edit";
 
-  const title = drawer.mode === "create" ? "New branch" : drawer.mode === "edit" ? "Edit branch" : branch?.name ?? "";
+  const title = drawer.mode === "create" ? t("newBranch") : drawer.mode === "edit" ? t("editBranch") : branch?.name ?? "";
   const subtitle =
     drawer.mode === "create"
-      ? "Add a location with monthly sales target"
+      ? t("newBranchSubtitle")
       : drawer.mode === "edit"
-        ? "Update branch profile & targets"
+        ? t("editBranchSubtitle")
         : [branch?.code, branch?.societyDefault].filter(Boolean).join(" · ");
 
   return (
@@ -483,11 +490,11 @@ function BranchDrawer({
           <div className="flex flex-col sm:flex-row gap-2">
             <button onClick={onEdit} className={`${btnPrimary} flex-1`}>
               <Pencil className="w-4 h-4" />
-              Edit branch
+              {t("editBranchBtn")}
             </button>
             <button onClick={onDeactivate} className={`${btnSecondary} flex-1 text-red-600 border-red-200 hover:bg-red-50`}>
               <Trash2 className="w-4 h-4" />
-              Deactivate
+              {tCommon("deactivate")}
             </button>
           </div>
         ) : undefined
@@ -507,7 +514,7 @@ function BranchDrawer({
             if (drawer.mode === "create") onCreate(data as CreateBranchRequest);
             else if (branch) onUpdate(branch.id, data);
           }}
-          cancelLabel={drawer.mode === "edit" ? "Back to details" : "Cancel"}
+          cancelLabel={drawer.mode === "edit" ? tAdmin("backToDetails") : tCommon("cancel")}
         />
       )}
     </SideSheet>
@@ -521,16 +528,22 @@ function BranchDetailView({
   branch: Branch;
   performance?: { actualSales: number; monthlySalesTarget: number; achievementPercent: number; meetingTarget: boolean; onTrack: boolean } | null;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   return (
     <div className="space-y-5">
       {performance && performance.monthlySalesTarget > 0 && (
         <div className="rounded-xl border border-[var(--border)] p-4 bg-[var(--surface-muted)]/40">
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">This month</p>
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">{tAdmin("thisMonth")}</p>
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(performance.actualSales)}</p>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                of {formatCurrency(performance.monthlySalesTarget)} target ({performance.achievementPercent}%)
+                {tAdmin("ofTarget", {
+                  target: formatCurrency(performance.monthlySalesTarget),
+                  percent: performance.achievementPercent,
+                })}
               </p>
             </div>
             <BranchTargetBadge meeting={performance.meetingTarget} onTrack={performance.onTrack} />
@@ -538,22 +551,22 @@ function BranchDetailView({
         </div>
       )}
 
-      <SectionTitle>Profile</SectionTitle>
+      <SectionTitle>{tAdmin("profile")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">
-        <DetailField label="Code" value={branch.code} />
-        <DetailField label="Status" value={branch.status || "ACTIVE"} />
-        <DetailField label="Society / locality" value={branch.societyDefault} />
-        <DetailField label="Phone" value={branch.phone} />
-        <DetailField label="Address" value={branch.address} />
-        <DetailField label="GSTIN" value={branch.gstin} />
-        <DetailField label="Open time" value={branch.openTime} />
-        <DetailField label="Close time" value={branch.closeTime} />
+        <DetailField label={t("code")} value={branch.code} />
+        <DetailField label={tCommon("status")} value={branch.status || "ACTIVE"} />
+        <DetailField label={t("societyLocality")} value={branch.societyDefault} />
+        <DetailField label={tCommon("phone")} value={branch.phone} />
+        <DetailField label={t("address")} value={branch.address} />
+        <DetailField label={t("gstin")} value={branch.gstin} />
+        <DetailField label={t("openTime")} value={branch.openTime} />
+        <DetailField label={t("closeTime")} value={branch.closeTime} />
       </div>
 
-      <SectionTitle>Targets</SectionTitle>
+      <SectionTitle>{tAdmin("targets")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">
         <DetailField
-          label="Monthly sales target"
+          label={t("monthlySalesTarget")}
           value={branch.monthlySalesTarget != null ? formatCurrency(branch.monthlySalesTarget) : undefined}
         />
       </div>
@@ -574,6 +587,9 @@ function BranchForm({
   onSubmit: (data: CreateBranchRequest | UpdateBranchRequest) => void;
   cancelLabel?: string;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(initial?.name ?? "");
   const [code, setCode] = useState(initial?.code ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
@@ -600,12 +616,12 @@ function BranchForm({
       }}
       className="space-y-4 pb-2"
     >
-      <SectionTitle>Profile</SectionTitle>
+      <SectionTitle>{tAdmin("profile")}</SectionTitle>
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Name *">
+        <Field label={`${tCommon("name")} *`}>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
         </Field>
-        <Field label="Code *">
+        <Field label={`${t("code")} *`}>
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s/g, ""))}
@@ -614,33 +630,33 @@ function BranchForm({
             required
           />
         </Field>
-        <Field label="Society / locality">
+        <Field label={t("societyLocality")}>
           <input value={societyDefault} onChange={(e) => setSocietyDefault(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Phone">
+        <Field label={tCommon("phone")}>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Address">
+        <Field label={t("address")}>
           <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="GSTIN">
+        <Field label={t("gstin")}>
           <input value={gstin} onChange={(e) => setGstin(e.target.value)} className={inputClass} />
         </Field>
-        <Field label="Monthly sales target (₹)">
+        <Field label={t("monthlySalesTargetField")}>
           <input
             type="number"
             min={0}
             value={monthlySalesTarget}
             onChange={(e) => setMonthlySalesTarget(e.target.value)}
             className={inputClass}
-            placeholder="e.g. 400000"
+            placeholder={t("targetPlaceholder")}
           />
         </Field>
       </div>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)] sticky bottom-0 bg-[var(--surface)]">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>{cancelLabel}</button>
         <button type="submit" disabled={!name || !code || loading} className={`${btnPrimary} flex-1`}>
-          {loading ? "Saving…" : initial ? "Save changes" : "Create branch"}
+          {loading ? tCommon("saving") : initial ? tAdmin("saveChanges") : t("createBranch")}
         </button>
       </div>
     </form>
@@ -668,6 +684,9 @@ function ManagerDrawer({
   onCreate: (data: CreatePlatformUserRequest) => void;
   onUpdate: (id: string, data: UpdatePlatformUserRequest) => void;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   if (!drawer) return null;
 
   const manager = drawer.mode !== "create" ? drawer.manager : null;
@@ -675,13 +694,13 @@ function ManagerDrawer({
   const isForm = drawer.mode === "create" || drawer.mode === "edit";
   const canEdit = manager?.role !== "BRAND_ADMIN";
 
-  const title = drawer.mode === "create" ? "Onboard manager" : drawer.mode === "edit" ? "Edit manager" : manager?.name ?? "";
+  const title = drawer.mode === "create" ? t("onboardManagerTitle") : drawer.mode === "edit" ? t("editManagerTitle") : manager?.name ?? "";
   const subtitle =
     drawer.mode === "create"
-      ? "Create a login for branch or brand management"
+      ? t("onboardSubtitle")
       : drawer.mode === "edit"
-        ? "Update account details"
-        : [manager?.email, manager?.role && ROLE_LABELS[manager.role]].filter(Boolean).join(" · ");
+        ? t("editManagerSubtitle")
+        : [manager?.email, manager?.role && t(`roles.${manager.role}`)].filter(Boolean).join(" · ");
 
   return (
     <SideSheet
@@ -695,11 +714,11 @@ function ManagerDrawer({
           <div className="flex flex-col sm:flex-row gap-2">
             <button onClick={onEdit} className={`${btnPrimary} flex-1`}>
               <Pencil className="w-4 h-4" />
-              Edit account
+              {t("editAccount")}
             </button>
             <button onClick={onDeactivate} className={`${btnSecondary} flex-1 text-red-600 border-red-200 hover:bg-red-50`}>
               <Trash2 className="w-4 h-4" />
-              Deactivate
+              {tCommon("deactivate")}
             </button>
           </div>
         ) : undefined
@@ -721,7 +740,7 @@ function ManagerDrawer({
             if (drawer.mode === "create") onCreate(data as CreatePlatformUserRequest);
             else if (manager) onUpdate(manager.id, data);
           }}
-          cancelLabel={drawer.mode === "edit" ? "Back to details" : "Cancel"}
+          cancelLabel={drawer.mode === "edit" ? tAdmin("backToDetails") : tCommon("cancel")}
         />
       )}
     </SideSheet>
@@ -729,14 +748,17 @@ function ManagerDrawer({
 }
 
 function ManagerDetailView({ manager }: { manager: PlatformUser }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   return (
     <div className="space-y-5">
-      <SectionTitle>Account</SectionTitle>
+      <SectionTitle>{tAdmin("account")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">
-        <DetailField label="Email" value={manager.email} />
-        <DetailField label="Role" value={ROLE_LABELS[manager.role]} />
-        <DetailField label="Branch" value={manager.branchName} />
-        <DetailField label="Status" value={manager.active ? "Active" : "Inactive"} />
+        <DetailField label={tCommon("email")} value={manager.email} />
+        <DetailField label={t("role")} value={t(`roles.${manager.role}`)} />
+        <DetailField label={tCommon("branch")} value={manager.branchName} />
+        <DetailField label={tCommon("status")} value={manager.active ? tCommon("active") : tCommon("inactive")} />
       </div>
     </div>
   );
@@ -759,6 +781,9 @@ function ManagerForm({
   onSubmit: (data: CreatePlatformUserRequest | UpdatePlatformUserRequest) => void;
   cancelLabel?: string;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(manager?.name ?? "");
   const [email, setEmail] = useState(manager?.email ?? "");
   const [password, setPassword] = useState("");
@@ -792,15 +817,15 @@ function ManagerForm({
       }}
       className="space-y-4 pb-2"
     >
-      <SectionTitle>Account</SectionTitle>
+      <SectionTitle>{tAdmin("account")}</SectionTitle>
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Name *">
+        <Field label={`${tCommon("name")} *`}>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
         </Field>
-        <Field label="Email *">
+        <Field label={`${tCommon("email")} *`}>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} required />
         </Field>
-        <Field label={isCreate ? "Password *" : "New password"}>
+        <Field label={isCreate ? `${t("password")} *` : t("newPassword")}>
           <input
             type="password"
             value={password}
@@ -808,10 +833,10 @@ function ManagerForm({
             className={inputClass}
             required={isCreate}
             minLength={isCreate ? 6 : undefined}
-            placeholder={isCreate ? undefined : "Leave blank to keep current"}
+            placeholder={isCreate ? undefined : t("passwordPlaceholder")}
           />
         </Field>
-        <Field label="Role *">
+        <Field label={`${t("role")} *`}>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
@@ -819,12 +844,12 @@ function ManagerForm({
             disabled={!canEditRole && !isCreate}
           >
             {ONBOARD_ROLES.map((r) => (
-              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+              <option key={r} value={r}>{t(`roles.${r}`)}</option>
             ))}
           </select>
         </Field>
         {needsBranch && (
-          <Field label="Branch *">
+          <Field label={`${tCommon("branch")} *`}>
             <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={selectClass} required>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
@@ -840,7 +865,7 @@ function ManagerForm({
           disabled={!name || !email || (isCreate && !password) || (needsBranch && !branchId) || loading}
           className={`${btnPrimary} flex-1`}
         >
-          {loading ? "Saving…" : isCreate ? "Create account" : "Save changes"}
+          {loading ? tCommon("saving") : isCreate ? t("createAccount") : tAdmin("saveChanges")}
         </button>
       </div>
     </form>
@@ -866,6 +891,8 @@ function BrandDrawer({
   onBackToView: () => void;
   onSave: (data: UpdateTenantRequest) => void;
 }) {
+  const t = useTranslations("admin.organization");
+  const tCommon = useTranslations("common");
   if (!drawer) return null;
 
   const isView = drawer.mode === "view";
@@ -874,28 +901,28 @@ function BrandDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title={isView ? tenant?.name ?? "Brand profile" : "Edit brand profile"}
-      subtitle={isView ? `${tenant?.slug} · ${tenant?.status}` : "Update brand name and theme color"}
+      title={isView ? tenant?.name ?? t("brandProfile") : t("editBrandProfile")}
+      subtitle={isView ? `${tenant?.slug} · ${tenant?.status}` : t("editBrandSubtitle")}
       footer={
         isView ? (
           <button onClick={onEdit} className={`${btnPrimary} w-full`}>
             <Pencil className="w-4 h-4" />
-            Edit brand profile
+            {t("editBrandBtn")}
           </button>
         ) : undefined
       }
     >
       {loading ? (
-        <p className="text-sm text-[var(--text-secondary)]">Loading brand...</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("loadingBrand")}</p>
       ) : isView && tenant ? (
         <div className="space-y-5">
-          <SectionTitle>Brand</SectionTitle>
+          <SectionTitle>{t("brand")}</SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Name" value={tenant.name} />
-            <DetailField label="Slug" value={tenant.slug} />
-            <DetailField label="Status" value={tenant.status} />
+            <DetailField label={tCommon("name")} value={tenant.name} />
+            <DetailField label={t("slug")} value={tenant.slug} />
+            <DetailField label={tCommon("status")} value={tenant.status} />
             <DetailField
-              label="Primary color"
+              label={t("primaryColor")}
               value={
                 tenant.primaryColor ? (
                   <span className="inline-flex items-center gap-2">
@@ -930,6 +957,9 @@ function BrandForm({
   onCancel: () => void;
   onSave: (data: UpdateTenantRequest) => void;
 }) {
+  const t = useTranslations("admin.organization");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(tenant?.name ?? "");
   const [primaryColor, setPrimaryColor] = useState(tenant?.primaryColor || "#6366f1");
 
@@ -949,10 +979,10 @@ function BrandForm({
       className="space-y-4 pb-2"
     >
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Brand name">
+        <Field label={t("brandName")}>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} required />
         </Field>
-        <Field label="Primary color">
+        <Field label={t("primaryColor")}>
           <div className="flex gap-2">
             <input
               type="color"
@@ -965,9 +995,9 @@ function BrandForm({
         </Field>
       </div>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
-        <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>Back to details</button>
+        <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>{tAdmin("backToDetails")}</button>
         <button type="submit" disabled={saving || !name} className={`${btnPrimary} flex-1`}>
-          {saving ? "Saving…" : "Save brand profile"}
+          {saving ? tCommon("saving") : t("saveBrandProfile")}
         </button>
       </div>
     </form>

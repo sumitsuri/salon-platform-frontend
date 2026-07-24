@@ -2,21 +2,27 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Building2, LogOut } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 
-const nav = [{ href: "/platform", label: "Tenants", icon: Building2, exact: true }];
-
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("platform.layout");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthHydrated();
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const nav = useMemo(
+    () => [{ href: "/platform", label: t("tenants"), icon: Building2, exact: true }],
+    [t]
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -29,7 +35,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
         </div>
       </div>
     );
@@ -49,8 +55,8 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
               P
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">Salon Platform</p>
-              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">Platform Admin · {user.name}</p>
+              <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">{t("title")}</p>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">{t("subtitle", { name: user.name })}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -61,7 +67,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
                 router.push("/login");
               }}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
-              aria-label="Logout"
+              aria-label={tCommon("logout")}
             >
               <LogOut className="w-5 h-5" />
             </button>

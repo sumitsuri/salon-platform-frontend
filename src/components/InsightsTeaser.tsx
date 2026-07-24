@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Lightbulb, ChevronRight } from "lucide-react";
 import { RecommendationsResponse } from "@/lib/api";
 import { Card, StatusBadge } from "@/components/ui";
@@ -13,6 +14,8 @@ interface InsightsTeaserProps {
 }
 
 export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
+  const t = useTranslations("components.insightsTeaser");
+  const tCommon = useTranslations("common");
   const total = countInsights(data);
   const top = flattenInsights(data).slice(0, 2);
 
@@ -22,24 +25,22 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
         <div className="flex items-center gap-2">
           <Lightbulb className="w-5 h-5 text-[var(--brand-text)]" />
           <div>
-            <h2 className="font-semibold text-[var(--text-primary)] text-sm">Insights</h2>
+            <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
             <p className="text-xs text-[var(--text-secondary)]">
-              {loading ? "Loading..." : total > 0 ? `${total} actionable tip${total > 1 ? "s" : ""}` : "No tips yet"}
+              {loading ? tCommon("loading") : total > 0 ? t("tipsCount", { count: total }) : t("noTips")}
             </p>
           </div>
         </div>
         <Link href={href} className="link-brand text-xs flex items-center gap-0.5">
-          View all
+          {tCommon("viewAll")}
           <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {loading ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">Analyzing your branch data...</p>
+        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("analyzing")}</p>
       ) : top.length === 0 ? (
-        <p className="p-4 text-sm text-[var(--text-secondary)]">
-          Insights appear after more visits and activity are recorded.
-        </p>
+        <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
       ) : (
         <div className="divide-y divide-[var(--border)]">
           {top.map((item) => (

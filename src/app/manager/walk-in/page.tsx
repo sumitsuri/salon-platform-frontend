@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Trash2, Plus, Check } from "lucide-react";
 import { api, BillPreview, BranchServiceItem, StaffItem } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -28,6 +29,8 @@ interface CartItem {
 }
 
 export default function WalkInPage() {
+  const t = useTranslations("manager.walkIn");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
   const router = useRouter();
@@ -43,6 +46,8 @@ export default function WalkInPage() {
   const [bookingId, setBookingId] = useState("");
   const [billPreview, setBillPreview] = useState<BillPreview | null>(null);
   const [error, setError] = useState("");
+
+  const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
 
   const { data: services = [] } = useQuery({
     queryKey: ["services", branchId],
@@ -67,10 +72,19 @@ export default function WalkInPage() {
     onError: (e: Error) => setError(e.message),
   });
 
+  const [paymentSuccess, setPaymentSuccess] = useState("");
+
   const payBooking = useMutation({
     mutationFn: ({ id, amount }: { id: string; amount: number }) =>
       api.payBooking(id, { mode: paymentMode, amount, reference }),
-    onSuccess: () => router.push("/manager"),
+    onSuccess: (booking) => {
+      if (booking.receiptQueued) {
+        setPaymentSuccess(t("receiptQueued", { phone: booking.customerPhone }));
+        setTimeout(() => router.push("/manager"), 2500);
+      } else {
+        router.push("/manager");
+      }
+    },
     onError: (e: Error) => setError(e.message),
   });
 
@@ -99,7 +113,7 @@ export default function WalkInPage() {
       }
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
+      setError(e instanceof Error ? e.message : tCommon("failed"));
     }
   }
 
@@ -119,7 +133,7 @@ export default function WalkInPage() {
 
   function submitBooking() {
     if (cart.some((c) => !c.staffId)) {
-      setError("Assign stylist to every service");
+      setError(t("assignStylistError"));
       return;
     }
     setError("");
@@ -135,10 +149,10 @@ export default function WalkInPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="New Walk-in" subtitle={user?.branchName} />
+      <PageHeader title={t("title")} subtitle={user?.branchName} />
 
       <div className="flex items-center gap-2">
-        {["Customer", "Services", "Payment"].map((label, i) => {
+        {steps.map((label, i) => {
           const num = i + 1;
           const done = step > num;
           const active = step === num;
@@ -166,26 +180,16 @@ export default function WalkInPage() {
       {step === 1 && (
         <Card className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              placeholder="Phone number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className={inputClass}
-            />
+            <input placeholder={t("phonePlaceholder")} value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} />
             <button onClick={searchCustomer} className={`${btnSecondary} shrink-0 sm:px-5`}>
-              Search
+              {tCommon("search")}
             </button>
           </div>
-          <input
-            placeholder="Customer name *"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className={inputClass}
-          />
-          <input placeholder="Society" value={society} onChange={(e) => setSociety(e.target.value)} className={inputClass} />
-          <input placeholder="Flat / Unit" value={flat} onChange={(e) => setFlat(e.target.value)} className={inputClass} />
+          <input placeholder={t("namePlaceholder")} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className={inputClass} />
+          <input placeholder={t("societyPlaceholder")} value={society} onChange={(e) => setSociety(e.target.value)} className={inputClass} />
+          <input placeholder={t("flatPlaceholder")} value={flat} onChange={(e) => setFlat(e.target.value)} className={inputClass} />
           <button onClick={registerAndContinue} disabled={!phone || !customerName} className={`${btnPrimary} w-full`}>
-            Continue to services
+            {t("continueServices")}
           </button>
         </Card>
       )}
@@ -194,7 +198,7 @@ export default function WalkInPage() {
         <div className="space-y-4">
           <Card padding={false}>
             <div className="px-4 py-3 border-b border-[var(--border)]">
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">Add services</p>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("addServices")}</p>
             </div>
             <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto">
               {services.map((s) => (
@@ -218,11 +222,13 @@ export default function WalkInPage() {
 
           <Card className="sticky bottom-20 lg:bottom-4 z-10 shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">Cart ({cart.length})</p>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                {t("cart", { count: cart.length })}
+              </p>
               <p className="text-lg font-bold text-[var(--text-primary)]">{formatCurrency(estimateGrandTotal)}</p>
             </div>
             {cart.length === 0 ? (
-              <p className="text-[var(--text-tertiary)] text-sm text-center py-4">Tap a service above to add</p>
+              <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {cart.map((item, idx) => (
@@ -236,12 +242,8 @@ export default function WalkInPage() {
                         </button>
                       </div>
                     </div>
-                    <select
-                      value={item.staffId}
-                      onChange={(e) => updateStaff(idx, e.target.value)}
-                      className={`${selectClass} mt-2 py-2`}
-                    >
-                      <option value="">Select stylist *</option>
+                    <select value={item.staffId} onChange={(e) => updateStaff(idx, e.target.value)} className={`${selectClass} mt-2 py-2`}>
+                      <option value="">{t("selectStylist")}</option>
                       {staff.map((st: StaffItem) => (
                         <option key={st.id} value={st.id}>
                           {st.name}
@@ -252,12 +254,8 @@ export default function WalkInPage() {
                 ))}
               </div>
             )}
-            <button
-              onClick={submitBooking}
-              disabled={cart.length === 0 || createBooking.isPending}
-              className={`${btnPrimary} w-full mt-4`}
-            >
-              {createBooking.isPending ? "Processing..." : "Continue to bill"}
+            <button onClick={submitBooking} disabled={cart.length === 0 || createBooking.isPending} className={`${btnPrimary} w-full mt-4`}>
+              {createBooking.isPending ? tCommon("processing") : t("continueBill")}
             </button>
           </Card>
         </div>
@@ -267,12 +265,12 @@ export default function WalkInPage() {
         <Card className="space-y-5">
           <div className="bg-[var(--surface-muted)] rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[var(--text-secondary)]">Subtotal</span>
+              <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
               <span>{formatCurrency(billPreview.subtotal)}</span>
             </div>
             {billPreview.discountAmount > 0 && (
               <div className="flex justify-between text-emerald-600">
-                <span>Discount</span>
+                <span>{tCommon("discount")}</span>
                 <span>-{formatCurrency(billPreview.discountAmount)}</span>
               </div>
             )}
@@ -285,18 +283,18 @@ export default function WalkInPage() {
               <span>{formatCurrency(billPreview.sgstAmount)}</span>
             </div>
             <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">
-              <span>Grand total</span>
+              <span>{tCommon("grandTotal")}</span>
               <span className="text-[var(--brand-text)]">{formatCurrency(billPreview.grandTotal)}</span>
             </div>
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Payment mode</p>
+            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">{t("paymentMode")}</p>
             <SegmentedControl
               options={[
-                { id: "CASH", label: "Cash" },
-                { id: "UPI", label: "UPI" },
-                { id: "CARD", label: "Card" },
+                { id: "CASH", label: t("cash") },
+                { id: "UPI", label: t("upi") },
+                { id: "CARD", label: t("card") },
               ]}
               value={paymentMode}
               onChange={(m) => setPaymentMode(m as "CASH" | "UPI" | "CARD")}
@@ -304,12 +302,11 @@ export default function WalkInPage() {
           </div>
 
           {paymentMode !== "CASH" && (
-            <input
-              placeholder="Transaction reference"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              className={inputClass}
-            />
+            <input placeholder={t("txnReference")} value={reference} onChange={(e) => setReference(e.target.value)} className={inputClass} />
+          )}
+
+          {paymentSuccess && (
+            <p className="text-sm text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl px-3 py-2">{paymentSuccess}</p>
           )}
 
           <button
@@ -317,7 +314,7 @@ export default function WalkInPage() {
             disabled={payBooking.isPending}
             className={`${btnPrimary} w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
           >
-            {payBooking.isPending ? "Processing..." : "Complete & generate invoice"}
+            {payBooking.isPending ? tCommon("processing") : t("completeInvoice")}
           </button>
         </Card>
       )}

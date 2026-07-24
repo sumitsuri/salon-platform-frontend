@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, Check } from "lucide-react";
 import { Branch } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ interface BranchMultiSelectProps {
 }
 
 export function BranchMultiSelect({ branches, selected, onChange, className }: BranchMultiSelectProps) {
+  const t = useTranslations("components.branchMultiSelect");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -26,10 +28,10 @@ export function BranchMultiSelect({ branches, selected, onChange, className }: B
 
   const allSelected = selected.length === branches.length;
   const label = allSelected
-    ? "All branches"
+    ? t("allBranches")
     : selected.length === 0
-      ? "Select branches"
-      : `${selected.length} branch${selected.length > 1 ? "es" : ""}`;
+      ? t("selectBranches")
+      : t("branchCount", { count: selected.length });
 
   function toggle(id: string) {
     if (selected.includes(id)) {
@@ -67,7 +69,7 @@ export function BranchMultiSelect({ branches, selected, onChange, className }: B
             >
               {allSelected && <Check className="w-3 h-3 text-[var(--brand-on-brand)]" />}
             </div>
-            <span className="font-medium">All branches</span>
+            <span className="font-medium">{t("allBranches")}</span>
           </button>
           {branches.map((b) => {
             const checked = selected.includes(b.id);

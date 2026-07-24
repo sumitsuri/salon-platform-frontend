@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronRight, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import {
@@ -39,31 +40,9 @@ import {
 
 type Tab = "overview" | "products" | "vendors" | "stock" | "movements";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "products", label: "Products" },
-  { id: "vendors", label: "Vendors" },
-  { id: "stock", label: "Stock" },
-  { id: "movements", label: "Movements" },
-];
-
 const CATEGORIES: ProductCategory[] = ["CONSUMABLE", "RETAIL", "EQUIPMENT"];
 const UNITS = ["ML", "G", "PCS", "BOTTLE"] as const;
 const MOVEMENT_TYPES: MovementType[] = ["RESTOCK", "USAGE", "WASTAGE", "RETAIL_SALE", "ADJUSTMENT"];
-
-const CATEGORY_LABELS: Record<ProductCategory, string> = {
-  CONSUMABLE: "Consumable",
-  RETAIL: "Retail",
-  EQUIPMENT: "Equipment",
-};
-
-const MOVEMENT_LABELS: Record<MovementType, string> = {
-  RESTOCK: "Restock",
-  USAGE: "Usage",
-  WASTAGE: "Wastage",
-  RETAIL_SALE: "Retail sale",
-  ADJUSTMENT: "Adjustment",
-};
 
 type ProductDrawer =
   | { mode: "create" }
@@ -84,8 +63,22 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function AdminInventoryPage() {
+  const t = useTranslations("admin.inventory");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
+
+  const tabs = useMemo(
+    () => [
+      { id: "overview" as Tab, label: t("tabs.overview") },
+      { id: "products" as Tab, label: t("tabs.products") },
+      { id: "vendors" as Tab, label: t("tabs.vendors") },
+      { id: "stock" as Tab, label: t("tabs.stock") },
+      { id: "movements" as Tab, label: t("tabs.movements") },
+    ],
+    [t]
+  );
   const [selectedMonth, setSelectedMonth] = useState(currentMonthIso);
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
@@ -276,39 +269,39 @@ export default function AdminInventoryPage() {
     createMovement.isPending;
 
   if (!initialized || branchesLoading) {
-    return <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">Loading inventory...</p>;
+    return <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">{t("loading")}</p>;
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Inventory"
-        subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : "Products, vendors & branch stock"}
+        title={t("title")}
+        subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : t("subtitleOverview")}
         action={tab === "overview" ? <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} /> : undefined}
       />
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
-      <SegmentedControl value={tab} onChange={setTab} options={TABS} />
+      <SegmentedControl value={tab} onChange={setTab} options={tabs} />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
       {tab === "overview" && (
         <div className="space-y-5">
           {overviewLoading || !overview ? (
-            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">Loading overview...</p>
+            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">{t("loadingOverview")}</p>
           ) : (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard label="Product cost" value={formatCurrency(overview.totalProductCost)} icon={Package} accent="amber" />
-                <StatCard label="Stock value" value={formatCurrency(overview.totalStockValue)} icon={Building2} accent="brand" />
-                <StatCard label="Low stock" value={overview.lowStockCount} icon={Package} accent="amber" />
-                <StatCard label="Out of stock" value={overview.outOfStockCount} icon={Package} accent="violet" />
+                <StatCard label={t("productCost")} value={formatCurrency(overview.totalProductCost)} icon={Package} accent="amber" />
+                <StatCard label={t("stockValue")} value={formatCurrency(overview.totalStockValue)} icon={Building2} accent="brand" />
+                <StatCard label={t("lowStock")} value={overview.lowStockCount} icon={Package} accent="amber" />
+                <StatCard label={t("outOfStock")} value={overview.outOfStockCount} icon={Package} accent="violet" />
               </div>
 
               {overview.topCostProductName && (
                 <Card className="text-sm">
-                  <span className="text-[var(--text-secondary)]">Top cost driver: </span>
+                  <span className="text-[var(--text-secondary)]">{t("topCostDriver")}</span>
                   <span className="font-semibold">{overview.topCostProductName}</span>
                   <span className="text-[var(--text-secondary)]"> · {formatCurrency(overview.topCostProductAmount)}</span>
                 </Card>
@@ -320,18 +313,18 @@ export default function AdminInventoryPage() {
 
               <Card padding={false}>
                 <div className="px-4 py-3 border-b border-[var(--border)]">
-                  <h2 className="font-semibold text-sm">Branch summary</h2>
+                  <h2 className="font-semibold text-sm">{t("branchSummary")}</h2>
                 </div>
                 <div className="divide-y divide-[var(--border)]">
                   {overview.branches.map((b) => (
                     <ListRow
                       key={b.branchId}
                       title={b.branchName}
-                      subtitle={`${b.movementCount} movements · ${b.lowStockCount} low stock`}
+                      subtitle={t("movementsCount", { count: b.movementCount, low: b.lowStockCount })}
                       trailing={
                         <div className="text-right text-sm">
                           <p className="font-bold">{formatCurrency(b.productCost)}</p>
-                          <p className="text-xs text-[var(--text-tertiary)]">stock {formatCurrency(b.stockValue)}</p>
+                          <p className="text-xs text-[var(--text-tertiary)]">{t("stockLabel", { amount: formatCurrency(b.stockValue) })}</p>
                         </div>
                       }
                     />
@@ -346,10 +339,10 @@ export default function AdminInventoryPage() {
       {tab === "products" && (
         <div className="space-y-4">
           <button type="button" onClick={() => setProductDrawer({ mode: "create" })} className={btnPrimary}>
-            <Plus className="w-4 h-4" /> Add product
+            <Plus className="w-4 h-4" /> {t("addProduct")}
           </button>
           {products.length === 0 ? (
-            <EmptyState title="No products" description="Add SKU-level products linked to vendors" />
+            <EmptyState title={t("noProductsTitle")} description={t("noProductsDesc")} />
           ) : (
             <Card padding={false}>
               <div className="divide-y divide-[var(--border)]">
@@ -357,7 +350,7 @@ export default function AdminInventoryPage() {
                   <button key={p.id} type="button" onClick={() => setProductDrawer({ mode: "view", product: p })} className="w-full text-left">
                     <ListRow
                       title={p.name}
-                      subtitle={`${CATEGORY_LABELS[p.category]} · ${p.vendorName} · ${p.sku || "no SKU"}`}
+                      subtitle={`${t(`categories.${p.category}`)} · ${p.vendorName} · ${p.sku || t("noSku")}`}
                       trailing={
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold">{formatCurrency(p.unitCost)}</span>
@@ -376,10 +369,10 @@ export default function AdminInventoryPage() {
       {tab === "vendors" && (
         <div className="space-y-4">
           <button type="button" onClick={() => setVendorDrawer({ mode: "create" })} className={btnPrimary}>
-            <Plus className="w-4 h-4" /> Add vendor
+            <Plus className="w-4 h-4" /> {t("addVendor")}
           </button>
           {vendors.length === 0 ? (
-            <EmptyState title="No vendors" description="Add suppliers you procure inventory from" />
+            <EmptyState title={t("noVendorsTitle")} description={t("noVendorsDesc")} />
           ) : (
             <Card padding={false}>
               <div className="divide-y divide-[var(--border)]">
@@ -387,7 +380,7 @@ export default function AdminInventoryPage() {
                   <button key={v.id} type="button" onClick={() => setVendorDrawer({ mode: "view", vendor: v })} className="w-full text-left">
                     <ListRow
                       title={v.name}
-                      subtitle={[v.contactPhone, v.contactEmail].filter(Boolean).join(" · ") || "No contact"}
+                      subtitle={[v.contactPhone, v.contactEmail].filter(Boolean).join(" · ") || tAdmin("noContact")}
                       trailing={<ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />}
                     />
                   </button>
@@ -401,10 +394,10 @@ export default function AdminInventoryPage() {
       {tab === "stock" && (
         <div className="space-y-4">
           <button type="button" onClick={() => setMovementDrawer({ mode: "create" })} className={btnPrimary}>
-            <Plus className="w-4 h-4" /> Log movement
+            <Plus className="w-4 h-4" /> {t("logMovement")}
           </button>
           {stockLoading ? (
-            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">Loading stock...</p>
+            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">{t("loadingStock")}</p>
           ) : (
             <div className="grid gap-4">
               {stockByBranch.map(({ branch, items }) => (
@@ -416,11 +409,11 @@ export default function AdminInventoryPage() {
                       onClick={() => setMovementDrawer({ mode: "create", branchId: branch.id })}
                       className="text-xs font-semibold text-[var(--brand-text)]"
                     >
-                      + Log
+                      {t("logShort")}
                     </button>
                   </div>
                   {items.length === 0 ? (
-                    <p className="p-4 text-sm text-[var(--text-secondary)]">No stock records — log a restock first.</p>
+                    <p className="p-4 text-sm text-[var(--text-secondary)]">{t("noStockRecords")}</p>
                   ) : (
                     <div className="divide-y divide-[var(--border)]">
                       {items.map((s) => (
@@ -432,7 +425,7 @@ export default function AdminInventoryPage() {
                         >
                           <ListRow
                             title={s.productName}
-                            subtitle={`${s.vendorName} · ${s.quantity} ${s.unit}${s.lowStock ? " · Low" : ""}${s.outOfStock ? " · Out" : ""}`}
+                            subtitle={`${s.vendorName} · ${s.quantity} ${s.unit}${s.lowStock ? ` · ${t("low")}` : ""}${s.outOfStock ? ` · ${t("out")}` : ""}`}
                             trailing={
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-bold">{formatCurrency(s.stockValue)}</span>
@@ -456,20 +449,20 @@ export default function AdminInventoryPage() {
           <div className="flex justify-between items-center">
             <p className="text-sm text-[var(--text-secondary)]">{formatMonthYear(selectedMonth)}</p>
             <button type="button" onClick={() => setMovementDrawer({ mode: "create" })} className={btnPrimary}>
-              <Plus className="w-4 h-4" /> Log movement
+              <Plus className="w-4 h-4" /> {t("logMovement")}
             </button>
           </div>
           {movementsLoading ? (
-            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">Loading movements...</p>
+            <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">{t("loadingMovements")}</p>
           ) : filteredMovements.length === 0 ? (
-            <EmptyState title="No movements" description="Log restock, usage, wastage, or retail sales" />
+            <EmptyState title={t("noMovementsTitle")} description={t("noMovementsDesc")} />
           ) : (
             <Card padding={false}>
               <div className="divide-y divide-[var(--border)]">
                 {filteredMovements.map((m) => (
                   <button key={m.id} type="button" onClick={() => setMovementDrawer({ mode: "view", movement: m })} className="w-full text-left">
                     <ListRow
-                      title={`${MOVEMENT_LABELS[m.movementType]} · ${m.productName}`}
+                      title={`${t(`movements.${m.movementType}`)} · ${m.productName}`}
                       subtitle={`${m.branchName} · ${m.vendorName} · ${m.movementDate}`}
                       trailing={
                         <div className="flex items-center gap-2">
@@ -499,7 +492,7 @@ export default function AdminInventoryPage() {
             productDrawer.mode === "edit" && setProductDrawer({ mode: "view", product: productDrawer.product })
           }
           onDeactivate={() => {
-            if (productDrawer.mode !== "create" && window.confirm(`Deactivate ${productDrawer.product.name}?`)) {
+            if (productDrawer.mode !== "create" && window.confirm(t("deactivateConfirm", { name: productDrawer.product.name }))) {
               deleteProduct.mutate(productDrawer.product.id);
             }
           }}
@@ -520,7 +513,7 @@ export default function AdminInventoryPage() {
             vendorDrawer.mode === "edit" && setVendorDrawer({ mode: "view", vendor: vendorDrawer.vendor })
           }
           onDeactivate={() => {
-            if (vendorDrawer.mode !== "create" && window.confirm(`Deactivate ${vendorDrawer.vendor.name}?`)) {
+            if (vendorDrawer.mode !== "create" && window.confirm(t("deactivateConfirm", { name: vendorDrawer.vendor.name }))) {
               deleteVendor.mutate(vendorDrawer.vendor.id);
             }
           }}
@@ -575,17 +568,20 @@ function ProductDrawer({
   onCreate: (data: CreateInventoryProductRequest) => void;
   onUpdate: (id: string, data: UpdateInventoryProductRequest) => void;
 }) {
+  const t = useTranslations("admin.inventory");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const product = drawer.mode !== "create" ? drawer.product : null;
   const isView = drawer.mode === "view";
   const isForm = drawer.mode === "create" || drawer.mode === "edit";
 
   const title =
-    drawer.mode === "create" ? "Add product" : drawer.mode === "edit" ? "Edit product" : product?.name ?? "";
+    drawer.mode === "create" ? t("addProductTitle") : drawer.mode === "edit" ? t("editProductTitle") : product?.name ?? "";
   const subtitle =
     drawer.mode === "create"
-      ? "Define SKU, unit cost, and reorder level"
+      ? t("addProductSubtitle")
       : drawer.mode === "edit"
-        ? "Update catalog details and pricing"
+        ? t("editProductSubtitle")
         : [product?.vendorName, product?.sku].filter(Boolean).join(" · ");
 
   return (
@@ -600,7 +596,7 @@ function ProductDrawer({
           <div className="flex flex-col sm:flex-row gap-2">
             <button type="button" onClick={onEdit} className={`${btnPrimary} flex-1`}>
               <Pencil className="w-4 h-4" />
-              Edit product
+              {t("editProduct")}
             </button>
             <button
               type="button"
@@ -608,7 +604,7 @@ function ProductDrawer({
               className={`${btnSecondary} flex-1 text-red-600 border-red-200 hover:bg-red-50`}
             >
               <Trash2 className="w-4 h-4" />
-              Deactivate
+              {tCommon("deactivate")}
             </button>
           </div>
         ) : undefined
@@ -616,13 +612,13 @@ function ProductDrawer({
     >
       {isView && product && (
         <div className="space-y-4">
-          <DetailField label="Vendor" value={product.vendorName} />
-          <DetailField label="SKU" value={product.sku || "—"} />
-          <DetailField label="Category" value={CATEGORY_LABELS[product.category]} />
-          <DetailField label="Unit" value={product.unit} />
-          <DetailField label="Unit cost" value={formatCurrency(product.unitCost)} />
-          {product.retailPrice != null && <DetailField label="Retail price" value={formatCurrency(product.retailPrice)} />}
-          {product.reorderLevel != null && <DetailField label="Reorder level" value={String(product.reorderLevel)} />}
+          <DetailField label={t("vendor")} value={product.vendorName} />
+          <DetailField label={t("sku")} value={product.sku || "—"} />
+          <DetailField label={t("category")} value={t(`categories.${product.category}`)} />
+          <DetailField label={t("unit")} value={product.unit} />
+          <DetailField label={t("unitCost")} value={formatCurrency(product.unitCost)} />
+          {product.retailPrice != null && <DetailField label={t("retailPrice")} value={formatCurrency(product.retailPrice)} />}
+          {product.reorderLevel != null && <DetailField label={t("reorderLevel")} value={String(product.reorderLevel)} />}
         </div>
       )}
       {isForm && (
@@ -639,7 +635,7 @@ function ProductDrawer({
             if (drawer.mode === "create") onCreate(data as CreateInventoryProductRequest);
             else if (product) onUpdate(product.id, data);
           }}
-          cancelLabel={drawer.mode === "edit" ? "Back to details" : "Cancel"}
+          cancelLabel={drawer.mode === "edit" ? tAdmin("backToDetails") : tCommon("cancel")}
         />
       )}
     </SideSheet>
@@ -661,6 +657,8 @@ function ProductForm({
   onSubmit: (data: CreateInventoryProductRequest | UpdateInventoryProductRequest) => void;
   cancelLabel?: string;
 }) {
+  const t = useTranslations("admin.inventory");
+  const tCommon = useTranslations("common");
   const [vendorId, setVendorId] = useState(product?.vendorId ?? vendors[0]?.id ?? "");
   const [name, setName] = useState(product?.name ?? "");
   const [sku, setSku] = useState(product?.sku ?? "");
@@ -686,7 +684,7 @@ function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-2">
-      <Field label="Vendor">
+      <Field label={t("vendor")}>
         <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={selectClass} required>
           {vendors.map((v) => (
             <option key={v.id} value={v.id}>
@@ -695,22 +693,22 @@ function ProductForm({
           ))}
         </select>
       </Field>
-      <Field label="Name">
+      <Field label={tCommon("name")}>
         <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label="SKU">
+      <Field label={t("sku")}>
         <input className={inputClass} value={sku} onChange={(e) => setSku(e.target.value)} />
       </Field>
-      <Field label="Category">
+      <Field label={t("category")}>
         <select value={category} onChange={(e) => setCategory(e.target.value as ProductCategory)} className={selectClass}>
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {CATEGORY_LABELS[c]}
+              {t(`categories.${c}`)}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Unit">
+      <Field label={t("unit")}>
         <select value={unit} onChange={(e) => setUnit(e.target.value as typeof unit)} className={selectClass}>
           {UNITS.map((u) => (
             <option key={u} value={u}>
@@ -719,13 +717,13 @@ function ProductForm({
           ))}
         </select>
       </Field>
-      <Field label="Unit cost (₹)">
+      <Field label={t("unitCostField")}>
         <input type="number" min="0" step="0.01" className={inputClass} value={unitCost} onChange={(e) => setUnitCost(e.target.value)} required />
       </Field>
-      <Field label="Retail price (₹)">
+      <Field label={t("retailPriceField")}>
         <input type="number" min="0" step="0.01" className={inputClass} value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
       </Field>
-      <Field label="Reorder level">
+      <Field label={t("reorderLevel")}>
         <input type="number" min="0" step="0.001" className={inputClass} value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
       </Field>
       <div className="flex gap-2 pt-2">
@@ -733,7 +731,7 @@ function ProductForm({
           {cancelLabel}
         </button>
         <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
-          {loading ? "Saving..." : "Save"}
+          {loading ? tCommon("saving") : tCommon("save")}
         </button>
       </div>
     </form>
@@ -759,16 +757,19 @@ function VendorDrawer({
   onCreate: (data: CreateVendorRequest) => void;
   onUpdate: (id: string, data: UpdateVendorRequest) => void;
 }) {
+  const t = useTranslations("admin.inventory");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const vendor = drawer.mode !== "create" ? drawer.vendor : null;
   const isView = drawer.mode === "view";
   const isForm = drawer.mode === "create" || drawer.mode === "edit";
 
-  const title = drawer.mode === "create" ? "Add vendor" : drawer.mode === "edit" ? "Edit vendor" : vendor?.name ?? "";
+  const title = drawer.mode === "create" ? t("addVendorTitle") : drawer.mode === "edit" ? t("editVendorTitle") : vendor?.name ?? "";
   const subtitle =
     drawer.mode === "create"
-      ? "Supplier contact for purchase orders"
+      ? t("addVendorSubtitle")
       : drawer.mode === "edit"
-        ? "Update contact details"
+        ? t("editVendorSubtitle")
         : vendor?.contactPhone || vendor?.contactEmail || undefined;
 
   return (
@@ -782,7 +783,7 @@ function VendorDrawer({
           <div className="flex flex-col sm:flex-row gap-2">
             <button type="button" onClick={onEdit} className={`${btnPrimary} flex-1`}>
               <Pencil className="w-4 h-4" />
-              Edit vendor
+              {t("editVendor")}
             </button>
             <button
               type="button"
@@ -790,7 +791,7 @@ function VendorDrawer({
               className={`${btnSecondary} flex-1 text-red-600 border-red-200 hover:bg-red-50`}
             >
               <Trash2 className="w-4 h-4" />
-              Deactivate
+              {tCommon("deactivate")}
             </button>
           </div>
         ) : undefined
@@ -798,9 +799,9 @@ function VendorDrawer({
     >
       {isView && vendor && (
         <div className="space-y-4">
-          <DetailField label="Phone" value={vendor.contactPhone || "—"} />
-          <DetailField label="Email" value={vendor.contactEmail || "—"} />
-          <DetailField label="Notes" value={vendor.notes || "—"} />
+          <DetailField label={tCommon("phone")} value={vendor.contactPhone || "—"} />
+          <DetailField label={tCommon("email")} value={vendor.contactEmail || "—"} />
+          <DetailField label={tCommon("notes")} value={vendor.notes || "—"} />
         </div>
       )}
       {isForm && (
@@ -816,7 +817,7 @@ function VendorDrawer({
             if (drawer.mode === "create") onCreate(data as CreateVendorRequest);
             else if (vendor) onUpdate(vendor.id, data);
           }}
-          cancelLabel={drawer.mode === "edit" ? "Back to details" : "Cancel"}
+          cancelLabel={drawer.mode === "edit" ? tAdmin("backToDetails") : tCommon("cancel")}
         />
       )}
     </SideSheet>
@@ -836,6 +837,7 @@ function VendorForm({
   onSubmit: (data: CreateVendorRequest | UpdateVendorRequest) => void;
   cancelLabel?: string;
 }) {
+  const tCommon = useTranslations("common");
   const [name, setName] = useState(vendor?.name ?? "");
   const [phone, setPhone] = useState(vendor?.contactPhone ?? "");
   const [email, setEmail] = useState(vendor?.contactEmail ?? "");
@@ -853,16 +855,16 @@ function VendorForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-2">
-      <Field label="Name">
+      <Field label={tCommon("name")}>
         <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label="Phone">
+      <Field label={tCommon("phone")}>
         <input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} />
       </Field>
-      <Field label="Email">
+      <Field label={tCommon("email")}>
         <input type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
-      <Field label="Notes">
+      <Field label={tCommon("notes")}>
         <input className={inputClass} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </Field>
       <div className="flex gap-2 pt-2">
@@ -870,7 +872,7 @@ function VendorForm({
           {cancelLabel}
         </button>
         <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
-          {loading ? "Saving..." : "Save"}
+          {loading ? tCommon("saving") : tCommon("save")}
         </button>
       </div>
     </form>
@@ -892,28 +894,30 @@ function MovementDrawer({
   onClose: () => void;
   onCreate: (data: CreateInventoryMovementRequest) => void;
 }) {
+  const t = useTranslations("admin.inventory");
+  const tCommon = useTranslations("common");
   const movement = drawer.mode === "view" ? drawer.movement : null;
   const isView = drawer.mode === "view";
 
-  const title = isView ? MOVEMENT_LABELS[movement!.movementType] : "Log movement";
+  const title = isView ? t(`movements.${movement!.movementType}`) : t("logMovementTitle");
   const subtitle = isView
     ? `${movement!.branchName} · ${movement!.productName}`
-    : "PRODUCT_COST in Finance auto-updates from movements";
+    : t("logMovementSubtitle");
 
   return (
     <SideSheet open onClose={onClose} title={title} subtitle={subtitle}>
       {isView && movement && (
         <div className="space-y-4">
-          <DetailField label="Branch" value={movement.branchName} />
-          <DetailField label="Product" value={movement.productName} />
-          <DetailField label="Vendor" value={movement.vendorName || "—"} />
-          <DetailField label="Quantity" value={`${movement.quantity}`} />
-          <DetailField label="Total cost" value={formatCurrency(movement.totalCost)} />
-          <DetailField label="Date" value={movement.movementDate} />
-          {movement.recordedByName && <DetailField label="Recorded by" value={movement.recordedByName} />}
-          {movement.note && <DetailField label="Note" value={movement.note} />}
+          <DetailField label={tCommon("branch")} value={movement.branchName} />
+          <DetailField label={t("tabs.products")} value={movement.productName} />
+          <DetailField label={t("vendor")} value={movement.vendorName || "—"} />
+          <DetailField label={t("quantity")} value={`${movement.quantity}`} />
+          <DetailField label={t("totalCost")} value={formatCurrency(movement.totalCost)} />
+          <DetailField label={tCommon("date")} value={movement.movementDate} />
+          {movement.recordedByName && <DetailField label={t("recordedBy")} value={movement.recordedByName} />}
+          {movement.note && <DetailField label={t("note")} value={movement.note} />}
           <p className="text-xs text-[var(--text-tertiary)] pt-2">
-            Movements are immutable audit records. Use an adjustment entry to correct stock.
+            {t("movementsImmutable")}
           </p>
         </div>
       )}
@@ -949,6 +953,8 @@ function MovementForm({
   onCancel: () => void;
   onSubmit: (data: CreateInventoryMovementRequest) => void;
 }) {
+  const t = useTranslations("admin.inventory");
+  const tCommon = useTranslations("common");
   const today = new Date().toISOString().slice(0, 10);
   const [branchId, setBranchId] = useState(presetBranchId ?? branches[0]?.id ?? "");
   const [productId, setProductId] = useState(presetProductId ?? products[0]?.id ?? "");
@@ -971,7 +977,7 @@ function MovementForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pb-2">
-      <Field label="Branch">
+      <Field label={tCommon("branch")}>
         <select value={branchId} onChange={(e) => setBranchId(e.target.value)} className={selectClass} required>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
@@ -980,7 +986,7 @@ function MovementForm({
           ))}
         </select>
       </Field>
-      <Field label="Product">
+      <Field label={t("tabs.products")}>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} className={selectClass} required>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
@@ -989,30 +995,30 @@ function MovementForm({
           ))}
         </select>
       </Field>
-      <Field label="Type">
+      <Field label={t("type")}>
         <select value={movementType} onChange={(e) => setMovementType(e.target.value as MovementType)} className={selectClass}>
-          {MOVEMENT_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {MOVEMENT_LABELS[t]}
+          {MOVEMENT_TYPES.map((mt) => (
+            <option key={mt} value={mt}>
+              {t(`movements.${mt}`)}
             </option>
           ))}
         </select>
       </Field>
-      <Field label="Quantity">
+      <Field label={t("quantity")}>
         <input type="number" min="0.001" step="0.001" className={inputClass} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
       </Field>
-      <Field label="Date">
+      <Field label={tCommon("date")}>
         <input type="date" className={inputClass} value={movementDate} onChange={(e) => setMovementDate(e.target.value)} required />
       </Field>
-      <Field label="Note">
+      <Field label={t("note")}>
         <input className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} />
       </Field>
       <div className="flex gap-2 pt-2">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>
-          Cancel
+          {tCommon("cancel")}
         </button>
         <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
-          {loading ? "Saving..." : "Save & sync finance"}
+          {loading ? tCommon("saving") : t("saveAndSync")}
         </button>
       </div>
     </form>
@@ -1028,6 +1034,7 @@ function StockDrawer({
   onClose: () => void;
   onLogMovement: (branchId: string, productId: string) => void;
 }) {
+  const t = useTranslations("admin.inventory");
   const s = drawer.item;
 
   return (
@@ -1039,27 +1046,27 @@ function StockDrawer({
       footer={
         <button type="button" onClick={() => onLogMovement(s.branchId, s.productId)} className={`${btnPrimary} w-full`}>
           <Plus className="w-4 h-4" />
-          Log movement
+          {t("logMovement")}
         </button>
       }
     >
       <div className="space-y-4">
         <div className="rounded-xl border border-[var(--border)] p-4 bg-[var(--surface-muted)]/40">
-          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-1">On hand</p>
+          <p className="text-xs font-semibold text-[var(--text-secondary)] mb-1">{t("onHand")}</p>
           <p className="text-2xl font-bold text-[var(--text-primary)]">
             {s.quantity} {s.unit}
           </p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Value: {formatCurrency(s.stockValue)}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">{t("value", { amount: formatCurrency(s.stockValue) })}</p>
           {(s.lowStock || s.outOfStock) && (
             <p className={cn("text-xs font-semibold mt-2", s.outOfStock ? "text-red-600" : "text-amber-600")}>
-              {s.outOfStock ? "Out of stock" : "Low stock"}
+              {s.outOfStock ? t("outOfStock") : t("lowStock")}
             </p>
           )}
         </div>
-        <DetailField label="SKU" value={s.sku || "—"} />
-        <DetailField label="Category" value={CATEGORY_LABELS[s.category]} />
-        <DetailField label="Unit cost" value={formatCurrency(s.unitCost)} />
-        {s.reorderLevel != null && <DetailField label="Reorder level" value={String(s.reorderLevel)} />}
+        <DetailField label={t("sku")} value={s.sku || "—"} />
+        <DetailField label={t("category")} value={t(`categories.${s.category}`)} />
+        <DetailField label={t("unitCost")} value={formatCurrency(s.unitCost)} />
+        {s.reorderLevel != null && <DetailField label={t("reorderLevel")} value={String(s.reorderLevel)} />}
       </div>
     </SideSheet>
   );

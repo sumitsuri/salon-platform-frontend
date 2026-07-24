@@ -7,7 +7,8 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
+# Empty = same-origin /api via nginx in production
+ARG NEXT_PUBLIC_API_URL=
 ARG NEXT_PUBLIC_BASE_PATH=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH

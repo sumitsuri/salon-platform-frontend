@@ -1,19 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CalendarDays, TrendingDown, Zap } from "lucide-react";
 import { WeekdaySalesInsight } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Card } from "@/components/ui";
-
-const SEVERITY_BADGE: Record<string, string> = {
-  HIGH: "badge-high",
-  MEDIUM: "badge-medium",
-  LOW: "badge-low",
-};
+import { Card, StatusBadge } from "@/components/ui";
 
 const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 function DayTrendChart({ insight }: { insight: WeekdaySalesInsight }) {
+  const t = useTranslations("components.weekdayBoostPanel");
   const ordered = [...insight.dayStats].sort(
     (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)
   );
@@ -43,14 +39,13 @@ function DayTrendChart({ insight }: { insight: WeekdaySalesInsight }) {
           );
         })}
       </div>
-      <p className="text-[11px] text-[var(--text-tertiary)]">
-        Amber bars = slower weekdays · height = avg revenue per day
-      </p>
+      <p className="text-[11px] text-[var(--text-tertiary)]">{t("chartLegend")}</p>
     </div>
   );
 }
 
 function SlowDayCard({ action }: { action: WeekdaySalesInsight["slowDayActions"][0] }) {
+  const t = useTranslations("components.weekdayBoostPanel");
   return (
     <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 p-4">
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -63,14 +58,7 @@ function SlowDayCard({ action }: { action: WeekdaySalesInsight["slowDayActions"]
             <p className="text-xs text-[var(--text-secondary)]">{action.dayLabel}</p>
           </div>
         </div>
-        <span
-          className={cn(
-            "text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full font-semibold shrink-0",
-            SEVERITY_BADGE[action.severity] ?? SEVERITY_BADGE.LOW
-          )}
-        >
-          {action.severity}
-        </span>
+        <StatusBadge status={action.severity} className="shrink-0" />
       </div>
       <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{action.insight}</p>
       {action.metricLabel && action.metricValue && (
@@ -81,7 +69,7 @@ function SlowDayCard({ action }: { action: WeekdaySalesInsight["slowDayActions"]
       <div className="mt-3 space-y-2">
         <p className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1">
           <Zap className="w-3.5 h-3.5 text-[var(--brand-text)]" />
-          Actions your team can take
+          {t("actionsTitle")}
         </p>
         <ul className="space-y-1.5">
           {action.actions.map((item, i) => (
@@ -97,6 +85,7 @@ function SlowDayCard({ action }: { action: WeekdaySalesInsight["slowDayActions"]
 }
 
 function BranchWeekdaySection({ insight }: { insight: WeekdaySalesInsight }) {
+  const t = useTranslations("components.weekdayBoostPanel");
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-[var(--text-primary)]">{insight.branchName}</h3>
@@ -108,9 +97,7 @@ function BranchWeekdaySection({ insight }: { insight: WeekdaySalesInsight }) {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No significantly slow weekdays detected — sales are fairly balanced across the week.
-        </p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("balanced")}</p>
       )}
     </div>
   );
@@ -123,10 +110,12 @@ interface WeekdayBoostPanelProps {
 }
 
 export function WeekdayBoostPanel({ insights = [], loading, variant = "ceo" }: WeekdayBoostPanelProps) {
+  const t = useTranslations("components.weekdayBoostPanel");
+
   if (loading) {
     return (
       <Card>
-        <p className="text-sm text-[var(--text-secondary)]">Analyzing weekday sales patterns...</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
       </Card>
     );
   }
@@ -141,11 +130,9 @@ export function WeekdayBoostPanel({ insights = [], loading, variant = "ceo" }: W
       <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-2">
         <CalendarDays className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-semibold text-[var(--text-primary)] text-sm">Weekday sales boost</h2>
+          <h2 className="font-semibold text-[var(--text-primary)] text-sm">{t("title")}</h2>
           <p className="text-xs text-[var(--text-secondary)] truncate">
-            {variant === "manager"
-              ? "Slow-day trends and offers your team can run"
-              : "Per-branch weekday patterns with promotion ideas"}
+            {variant === "manager" ? t("managerSubtitle") : t("ceoSubtitle")}
           </p>
         </div>
       </div>

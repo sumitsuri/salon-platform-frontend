@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -44,6 +45,10 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 }
 
 export default function AdminBookingsPage() {
+  const t = useTranslations("admin.bookings");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
+  const tStatus = useTranslations("components.status");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
@@ -51,8 +56,8 @@ export default function AdminBookingsPage() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(filters), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(filters), 300);
+    return () => clearTimeout(timer);
   }, [filters]);
 
   useEffect(() => {
@@ -89,43 +94,46 @@ export default function AdminBookingsPage() {
 
   const columns = [
     {
-      label: "Customer",
+      label: t("customer"),
       filter: {
         type: "text" as const,
-        placeholder: "Name or phone",
+        placeholder: t("nameOrPhone"),
         value: filters.customer,
         onChange: (v: string) => updateFilter("customer", v),
       },
     },
     {
-      label: "Branch",
+      label: tCommon("branch"),
       filter: {
         type: "text" as const,
-        placeholder: "Branch",
+        placeholder: tCommon("branch"),
         value: filters.branch,
         onChange: (v: string) => updateFilter("branch", v),
       },
     },
     {
-      label: "Amount",
+      label: tCommon("amount"),
       filter: {
         type: "text" as const,
-        placeholder: "Amount",
+        placeholder: tCommon("amount"),
         value: filters.amount,
         onChange: (v: string) => updateFilter("amount", v),
       },
     },
     {
-      label: "Status",
+      label: tCommon("status"),
       filter: {
         type: "select" as const,
         value: filters.status,
         onChange: (v: string) => updateFilter("status", v),
-        options: STATUSES.map((s) => ({ value: s, label: s || "All" })),
+        options: STATUSES.map((s) => ({
+          value: s,
+          label: s ? tStatus(s as "COMPLETED") : tCommon("all"),
+        })),
       },
     },
     {
-      label: "Date",
+      label: tCommon("date"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -137,8 +145,8 @@ export default function AdminBookingsPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="All bookings"
-        subtitle={`${totalElements} total${isFetching && !isLoading ? " · updating" : ""}`}
+        title={t("title")}
+        subtitle={`${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -154,15 +162,15 @@ export default function AdminBookingsPage() {
           onClick={() => setFilters(emptyFilters)}
           className="text-sm font-semibold text-[var(--brand-text)]"
         >
-          Clear filters
+          {tAdmin("clearFilters")}
         </button>
       )}
 
       <Card padding={false}>
         {isLoading ? (
-          <p className="p-4 text-[var(--text-tertiary)] text-sm">Loading bookings...</p>
+          <p className="p-4 text-[var(--text-tertiary)] text-sm">{t("loading")}</p>
         ) : bookings.length === 0 ? (
-          <EmptyState title="No bookings match" description="Try adjusting your filters" />
+          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
           <>
             <div className="lg:hidden divide-y divide-[var(--border)]">

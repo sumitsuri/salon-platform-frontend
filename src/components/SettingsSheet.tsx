@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Palette, RotateCcw, Sun, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Globe, Moon, Palette, RotateCcw, Sun, X } from "lucide-react";
 import {
   ACCENT_PRESETS,
   applyThemeToDocument,
@@ -10,8 +11,13 @@ import {
   useThemeStore,
 } from "@/lib/theme-store";
 import { useAuthStore } from "@/lib/auth-store";
+import { api, type LocaleInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { btnPrimary, btnSecondary } from "@/components/ui";
+import { applyLocaleChange } from "@/lib/locale-client";
+import { resolveLocale, type AppLocale } from "@/i18n/config";
+import { FALLBACK_LOCALES } from "@/lib/locale-catalog";
+import { LocalePickerList } from "@/components/LocalePickerList";
 
 interface SettingsSheetProps {
   open: boolean;
@@ -102,7 +108,12 @@ function ThemePreview({
 }
 
 export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
-  const tenantColor = useAuthStore((s) => s.user?.primaryColor);
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const tenantColor = user?.primaryColor;
   const darkMode = useThemeStore((s) => s.darkMode);
   const customAccentEnabled = useThemeStore((s) => s.customAccentEnabled);
   const customAccentColor = useThemeStore((s) => s.customAccentColor);
@@ -114,14 +125,22 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const [previewDark, setPreviewDark] = useState(darkMode);
   const [previewAccentEnabled, setPreviewAccentEnabled] = useState(customAccentEnabled);
   const [previewAccentColor, setPreviewAccentColor] = useState(customAccentColor);
+  const [locales, setLocales] = useState<LocaleInfo[]>(FALLBACK_LOCALES);
+  const [previewLocale, setPreviewLocale] = useState<AppLocale>(resolveLocale(locale));
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      setPreviewDark(darkMode);
-      setPreviewAccentEnabled(customAccentEnabled);
-      setPreviewAccentColor(customAccentColor);
-    }
-  }, [open, darkMode, customAccentEnabled, customAccentColor]);
+    if (!open || !user) return;
+    setPreviewDark(darkMode);
+    setPreviewAccentEnabled(customAccentEnabled);
+    setPreviewAccentColor(customAccentColor);
+    setPreviewLocale(resolveLocale(user.preferredLocale || locale));
+    api.getLocales().then(setLocales).catch(() => setLocales(FALLBACK_LOCALES));
+  }, [open, user, darkMode, customAccentEnabled, customAccentColor, locale]);
+
+  useEffect(() => {
+    if (open && !user) onClose();
+  }, [open, user, onClose]);
 
   const previewAccent = ensureReadableAccent(
     resolveAccentColor(
@@ -130,16 +149,33 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     )
   );
 
-  function applySettings() {
-    const safeColor = ensureReadableAccent(previewAccentColor);
-    setDarkMode(previewDark);
-    setCustomAccentEnabled(previewAccentEnabled);
-    setCustomAccentColor(safeColor);
-    applyThemeToDocument(
-      { darkMode: previewDark, customAccentEnabled: previewAccentEnabled, customAccentColor: safeColor },
-      tenantColor
-    );
-    onClose();
+  async function applySettings() {
+    setSaving(true);
+    try {
+      const safeColor = ensureReadableAccent(previewAccentColor);
+      setDarkMode(previewDark);
+      setCustomAccentEnabled(previewAccentEnabled);
+      setCustomAccentColor(safeColor);
+      applyThemeToDocument(
+        { darkMode: previewDark, customAccentEnabled: previewAccentEnabled, customAccentColor: safeColor },
+        tenantColor
+      );
+
+      const localeChanged =
+        user && previewLocale !== resolveLocale(user.preferredLocale || locale);
+
+      if (localeChanged) {
+        await api.updateLocale(previewLocale);
+        setUser({ ...user, preferredLocale: previewLocale });
+        onClose();
+        applyLocaleChange(previewLocale);
+        return;
+      }
+
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleReset() {
@@ -153,16 +189,16 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     );
   }
 
-  if (!open) return null;
+  if (!open || !user) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
       <button className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} aria-label="Close settings" />
-      <div className="relative w-full max-w-md h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative w-full max-w-md h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200" data-testid="settings-sheet">
         <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border)]">
           <div>
-            <h2 className="font-bold text-[var(--text-primary)]">Settings</h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">Appearance & theme</p>
+            <h2 className="font-bold text-[var(--text-primary)]">{t("title")}</h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("subtitle")}</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
             <X className="w-5 h-5" />
@@ -170,6 +206,28 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {locales.length > 0 && (
+            <section className="space-y-3" data-testid="settings-language-section">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[var(--surface-muted)] flex items-center justify-center">
+                  <Globe className="w-4 h-4 text-[var(--text-primary)]" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t("language")}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t("languageHint")}</p>
+                </div>
+              </div>
+              <div className="pl-2">
+                <LocalePickerList
+                  locales={locales}
+                  selected={previewLocale}
+                  onSelect={setPreviewLocale}
+                  compact
+                />
+              </div>
+            </section>
+          )}
+
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -177,8 +235,8 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   {previewDark ? <Moon className="w-4 h-4 text-[var(--text-primary)]" /> : <Sun className="w-4 h-4 text-[var(--text-primary)]" />}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Dark mode</p>
-                  <p className="text-xs text-[var(--text-secondary)]">Easier on eyes in low light</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t("darkMode")}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t("darkModeHint")}</p>
                 </div>
               </div>
               <Toggle enabled={previewDark} onChange={setPreviewDark} label="Toggle dark mode" />
@@ -192,9 +250,9 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   <Palette className="w-4 h-4 text-[var(--text-primary)]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">Custom accent color</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{t("customAccent")}</p>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    {previewAccentEnabled ? "Using your pick" : `Using brand default${tenantColor ? "" : " (indigo)"}`}
+                    {previewAccentEnabled ? t("usingYourPick") : tenantColor ? t("usingBrandDefault") : t("usingBrandDefaultIndigo")}
                   </p>
                 </div>
               </div>
@@ -239,22 +297,22 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           </section>
 
           <section className="space-y-2">
-            <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">Preview</p>
+            <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{t("preview")}</p>
             <ThemePreview darkMode={previewDark} accent={previewAccent} />
           </section>
         </div>
 
         <div className="p-4 border-t border-[var(--border)] space-y-2 bg-[var(--surface-muted)]">
-          <button onClick={applySettings} className={`${btnPrimary} w-full`}>
-            Apply changes
+          <button onClick={applySettings} disabled={saving} className={`${btnPrimary} w-full`} data-testid="settings-apply-button">
+            {saving ? tCommon("processing") : t("apply")}
           </button>
           <div className="flex gap-2">
             <button onClick={handleReset} className={`${btnSecondary} flex-1 text-xs`}>
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset
+              {tCommon("reset")}
             </button>
             <button onClick={onClose} className={`${btnSecondary} flex-1 text-xs`}>
-              Cancel
+              {tCommon("cancel")}
             </button>
           </div>
         </div>
@@ -267,6 +325,7 @@ export function SettingsButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
+      data-testid="settings-button"
       className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-[var(--brand-text)] hover:bg-[var(--brand-light)] transition"
       aria-label="Settings"
     >

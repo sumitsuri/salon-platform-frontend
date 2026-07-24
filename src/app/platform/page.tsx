@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -44,13 +45,6 @@ type TenantDrawerState = { mode: "create" };
 type BranchDrawerState = { mode: "create" } | { mode: "view"; branch: PlatformBranch };
 type UserDrawerState = { mode: "create" } | { mode: "view"; user: PlatformUser };
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  PLATFORM_SUPER_ADMIN: "Platform Admin",
-  BRAND_ADMIN: "Brand Admin (CEO)",
-  BRANCH_MANAGER: "Branch Manager",
-  SALON_MANAGER: "Salon Manager",
-};
-
 const ONBOARD_ROLES: UserRole[] = ["BRAND_ADMIN", "BRANCH_MANAGER", "SALON_MANAGER"];
 
 const btnViolet = `${btnPrimary} bg-violet-600 hover:bg-violet-700 active:bg-violet-800 shadow-violet-600/20`;
@@ -73,6 +67,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function PlatformPage() {
+  const t = useTranslations("platform.admin");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
@@ -183,13 +179,13 @@ export default function PlatformPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Platform admin"
-        subtitle="Manage tenants, branches & employees"
+        title={t("title")}
+        subtitle={t("subtitle")}
         action={
           !mobileShowDetail && (
             <button onClick={() => setTenantDrawer({ mode: "create" })} className={`${btnViolet} py-2.5 px-4`}>
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add tenant</span>
+              <span className="hidden sm:inline">{t("addTenant")}</span>
             </button>
           )
         }
@@ -200,18 +196,18 @@ export default function PlatformPage() {
       <div className="grid lg:grid-cols-3 gap-4 min-w-0">
         <section className={cn("lg:col-span-1 min-w-0", mobileShowDetail && "hidden lg:block")}>
           <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 px-0.5">
-            Tenants ({tenants.length})
+            {t("tenantsCount", { count: tenants.length })}
           </p>
           {tenantsLoading ? (
-            <p className="text-sm text-[var(--text-tertiary)]">Loading...</p>
+            <p className="text-sm text-[var(--text-tertiary)]">{tCommon("loading")}</p>
           ) : tenants.length === 0 ? (
             <EmptyState
-              title="No tenants yet"
-              description="Add your first salon brand to get started"
+              title={t("noTenantsTitle")}
+              description={t("noTenantsDesc")}
               action={
                 <button onClick={() => setTenantDrawer({ mode: "create" })} className={btnViolet}>
                   <Plus className="w-4 h-4" />
-                  Add tenant
+                  {t("addTenant")}
                 </button>
               }
             />
@@ -224,7 +220,7 @@ export default function PlatformPage() {
                   selected={selectedTenantId === tenant.id}
                   onSelect={() => selectTenant(tenant.id)}
                   onRemove={() => {
-                    if (window.confirm(`Deactivate "${tenant.name}"? All users will be deactivated.`)) {
+                    if (window.confirm(t("deactivateTenantConfirm", { name: tenant.name }))) {
                       deactivateTenantMutation.mutate(tenant.id);
                     }
                   }}
@@ -238,8 +234,8 @@ export default function PlatformPage() {
           {!selectedTenant ? (
             <Card>
               <EmptyState
-                title="Select a tenant"
-                description="Choose a brand from the list to manage branches and employees"
+                title={t("selectTenantTitle")}
+                description={t("selectTenantDesc")}
                 action={<Building2 className="w-10 h-10 mx-auto text-[var(--text-tertiary)]" />}
               />
             </Card>
@@ -249,7 +245,7 @@ export default function PlatformPage() {
                 <button
                   onClick={() => setMobileShowDetail(false)}
                   className="lg:hidden p-2 -ml-1 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
-                  aria-label="Back to tenants"
+                  aria-label={t("backToTenants")}
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -265,7 +261,7 @@ export default function PlatformPage() {
                     className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
                   >
                     <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Add branch</span>
+                    <span className="hidden sm:inline">{t("addBranch")}</span>
                   </button>
                 )}
                 {tab === "employees" && (
@@ -274,7 +270,7 @@ export default function PlatformPage() {
                     className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Onboard</span>
+                    <span className="hidden sm:inline">{t("onboard")}</span>
                   </button>
                 )}
               </div>
@@ -282,8 +278,8 @@ export default function PlatformPage() {
               <div className="p-4">
                 <SegmentedControl
                   options={[
-                    { id: "branches" as Tab, label: "Branches", icon: Building2 },
-                    { id: "employees" as Tab, label: "Employees", icon: Users },
+                    { id: "branches" as Tab, label: t("tabs.branches"), icon: Building2 },
+                    { id: "employees" as Tab, label: t("tabs.employees"), icon: Users },
                   ]}
                   value={tab}
                   onChange={setTab}
@@ -328,7 +324,7 @@ export default function PlatformPage() {
             onClose={() => setBranchDrawer(null)}
             onCreate={(data) => createBranchMutation.mutate({ tenantId: selectedTenant.id, data })}
             onDeactivate={() => {
-              if (branchDrawer && branchDrawer.mode === "view" && window.confirm(`Deactivate branch "${branchDrawer.branch.name}"?`)) {
+              if (branchDrawer && branchDrawer.mode === "view" && window.confirm(t("deactivateBranchConfirm", { name: branchDrawer.branch.name }))) {
                 deactivateBranchMutation.mutate({ tenantId: selectedTenant.id, branchId: branchDrawer.branch.id });
               }
             }}
@@ -342,7 +338,7 @@ export default function PlatformPage() {
             onCreate={(data) => createUserMutation.mutate({ tenantId: selectedTenant.id, data })}
             onDeactivate={() => {
               if (userDrawer && userDrawer.mode === "view" && userDrawer.user.active &&
-                window.confirm(`Deactivate "${userDrawer.user.name}" (${userDrawer.user.email})?`)) {
+                window.confirm(t("deactivateUserConfirm", { name: userDrawer.user.name, email: userDrawer.user.email }))) {
                 deactivateUserMutation.mutate({ tenantId: selectedTenant.id, userId: userDrawer.user.id });
               }
             }}
@@ -413,14 +409,17 @@ function BranchesList({
   selectedId: string | null;
   onSelect: (branch: PlatformBranch) => void;
 }) {
-  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">Loading branches...</p>;
-  if (branches.length === 0) return <div className="mt-4"><EmptyState title="No branches yet" /></div>;
+  const t = useTranslations("platform.admin");
+  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">{t("loadingBranches")}</p>;
+  if (branches.length === 0) return <div className="mt-4"><EmptyState title={t("noBranchesTitle")} /></div>;
+
+  const activeCount = branches.filter((b) => b.status === "ACTIVE").length;
 
   return (
     <Card padding={false} className="mt-4">
       <div className="px-4 py-3 border-b border-[var(--border)]">
         <p className="text-xs text-[var(--text-tertiary)]">
-          {branches.filter((b) => b.status === "ACTIVE").length} active · Tap to view details
+          {t("activeTapDetails", { count: activeCount })}
         </p>
       </div>
       <div className="divide-y divide-[var(--border)]">
@@ -457,14 +456,17 @@ function UsersList({
   selectedId: string | null;
   onSelect: (user: PlatformUser) => void;
 }) {
-  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">Loading employees...</p>;
-  if (users.length === 0) return <div className="mt-4"><EmptyState title="No employees yet" /></div>;
+  const t = useTranslations("platform.admin");
+  if (loading) return <p className="text-sm text-[var(--text-tertiary)] mt-4">{t("loadingEmployees")}</p>;
+  if (users.length === 0) return <div className="mt-4"><EmptyState title={t("noEmployeesTitle")} /></div>;
+
+  const activeCount = users.filter((u) => u.active).length;
 
   return (
     <Card padding={false} className="mt-4">
       <div className="px-4 py-3 border-b border-[var(--border)]">
         <p className="text-xs text-[var(--text-tertiary)]">
-          {users.filter((u) => u.active).length} active · Tap to view details
+          {t("activeTapDetails", { count: activeCount })}
         </p>
       </div>
       <div className="divide-y divide-[var(--border)]">
@@ -472,7 +474,7 @@ function UsersList({
           <ListRow
             key={user.id}
             title={user.name}
-            subtitle={`${user.email} · ${ROLE_LABELS[user.role]}${user.branchName ? ` · ${user.branchName}` : ""}`}
+            subtitle={`${user.email} · ${t(`roles.${user.role}`)}${user.branchName ? ` · ${user.branchName}` : ""}`}
             onClick={() => onSelect(user)}
             trailing={
               <div className="flex items-center gap-2">
@@ -500,6 +502,8 @@ function TenantDrawer({
   onClose: () => void;
   onCreate: (data: CreateTenantRequest) => void;
 }) {
+  const t = useTranslations("platform.admin");
+  const tCommon = useTranslations("common");
   const [form, setForm] = useState<CreateTenantRequest>({
     name: "",
     slug: "",
@@ -515,8 +519,8 @@ function TenantDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title="New tenant"
-      subtitle="Creates the brand and a CEO account for onboarding"
+      title={t("newTenant")}
+      subtitle={t("newTenantSubtitle")}
       wide
     >
       <form
@@ -527,36 +531,36 @@ function TenantDrawer({
         className="space-y-4 pb-2"
       >
         <div className="grid sm:grid-cols-2 gap-3">
-          <Field label="Brand name">
+          <Field label={t("brandName")}>
             <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>
-          <Field label="Slug">
+          <Field label={t("slug")}>
             <input
               className={inputClass}
               required
-              placeholder="my-brand"
+              placeholder={t("slugPlaceholder")}
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") })}
             />
           </Field>
-          <Field label="CEO name">
+          <Field label={t("ceoName")}>
             <input className={inputClass} required value={form.adminName} onChange={(e) => setForm({ ...form, adminName: e.target.value })} />
           </Field>
-          <Field label="CEO email">
+          <Field label={t("ceoEmail")}>
             <input className={inputClass} type="email" required value={form.adminEmail} onChange={(e) => setForm({ ...form, adminEmail: e.target.value })} />
           </Field>
-          <Field label="CEO password">
+          <Field label={t("ceoPassword")}>
             <input className={inputClass} type="password" required minLength={6} value={form.adminPassword} onChange={(e) => setForm({ ...form, adminPassword: e.target.value })} />
           </Field>
-          <Field label="Brand color">
+          <Field label={t("brandColor")}>
             <input className={inputClass} type="color" value={form.primaryColor} onChange={(e) => setForm({ ...form, primaryColor: e.target.value })} />
           </Field>
         </div>
         {error && <AlertBanner variant="error">{error}</AlertBanner>}
         <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
-          <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+          <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
           <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
-            {loading ? "Creating…" : "Create tenant"}
+            {loading ? t("creating") : t("createTenant")}
           </button>
         </div>
       </form>
@@ -577,6 +581,9 @@ function PlatformBranchDrawer({
   onCreate: (data: CreatePlatformBranchRequest) => void;
   onDeactivate: () => void;
 }) {
+  const t = useTranslations("platform.admin");
+  const tCommon = useTranslations("common");
+  const tOrg = useTranslations("admin.organization");
   const [form, setForm] = useState<CreatePlatformBranchRequest>({
     name: "",
     code: "",
@@ -594,27 +601,27 @@ function PlatformBranchDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title={isView ? branch!.name : "New branch"}
-      subtitle={isView ? `${branch!.code}${branch!.societyDefault ? ` · ${branch!.societyDefault}` : ""}` : "Add a branch for this tenant"}
+      title={isView ? branch!.name : t("newBranch")}
+      subtitle={isView ? `${branch!.code}${branch!.societyDefault ? ` · ${branch!.societyDefault}` : ""}` : t("newBranchSubtitle")}
       wide
       footer={
         isView && branch!.status === "ACTIVE" ? (
           <button onClick={onDeactivate} className={`${btnSecondary} w-full text-red-600 border-red-200 hover:bg-red-50`}>
             <Trash2 className="w-4 h-4" />
-            Deactivate branch
+            {t("deactivateBranch")}
           </button>
         ) : undefined
       }
     >
       {isView && branch ? (
         <div className="space-y-5">
-          <SectionTitle>Branch</SectionTitle>
+          <SectionTitle>{t("branchSection")}</SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Code" value={branch.code} />
-            <DetailField label="Status" value={branch.status} />
-            <DetailField label="Address" value={branch.address} />
-            <DetailField label="Default society" value={branch.societyDefault} />
-            <DetailField label="Phone" value={branch.phone} />
+            <DetailField label={t("code")} value={branch.code} />
+            <DetailField label={tCommon("status")} value={branch.status} />
+            <DetailField label={tOrg("address")} value={branch.address} />
+            <DetailField label={t("defaultSociety")} value={branch.societyDefault} />
+            <DetailField label={tCommon("phone")} value={branch.phone} />
           </div>
         </div>
       ) : (
@@ -626,32 +633,32 @@ function PlatformBranchDrawer({
           className="space-y-4 pb-2"
         >
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Branch name">
+            <Field label={t("branchName")}>
               <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
-            <Field label="Code">
+            <Field label={t("code")}>
               <input
                 className={inputClass}
                 required
-                placeholder="LITHOS"
+                placeholder={t("codePlaceholder")}
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/\s+/g, "") })}
               />
             </Field>
-            <Field label="Address">
+            <Field label={tOrg("address")}>
               <input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
-            <Field label="Default society">
+            <Field label={t("defaultSociety")}>
               <input className={inputClass} value={form.societyDefault} onChange={(e) => setForm({ ...form, societyDefault: e.target.value })} />
             </Field>
-            <Field label="Phone">
+            <Field label={tCommon("phone")}>
               <input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </Field>
           </div>
           <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
-            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
             <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
-              {loading ? "Adding…" : "Add branch"}
+              {loading ? t("adding") : t("addBranch")}
             </button>
           </div>
         </form>
@@ -675,6 +682,9 @@ function PlatformUserDrawer({
   onCreate: (data: CreatePlatformUserRequest) => void;
   onDeactivate: () => void;
 }) {
+  const t = useTranslations("platform.admin");
+  const tCommon = useTranslations("common");
+  const tAdmin = useTranslations("admin.common");
   const [form, setForm] = useState<CreatePlatformUserRequest>({
     name: "",
     email: "",
@@ -693,26 +703,26 @@ function PlatformUserDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title={isView ? user!.name : "Onboard employee"}
-      subtitle={isView ? `${user!.email} · ${ROLE_LABELS[user!.role]}` : "Create a manager login for this tenant"}
+      title={isView ? user!.name : t("onboardEmployee")}
+      subtitle={isView ? `${user!.email} · ${t(`roles.${user!.role}`)}` : t("onboardSubtitle")}
       wide
       footer={
         isView && user!.active ? (
           <button onClick={onDeactivate} className={`${btnSecondary} w-full text-red-600 border-red-200 hover:bg-red-50`}>
             <Trash2 className="w-4 h-4" />
-            Deactivate account
+            {t("deactivateAccount")}
           </button>
         ) : undefined
       }
     >
       {isView && user ? (
         <div className="space-y-5">
-          <SectionTitle>Account</SectionTitle>
+          <SectionTitle>{tAdmin("account")}</SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Email" value={user.email} />
-            <DetailField label="Role" value={ROLE_LABELS[user.role]} />
-            <DetailField label="Branch" value={user.branchName} />
-            <DetailField label="Status" value={user.active ? "Active" : "Inactive"} />
+            <DetailField label={tCommon("email")} value={user.email} />
+            <DetailField label={t("role")} value={t(`roles.${user.role}`)} />
+            <DetailField label={tCommon("branch")} value={user.branchName} />
+            <DetailField label={tCommon("status")} value={user.active ? tCommon("active") : tCommon("inactive")} />
           </div>
         </div>
       ) : (
@@ -724,35 +734,35 @@ function PlatformUserDrawer({
           className="space-y-4 pb-2"
         >
           <div className="grid sm:grid-cols-2 gap-3">
-            <Field label="Full name">
+            <Field label={t("fullName")}>
               <input className={inputClass} required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
-            <Field label="Email">
+            <Field label={tCommon("email")}>
               <input className={inputClass} type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </Field>
-            <Field label="Password">
+            <Field label={t("password")}>
               <input className={inputClass} type="password" required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </Field>
-            <Field label="Role">
+            <Field label={t("role")}>
               <select
                 className={selectClass}
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value as UserRole, branchId: "" })}
               >
                 {ONBOARD_ROLES.map((role) => (
-                  <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                  <option key={role} value={role}>{t(`roles.${role}`)}</option>
                 ))}
               </select>
             </Field>
             {needsBranch && (
-              <Field label="Branch">
+              <Field label={tCommon("branch")}>
                 <select
                   className={selectClass}
                   required
                   value={form.branchId}
                   onChange={(e) => setForm({ ...form, branchId: e.target.value })}
                 >
-                  <option value="">Select branch</option>
+                  <option value="">{t("selectBranch")}</option>
                   {branches.map((b) => (
                     <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
                   ))}
@@ -761,12 +771,12 @@ function PlatformUserDrawer({
             )}
           </div>
           {needsBranch && branches.length === 0 && (
-            <AlertBanner variant="warning">Add an active branch before onboarding managers.</AlertBanner>
+            <AlertBanner variant="warning">{t("noBranchWarning")}</AlertBanner>
           )}
           <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
-            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>Cancel</button>
+            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
             <button type="submit" disabled={loading || (needsBranch && branches.length === 0)} className={`${btnViolet} flex-1`}>
-              {loading ? "Onboarding…" : "Onboard employee"}
+              {loading ? t("onboarding") : t("onboardEmployeeBtn")}
             </button>
           </div>
         </form>

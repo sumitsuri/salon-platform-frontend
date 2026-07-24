@@ -2,27 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { LayoutDashboard, ClipboardList, Building2, LogOut, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { LayoutDashboard, ClipboardList, Building2, LogOut, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 import { MobileBottomNav, MOBILE_NAV_MAIN_PADDING } from "@/components/MobileBottomNav";
 
-const nav = [
-  { href: "/admin", label: "Overview", shortLabel: "Home", icon: LayoutDashboard, exact: true },
-  { href: "/admin/insights", label: "Insights", shortLabel: "Tips", icon: Sparkles },
-  { href: "/admin/services", label: "Services", shortLabel: "Sales", icon: Scissors },
-  { href: "/admin/bookings", label: "Bookings", shortLabel: "Book", icon: ClipboardList },
-  { href: "/admin/leads", label: "Leads", shortLabel: "Leads", icon: UserPlus },
-  { href: "/admin/employees", label: "Employees", shortLabel: "Staff", icon: Users },
-  { href: "/admin/finance", label: "Finance", shortLabel: "P&L", icon: IndianRupee },
-  { href: "/admin/inventory", label: "Inventory", shortLabel: "Stock", icon: Package },
-  { href: "/admin/branches", label: "Organization", shortLabel: "Org", icon: Building2 },
-];
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("admin.layout");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthHydrated();
   const logout = useAuthStore((s) => s.logout);
@@ -30,6 +21,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const themeSettings = useThemeStore();
+
+  const nav = useMemo(
+    () => [
+      { href: "/admin", label: t("nav.overview"), shortLabel: t("nav.home"), icon: LayoutDashboard, exact: true },
+      { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
+      { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
+      { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
+      { href: "/admin/leads", label: t("nav.leads"), shortLabel: t("nav.leads"), icon: UserPlus },
+      { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
+      { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },
+      { href: "/admin/finance", label: t("nav.finance"), shortLabel: t("nav.pl"), icon: IndianRupee },
+      { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },
+      { href: "/admin/branches", label: t("nav.organization"), shortLabel: t("nav.org"), icon: Building2 },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -42,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[var(--brand)] animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
         </div>
       </div>
     );
@@ -68,7 +75,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">{user.tenantName}</p>
-              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">CEO · {user.name}</p>
+              <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">{t("ceo")} · {user.name}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -79,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 router.push("/login");
               }}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
-              aria-label="Logout"
+              aria-label={tCommon("logout")}
             >
               <LogOut className="w-5 h-5" />
             </button>

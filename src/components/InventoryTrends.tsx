@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { BranchInventoryTrend } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { seriesColor, BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
@@ -14,18 +15,21 @@ interface InventoryTrendsProps {
 
 type MetricKey = "productCost" | "usageCost" | "wastageCost" | "stockValue";
 
-const METRICS: { key: MetricKey; title: string; format: (v: number) => string }[] = [
-  { key: "productCost", title: "Product cost trend", format: formatCurrency },
-  { key: "usageCost", title: "Usage cost trend", format: formatCurrency },
-  { key: "wastageCost", title: "Wastage cost trend", format: formatCurrency },
-  { key: "stockValue", title: "Stock value trend", format: formatCurrency },
-];
-
 export function InventoryTrends({ branches, periodLabel }: InventoryTrendsProps) {
+  const t = useTranslations("components.inventoryTrends");
+  const locale = useLocale();
+
+  const metrics: { key: MetricKey; titleKey: "productCostTrend" | "usageCostTrend" | "wastageCostTrend" | "stockValueTrend"; format: (v: number) => string }[] = [
+    { key: "productCost", titleKey: "productCostTrend", format: formatCurrency },
+    { key: "usageCost", titleKey: "usageCostTrend", format: formatCurrency },
+    { key: "wastageCost", titleKey: "wastageCostTrend", format: formatCurrency },
+    { key: "stockValue", titleKey: "stockValueTrend", format: formatCurrency },
+  ];
+
   if (branches.length === 0) {
     return (
       <Card>
-        <EmptyState title="No inventory trends" description="Log stock movements to see trends" />
+        <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
       </Card>
     );
   }
@@ -33,7 +37,7 @@ export function InventoryTrends({ branches, periodLabel }: InventoryTrendsProps)
   const monthLabels =
     branches[0]?.points.map((p) => {
       const d = new Date(p.month + "T12:00:00");
-      return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+      return d.toLocaleDateString(locale, { month: "short", year: "2-digit" });
     }) ?? [];
 
   return (
@@ -41,19 +45,19 @@ export function InventoryTrends({ branches, periodLabel }: InventoryTrendsProps)
       <div className="flex items-center gap-2 px-0.5">
         <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)]">Inventory & product cost trends</h2>
+          <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("title")}</h2>
           <p className="text-xs text-[var(--text-secondary)]">
             {periodLabel ? `${periodLabel} · ` : ""}
-            Monthly totals per branch · Switch chart type on each card
+            {t("subtitle")}
           </p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
-        {METRICS.map((metric) => (
+        {metrics.map((metric) => (
           <MetricChart
             key={metric.key}
-            title={metric.title}
+            title={t(metric.titleKey)}
             labels={monthLabels}
             formatValue={metric.format}
             series={branches.map((trend, idx) => ({

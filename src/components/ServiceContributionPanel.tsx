@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { TrendingDown, TrendingUp, Scissors } from "lucide-react";
 import { ServiceContributionResponse } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -44,18 +45,19 @@ export function ServiceContributionPanel({
   onPageChange,
   onSizeChange,
 }: ServiceContributionPanelProps) {
+  const t = useTranslations("components.serviceContributionPanel");
   const [localFilter, setLocalFilter] = useState(serviceFilter);
 
   useEffect(() => {
-    const t = setTimeout(() => onServiceFilterChange?.(localFilter), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => onServiceFilterChange?.(localFilter), 300);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localFilter]);
 
   if (loading) {
     return (
       <Card>
-        <p className="text-sm text-[var(--text-secondary)]">Loading service breakdown...</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
       </Card>
     );
   }
@@ -63,10 +65,7 @@ export function ServiceContributionPanel({
   if (!data || data.totalElements === 0) {
     return (
       <Card>
-        <EmptyState
-          title="No service sales yet"
-          description="Service contribution appears after completed visits in this period."
-        />
+        <EmptyState title={t("noSalesTitle")} description={t("noSalesDesc")} />
       </Card>
     );
   }
@@ -78,33 +77,33 @@ export function ServiceContributionPanel({
 
   const columns = [
     {
-      label: "Service",
+      label: t("columns.service"),
       filter: {
         type: "text" as const,
-        placeholder: "Service name",
+        placeholder: t("serviceFilter"),
         value: localFilter,
         onChange: setLocalFilter,
       },
     },
-    { label: "Count", filter: { type: "none" as const } },
-    { label: "Revenue", filter: { type: "none" as const } },
-    { label: "Rev %", filter: { type: "none" as const } },
-    { label: "Share", filter: { type: "none" as const } },
+    { label: t("columns.count"), filter: { type: "none" as const } },
+    { label: t("columns.revenue"), filter: { type: "none" as const } },
+    { label: t("columns.revPct"), filter: { type: "none" as const } },
+    { label: t("columns.share"), filter: { type: "none" as const } },
   ];
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card className="!p-3.5">
-          <p className="text-xs text-[var(--text-secondary)]">Total sales</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("totalSales")}</p>
           <p className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{formatCurrency(data.totalRevenue)}</p>
         </Card>
         <Card className="!p-3.5">
-          <p className="text-xs text-[var(--text-secondary)]">Service revenue</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("serviceRevenue")}</p>
           <p className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{formatCurrency(data.serviceRevenue)}</p>
         </Card>
         <Card className="!p-3.5 col-span-2 sm:col-span-1">
-          <p className="text-xs text-[var(--text-secondary)]">Services sold</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("servicesSold")}</p>
           <p className="text-lg font-bold text-[var(--text-primary)] mt-0.5">{data.totalServiceCount}</p>
         </Card>
       </div>
@@ -113,13 +112,13 @@ export function ServiceContributionPanel({
         <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center gap-2">
           <Scissors className="w-4 h-4 text-[var(--brand-text)]" />
           <div>
-            <h2 className="font-semibold text-sm text-[var(--text-primary)]">Service contribution</h2>
-            <p className="text-xs text-[var(--text-secondary)]">{totalElements} services in period</p>
+            <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("title")}</h2>
+            <p className="text-xs text-[var(--text-secondary)]">{t("servicesInPeriod", { count: totalElements })}</p>
           </div>
         </div>
 
         {data.services.length === 0 ? (
-          <EmptyState title="No matching services" description="Try a different service name filter" />
+          <EmptyState title={t("noMatchTitle")} description={t("noMatchDesc")} />
         ) : (
           <>
             <div className="hidden md:block">
@@ -132,13 +131,13 @@ export function ServiceContributionPanel({
                         {heroes.has(i) && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                             <TrendingUp className="w-3 h-3" />
-                            Hero
+                            {t("hero")}
                           </span>
                         )}
                         {laggards.has(i) && !heroes.has(i) && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
                             <TrendingDown className="w-3 h-3" />
-                            Focus
+                            {t("focus")}
                           </span>
                         )}
                       </div>
@@ -171,12 +170,12 @@ export function ServiceContributionPanel({
                         <p className="font-medium text-sm text-[var(--text-primary)]">{s.serviceName}</p>
                         {heroes.has(i) && (
                           <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                            Hero
+                            {t("hero")}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                        {s.count} bookings · {s.countSharePct}% of volume
+                        {t("bookingsVolume", { count: s.count, pct: s.countSharePct })}
                       </p>
                     </div>
                     <div className="text-right shrink-0">

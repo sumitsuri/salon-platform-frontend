@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, AuthUser } from "./api";
 import { clearStoredAuth } from "./auth-session";
+import { syncLocaleFromUser } from "./locale-client";
 
 interface AuthState {
   user: AuthUser | null;
@@ -20,6 +21,7 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         const user = await api.login(email, password);
         set({ user });
+        syncLocaleFromUser(user.preferredLocale, true);
       },
       logout: () => {
         clearStoredAuth();

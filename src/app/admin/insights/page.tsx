@@ -2,21 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
 import { PageHeader, StatCard, EmptyState, selectClass } from "@/components/ui";
-import {
-  countInsights,
-  flattenInsights,
-  insightPeriodToRange,
-  INSIGHT_PERIOD_LABELS,
-  InsightPeriod,
-} from "@/lib/insights-utils";
+import { countInsights, flattenInsights, insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
+
+const INSIGHT_PERIODS: InsightPeriod[] = ["days60", "month", "week"];
 
 export default function AdminInsightsPage() {
+  const t = useTranslations("admin.insights");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
+  const tPeriods = useTranslations("components.insights.periods");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [period, setPeriod] = useState<InsightPeriod>("days60");
   const [initialized, setInitialized] = useState(false);
@@ -52,23 +53,23 @@ export default function AdminInsightsPage() {
   const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
 
   if (!initialized) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading...</p>;
+    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tCommon("loading")}</p>;
   }
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Insights"
-        subtitle={`${INSIGHT_PERIOD_LABELS[period]}${isFetching && !isLoading ? " · updating" : ""}`}
+        title={t("title")}
+        subtitle={`${tPeriods(period)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
             className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
           >
-            {(Object.keys(INSIGHT_PERIOD_LABELS) as InsightPeriod[]).map((p) => (
+            {INSIGHT_PERIODS.map((p) => (
               <option key={p} value={p}>
-                {INSIGHT_PERIOD_LABELS[p]}
+                {tPeriods(p)}
               </option>
             ))}
           </select>
@@ -78,20 +79,16 @@ export default function AdminInsightsPage() {
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       {selectedBranches.length === 0 ? (
-        <EmptyState title="Select at least one branch" description="Choose branches to view insights" />
+        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranchesInsights")} />
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <StatCard label="Total tips" value={countInsights(data)} icon={Lightbulb} accent="brand" />
-            <StatCard label="High priority" value={highCount} icon={AlertTriangle} accent="amber" />
-            <StatCard label="Medium" value={mediumCount} icon={Sparkles} accent="violet" />
+            <StatCard label={t("totalTips")} value={countInsights(data)} icon={Lightbulb} accent="brand" />
+            <StatCard label={t("highPriority")} value={highCount} icon={AlertTriangle} accent="amber" />
+            <StatCard label={t("medium")} value={mediumCount} icon={Sparkles} accent="violet" />
           </div>
 
-          <WeekdayBoostPanel
-            insights={data?.weekdayInsights}
-            loading={isLoading}
-            variant="ceo"
-          />
+          <WeekdayBoostPanel insights={data?.weekdayInsights} loading={isLoading} variant="ceo" />
 
           <RecommendationsPanel data={data} loading={isLoading} variant="ceo" />
         </>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { TrendingUp, Users, Receipt, Tag, Building2, Target } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -16,6 +17,7 @@ import { ServiceContributionTeaser } from "@/components/ServiceContributionTease
 import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction } from "@/components/ui";
 
 type Period = "all" | "days60" | "month" | "week" | "today";
+const PERIODS: Period[] = ["all", "days60", "month", "week", "today"];
 
 function periodToRange(period: Period): { startDate?: string; endDate?: string } {
   if (period === "all") return {};
@@ -37,15 +39,11 @@ function periodToRange(period: Period): { startDate?: string; endDate?: string }
   return { startDate: fmt(start), endDate: fmt(today) };
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  all: "All time",
-  days60: "Last 60 days",
-  month: "This month",
-  week: "Last 7 days",
-  today: "Today",
-};
-
 export default function AdminDashboardPage() {
+  const t = useTranslations("admin.dashboard");
+  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
+  const tPeriods = useTranslations("components.insights.periods");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [period, setPeriod] = useState<Period>("days60");
   const [initialized, setInitialized] = useState(false);
@@ -168,14 +166,14 @@ export default function AdminDashboardPage() {
   });
 
   if (!initialized || branchesLoading) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading dashboard...</p>;
+    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tAdmin("loadingDashboard")}</p>;
   }
 
   if (branchesError) {
     return (
       <EmptyState
-        title="Could not load branches"
-        description="Check that the backend is running and try refreshing the page."
+        title={t("branchesErrorTitle")}
+        description={t("branchesErrorDesc")}
       />
     );
   }
@@ -183,17 +181,17 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="CEO Dashboard"
-        subtitle={isFetching && !isLoading ? "Updating..." : PERIOD_LABELS[period]}
+        title={t("title")}
+        subtitle={isFetching && !isLoading ? tAdmin("updating") : tPeriods(period)}
         action={
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as Period)}
             className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
           >
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+            {PERIODS.map((p) => (
               <option key={p} value={p}>
-                {PERIOD_LABELS[p]}
+                {tPeriods(p)}
               </option>
             ))}
           </select>
@@ -203,21 +201,21 @@ export default function AdminDashboardPage() {
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <QuickAction href="/admin/employees" icon={Target} label="Employees" description="Targets & incentives" />
-        <QuickAction href="/admin/branches" icon={Building2} label="Organization" description="Branches & managers" />
+        <QuickAction href="/admin/employees" icon={Target} label={t("employeesQuick")} description={t("employeesQuickDesc")} />
+        <QuickAction href="/admin/branches" icon={Building2} label={t("organizationQuick")} description={t("organizationQuickDesc")} />
       </div>
 
       {selectedBranches.length === 0 ? (
-        <EmptyState title="Select at least one branch" description="Choose branches above to view analytics" />
+        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
       ) : isLoading || !dashboard ? (
-        <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">Loading dashboard...</p>
+        <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tAdmin("loadingDashboard")}</p>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <StatCard label="Total Revenue" value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
-            <StatCard label="Visits" value={dashboard.totalVisits} icon={Users} accent="brand" />
-            <StatCard label="Avg Ticket" value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
-            <StatCard label="Discounts" value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" className="col-span-2 lg:col-span-1" />
+            <StatCard label={t("totalRevenue")} value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
+            <StatCard label={t("visits")} value={dashboard.totalVisits} icon={Users} accent="brand" />
+            <StatCard label={t("avgTicket")} value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
+            <StatCard label={t("discounts")} value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" className="col-span-2 lg:col-span-1" />
           </div>
 
           <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
@@ -250,16 +248,16 @@ export default function AdminDashboardPage() {
           <div className="grid md:grid-cols-2 gap-4">
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Branch comparison</h2>
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("branchComparison")}</h2>
               </div>
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-[var(--text-secondary)] border-b border-[var(--border)]">
-                      <th className="px-4 py-2 font-medium">Branch</th>
-                      <th className="px-4 py-2 font-medium">Revenue</th>
-                      <th className="px-4 py-2 font-medium">Visits</th>
-                      <th className="px-4 py-2 font-medium">Avg</th>
+                      <th className="px-4 py-2 font-medium">{tCommon("branch")}</th>
+                      <th className="px-4 py-2 font-medium">{t("revenue")}</th>
+                      <th className="px-4 py-2 font-medium">{t("visits")}</th>
+                      <th className="px-4 py-2 font-medium">{t("avgTicket")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -279,11 +277,11 @@ export default function AdminDashboardPage() {
                   <ListRow
                     key={b.branchId}
                     title={b.branchName}
-                    subtitle={`${b.visits} visits`}
+                    subtitle={tAdmin("visits", { count: b.visits })}
                     trailing={
                       <div className="text-right">
                         <p className="text-sm font-bold">{formatCurrency(b.revenue)}</p>
-                        <p className="text-xs text-[var(--text-tertiary)]">avg {formatCurrency(b.avgTicket)}</p>
+                        <p className="text-xs text-[var(--text-tertiary)]">{tAdmin("avg", { amount: formatCurrency(b.avgTicket) })}</p>
                       </div>
                     }
                   />
@@ -293,10 +291,10 @@ export default function AdminDashboardPage() {
 
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)]">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Staff leaderboard</h2>
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
               </div>
               {dashboard.topStaff.length === 0 ? (
-                <EmptyState title="No staff data" description="For selected branches in this period" />
+                <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} />
               ) : (
                 <div className="divide-y divide-[var(--border)]">
                   {dashboard.topStaff.map((s, i) => (
@@ -313,13 +311,13 @@ export default function AdminDashboardPage() {
 
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-                <h2 className="font-semibold text-sm text-[var(--text-primary)]">Payment mix</h2>
+                <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("paymentMix")}</h2>
               </div>
               <div className="p-4 space-y-3">
                 {[
-                  { label: "Cash", value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
-                  { label: "UPI", value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
-                  { label: "Card", value: dashboard.paymentMix.card, color: "bg-violet-500" },
+                  { label: tCommon("cash"), value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
+                  { label: tCommon("upi"), value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
+                  { label: tCommon("card"), value: dashboard.paymentMix.card, color: "bg-violet-500" },
                 ].map((p) => {
                   const total =
                     dashboard.paymentMix.cash + dashboard.paymentMix.upi + dashboard.paymentMix.card || 1;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Fingerprint, PenLine, CalendarOff, List, Scan } from "lucide-react";
 import { api, StaffItem } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -36,6 +37,8 @@ function formatTime(iso?: string) {
 }
 
 export default function ManagerAttendancePage() {
+  const t = useTranslations("manager.attendance");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
   const queryClient = useQueryClient();
@@ -114,29 +117,33 @@ export default function ManagerAttendancePage() {
 
   async function simulateScan(member: StaffItem) {
     if (!member.biometricId) {
-      setScanError("No biometric registered for " + member.name);
+      setScanError(t("noBiometric", { name: member.name }));
       return;
     }
     setScanning(true);
     setScanError("");
-    setScanMsg("Scanning fingerprint...");
+    setScanMsg(t("scanning"));
     await new Promise((r) => setTimeout(r, 600));
     punchMutation.mutate(member.biometricId);
     setScanning(false);
   }
 
   const tabs = [
-    { id: "biometric" as Tab, label: "Scan", icon: Fingerprint },
-    { id: "manual" as Tab, label: "Manual", icon: PenLine },
-    { id: "leave" as Tab, label: "Leave", icon: CalendarOff },
-    { id: "log" as Tab, label: "Today", icon: List },
+    { id: "biometric" as Tab, label: t("tabs.scan"), icon: Fingerprint },
+    { id: "manual" as Tab, label: t("tabs.manual"), icon: PenLine },
+    { id: "leave" as Tab, label: t("tabs.leave"), icon: CalendarOff },
+    { id: "log" as Tab, label: t("tabs.today"), icon: List },
   ];
 
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Staff Attendance"
-        subtitle={`${user?.branchName} · ${presentCount} of ${staff.length} present`}
+        title={t("title")}
+        subtitle={t("subtitle", {
+          branch: user?.branchName ?? "",
+          present: presentCount,
+          total: staff.length,
+        })}
       />
 
       <SegmentedControl options={tabs} value={tab} onChange={setTab} />
@@ -154,10 +161,8 @@ export default function ManagerAttendancePage() {
             >
               <Fingerprint className="w-12 h-12 text-[var(--brand-text)]" />
             </div>
-            <p className="text-sm font-medium text-[var(--text-primary)] mt-4">Ready to scan</p>
-            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
-              Tap a staff member below to simulate a biometric punch
-            </p>
+            <p className="text-sm font-medium text-[var(--text-primary)] mt-4">{t("readyToScan")}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">{t("scanHint")}</p>
           </div>
 
           {scanMsg && (
@@ -171,7 +176,7 @@ export default function ManagerAttendancePage() {
             </div>
           )}
 
-          <p className="section-label mb-2">Staff roster</p>
+          <p className="section-label mb-2">{t("staffRoster")}</p>
           <div className="grid grid-cols-2 gap-2">
             {staff.map((s) => (
               <button
@@ -185,7 +190,7 @@ export default function ManagerAttendancePage() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.name}</p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] truncate">{s.biometricId || "No FP"}</p>
+                  <p className="text-[10px] text-[var(--text-tertiary)] truncate">{s.biometricId || t("noFp")}</p>
                 </div>
               </button>
             ))}
@@ -195,9 +200,9 @@ export default function ManagerAttendancePage() {
 
       {tab === "manual" && (
         <Card className="space-y-4">
-          <p className="text-sm text-[var(--text-secondary)]">Use when the scanner fails or a correction is needed</p>
+          <p className="text-sm text-[var(--text-secondary)]">{t("manualHint")}</p>
           <select value={manualStaffId} onChange={(e) => setManualStaffId(e.target.value)} className={selectClass}>
-            <option value="">Select staff</option>
+            <option value="">{t("selectStaff")}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -207,16 +212,16 @@ export default function ManagerAttendancePage() {
           <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} className={inputClass} />
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1.5 text-sm">
-              <span className="text-[var(--text-secondary)] font-medium">Entry</span>
+              <span className="text-[var(--text-secondary)] font-medium">{t("entry")}</span>
               <input type="time" value={manualEntry} onChange={(e) => setManualEntry(e.target.value)} className={inputClass} />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-[var(--text-secondary)] font-medium">Exit</span>
+              <span className="text-[var(--text-secondary)] font-medium">{t("exit")}</span>
               <input type="time" value={manualExit} onChange={(e) => setManualExit(e.target.value)} className={inputClass} />
             </label>
           </div>
           <input
-            placeholder="Reason (optional)"
+            placeholder={t("reasonOptional")}
             value={manualReason}
             onChange={(e) => setManualReason(e.target.value)}
             className={inputClass}
@@ -229,16 +234,16 @@ export default function ManagerAttendancePage() {
             disabled={!manualStaffId || manualMutation.isPending}
             className={`${btnPrimary} w-full`}
           >
-            {manualMutation.isPending ? "Saving..." : "Save attendance"}
+            {manualMutation.isPending ? tCommon("processing") : t("saveAttendance")}
           </button>
         </Card>
       )}
 
       {tab === "leave" && (
         <Card className="space-y-4">
-          <p className="text-sm text-[var(--text-secondary)]">Submit leave requests for staff approval</p>
+          <p className="text-sm text-[var(--text-secondary)]">{t("leaveHint")}</p>
           <select value={leaveStaffId} onChange={(e) => setLeaveStaffId(e.target.value)} className={selectClass}>
-            <option value="">Select staff</option>
+            <option value="">{t("selectStaff")}</option>
             {staff.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -247,15 +252,15 @@ export default function ManagerAttendancePage() {
           </select>
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1.5 text-sm">
-              <span className="text-[var(--text-secondary)] font-medium">From</span>
+              <span className="text-[var(--text-secondary)] font-medium">{t("from")}</span>
               <input type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className={inputClass} />
             </label>
             <label className="space-y-1.5 text-sm">
-              <span className="text-[var(--text-secondary)] font-medium">To</span>
+              <span className="text-[var(--text-secondary)] font-medium">{t("to")}</span>
               <input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className={inputClass} />
             </label>
           </div>
-          <input placeholder="Reason" value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} className={inputClass} />
+          <input placeholder={t("reason")} value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} className={inputClass} />
           {leaveMutation.error && (
             <AlertBanner variant="error">{(leaveMutation.error as Error).message}</AlertBanner>
           )}
@@ -264,7 +269,7 @@ export default function ManagerAttendancePage() {
             disabled={!leaveStaffId || leaveMutation.isPending}
             className={`${btnPrimary} w-full bg-amber-600 hover:bg-amber-700 active:bg-amber-800 shadow-amber-600/20`}
           >
-            {leaveMutation.isPending ? "Submitting..." : "Submit leave request"}
+            {leaveMutation.isPending ? t("submitting") : t("submitLeave")}
           </button>
         </Card>
       )}
@@ -272,20 +277,20 @@ export default function ManagerAttendancePage() {
       {tab === "log" && (
         <Card padding={false}>
           <div className="px-4 py-3.5 border-b border-[var(--border)]">
-            <h2 className="font-semibold text-sm text-[var(--text-primary)]">Today&apos;s log</h2>
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5">{todayLog.length} records</p>
+            <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("todaysLog")}</h2>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("records", { count: todayLog.length })}</p>
           </div>
           {logLoading ? (
-            <p className="p-4 text-[var(--text-tertiary)] text-sm">Loading...</p>
+            <p className="p-4 text-[var(--text-tertiary)] text-sm">{tCommon("loading")}</p>
           ) : todayLog.length === 0 ? (
-            <EmptyState title="No attendance yet" description="Staff punches will appear here" />
+            <EmptyState title={t("noAttendanceTitle")} description={t("noAttendanceDesc")} />
           ) : (
             <div className="divide-y divide-[var(--border)]">
               {todayLog.map((r) => (
                 <ListRow
                   key={r.id}
                   title={r.staffName}
-                  subtitle={`In ${formatTime(r.entryTime)} · Out ${formatTime(r.exitTime)}`}
+                  subtitle={t("inOut", { in: formatTime(r.entryTime), out: formatTime(r.exitTime) })}
                   trailing={<StatusBadge status={r.status} />}
                 />
               ))}

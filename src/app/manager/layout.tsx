@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Home, UserPlus, ClipboardList, LogOut, Fingerprint, Sparkles, Scissors, Package } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
@@ -10,17 +11,9 @@ import { cn } from "@/lib/utils";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 import { MobileBottomNav, MOBILE_NAV_MAIN_PADDING_FAB } from "@/components/MobileBottomNav";
 
-const nav = [
-  { href: "/manager", label: "Home", shortLabel: "Home", icon: Home, exact: true },
-  { href: "/manager/attendance", label: "Staff", shortLabel: "Staff", icon: Fingerprint },
-  { href: "/manager/walk-in", label: "Walk-in", shortLabel: "Walk-in", icon: UserPlus, fab: true },
-  { href: "/manager/bookings", label: "Bookings", shortLabel: "Book", icon: ClipboardList },
-  { href: "/manager/inventory", label: "Inventory", shortLabel: "Stock", icon: Package },
-  { href: "/manager/insights", label: "Insights", shortLabel: "Tips", icon: Sparkles },
-  { href: "/manager/services", label: "Services", shortLabel: "Sales", icon: Scissors },
-];
-
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("manager.nav");
+  const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthHydrated();
   const logout = useAuthStore((s) => s.logout);
@@ -28,6 +21,19 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const themeSettings = useThemeStore();
+
+  const nav = useMemo(
+    () => [
+      { href: "/manager", label: t("home"), shortLabel: t("home"), icon: Home, exact: true },
+      { href: "/manager/attendance", label: t("staff"), shortLabel: t("staff"), icon: Fingerprint },
+      { href: "/manager/walk-in", label: t("walkIn"), shortLabel: t("walkIn"), icon: UserPlus, fab: true },
+      { href: "/manager/bookings", label: t("bookings"), shortLabel: t("book"), icon: ClipboardList },
+      { href: "/manager/inventory", label: t("inventory"), shortLabel: t("stock"), icon: Package },
+      { href: "/manager/insights", label: t("insights"), shortLabel: t("tips"), icon: Sparkles },
+      { href: "/manager/services", label: t("services"), shortLabel: t("sales"), icon: Scissors },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -39,7 +45,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
       <div className="min-h-screen flex items-center justify-center bg-[var(--surface-muted)]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[var(--brand)] animate-pulse" />
-          <p className="text-sm text-[var(--text-secondary)]">Loading...</p>
+          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
         </div>
       </div>
     );
@@ -78,7 +84,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
                 router.push("/login");
               }}
               className="p-2 rounded-xl text-[var(--text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
-              aria-label="Logout"
+              aria-label={tCommon("logout")}
             >
               <LogOut className="w-5 h-5" />
             </button>
