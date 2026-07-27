@@ -6,7 +6,8 @@ import { useTranslations } from "next-intl";
 import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
 import { AlertBanner, btnPrimary, inputClass } from "@/components/ui";
 import { LoginHeroPanel } from "@/components/brand/LoginHeroPanel";
-import { PravaahLogo } from "@/components/brand/PravaahLogo";
+import { AntrahqLogo } from "@/components/brand/AntrahqLogo";
+import { isLocalDev } from "@/lib/env";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -56,7 +57,7 @@ export default function LoginPage() {
 
           <div className="w-full max-w-sm mp-animate-in relative z-10">
             <div className="lg:hidden mb-6 flex justify-center">
-              <PravaahLogo size="md" variant="dark" />
+              <AntrahqLogo size="md" variant="dark" />
             </div>
 
             <div className="pravaah-form-card bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-lg p-6 sm:p-8">
@@ -95,17 +96,19 @@ export default function LoginPage() {
 
             <p className="mt-4 text-center text-[11px] text-[var(--text-tertiary)] font-medium">{tBrand("taglineShort")}</p>
 
-            <details className="mt-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
-              <summary className="font-semibold text-[var(--text-primary)] cursor-pointer">{t("demoAccounts")}</summary>
-              <div className="mt-2 space-y-1">
-                <p>Platform: platform@salonplatform.local / admin123</p>
-                <p>Demo CEO: ceo@demo-brand.local / ceo123</p>
-                <p>Velvet CEO: ceo@velvet-scissors.local / ceo123</p>
-                <p>Bloom CEO: ceo@bloom-beauty.local / ceo123</p>
-                <p>Crown CEO: ceo@crown-comb.local / ceo123</p>
-                <p className="pt-1 text-[var(--text-muted)]">All managers use manager123 — full list in docs/DEMO_CREDENTIALS.md</p>
-              </div>
-            </details>
+            {isLocalDev && (
+              <details className="mt-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
+                <summary className="font-semibold text-[var(--text-primary)] cursor-pointer">{t("demoAccounts")}</summary>
+                <div className="mt-2 space-y-1">
+                  <p>Platform: platform@salonplatform.local / admin123</p>
+                  <p>Demo CEO: ceo@demo-brand.local / ceo123</p>
+                  <p>Velvet CEO: ceo@velvet-scissors.local / ceo123</p>
+                  <p>Bloom CEO: ceo@bloom-beauty.local / ceo123</p>
+                  <p>Crown CEO: ceo@crown-comb.local / ceo123</p>
+                  <p className="pt-1 text-[var(--text-muted)]">All managers use manager123 — full list in docs/DEMO_CREDENTIALS.md</p>
+                </div>
+              </details>
+            )}
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Building2, LineChart, HeartHandshake } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PravaahLogo } from "./PravaahLogo";
+import { AntrahqLogo } from "./AntrahqLogo";
 
 const PILLAR_ICONS = [Building2, LineChart, HeartHandshake] as const;
 const PILLAR_KEYS = ["sync", "insights", "delight"] as const;
@@ -33,7 +33,7 @@ export function LoginHeroPanel() {
       </svg>
 
       <div className="relative z-10 space-y-6 max-w-lg mp-animate-in">
-        <PravaahLogo size="lg" variant="light" />
+        <AntrahqLogo size="lg" variant="light" />
 
         <div className="space-y-2">
           <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight text-white leading-tight">

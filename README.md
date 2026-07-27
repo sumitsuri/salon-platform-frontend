@@ -1,8 +1,8 @@
-# Pravaah — Frontend
+# Antrahq — Frontend
 
-Next.js web app for salon chain management — manager walk-in flow, brand admin dashboard, Market Pulse intelligence, and platform admin.
+Next.js web app for the Antrahq ops platform — manager walk-in flow, brand admin dashboard, Market Pulse intelligence, and platform admin.
 
-**Pravaah** (प्रवाह — *flow*) is the operating system for Indian salon chains: multi-branch sync, data-driven growth, and delightful customer experiences.
+**Antrahq** helps multi-location operators run billing, teams, and customer relationships from one connected system — built in India for growing local chains.
 
 ## Tech Stack
 

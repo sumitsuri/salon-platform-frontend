@@ -44,7 +44,7 @@
     "navigationMenu": "வழிசெலுத்தல் மெனு"
   },
   "auth": {
-    "title": "Pravaah",
+    "title": "Antrahq",
     "subtitle": "The flow of salon success",
     "email": "Email",
     "password": "Password",
@@ -1071,7 +1071,7 @@
   },
   "platform": {
     "layout": {
-      "title": "Pravaah Platform",
+      "title": "Antrahq Platform",
       "subtitle": "தள நிர்வாகி · {name}",
       "tenants": "டெனண்டுகள்"
     },
@@ -1138,7 +1138,7 @@
     }
   },
   "brand": {
-    "name": "Pravaah",
+    "name": "Antrahq",
     "tagline": "The flow of salon success",
     "taglineShort": "Flow smarter. Grow faster.",
     "mission": "We help salon chains run smoother, grow faster, and delight customers at every visit.",
@@ -1158,11 +1158,11 @@
       }
     },
     "missionStrip": {
-      "0": "Pravaah keeps your chain flowing — less chaos, more revenue per chair.",
+      "0": "Antrahq keeps your chain flowing — less chaos, more revenue per chair.",
       "1": "Small daily improvements compound into market-leading salons.",
       "2": "Your team sees clarity; your customers feel the difference.",
       "3": "Growth isn't luck — it's the flow of great operations."
     },
-    "poweredBy": "Powered by Pravaah"
+    "poweredBy": "Powered by Antrahq"
   }
 }

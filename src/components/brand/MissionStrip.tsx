@@ -14,6 +14,7 @@ export function MissionStrip({
   className?: string;
   variant?: "subtle" | "accent";
 }) {
+  const tBrand = useTranslations("brand");
   const t = useTranslations("brand.missionStrip");
   const [idx, setIdx] = useState(0);
 
@@ -36,7 +37,7 @@ export function MissionStrip({
           <Sparkles className="w-4 h-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text)]">Pravaah</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text)]">{tBrand("name")}</p>
           <p className="text-sm text-[var(--text-primary)] font-medium leading-snug transition-opacity duration-500" key={idx}>
             {message}
           </p>

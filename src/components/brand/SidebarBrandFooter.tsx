@@ -9,7 +9,7 @@ export function SidebarBrandFooter({ collapsed }: { collapsed?: boolean }) {
 
   return (
     <div className={cn("px-3 py-2 border-t border-[var(--border)] shrink-0")}>
-      <p className="text-[10px] font-bold text-[var(--brand-text)] tracking-wide">Pravaah</p>
+      <p className="text-[10px] font-bold text-[var(--brand-text)] tracking-wide">{t("name")}</p>
       <p className="text-[10px] text-[var(--text-tertiary)] leading-snug mt-0.5 line-clamp-2">{t("taglineShort")}</p>
     </div>
   );

@@ -8,7 +8,7 @@ import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { MOBILE_MAIN_PADDING } from "@/components/app-nav";
-import { PravaahLoading } from "@/components/brand/PravaahLoading";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("admin.layout");
@@ -45,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [user, router, hydrated]);
 
   if (!hydrated) {
-    return <PravaahLoading label={tCommon("loading")} />;
+    return <AntrahqLoading label={tCommon("loading")} />;
   }
 
   if (!user || (user.role !== "BRAND_ADMIN" && user.role !== "PLATFORM_SUPER_ADMIN")) return null;

@@ -75,10 +75,10 @@ function ThemePreview({
     >
       <div className="px-3 py-2 flex items-center gap-2 border-b" style={{ borderColor: border, background: surface }}>
         <div className="w-6 h-6 rounded-lg text-[10px] font-bold text-white flex items-center justify-center" style={{ background: accent }}>
-          S
+          A
         </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold truncate" style={{ color: text }}>Pravaah</p>
+          <p className="text-[10px] font-semibold truncate" style={{ color: text }}>Antrahq</p>
           <p className="text-[9px] truncate" style={{ color: subtext }}>Live preview</p>
         </div>
       </div>

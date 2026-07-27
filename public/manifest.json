@@ -1,7 +1,7 @@
 {
-  "name": "Pravaah",
-  "short_name": "Pravaah",
-  "description": "The flow of salon success — multi-branch operations platform",
+  "name": "Antrahq",
+  "short_name": "Antrahq",
+  "description": "Every location in sync — multi-location ops platform",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

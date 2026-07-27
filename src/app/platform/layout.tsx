@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Building2 } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { PravaahLoading } from "@/components/brand/PravaahLoading";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("platform.layout");
@@ -30,7 +30,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   }, [user, router, hydrated]);
 
   if (!hydrated) {
-    return <PravaahLoading label={tCommon("loading")} />;
+    return <AntrahqLoading label={tCommon("loading")} />;
   }
 
   if (!user || user.role !== "PLATFORM_SUPER_ADMIN") return null;

@@ -44,8 +44,8 @@
     "navigationMenu": "Navigation menu"
   },
   "auth": {
-    "title": "Pravaah",
-    "subtitle": "The flow of salon success",
+    "title": "Antrahq",
+    "subtitle": "Every location in sync. Every day clearer.",
     "email": "Email",
     "password": "Password",
     "signIn": "Sign in",
@@ -54,35 +54,35 @@
     "loginFailed": "Login failed",
     "demoAccounts": "Demo accounts",
     "welcomeBack": "Welcome back",
-    "formHint": "Sign in to your salon command centre"
+    "formHint": "Sign in to your connected workspace"
   },
   "brand": {
-    "name": "Pravaah",
-    "tagline": "The flow of salon success",
-    "taglineShort": "Flow smarter. Grow faster.",
-    "mission": "We help salon chains run smoother, grow faster, and delight customers at every visit.",
-    "footerTagline": "Built for Indian salon chains · Multi-branch · Real-time intelligence",
+    "name": "Antrahq",
+    "tagline": "Every location in sync. Every day clearer.",
+    "taglineShort": "Run smarter. Grow together.",
+    "mission": "We help multi-location operators run billing, teams, and customer relationships from one connected system — so growth feels clear, not chaotic.",
+    "footerTagline": "Built in India · Multi-location · Real-time ops intelligence",
     "pillars": {
       "sync": {
-        "title": "Every branch in sync",
-        "desc": "Walk-ins, bookings, staff, and stock — one live view across your entire chain."
+        "title": "Every location connected",
+        "desc": "Billing, staff, inventory, and bookings — one live view across your entire network."
       },
       "insights": {
-        "title": "Data that drives action",
-        "desc": "Market Pulse, P&L, and AI tips turn numbers into decisions your team acts on today."
+        "title": "Clarity that drives action",
+        "desc": "Branch P&L, Market Pulse, and performance signals turn numbers into decisions your team acts on today."
       },
       "delight": {
-        "title": "Delight at every touchpoint",
-        "desc": "From the front desk to the CEO dashboard — experiences that keep teams and customers coming back."
+        "title": "Customers stay close",
+        "desc": "WhatsApp outreach, visit history, and rebooking flows keep your brand present between every visit."
       }
     },
     "missionStrip": {
-      "0": "Pravaah keeps your chain flowing — less chaos, more revenue per chair.",
-      "1": "Small daily improvements compound into market-leading salons.",
-      "2": "Your team sees clarity; your customers feel the difference.",
-      "3": "Growth isn't luck — it's the flow of great operations."
+      "0": "Antrahq connects every location — less chaos, more confidence as you scale.",
+      "1": "Small daily improvements across branches compound into a stronger network.",
+      "2": "Your team sees clarity; your customers feel the consistency.",
+      "3": "Growth isn't luck — it's operators running in sync."
     },
-    "poweredBy": "Powered by Pravaah"
+    "poweredBy": "Powered by Antrahq"
   },
   "settings": {
     "title": "Settings",
@@ -1099,7 +1099,7 @@
   },
   "platform": {
     "layout": {
-      "title": "Pravaah Platform",
+      "title": "Antrahq Platform",
       "subtitle": "Platform Admin · {name}",
       "tenants": "Tenants"
     },
