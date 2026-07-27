@@ -48,7 +48,9 @@ export function useAuthHydrated() {
 export function getHomeForRole(role: string) {
   switch (role) {
     case "PLATFORM_SUPER_ADMIN":
-      return "/platform";
+      return "/platform/overview";
+    case "SALES_EXECUTIVE":
+      return "/platform/sales";
     case "BRAND_ADMIN":
       return "/admin";
     default:

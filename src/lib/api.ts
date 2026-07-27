@@ -32,7 +32,12 @@ function apiBase(): string {
   return resolveApiBase();
 }
 
-export type UserRole = "PLATFORM_SUPER_ADMIN" | "BRAND_ADMIN" | "BRANCH_MANAGER" | "SALON_MANAGER";
+export type UserRole =
+  | "PLATFORM_SUPER_ADMIN"
+  | "SALES_EXECUTIVE"
+  | "BRAND_ADMIN"
+  | "BRANCH_MANAGER"
+  | "SALON_MANAGER";
 
 export interface AuthUser {
   accessToken: string;

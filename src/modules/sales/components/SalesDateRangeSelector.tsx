@@ -1,0 +1,158 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Calendar, ChevronDown, Check } from "lucide-react";
+import {
+  DATE_RANGE_PRESET_LABELS,
+  DATE_RANGE_PRESET_ORDER,
+  DateRangePreset,
+  SalesDateRange,
+  formatDateRangeLabel,
+  resolvePresetRange,
+  todayIsoDate,
+} from "@/modules/sales/lib/date-range";
+import { selectClass } from "@/components/ui";
+import { cn } from "@/lib/utils";
+
+interface SalesDateRangeSelectorProps {
+  value: SalesDateRange;
+  onChange: (range: SalesDateRange) => void;
+  className?: string;
+  testId?: string;
+}
+
+export function SalesDateRangeSelector({
+  value,
+  onChange,
+  className,
+  testId = "sales-date-range",
+}: SalesDateRangeSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const label =
+    value.preset === "custom"
+      ? `Custom · ${formatDateRangeLabel(value.from, value.to)}`
+      : `${DATE_RANGE_PRESET_LABELS[value.preset]} · ${formatDateRangeLabel(value.from, value.to)}`;
+
+  function applyPreset(preset: DateRangePreset) {
+    if (preset === "custom") {
+      setDraft({ ...resolvePresetRange("last_week"), preset: "custom" });
+      return;
+    }
+    const { from, to } = resolvePresetRange(preset);
+    onChange({ preset, from, to });
+    setOpen(false);
+  }
+
+  function applyCustom() {
+    if (draft.from && draft.to) {
+      onChange({ preset: "custom", from: draft.from, to: draft.to });
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div ref={ref} className={cn("relative w-full max-w-sm", className)} data-testid={testId}>
+      <button
+        type="button"
+        data-testid={`${testId}-trigger`}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-violet-400"
+      >
+        <Calendar className="h-4 w-4 shrink-0 text-violet-600" />
+        <span className="flex-1 truncate text-left">{label}</span>
+        <ChevronDown
+          className={cn("h-4 w-4 shrink-0 text-[var(--ink-muted)] transition", open && "rotate-180")}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 z-50 mt-1 w-full min-w-[16rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg">
+          {DATE_RANGE_PRESET_ORDER.map((preset) => {
+            const active = value.preset === preset;
+            const preview =
+              preset !== "custom" ? resolvePresetRange(preset) : null;
+            return (
+              <button
+                key={preset}
+                type="button"
+                data-testid={`${testId}-preset-${preset}`}
+                onClick={() => applyPreset(preset)}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)]"
+              >
+                <div
+                  className={cn(
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                    active ? "border-violet-600 bg-violet-600" : "border-[var(--border)]"
+                  )}
+                >
+                  {active && <Check className="h-3 w-3 text-white" />}
+                </div>
+                <span className="flex flex-col items-start text-left">
+                  <span>{DATE_RANGE_PRESET_LABELS[preset]}</span>
+                  {preview && (
+                    <span className="text-[10px] text-[var(--ink-muted)]">
+                      {formatDateRangeLabel(preview.from, preview.to)}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+
+          {(draft.preset === "custom" || value.preset === "custom") && (
+            <div className="space-y-2 border-t border-[var(--border)] px-3 py-3">
+              <p className="text-xs font-medium text-[var(--ink-muted)]">Custom dates</p>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block text-xs">
+                  From
+                  <input
+                    type="date"
+                    data-testid={`${testId}-from`}
+                    className={`${selectClass} mt-1`}
+                    value={draft.from}
+                    max={draft.to || undefined}
+                    onChange={(e) => setDraft({ ...draft, from: e.target.value, preset: "custom" })}
+                  />
+                </label>
+                <label className="block text-xs">
+                  To
+                  <input
+                    type="date"
+                    data-testid={`${testId}-to`}
+                    className={`${selectClass} mt-1`}
+                    value={draft.to}
+                    min={draft.from || undefined}
+                    max={todayIsoDate()}
+                    onChange={(e) => setDraft({ ...draft, to: e.target.value, preset: "custom" })}
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-700"
+                onClick={applyCustom}
+              >
+                Apply range
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

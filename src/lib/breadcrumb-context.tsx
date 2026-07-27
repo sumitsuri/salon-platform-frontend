@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { AppNavItem } from "@/components/app-nav";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -76,12 +76,18 @@ export function useBreadcrumbs(): BreadcrumbItem[] {
 /** Override auto route breadcrumbs (e.g. platform tenant drill-down). Clears on unmount. */
 export function useSetPageBreadcrumbs(items: BreadcrumbItem[] | null) {
   const ctx = useContext(BreadcrumbContext);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  const stableKey = items
+    ? items.map((i) => `${i.label}|${i.href ?? ""}|${i.onClick ? "fn" : ""}`).join(">")
+    : "";
 
   useEffect(() => {
     if (!ctx) return;
-    ctx.setPageBreadcrumbs(items);
+    ctx.setPageBreadcrumbs(itemsRef.current);
     return () => ctx.setPageBreadcrumbs(null);
-  }, [ctx, items]);
+  }, [ctx, stableKey]);
 }
 
 export function useBreadcrumbActions() {

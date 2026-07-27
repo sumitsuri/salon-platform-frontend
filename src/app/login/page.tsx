@@ -101,6 +101,7 @@ export default function LoginPage() {
                 <summary className="font-semibold text-[var(--text-primary)] cursor-pointer">{t("demoAccounts")}</summary>
                 <div className="mt-2 space-y-1">
                   <p>Platform: platform@salonplatform.local / admin123</p>
+                  <p>Sales rep: sales1@antrahq.local / sales123</p>
                   <p>Demo CEO: ceo@demo-brand.local / ceo123</p>
                   <p>Velvet CEO: ceo@velvet-scissors.local / ceo123</p>
                   <p>Bloom CEO: ceo@bloom-beauty.local / ceo123</p>
