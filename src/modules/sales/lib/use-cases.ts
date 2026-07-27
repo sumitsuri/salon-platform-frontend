@@ -45,5 +45,5 @@ export function extractCustomUseCasesFromNotes(notes?: string | null): string {
 
 export function stripCustomUseCasesFromNotes(notes?: string | null): string {
   if (!notes) return "";
-  return notes.replace(/\n?Additional use cases:.*$/s, "").trim();
+  return notes.replace(/\n?Additional use cases:[\s\S]*$/, "").trim();
 }
