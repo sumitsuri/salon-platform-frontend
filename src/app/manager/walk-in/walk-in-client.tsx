@@ -947,6 +947,7 @@ export default function WalkInPage() {
                   <button
                     key={s.id}
                     type="button"
+                    data-testid="walk-in-service-card"
                     onClick={() => addService(s)}
                     className="flex items-center justify-between gap-2 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] transition text-left active:scale-[0.98] touch-manipulation min-w-0"
                   >
@@ -977,7 +978,7 @@ export default function WalkInPage() {
             {cart.length === 0 ? (
               <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto" data-testid="walk-in-cart">
                 {cart.map((item, idx) => (
                   <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
                     <div className="flex justify-between items-start gap-2">
@@ -995,6 +996,7 @@ export default function WalkInPage() {
                       </div>
                     </div>
                     <select
+                      data-testid="walk-in-stylist-select"
                       value={item.staffId}
                       onChange={(e) => updateStaff(idx, e.target.value)}
                       className={`${selectClass} mt-2 py-2`}
