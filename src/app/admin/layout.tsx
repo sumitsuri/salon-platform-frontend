@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone, TrendingUp } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
       { href: "/admin/leads", label: t("nav.leads"), shortLabel: t("nav.leads"), icon: UserPlus },
       { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
+      { href: "/admin/promotions", label: t("nav.promotions"), shortLabel: t("nav.deals"), icon: BadgePercent },
       { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },
       { href: "/admin/finance", label: t("nav.finance"), shortLabel: t("nav.pl"), icon: IndianRupee },
       { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },

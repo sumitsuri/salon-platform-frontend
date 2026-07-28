@@ -21,7 +21,7 @@ export const STAGE_LABELS: Record<LeadStage, string> = {
 export const STAGE_DESCRIPTIONS: Record<LeadStage, string> = {
   NEW: "Lead captured — schedule first touch",
   CONTACTED: "First call or visit done",
-  QUALIFIED: "Locality, use case, and type confirmed",
+  QUALIFIED: "Use case and type confirmed",
   PITCHED: "Product demo or pitch delivered",
   INTERESTED: "Prospect wants to proceed",
   FREE_TRIAL: "Trial intent recorded — admin will provision",
@@ -97,7 +97,7 @@ export function getStageRequirements(stage: LeadStage): string[] {
     case "CONTACTED":
       return ["Log at least one visit, call, or WhatsApp activity"];
     case "QUALIFIED":
-      return ["Locality filled in", "Use case filled in", "Lead type selected"];
+      return ["Use case filled in", "Lead type selected"];
     case "PITCHED":
       return ["Log a pitch or demo activity (recommended)"];
     case "INTERESTED":

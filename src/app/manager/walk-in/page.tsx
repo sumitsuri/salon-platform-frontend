@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Trash2, Plus } from "lucide-react";
-import { api, BillPreview, BranchServiceItem, StaffItem } from "@/lib/api";
+import { Trash2, Plus, CreditCard } from "lucide-react";
+import {
+  api,
+  BillPreview,
+  BranchServiceItem,
+  MembershipSubscription,
+  StaffItem,
+} from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
 import {
@@ -48,6 +54,9 @@ export default function WalkInPage() {
   const [bookingId, setBookingId] = useState("");
   const [billPreview, setBillPreview] = useState<BillPreview | null>(null);
   const [error, setError] = useState("");
+  const [selectedCouponId, setSelectedCouponId] = useState("");
+  const [selectedOfferId, setSelectedOfferId] = useState("");
+  const [membership, setMembership] = useState<MembershipSubscription | null>(null);
 
   const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
 
@@ -63,12 +72,42 @@ export default function WalkInPage() {
     enabled: !!branchId,
   });
 
+  const { data: applicablePromos = [] } = useQuery({
+    queryKey: ["applicable-promos", branchId],
+    queryFn: () => api.getApplicablePromos(branchId),
+    enabled: !!branchId && step >= 2,
+  });
+
+  const coupons = useMemo(() => applicablePromos.filter((p) => p.kind === "COUPON"), [applicablePromos]);
+  const offers = useMemo(() => applicablePromos.filter((p) => p.kind === "OFFER"), [applicablePromos]);
+
+  useEffect(() => {
+    if (!customerId) {
+      setMembership(null);
+      return;
+    }
+    api
+      .getActiveMembership(customerId)
+      .then((m) => setMembership(m))
+      .catch(() => setMembership(null));
+  }, [customerId]);
+
   const createBooking = useMutation({
     mutationFn: (data: Parameters<typeof api.createBooking>[0]) => api.createBooking(data),
     onSuccess: (b) => {
       setBookingId(b.id);
       setBillPreview(b.billPreview ?? null);
       setStep(3);
+      setError("");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const applyPromo = useMutation({
+    mutationFn: (data: { couponId?: string | null; offerId?: string | null; clearPromo?: boolean }) =>
+      api.applyBookingPromo(bookingId, data),
+    onSuccess: (b) => {
+      setBillPreview(b.billPreview ?? null);
       setError("");
     },
     onError: (e: Error) => setError(e.message),
@@ -101,6 +140,7 @@ export default function WalkInPage() {
     } catch {
       setCustomerId("");
       setCustomerName("");
+      setMembership(null);
     }
   }
 
@@ -143,7 +183,27 @@ export default function WalkInPage() {
       branchId,
       customerId,
       lines: cart.map((c) => ({ branchServiceId: c.branchServiceId, staffId: c.staffId, quantity: 1 })),
+      couponId: selectedCouponId || undefined,
+      offerId: selectedOfferId || undefined,
     });
+  }
+
+  function onCouponChange(id: string) {
+    setSelectedCouponId(id);
+    setSelectedOfferId("");
+    if (bookingId) {
+      if (!id) applyPromo.mutate({ clearPromo: true });
+      else applyPromo.mutate({ couponId: id, offerId: null });
+    }
+  }
+
+  function onOfferChange(id: string) {
+    setSelectedOfferId(id);
+    setSelectedCouponId("");
+    if (bookingId) {
+      if (!id) applyPromo.mutate({ clearPromo: true });
+      else applyPromo.mutate({ offerId: id, couponId: null });
+    }
   }
 
   const estimateSubtotal = cart.reduce((s, c) => s + c.price, 0);
@@ -170,6 +230,29 @@ export default function WalkInPage() {
           <input placeholder={t("namePlaceholder")} value={customerName} onChange={(e) => setCustomerName(e.target.value)} className={inputClass} />
           <input placeholder={t("societyPlaceholder")} value={society} onChange={(e) => setSociety(e.target.value)} className={inputClass} />
           <input placeholder={t("flatPlaceholder")} value={flat} onChange={(e) => setFlat(e.target.value)} className={inputClass} />
+
+          {membership && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+              <p className="font-semibold flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                {t("memberBadge", { plan: membership.planName || "Member", percent: membership.benefitPercent ?? 10 })}
+              </p>
+              <p className="text-xs mt-1">
+                {membership.cardNumber} · {t("validUntil", { date: membership.endsOn })}
+              </p>
+            </div>
+          )}
+
+          {customerId && !membership && (
+            <button
+              type="button"
+              onClick={() => router.push(`/manager/memberships?customerId=${customerId}&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(customerName)}`)}
+              className={`${btnSecondary} w-full`}
+            >
+              {t("sellMembership")}
+            </button>
+          )}
+
           <button onClick={registerAndContinue} disabled={!phone || !customerName} className={`${btnPrimary} w-full`}>
             {t("continueServices")}
           </button>
@@ -178,6 +261,42 @@ export default function WalkInPage() {
 
       {step === 2 && (
         <div className="space-y-4">
+          {membership && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800">
+              {t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })}
+            </div>
+          )}
+
+          <Card className="space-y-3">
+            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("applyPromo")}</p>
+            <select
+              value={selectedCouponId}
+              onChange={(e) => onCouponChange(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">{t("noCoupon")}</option>
+              {coupons.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} · {c.name} ({c.discountType === "PERCENT" ? `${c.discountValue}%` : formatCurrency(c.discountValue)})
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedOfferId}
+              onChange={(e) => onOfferChange(e.target.value)}
+              className={selectClass}
+              disabled={!!selectedCouponId}
+            >
+              <option value="">{t("noOffer")}</option>
+              {offers.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name} ({o.discountType === "PERCENT" ? `${o.discountValue}%` : formatCurrency(o.discountValue)})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-[var(--text-tertiary)]">{t("xorHint")}</p>
+          </Card>
+
           <Card padding={false}>
             <div className="px-4 py-3 border-b border-[var(--border)]">
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("addServices")}</p>
@@ -245,17 +364,56 @@ export default function WalkInPage() {
 
       {step === 3 && billPreview && (
         <Card className="space-y-5">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("applyPromo")}</p>
+            <select value={selectedCouponId} onChange={(e) => onCouponChange(e.target.value)} className={selectClass}>
+              <option value="">{t("noCoupon")}</option>
+              {coupons.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} · {c.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedOfferId}
+              onChange={(e) => onOfferChange(e.target.value)}
+              className={cn(selectClass, selectedCouponId && "opacity-60")}
+              disabled={!!selectedCouponId}
+            >
+              <option value="">{t("noOffer")}</option>
+              {offers.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="bg-[var(--surface-muted)] rounded-xl p-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
               <span>{formatCurrency(billPreview.subtotal)}</span>
             </div>
-            {billPreview.discountAmount > 0 && (
+            {(billPreview.membershipDiscountAmount ?? 0) > 0 && (
               <div className="flex justify-between text-emerald-600">
-                <span>{tCommon("discount")}</span>
-                <span>-{formatCurrency(billPreview.discountAmount)}</span>
+                <span>{billPreview.membershipLabel || t("membershipDiscount")}</span>
+                <span>-{formatCurrency(billPreview.membershipDiscountAmount ?? 0)}</span>
               </div>
             )}
+            {(billPreview.promoDiscountAmount ?? 0) > 0 && (
+              <div className="flex justify-between text-emerald-600">
+                <span>{billPreview.promoLabel || tCommon("discount")}</span>
+                <span>-{formatCurrency(billPreview.promoDiscountAmount ?? 0)}</span>
+              </div>
+            )}
+            {(billPreview.membershipDiscountAmount ?? 0) <= 0 &&
+              (billPreview.promoDiscountAmount ?? 0) <= 0 &&
+              billPreview.discountAmount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>{tCommon("discount")}</span>
+                  <span>-{formatCurrency(billPreview.discountAmount)}</span>
+                </div>
+              )}
             <div className="flex justify-between">
               <span className="text-[var(--text-secondary)]">CGST</span>
               <span>{formatCurrency(billPreview.cgstAmount)}</span>
@@ -293,7 +451,7 @@ export default function WalkInPage() {
 
           <button
             onClick={() => payBooking.mutate({ id: bookingId, amount: Number(billPreview.grandTotal) })}
-            disabled={payBooking.isPending}
+            disabled={payBooking.isPending || applyPromo.isPending}
             className={`${btnPrimary} w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
           >
             {payBooking.isPending ? tCommon("processing") : t("completeInvoice")}

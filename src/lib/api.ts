@@ -233,6 +233,8 @@ export const api = {
   getBranchServices: (branchId: string) =>
     request<BranchServiceItem[]>(`/api/v1/catalog/branches/${branchId}/services`),
 
+  getCategories: () => request<{ id: string; name: string }[]>("/api/v1/catalog/categories"),
+
   getStaff: (branchId: string) =>
     request<StaffItem[]>(`/api/v1/staff?branchId=${branchId}`),
 
@@ -280,6 +282,47 @@ export const api = {
 
   sendCampaign: (id: string) =>
     request<Campaign>(`/api/v1/campaigns/${id}/send`, { method: "POST" }),
+
+  getCoupons: () => request<Coupon[]>("/api/v1/promotions/coupons"),
+  createCoupon: (data: CreateCouponRequest) =>
+    request<Coupon>("/api/v1/promotions/coupons", { method: "POST", body: JSON.stringify(data) }),
+  updateCouponStatus: (id: string, status: PromoStatus) =>
+    request<Coupon>(`/api/v1/promotions/coupons/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  getOffers: () => request<Offer[]>("/api/v1/promotions/offers"),
+  createOffer: (data: CreateOfferRequest) =>
+    request<Offer>("/api/v1/promotions/offers", { method: "POST", body: JSON.stringify(data) }),
+  updateOfferStatus: (id: string, status: PromoStatus) =>
+    request<Offer>(`/api/v1/promotions/offers/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  getApplicablePromos: (branchId: string) =>
+    request<ApplicablePromo[]>(`/api/v1/promotions/applicable?branchId=${branchId}`),
+
+  getMembershipPlans: () => request<MembershipPlan[]>("/api/v1/memberships/plans"),
+  getActiveMembershipPlans: () => request<MembershipPlan[]>("/api/v1/memberships/plans/active"),
+  createMembershipPlan: (data: CreateMembershipPlanRequest) =>
+    request<MembershipPlan>("/api/v1/memberships/plans", { method: "POST", body: JSON.stringify(data) }),
+  updateMembershipPlanStatus: (id: string, status: PromoStatus) =>
+    request<MembershipPlan>(`/api/v1/memberships/plans/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  sellMembership: (data: SellMembershipRequest) =>
+    request<MembershipSubscription>("/api/v1/memberships/subscriptions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getActiveMembership: (customerId: string) =>
+    request<MembershipSubscription | null>(`/api/v1/memberships/customers/${customerId}/active`),
+
+  applyBookingPromo: (id: string, data: { couponId?: string | null; offerId?: string | null; clearPromo?: boolean }) =>
+    request<Booking>(`/api/v1/bookings/${id}/promotions`, { method: "POST", body: JSON.stringify(data) }),
 
   payBooking: (id: string, data: PaymentRequest) =>
     request<Booking>(`/api/v1/bookings/${id}/payments`, { method: "POST", body: JSON.stringify(data) }),
@@ -708,6 +751,7 @@ export interface BranchServiceItem {
   serviceId: string;
   serviceName: string;
   categoryName: string;
+  categoryId?: string;
   price: number;
   gstRate: number;
 }
@@ -935,11 +979,18 @@ export interface BookingLine {
 
 export interface BillPreview {
   subtotal: number;
+  membershipDiscountAmount?: number;
+  promoDiscountAmount?: number;
   discountAmount: number;
   taxableAmount: number;
   cgstAmount: number;
   sgstAmount: number;
   grandTotal: number;
+  couponId?: string;
+  offerId?: string;
+  membershipSubscriptionId?: string;
+  membershipLabel?: string;
+  promoLabel?: string;
 }
 
 export interface Booking {
@@ -951,6 +1002,9 @@ export interface Booking {
   customerPhone: string;
   status: string;
   lines: BookingLine[];
+  couponId?: string;
+  offerId?: string;
+  membershipSubscriptionId?: string;
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
@@ -963,6 +1017,145 @@ export interface CreateBookingRequest {
   lines: { branchServiceId: string; staffId: string; quantity: number }[];
   billDiscountType?: string;
   billDiscountValue?: number;
+  couponId?: string;
+  offerId?: string;
+}
+
+export type PromoStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
+export type DiscountType = "FLAT" | "PERCENT";
+export type ServiceScopeType = "ALL" | "CATEGORY" | "SERVICES";
+export type MembershipCadence = "MONTHS_6" | "MONTHS_12";
+
+export interface Coupon {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  serviceScope: ServiceScopeType;
+  scopeIds: string[];
+  branchIds: string[];
+  status: PromoStatus;
+  maxRedemptionsTotal?: number;
+  redemptionCount?: number;
+  createdAt: string;
+}
+
+export interface CreateCouponRequest {
+  name: string;
+  code: string;
+  description?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  serviceScope?: ServiceScopeType;
+  scopeIds?: string[];
+  branchIds?: string[];
+  status?: PromoStatus;
+  maxRedemptionsTotal?: number;
+}
+
+export interface Offer {
+  id: string;
+  name: string;
+  description?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  serviceScope: ServiceScopeType;
+  scopeIds: string[];
+  branchIds: string[];
+  status: PromoStatus;
+  maxRedemptionsTotal?: number;
+  redemptionCount?: number;
+  createdAt: string;
+}
+
+export interface CreateOfferRequest {
+  name: string;
+  description?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  startsAt: string;
+  endsAt: string;
+  serviceScope?: ServiceScopeType;
+  scopeIds?: string[];
+  branchIds?: string[];
+  status?: PromoStatus;
+  maxRedemptionsTotal?: number;
+}
+
+export interface ApplicablePromo {
+  id: string;
+  kind: "COUPON" | "OFFER";
+  name: string;
+  code?: string;
+  discountType: DiscountType;
+  discountValue: number;
+  serviceScope: ServiceScopeType;
+  scopeIds: string[];
+  endsAt: string;
+  status: PromoStatus;
+}
+
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  description?: string;
+  cadence: MembershipCadence;
+  feeAmount: number;
+  benefitPercent: number;
+  serviceScope: ServiceScopeType;
+  scopeIds: string[];
+  branchIds: string[];
+  status: PromoStatus;
+  createdAt: string;
+}
+
+export interface CreateMembershipPlanRequest {
+  name: string;
+  description?: string;
+  cadence: MembershipCadence;
+  feeAmount: number;
+  benefitPercent?: number;
+  serviceScope?: ServiceScopeType;
+  scopeIds?: string[];
+  branchIds?: string[];
+  status?: PromoStatus;
+}
+
+export interface MembershipSubscription {
+  id: string;
+  customerId: string;
+  customerName?: string;
+  customerPhone?: string;
+  planId: string;
+  planName?: string;
+  benefitPercent?: number;
+  branchId: string;
+  branchName?: string;
+  cardNumber: string;
+  startsOn: string;
+  endsOn: string;
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED";
+  amountPaid: number;
+  paymentMode: string;
+  paymentReference?: string;
+  createdAt: string;
+}
+
+export interface SellMembershipRequest {
+  customerId: string;
+  planId: string;
+  branchId: string;
+  paymentMode: "CASH" | "UPI" | "CARD";
+  paymentReference?: string;
+  amount?: number;
 }
 
 export interface PaymentRequest {

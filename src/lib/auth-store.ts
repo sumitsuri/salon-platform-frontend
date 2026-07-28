@@ -38,8 +38,20 @@ export function useAuthHydrated() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setHydrated(useAuthStore.persist.hasHydrated());
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    const finish = () => setHydrated(true);
+    if (useAuthStore.persist.hasHydrated()) {
+      finish();
+      return;
+    }
+    const unsub = useAuthStore.persist.onFinishHydration(finish);
+    // Fallback if hydration already completed between hasHydrated check and subscription
+    const t = window.setTimeout(() => {
+      if (useAuthStore.persist.hasHydrated()) finish();
+    }, 0);
+    return () => {
+      unsub();
+      window.clearTimeout(t);
+    };
   }, []);
 
   return hydrated;
