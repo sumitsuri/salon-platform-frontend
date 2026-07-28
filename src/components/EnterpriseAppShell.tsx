@@ -234,7 +234,7 @@ export function EnterpriseAppShell({
                 mobileMainPadding
               )}
             >
-              <div className="w-full max-w-[1920px] mx-auto">{children}</div>
+              <div className="w-full max-w-[1920px] mx-auto min-w-0 overflow-x-clip">{children}</div>
             </main>
           </div>
 

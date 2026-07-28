@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Home, UserPlus, ClipboardList, Fingerprint, Sparkles, Scissors, Package, CreditCard } from "lucide-react";
+import { Home, UserPlus, ClipboardList, Fingerprint, Sparkles, Scissors, Package, CreditCard, CalendarClock } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -24,6 +24,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   const nav = useMemo(
     () => [
       { href: "/manager", label: t("home"), shortLabel: t("home"), icon: Home, exact: true },
+      { href: "/manager/schedule", label: t("schedule"), shortLabel: t("floor"), icon: CalendarClock },
       { href: "/manager/attendance", label: t("staff"), shortLabel: t("staff"), icon: Fingerprint },
       { href: "/manager/walk-in", label: t("walkIn"), shortLabel: t("walkIn"), icon: UserPlus, fab: true },
       { href: "/manager/memberships", label: t("memberships"), shortLabel: t("member"), icon: CreditCard },

@@ -206,10 +206,13 @@ export function WizardSteps({
   steps,
   current,
   className,
+  onStepSelect,
 }: {
   steps: string[];
   current: number;
   className?: string;
+  /** When set, completed (and current) steps are clickable to navigate back. */
+  onStepSelect?: (step: number) => void;
 }) {
   const activeLabel = steps[current - 1] ?? "";
   return (
@@ -219,29 +222,40 @@ export function WizardSteps({
           const num = i + 1;
           const done = current > num;
           const active = current === num;
+          const clickable = !!onStepSelect && num < current;
           return (
             <div key={label} className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0" role="listitem">
-              <div
+              <button
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onStepSelect?.(num)}
                 className={cn(
                   "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0 transition-all shadow-sm",
                   done
                     ? "bg-emerald-500 text-white"
                     : active
                       ? "bg-[var(--brand)] text-[var(--brand-on-brand)] ring-2 ring-[var(--brand-ring)]"
-                      : "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border border-[var(--border)]"
+                      : "bg-[var(--surface-muted)] text-[var(--text-tertiary)] border border-[var(--border)]",
+                  clickable && "cursor-pointer hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)]",
+                  !clickable && "cursor-default"
                 )}
                 aria-current={active ? "step" : undefined}
+                aria-label={clickable ? `Go to ${label}` : label}
               >
                 {done ? <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : num}
-              </div>
-              <span
+              </button>
+              <button
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onStepSelect?.(num)}
                 className={cn(
-                  "text-[10px] sm:text-xs font-semibold truncate hidden md:block",
-                  active ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]"
+                  "text-[10px] sm:text-xs font-semibold truncate hidden md:block text-left bg-transparent border-0 p-0",
+                  active ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]",
+                  clickable && "cursor-pointer hover:text-[var(--text-primary)]"
                 )}
               >
                 {label}
-              </span>
+              </button>
               {i < steps.length - 1 && (
                 <div
                   className={cn(

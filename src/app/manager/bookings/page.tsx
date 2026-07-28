@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { UserPlus, IndianRupee, Clock, CheckCircle2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { UserPlus, IndianRupee, Clock, CheckCircle2, Download, FileText } from "lucide-react";
+import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -14,10 +14,13 @@ import {
   StatusBadge,
   EmptyState,
   btnPrimary,
+  btnSecondary,
   StatCard,
   FilterableTable,
   TablePagination,
   AvatarInitial,
+  SideSheet,
+  AlertBanner,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
@@ -59,6 +62,11 @@ export default function ManagerBookingsPage() {
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
+  const [selected, setSelected] = useState<Booking | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(filters), 300);
@@ -68,6 +76,36 @@ export default function ManagerBookingsPage() {
   useEffect(() => {
     setPage(0);
   }, [debounced, size, branchId]);
+
+  useEffect(() => {
+    if (!selected || selected.status !== "COMPLETED") {
+      setInvoice(null);
+      setInvoiceError("");
+      return;
+    }
+    let cancelled = false;
+    setInvoiceLoading(true);
+    setInvoiceError("");
+    const load = selected.invoiceId
+      ? api.getInvoice(selected.invoiceId)
+      : api.getInvoiceByBooking(selected.id);
+    load
+      .then((inv) => {
+        if (!cancelled) setInvoice(inv);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) {
+          setInvoice(null);
+          setInvoiceError(e.message || t("invoiceUnavailable"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setInvoiceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, t]);
 
   const amountFilter = parseAmount(debounced.amount);
 
@@ -99,6 +137,19 @@ export default function ManagerBookingsPage() {
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function downloadInvoice() {
+    if (!invoice?.id) return;
+    setDownloading(true);
+    setInvoiceError("");
+    try {
+      await api.downloadInvoicePdf(invoice.id, `invoice-${invoice.invoiceNumber}.pdf`);
+    } catch (e) {
+      setInvoiceError(e instanceof Error ? e.message : tCommon("failed"));
+    } finally {
+      setDownloading(false);
+    }
   }
 
   const columns = [
@@ -160,6 +211,56 @@ export default function ManagerBookingsPage() {
     },
   ];
 
+  function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
+    const preview = inv
+      ? {
+          subtotal: inv.subtotal,
+          membershipDiscountAmount: inv.membershipDiscountAmount,
+          promoDiscountAmount: inv.promoDiscountAmount,
+          membershipLabel: inv.membershipLabel,
+          promoLabel: inv.promoLabel,
+          cgstAmount: inv.cgstAmount,
+          sgstAmount: inv.sgstAmount,
+          grandTotal: inv.grandTotal,
+        }
+      : booking.billPreview;
+    if (!preview) {
+      return <p className="text-sm text-[var(--text-secondary)]">{t("noBillingYet")}</p>;
+    }
+    return (
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
+          <span>{formatCurrency(preview.subtotal)}</span>
+        </div>
+        {(preview.membershipDiscountAmount ?? 0) > 0 && (
+          <div className="flex justify-between text-emerald-600">
+            <span>{preview.membershipLabel || t("membershipDiscount")}</span>
+            <span>-{formatCurrency(preview.membershipDiscountAmount ?? 0)}</span>
+          </div>
+        )}
+        {(preview.promoDiscountAmount ?? 0) > 0 && (
+          <div className="flex justify-between text-emerald-600">
+            <span>{preview.promoLabel || tCommon("discount")}</span>
+            <span>-{formatCurrency(preview.promoDiscountAmount ?? 0)}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">CGST</span>
+          <span>{formatCurrency(preview.cgstAmount)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">SGST</span>
+          <span>{formatCurrency(preview.sgstAmount)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
+          <span>{tCommon("grandTotal")}</span>
+          <span className="text-[var(--brand-text)]">{formatCurrency(preview.grandTotal)}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -203,7 +304,11 @@ export default function ManagerBookingsPage() {
             <div className="hidden md:block">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
-                  <tr key={b.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition">
+                  <tr
+                    key={b.id}
+                    className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                    onClick={() => setSelected(b)}
+                  >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <AvatarInitial name={b.customerName} />
@@ -241,6 +346,17 @@ export default function ManagerBookingsPage() {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
+                      {(b.status === "IN_PROGRESS" || b.status === "READY_FOR_BILLING" || b.status === "DRAFT") && (
+                        <div className="mt-1">
+                          <Link
+                            href={`/manager/walk-in?bookingId=${b.id}`}
+                            className="text-[var(--brand-text)] font-semibold hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {b.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
+                          </Link>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -249,7 +365,12 @@ export default function ManagerBookingsPage() {
 
             <div className="md:hidden divide-y divide-[var(--border)]">
               {bookings.map((b) => (
-                <div key={b.id} className="px-4 py-3 flex gap-3">
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setSelected(b)}
+                  className="w-full text-left px-4 py-3 flex gap-3"
+                >
                   <AvatarInitial name={b.customerName} />
                   <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
                     <p className="font-semibold text-sm text-[var(--text-primary)] truncate col-span-1">
@@ -275,7 +396,7 @@ export default function ManagerBookingsPage() {
                       <StatusBadge status={b.status} />
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </>
@@ -290,6 +411,89 @@ export default function ManagerBookingsPage() {
           onSizeChange={setSize}
         />
       </Card>
+
+      <SideSheet
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected?.customerName || t("billingDetails")}
+        subtitle={selected ? `${selected.customerPhone} · ${selected.status}` : undefined}
+        footer={
+          selected?.status === "COMPLETED" && invoice ? (
+            <button
+              type="button"
+              onClick={() => void downloadInvoice()}
+              disabled={downloading}
+              className={`${btnPrimary} w-full`}
+            >
+              <Download className="w-4 h-4" />
+              {downloading ? tCommon("processing") : t("downloadBill")}
+            </button>
+          ) : undefined
+        }
+      >
+        {selected && (
+          <div className="space-y-4 p-4">
+            {invoiceError && <AlertBanner variant="error">{invoiceError}</AlertBanner>}
+
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                {t("services")}
+              </p>
+              <ul className="space-y-1 text-sm">
+                {selected.lines?.map((l) => (
+                  <li key={l.id} className="flex justify-between gap-2">
+                    <span>
+                      {l.serviceName}
+                      {l.staffName ? ` · ${l.staffName}` : ""}
+                    </span>
+                    <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                {t("billingDetails")}
+              </p>
+              {invoiceLoading ? (
+                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+              ) : (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+                  {invoice && (
+                    <p className="text-xs text-[var(--text-secondary)] mb-2">
+                      {t("invoiceNumber", { number: invoice.invoiceNumber })}
+                      {invoice.pdfAvailable ? ` · ${t("pdfStored")}` : ""}
+                    </p>
+                  )}
+                  <BillingRows booking={selected} inv={invoice} />
+                </div>
+              )}
+            </div>
+
+            {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
+              <p className="text-sm text-[var(--text-secondary)]">{t("invoiceUnavailable")}</p>
+            )}
+
+            {selected.status !== "COMPLETED" && (
+              <p className="text-sm text-[var(--text-secondary)]">{t("completeToDownload")}</p>
+            )}
+
+            {selected.status === "COMPLETED" && invoice && (
+              <button
+                type="button"
+                onClick={() => void downloadInvoice()}
+                disabled={downloading}
+                className={`${btnSecondary} w-full md:hidden`}
+              >
+                <Download className="w-4 h-4" />
+                {downloading ? tCommon("processing") : t("downloadBill")}
+              </button>
+            )}
+          </div>
+        )}
+      </SideSheet>
     </div>
   );
 }

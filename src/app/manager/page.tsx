@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Sparkles,
   Scissors,
+  CalendarClock,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -98,6 +99,7 @@ export default function ManagerHomePage() {
         <SectionLabel>{t("quickActions")}</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
           <QuickAction href="/manager/walk-in" icon={UserPlus} label={t("newWalkIn")} description={t("walkInDesc")} color="brand" />
+          <QuickAction href="/manager/schedule" icon={CalendarClock} label={t("schedule")} description={t("scheduleDesc")} color="emerald" />
           <QuickAction href="/manager/attendance" icon={Fingerprint} label={t("attendance")} description={t("attendanceDesc")} color="violet" />
           <QuickAction href="/manager/bookings" icon={ClipboardList} label={tNav("bookings")} description={t("bookingsDesc")} color="emerald" />
           <QuickAction href="/manager/insights" icon={Sparkles} label={tNav("insights")} description={t("insightsDesc")} color="amber" />

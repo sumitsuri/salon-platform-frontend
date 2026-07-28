@@ -111,6 +111,17 @@ async function handleSessionExpired() {
   redirectToLogin(true);
 }
 
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 async function request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -233,6 +244,11 @@ export const api = {
   getBranchServices: (branchId: string) =>
     request<BranchServiceItem[]>(`/api/v1/catalog/branches/${branchId}/services`),
 
+  getBranchAvailability: (branchId: string, date?: string) => {
+    const q = date ? `?date=${encodeURIComponent(date)}` : "";
+    return request<BranchAvailability>(`/api/v1/branches/${branchId}/availability${q}`);
+  },
+
   getCategories: () => request<{ id: string; name: string }[]>("/api/v1/catalog/categories"),
 
   getStaff: (branchId: string) =>
@@ -240,6 +256,23 @@ export const api = {
 
   createBooking: (data: CreateBookingRequest) =>
     request<Booking>("/api/v1/bookings", { method: "POST", body: JSON.stringify(data) }),
+
+  getBooking: (id: string) => request<Booking>(`/api/v1/bookings/${id}`),
+
+  updateBookingLines: (
+    id: string,
+    lines: { branchServiceId: string; staffId: string; quantity: number }[]
+  ) =>
+    request<Booking>(`/api/v1/bookings/${id}/lines`, {
+      method: "PUT",
+      body: JSON.stringify({ lines }),
+    }),
+
+  markBookingReadyForBilling: (id: string) =>
+    request<Booking>(`/api/v1/bookings/${id}/ready-for-billing`, { method: "POST" }),
+
+  reopenBooking: (id: string) =>
+    request<Booking>(`/api/v1/bookings/${id}/reopen`, { method: "POST" }),
 
   getBookings: (params?: BookingListParams) => {
     const search = new URLSearchParams();
@@ -692,7 +725,54 @@ export const api = {
 
   getInvoices: () => request<Invoice[]>("/api/v1/invoices"),
 
+  getInvoiceByBooking: (bookingId: string) =>
+    request<InvoiceDetail>(`/api/v1/invoices/booking/${bookingId}`),
+
+  getInvoice: (invoiceId: string) => request<InvoiceDetail>(`/api/v1/invoices/${invoiceId}`),
+
   getInvoicePdfUrl: (invoiceId: string) => `${apiBase()}/api/v1/invoices/${invoiceId}/pdf`,
+
+  downloadInvoicePdf: async (invoiceId: string, filename?: string) => {
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(`${apiBase()}/api/v1/invoices/${invoiceId}/pdf`, { headers });
+    if (res.status === 401) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        headers.Authorization = `Bearer ${newToken}`;
+        const retry = await fetch(`${apiBase()}/api/v1/invoices/${invoiceId}/pdf`, { headers });
+        if (!retry.ok) throw new Error(`Download failed (${retry.status})`);
+        const blob = await retry.blob();
+        triggerBlobDownload(blob, filename || `invoice-${invoiceId}.pdf`);
+        return;
+      }
+      await handleSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    }
+    if (!res.ok) throw new Error(`Download failed (${res.status})`);
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^"]+)"?/i);
+    triggerBlobDownload(blob, filename || match?.[1] || `invoice-${invoiceId}.pdf`);
+  },
+
+  applyBookingBillDiscount: (
+    id: string,
+    data: {
+      billDiscountType?: "FLAT" | "PERCENT" | null;
+      billDiscountValue?: number | null;
+      billDiscountNote?: string | null;
+      clearDiscount?: boolean;
+    }
+  ) =>
+    request<Booking>(`/api/v1/bookings/${id}/bill-discount`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  cancelBooking: (id: string) =>
+    request<void>(`/api/v1/bookings/${id}/cancel`, { method: "POST" }),
 
   getTenants: () => request<Tenant[]>("/api/v1/platform/tenants"),
 
@@ -752,8 +832,70 @@ export interface BranchServiceItem {
   serviceName: string;
   categoryName: string;
   categoryId?: string;
+  parentCategoryId?: string;
+  parentCategoryName?: string;
   price: number;
   gstRate: number;
+  durationMinutes?: number;
+}
+
+export interface FreeSlot {
+  startAt: string;
+  endAt: string;
+  minutes: number;
+}
+
+export interface StaffTimeBlock {
+  bookingId: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string;
+  status: string;
+  startAt: string;
+  endAt: string;
+  estimatedMinutes: number;
+  actualMinutes?: number;
+  overdue: boolean;
+  services: string[];
+}
+
+export interface StaffAvailabilityColumn {
+  staffId: string;
+  staffName: string;
+  skills?: string;
+  occupancy: "FREE" | "BUSY" | "OVERDUE" | string;
+  busyUntil?: string;
+  remainingMinutes?: number;
+  blocks: StaffTimeBlock[];
+  freeSlots: FreeSlot[];
+}
+
+export interface StaffServiceDurationStat {
+  staffId: string;
+  staffName: string;
+  serviceId: string;
+  serviceName: string;
+  sampleCount: number;
+  avgEstimatedMinutes: number;
+  avgActualMinutes?: number;
+}
+
+export interface BranchAvailability {
+  branchId: string;
+  branchName: string;
+  date: string;
+  openTime: string;
+  closeTime: string;
+  now: string;
+  freeStaffCount: number;
+  busyStaffCount: number;
+  staff: StaffAvailabilityColumn[];
+  metrics: {
+    sampleVisitCount: number;
+    avgVisitMinutes?: number;
+    medianVisitMinutes?: number;
+    byStaffService: StaffServiceDurationStat[];
+  };
 }
 
 export interface StaffItem {
@@ -977,10 +1119,25 @@ export interface BookingLine {
   quantity: number;
 }
 
+export interface BillLinePreview {
+  lineItemId?: string;
+  serviceName: string;
+  unitPrice: number;
+  quantity: number;
+  lineDiscount?: number;
+  taxableAmount?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  lineTotal?: number;
+}
+
 export interface BillPreview {
+  lines?: BillLinePreview[];
   subtotal: number;
   membershipDiscountAmount?: number;
   promoDiscountAmount?: number;
+  manualDiscountAmount?: number;
+  manualDiscountLabel?: string;
   discountAmount: number;
   taxableAmount: number;
   cgstAmount: number;
@@ -1002,6 +1159,9 @@ export interface Booking {
   customerPhone: string;
   status: string;
   lines: BookingLine[];
+  billDiscountType?: "FLAT" | "PERCENT";
+  billDiscountValue?: number;
+  billDiscountNote?: string;
   couponId?: string;
   offerId?: string;
   membershipSubscriptionId?: string;
@@ -1009,6 +1169,7 @@ export interface Booking {
   invoiceId?: string;
   receiptQueued?: boolean;
   createdAt: string;
+  completedAt?: string;
 }
 
 export interface CreateBookingRequest {
@@ -1019,6 +1180,8 @@ export interface CreateBookingRequest {
   billDiscountValue?: number;
   couponId?: string;
   offerId?: string;
+  /** Keep visit open (IN_PROGRESS) so services can be added/changed before final bill. */
+  keepOpen?: boolean;
 }
 
 export type PromoStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
@@ -1163,6 +1326,10 @@ export interface PaymentRequest {
   amount: number;
   reference?: string;
   splits?: { mode: string; amount: number; reference?: string }[];
+  /** Manager tax amount; >= 0 when sent (with sgstAmount). Defaults to 0 in walk-in UI. */
+  cgstAmount?: number;
+  /** Manager tax amount; >= 0 when sent (with cgstAmount). Defaults to 0 in walk-in UI. */
+  sgstAmount?: number;
 }
 
 export interface Branch {
@@ -1510,6 +1677,27 @@ export interface Invoice {
   grandTotal: number;
   customerName: string;
   issuedAt: string;
+}
+
+export interface InvoiceDetail {
+  id: string;
+  bookingId: string;
+  invoiceNumber: string;
+  subtotal: number;
+  discountAmount: number;
+  membershipDiscountAmount?: number;
+  promoDiscountAmount?: number;
+  membershipLabel?: string;
+  promoLabel?: string;
+  taxableAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  grandTotal: number;
+  customerName: string;
+  customerPhone: string;
+  issuedAt: string;
+  pdfAvailable: boolean;
+  pdfStoredAt?: string;
 }
 
 export interface Tenant {
