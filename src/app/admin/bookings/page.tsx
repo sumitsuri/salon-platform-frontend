@@ -3,18 +3,22 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Filter } from "lucide-react";
-import { api } from "@/lib/api";
+import { Download, FileText, Filter, IndianRupee, Clock, CheckCircle2 } from "lucide-react";
+import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import {
   PageHeader,
   Card,
-  ListRow,
   StatusBadge,
   EmptyState,
+  btnPrimary,
   btnSecondary,
+  StatCard,
   FilterableTable,
   TablePagination,
+  AvatarInitial,
+  SideSheet,
+  AlertBanner,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
@@ -24,6 +28,8 @@ const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLE
 type Filters = {
   customer: string;
   branch: string;
+  service: string;
+  stylist: string;
   amount: string;
   status: string;
   date: string;
@@ -32,6 +38,8 @@ type Filters = {
 const emptyFilters: Filters = {
   customer: "",
   branch: "",
+  service: "",
+  stylist: "",
   amount: "",
   status: "",
   date: "",
@@ -47,6 +55,7 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 
 export default function AdminBookingsPage() {
   const t = useTranslations("admin.bookings");
+  const tMgr = useTranslations("manager.bookings");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
@@ -55,6 +64,11 @@ export default function AdminBookingsPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [showFilters, setShowFilters] = useState(true);
+  const [selected, setSelected] = useState<Booking | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(filters), 300);
@@ -65,6 +79,36 @@ export default function AdminBookingsPage() {
     setPage(0);
   }, [debounced, size]);
 
+  useEffect(() => {
+    if (!selected || selected.status !== "COMPLETED") {
+      setInvoice(null);
+      setInvoiceError("");
+      return;
+    }
+    let cancelled = false;
+    setInvoiceLoading(true);
+    setInvoiceError("");
+    const load = selected.invoiceId
+      ? api.getInvoice(selected.invoiceId)
+      : api.getInvoiceByBooking(selected.id);
+    load
+      .then((inv) => {
+        if (!cancelled) setInvoice(inv);
+      })
+      .catch((e: Error) => {
+        if (!cancelled) {
+          setInvoice(null);
+          setInvoiceError(e.message || tMgr("invoiceUnavailable"));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setInvoiceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, tMgr]);
+
   const amountFilter = parseAmount(debounced.amount);
 
   const { data, isLoading, isFetching } = useQuery({
@@ -73,6 +117,8 @@ export default function AdminBookingsPage() {
       api.getBookings({
         customer: debounced.customer || undefined,
         branch: debounced.branch || undefined,
+        service: debounced.service || undefined,
+        stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
         minAmount: amountFilter.minAmount,
         maxAmount: amountFilter.maxAmount,
@@ -86,9 +132,25 @@ export default function AdminBookingsPage() {
   const bookings = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
   const totalElements = data?.totalElements ?? 0;
+  const completed = bookings.filter((b) => b.status === "COMPLETED");
+  const active = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
+  const totalRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function downloadInvoice() {
+    if (!invoice?.id) return;
+    setDownloading(true);
+    setInvoiceError("");
+    try {
+      await api.downloadInvoicePdf(invoice.id, `invoice-${invoice.invoiceNumber}.pdf`);
+    } catch (e) {
+      setInvoiceError(e instanceof Error ? e.message : tCommon("failed"));
+    } finally {
+      setDownloading(false);
+    }
   }
 
   const hasFilters = Object.values(filters).some((v) => v !== "");
@@ -110,6 +172,24 @@ export default function AdminBookingsPage() {
         placeholder: tCommon("branch"),
         value: filters.branch,
         onChange: (v: string) => updateFilter("branch", v),
+      },
+    },
+    {
+      label: tMgr("columns.services"),
+      filter: {
+        type: "text" as const,
+        placeholder: tMgr("filters.service"),
+        value: filters.service,
+        onChange: (v: string) => updateFilter("service", v),
+      },
+    },
+    {
+      label: tMgr("columns.stylist"),
+      filter: {
+        type: "text" as const,
+        placeholder: tMgr("filters.stylist"),
+        value: filters.stylist,
+        onChange: (v: string) => updateFilter("stylist", v),
       },
     },
     {
@@ -143,6 +223,56 @@ export default function AdminBookingsPage() {
     },
   ];
 
+  function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
+    const preview = inv
+      ? {
+          subtotal: inv.subtotal,
+          membershipDiscountAmount: inv.membershipDiscountAmount,
+          promoDiscountAmount: inv.promoDiscountAmount,
+          membershipLabel: inv.membershipLabel,
+          promoLabel: inv.promoLabel,
+          cgstAmount: inv.cgstAmount,
+          sgstAmount: inv.sgstAmount,
+          grandTotal: inv.grandTotal,
+        }
+      : booking.billPreview;
+    if (!preview) {
+      return <p className="text-sm text-[var(--text-secondary)]">{tMgr("noBillingYet")}</p>;
+    }
+    return (
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
+          <span>{formatCurrency(preview.subtotal)}</span>
+        </div>
+        {(preview.membershipDiscountAmount ?? 0) > 0 && (
+          <div className="flex justify-between text-emerald-600">
+            <span>{preview.membershipLabel || tMgr("membershipDiscount")}</span>
+            <span>-{formatCurrency(preview.membershipDiscountAmount ?? 0)}</span>
+          </div>
+        )}
+        {(preview.promoDiscountAmount ?? 0) > 0 && (
+          <div className="flex justify-between text-emerald-600">
+            <span>{preview.promoLabel || tCommon("discount")}</span>
+            <span>-{formatCurrency(preview.promoDiscountAmount ?? 0)}</span>
+          </div>
+        )}
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">CGST</span>
+          <span>{formatCurrency(preview.cgstAmount)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[var(--text-secondary)]">SGST</span>
+          <span>{formatCurrency(preview.sgstAmount)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
+          <span>{tCommon("grandTotal")}</span>
+          <span className="text-[var(--brand-text)]">{formatCurrency(preview.grandTotal)}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -159,6 +289,12 @@ export default function AdminBookingsPage() {
       />
 
       <MissionStrip />
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard label={tMgr("revenuePage")} value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />
+        <StatCard label={tMgr("completed")} value={completed.length} icon={CheckCircle2} accent="emerald" />
+        <StatCard label={tMgr("active")} value={active.length} icon={Clock} accent="amber" />
+      </div>
 
       {hasFilters && (
         <button
@@ -178,40 +314,85 @@ export default function AdminBookingsPage() {
           <>
             <div className="lg:hidden divide-y divide-[var(--border)]">
               {bookings.map((b) => (
-                <ListRow
+                <button
                   key={b.id}
-                  title={b.customerName}
-                  subtitle={`${b.branchName} · ${new Date(b.createdAt).toLocaleDateString("en-IN")}`}
-                  trailing={
-                    <div className="text-right">
-                      {b.billPreview && (
-                        <p className="text-sm font-bold">{formatCurrency(b.billPreview.grandTotal)}</p>
-                      )}
+                  type="button"
+                  onClick={() => setSelected(b)}
+                  className="w-full text-left px-4 py-3 flex gap-3"
+                >
+                  <AvatarInitial name={b.customerName} />
+                  <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                    <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{b.customerName}</p>
+                    <p className="font-bold text-sm text-[var(--text-primary)] text-right">
+                      {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] col-span-2">
+                      {b.branchName} ·{" "}
+                      {new Date(b.createdAt).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                    <p className="text-xs text-[var(--text-tertiary)] col-span-2 truncate">
+                      {b.lines?.map((l) => l.serviceName).join(", ")}
+                    </p>
+                    <div className="col-span-2 flex justify-end">
                       <StatusBadge status={b.status} />
                     </div>
-                  }
-                />
+                  </div>
+                </button>
               ))}
             </div>
 
             <div className={showFilters ? "hidden lg:block" : "hidden lg:block"}>
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
-                  <tr key={b.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                  <tr
+                    key={b.id}
+                    data-testid="admin-booking-row"
+                    className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                    onClick={() => setSelected(b)}
+                  >
                     <td className="px-4 py-3">
-                      <span className="font-medium text-[var(--text-primary)]">{b.customerName}</span>
-                      <br />
-                      <span className="text-[var(--text-tertiary)] text-xs">{b.customerPhone}</span>
+                      <div className="flex items-center gap-3">
+                        <AvatarInitial name={b.customerName} />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[var(--text-primary)] truncate">{b.customerName}</p>
+                          <p className="text-xs text-[var(--text-secondary)]">{b.customerPhone}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-[var(--text-primary)]">{b.branchName}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {b.lines?.map((l) => (
+                          <span
+                            key={l.id}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[var(--brand-light)] text-[var(--brand-text)]"
+                          >
+                            {l.serviceName}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
+                      {b.lines?.map((l) => l.staffName).filter(Boolean).join(", ") || "—"}
+                    </td>
                     <td className="px-4 py-3 font-medium">
                       {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={b.status} />
                     </td>
-                    <td className="px-4 py-3 text-[var(--text-secondary)]">
-                      {new Date(b.createdAt).toLocaleDateString("en-IN")}
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
+                      {new Date(b.createdAt).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                   </tr>
                 ))}
@@ -229,6 +410,82 @@ export default function AdminBookingsPage() {
           onSizeChange={setSize}
         />
       </Card>
+
+      <SideSheet
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected?.customerName || tMgr("billingDetails")}
+        subtitle={
+          selected
+            ? `${selected.branchName} · ${selected.customerPhone} · ${selected.status}`
+            : undefined
+        }
+        footer={
+          selected?.status === "COMPLETED" && invoice ? (
+            <button
+              type="button"
+              data-testid="admin-download-invoice"
+              onClick={() => void downloadInvoice()}
+              disabled={downloading}
+              className={`${btnPrimary} w-full`}
+            >
+              <Download className="w-4 h-4" />
+              {downloading ? tCommon("processing") : tMgr("downloadBill")}
+            </button>
+          ) : undefined
+        }
+      >
+        {selected && (
+          <div className="space-y-4 p-4">
+            {invoiceError && <AlertBanner variant="error">{invoiceError}</AlertBanner>}
+
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                {tMgr("services")}
+              </p>
+              <ul className="space-y-1 text-sm">
+                {selected.lines?.map((l) => (
+                  <li key={l.id} className="flex justify-between gap-2">
+                    <span>
+                      {l.serviceName}
+                      {l.staffName ? ` · ${l.staffName}` : ""}
+                    </span>
+                    <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                {tMgr("billingDetails")}
+              </p>
+              {invoiceLoading ? (
+                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+              ) : (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
+                  {invoice && (
+                    <p className="text-xs text-[var(--text-secondary)] mb-2">
+                      {tMgr("invoiceNumber", { number: invoice.invoiceNumber })}
+                      {invoice.pdfAvailable ? ` · ${tMgr("pdfStored")}` : ""}
+                    </p>
+                  )}
+                  <BillingRows booking={selected} inv={invoice} />
+                </div>
+              )}
+            </div>
+
+            {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
+              <p className="text-sm text-[var(--text-secondary)]">{tMgr("invoiceUnavailable")}</p>
+            )}
+
+            {selected.status !== "COMPLETED" && (
+              <p className="text-sm text-[var(--text-secondary)]">{t("completeToDownload")}</p>
+            )}
+          </div>
+        )}
+      </SideSheet>
     </div>
   );
 }

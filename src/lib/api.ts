@@ -249,7 +249,98 @@ export const api = {
     return request<BranchAvailability>(`/api/v1/branches/${branchId}/availability${q}`);
   },
 
-  getCategories: () => request<{ id: string; name: string }[]>("/api/v1/catalog/categories"),
+  getCategories: (includeInactive = false) =>
+    request<CatalogCategory[]>(
+      `/api/v1/catalog/categories${includeInactive ? "?includeInactive=true" : ""}`
+    ),
+
+  createCategory: (data: { name: string; parentCategoryId?: string; sortOrder?: number }) =>
+    request<CatalogCategory>("/api/v1/catalog/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateCategory: (
+    id: string,
+    data: {
+      name?: string;
+      parentCategoryId?: string;
+      clearParent?: boolean;
+      sortOrder?: number;
+      active?: boolean;
+    }
+  ) =>
+    request<CatalogCategory>(`/api/v1/catalog/categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteCategory: (id: string) =>
+    request<void>(`/api/v1/catalog/categories/${id}`, { method: "DELETE" }),
+
+  getCatalogServices: (includeInactive = false) =>
+    request<CatalogServiceItem[]>(
+      `/api/v1/catalog/services${includeInactive ? "?includeInactive=true" : ""}`
+    ),
+
+  getCatalogService: (id: string) =>
+    request<CatalogServiceItem>(`/api/v1/catalog/services/${id}`),
+
+  createCatalogService: (data: {
+    categoryId: string;
+    name: string;
+    description?: string;
+    sacCode?: string;
+    gstRate?: number;
+    durationMinutes?: number;
+  }) =>
+    request<{ id: string }>("/api/v1/catalog/services", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateCatalogService: (
+    id: string,
+    data: {
+      categoryId?: string;
+      name?: string;
+      description?: string;
+      sacCode?: string;
+      gstRate?: number;
+      durationMinutes?: number;
+      active?: boolean;
+    }
+  ) =>
+    request<{ id: string }>(`/api/v1/catalog/services/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  deleteCatalogService: (id: string) =>
+    request<void>(`/api/v1/catalog/services/${id}`, { method: "DELETE" }),
+
+  setCatalogServiceBranches: (
+    serviceId: string,
+    assignments: { branchId: string; price: number; displayNameOverride?: string; active?: boolean }[]
+  ) =>
+    request<CatalogServiceItem>(`/api/v1/catalog/services/${serviceId}/branches`, {
+      method: "PUT",
+      body: JSON.stringify({ assignments }),
+    }),
+
+  setBranchServicePricing: (
+    branchId: string,
+    data: { serviceId: string; price: number; displayNameOverride?: string }
+  ) =>
+    request(`/api/v1/catalog/branches/${branchId}/pricing`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  removeBranchServicePricing: (branchId: string, serviceId: string) =>
+    request<void>(`/api/v1/catalog/branches/${branchId}/pricing/${serviceId}`, {
+      method: "DELETE",
+    }),
 
   getStaff: (branchId: string) =>
     request<StaffItem[]>(`/api/v1/staff?branchId=${branchId}`),
@@ -837,6 +928,39 @@ export interface BranchServiceItem {
   price: number;
   gstRate: number;
   durationMinutes?: number;
+}
+
+export interface CatalogCategory {
+  id: string;
+  name: string;
+  parentCategoryId?: string | null;
+  sortOrder?: number;
+  active?: boolean;
+}
+
+export interface ServiceBranchAssignment {
+  branchServiceId?: string;
+  branchId: string;
+  branchName: string;
+  price: number;
+  displayNameOverride?: string;
+  active: boolean;
+  manualPriceOverride?: boolean;
+}
+
+export interface CatalogServiceItem {
+  id: string;
+  name: string;
+  description?: string;
+  categoryId: string;
+  categoryName?: string;
+  parentCategoryId?: string;
+  parentCategoryName?: string;
+  sacCode?: string;
+  gstRate?: number;
+  durationMinutes?: number;
+  active: boolean;
+  branches: ServiceBranchAssignment[];
 }
 
 export interface FreeSlot {
