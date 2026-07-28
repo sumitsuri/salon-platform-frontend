@@ -1,0 +1,59 @@
+name: Deploy Antrahq marketing (from pravaah-marketing)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-marketing.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  SSM_PREFIX: /salon-platform-prod/marketing/antrahq
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: sumitsuri/pravaah-marketing
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Build static export
+        env:
+          NEXT_PUBLIC_API_URL: https://api.antrahq.com
+        run: |
+          npm ci
+          npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve deploy targets from SSM
+        id: ssm
+        run: |
+          echo "bucket=$(aws ssm get-parameter --name ${SSM_PREFIX}/s3_bucket --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
+          echo "distribution_id=$(aws ssm get-parameter --name ${SSM_PREFIX}/cloudfront_distribution_id --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/" --delete \
+            --exclude "__app/*"
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.ssm.outputs.distribution_id }}" \
+            --paths "/*"
