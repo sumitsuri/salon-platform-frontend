@@ -95,7 +95,10 @@
       "memberships": "Memberships",
       "member": "Member",
       "schedule": "Floor",
-      "floor": "Floor"
+      "floor": "Floor",
+      "sectionFrontDesk": "ഫ്രണ്ട് ഡെസ്ക്",
+      "sectionOperations": "ഓപ്പറേഷൻസ്",
+      "sectionInsights": "ഇൻസൈറ്റ്സ്"
     },
     "home": {
       "goodMorning": "സുപ്രഭാതം",
@@ -756,7 +759,11 @@
         "marketPulse": "Market Pulse",
         "pulse": "Pulse",
         "promotions": "Promotions",
-        "deals": "Deals"
+        "deals": "Deals",
+        "sectionIntelligence": "ഇന്റലിജൻസ്",
+        "sectionOperations": "ഓപ്പറേഷൻസ്",
+        "sectionGrowth": "ഗ്രോത്ത്",
+        "sectionBusiness": "ബിസിനസ്"
       }
     },
     "common": {

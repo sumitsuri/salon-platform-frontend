@@ -4,11 +4,11 @@ import Link from "next/link";
 import { LogOut, Palette, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { AppNavItem } from "@/components/app-nav";
+import { AppNavInput, AppNavItem, flattenNavItems, toNavSections } from "@/components/app-nav";
 import { SidebarBrandFooter } from "@/components/brand/SidebarBrandFooter";
 
 export interface SidebarNavPanelProps {
-  nav: AppNavItem[];
+  nav: AppNavInput;
   isActive: (href: string, exact?: boolean) => boolean;
   brandName: string;
   brandSubtitle: string;
@@ -23,6 +23,86 @@ export interface SidebarNavPanelProps {
   settingsTestId?: string | null;
   onNavigate?: () => void;
   showCollapseToggle?: boolean;
+}
+
+function NavItemLink({
+  item,
+  collapsed,
+  brandColor,
+  activeClass,
+  inactiveClass,
+  navHasSelection,
+  itemIsActive,
+  onNavigate,
+}: {
+  item: AppNavItem;
+  collapsed: boolean;
+  brandColor: string;
+  activeClass: string;
+  inactiveClass: string;
+  navHasSelection: boolean;
+  itemIsActive: (href: string, exact?: boolean) => boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  const childActive = item.children?.some((child) => itemIsActive(child.href, child.exact));
+  const active = itemIsActive(item.href, item.exact) || !!childActive;
+  const isFab = item.fab === true;
+  // FAB solid CTA is for the mobile floating button only — in the sidebar,
+  // use normal active/inactive styles so another route can be selected cleanly.
+  const fabActive = isFab && !collapsed && active;
+  const showChildren = !collapsed && item.children && item.children.length > 0;
+
+  return (
+    <div className="space-y-0.5">
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        title={collapsed ? item.label : undefined}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
+          collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
+          fabActive
+            ? "border-transparent font-semibold text-white shadow-sm my-1"
+            : active
+              ? activeClass
+              : navHasSelection
+                ? inactiveClass
+                : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+        )}
+        style={fabActive ? { backgroundColor: brandColor } : undefined}
+      >
+        <Icon className={cn("w-[18px] h-[18px] shrink-0", fabActive ? "opacity-100" : "opacity-90")} />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </Link>
+
+      {showChildren && (
+        <div className="ml-3 space-y-0.5 border-l border-[var(--border)] pl-2">
+          {item.children!.map((child) => {
+            const childIsActive = itemIsActive(child.href, child.exact);
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
+                  childIsActive
+                    ? "bg-violet-100 text-violet-800 font-semibold"
+                    : navHasSelection
+                      ? "text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                )}
+              >
+                <span className="truncate">{child.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SidebarNavPanel({
@@ -51,8 +131,10 @@ export function SidebarNavPanel({
     "border-transparent text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]";
 
   const itemIsActive = (href: string, exact?: boolean) => isActive(href, exact);
+  const sections = toNavSections(nav);
+  const flatItems = flattenNavItems(nav);
 
-  const navHasSelection = nav.some(
+  const navHasSelection = flatItems.some(
     (item) =>
       itemIsActive(item.href, item.exact) ||
       item.children?.some((child) => itemIsActive(child.href, child.exact))
@@ -117,68 +199,33 @@ export function SidebarNavPanel({
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-        {nav.map((item) => {
-          const Icon = item.icon;
-          const childActive = item.children?.some((child) => itemIsActive(child.href, child.exact));
-          const active = itemIsActive(item.href, item.exact) || !!childActive;
-          const isFab = item.fab === true;
-          // FAB solid CTA is for the mobile floating button only — in the sidebar,
-          // use normal active/inactive styles so another route can be selected cleanly.
-          const fabActive = isFab && !collapsed && active;
-          const showChildren = !collapsed && item.children && item.children.length > 0;
-
-          return (
-            <div key={item.href} className="space-y-0.5">
-              <Link
-                href={item.href}
-                onClick={onNavigate}
-                title={collapsed ? item.label : undefined}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
-                  collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
-                  fabActive
-                    ? "border-transparent font-semibold text-white shadow-sm my-1"
-                    : active
-                      ? activeClass
-                      : navHasSelection
-                        ? inactiveClass
-                        : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                )}
-                style={fabActive ? { backgroundColor: brandColor } : undefined}
-              >
-                <Icon className={cn("w-[18px] h-[18px] shrink-0", fabActive ? "opacity-100" : "opacity-90")} />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-
-              {showChildren && (
-                <div className="ml-3 space-y-0.5 border-l border-[var(--border)] pl-2">
-                  {item.children!.map((child) => {
-                    const childIsActive = itemIsActive(child.href, child.exact);
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        onClick={onNavigate}
-                        className={cn(
-                          "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
-                          childIsActive
-                            ? "bg-violet-100 text-violet-800 font-semibold"
-                            : navHasSelection
-                              ? "text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                              : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
-                        )}
-                      >
-                        <span className="truncate">{child.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-3">
+        {sections.map((section, sectionIndex) => (
+          <div
+            key={section.id}
+            className={cn(
+              "space-y-0.5",
+              collapsed && sectionIndex > 0 && "pt-2 mt-1 border-t border-[var(--border)]"
+            )}
+          >
+            {!collapsed && section.label ? (
+              <p className="section-label px-3 pt-1 pb-1.5">{section.label}</p>
+            ) : null}
+            {section.items.map((item) => (
+              <NavItemLink
+                key={item.href}
+                item={item}
+                collapsed={collapsed}
+                brandColor={brandColor}
+                activeClass={activeClass}
+                inactiveClass={inactiveClass}
+                navHasSelection={navHasSelection}
+                itemIsActive={itemIsActive}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        ))}
       </nav>
 
       <div className={cn("shrink-0 border-t border-[var(--border)] p-2 space-y-1", collapsed && "px-1.5")}>

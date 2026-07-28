@@ -95,7 +95,10 @@
       "memberships": "Memberships",
       "member": "Member",
       "schedule": "Floor",
-      "floor": "Floor"
+      "floor": "Floor",
+      "sectionFrontDesk": "ਫਰੰਟ ਡੈਸਕ",
+      "sectionOperations": "ਆਪਰੇਸ਼ਨਜ਼",
+      "sectionInsights": "ਇਨਸਾਈਟਸ"
     },
     "home": {
       "goodMorning": "ਸ਼ੁਭ ਸਵੇਰ",
@@ -756,7 +759,11 @@
         "marketPulse": "Market Pulse",
         "pulse": "Pulse",
         "promotions": "Promotions",
-        "deals": "Deals"
+        "deals": "Deals",
+        "sectionIntelligence": "ਇੰਟੈਲੀਜੈਂਸ",
+        "sectionOperations": "ਆਪਰੇਸ਼ਨਜ਼",
+        "sectionGrowth": "ਗਰੋਥ",
+        "sectionBusiness": "ਬਿਜ਼ਨਸ"
       }
     },
     "common": {

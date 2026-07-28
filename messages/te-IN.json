@@ -95,7 +95,10 @@
       "memberships": "Memberships",
       "member": "Member",
       "schedule": "Floor",
-      "floor": "Floor"
+      "floor": "Floor",
+      "sectionFrontDesk": "ఫ్రంట్ డెస్క్",
+      "sectionOperations": "ఆపరేషన్స్",
+      "sectionInsights": "ఇన్‌సైట్స్"
     },
     "home": {
       "goodMorning": "శుభోదయం",
@@ -756,7 +759,11 @@
         "marketPulse": "Market Pulse",
         "pulse": "Pulse",
         "promotions": "Promotions",
-        "deals": "Deals"
+        "deals": "Deals",
+        "sectionIntelligence": "ఇంటెలిజెన్స్",
+        "sectionOperations": "ఆపరేషన్స్",
+        "sectionGrowth": "గ్రోత్",
+        "sectionBusiness": "బిజినెస్"
       }
     },
     "common": {

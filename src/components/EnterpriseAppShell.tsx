@@ -10,7 +10,7 @@ import { AppShellProvider } from "@/lib/app-shell-context";
 import { BreadcrumbProvider, useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
-import { AppNavItem, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET, isHomePath } from "@/components/app-nav";
+import { AppNavInput, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET, flattenNavItems, isHomePath } from "@/components/app-nav";
 import { MobilePrimaryFab } from "@/components/MobilePrimaryFab";
 import { SidebarNavPanel } from "@/components/SidebarNavPanel";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
@@ -23,7 +23,7 @@ export interface EnterpriseAppShellProps {
   brandSubtitle: string;
   brandLetter: string;
   brandColor?: string;
-  nav: AppNavItem[];
+  nav: AppNavInput;
   isActive: (href: string, exact?: boolean) => boolean;
   children: React.ReactNode;
   settingsOpen: boolean;
@@ -168,6 +168,7 @@ export function EnterpriseAppShell({
   const { collapsed, toggle, ready } = useSidebarCollapsed();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const closeDrawer = useCallback(() => setMobileDrawerOpen(false), []);
+  const flatNav = flattenNavItems(nav);
 
   const sidebarWidth = collapsed ? "var(--sidebar-width-collapsed)" : "var(--sidebar-width)";
 
@@ -186,7 +187,7 @@ export function EnterpriseAppShell({
 
   return (
     <AppShellProvider homeHref={homeHref} homeLabel={homeLabel}>
-      <BreadcrumbProvider nav={nav} homeHref={homeHref} homeLabel={homeLabel}>
+      <BreadcrumbProvider nav={flatNav} homeHref={homeHref} homeLabel={homeLabel}>
         <div className="min-h-screen bg-[var(--app-bg)] flex">
           <aside
             className={cn(
@@ -239,7 +240,7 @@ export function EnterpriseAppShell({
           </div>
 
           <MobileNavDrawer open={mobileDrawerOpen} onClose={closeDrawer} {...panelProps} />
-          <MobilePrimaryFab items={nav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
+          <MobilePrimaryFab items={flatNav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
           <SettingsSheet open={settingsOpen} onClose={() => onSettingsOpen(false)} />
         </div>
       </BreadcrumbProvider>

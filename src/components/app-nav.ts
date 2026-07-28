@@ -17,6 +17,30 @@ export type AppNavItem = {
   fab?: boolean;
 };
 
+/** Labeled group of nav items (enterprise sidebar sections). Omit `label` for an unlabeled block (e.g. Overview). */
+export type AppNavSection = {
+  id: string;
+  label?: string;
+  items: AppNavItem[];
+};
+
+export type AppNavInput = AppNavItem[] | AppNavSection[];
+
+export function isAppNavSection(entry: AppNavItem | AppNavSection): entry is AppNavSection {
+  return "items" in entry && Array.isArray((entry as AppNavSection).items);
+}
+
+/** Flat lists become one unlabeled section; section arrays pass through. */
+export function toNavSections(nav: AppNavInput): AppNavSection[] {
+  if (nav.length === 0) return [];
+  if (isAppNavSection(nav[0])) return nav as AppNavSection[];
+  return [{ id: "main", items: nav as AppNavItem[] }];
+}
+
+export function flattenNavItems(nav: AppNavInput): AppNavItem[] {
+  return toNavSections(nav).flatMap((section) => section.items);
+}
+
 /** Normalize paths for nav matching (trailing slashes from `trailingSlash: true`). */
 export function normalizeNavPath(path: string): string {
   if (path.length > 1 && path.endsWith("/")) {

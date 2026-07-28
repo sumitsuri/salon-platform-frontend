@@ -123,7 +123,10 @@
       "book": "Book",
       "stock": "Stock",
       "tips": "Tips",
-      "sales": "Sales"
+      "sales": "Sales",
+      "sectionFrontDesk": "Front desk",
+      "sectionOperations": "Operations",
+      "sectionInsights": "Insights"
     },
     "schedule": {
       "title": "Floor schedule",
@@ -784,7 +787,11 @@
         "inventory": "Inventory",
         "stock": "Stock",
         "organization": "Organization",
-        "org": "Org"
+        "org": "Org",
+        "sectionIntelligence": "Intelligence",
+        "sectionOperations": "Operations",
+        "sectionGrowth": "Growth",
+        "sectionBusiness": "Business"
       }
     },
     "common": {

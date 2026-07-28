@@ -95,7 +95,10 @@
       "memberships": "Memberships",
       "member": "Member",
       "schedule": "Floor",
-      "floor": "Floor"
+      "floor": "Floor",
+      "sectionFrontDesk": "ফ্রন্ট ডেস্ক",
+      "sectionOperations": "অপারেশনস",
+      "sectionInsights": "ইনসাইটস"
     },
     "home": {
       "goodMorning": "সুপ্রভাত",
@@ -756,7 +759,11 @@
         "marketPulse": "Market Pulse",
         "pulse": "Pulse",
         "promotions": "Promotions",
-        "deals": "Deals"
+        "deals": "Deals",
+        "sectionIntelligence": "ইন্টেলিজেন্স",
+        "sectionOperations": "অপারেশনস",
+        "sectionGrowth": "গ্রোথ",
+        "sectionBusiness": "বিজনেস"
       }
     },
     "common": {

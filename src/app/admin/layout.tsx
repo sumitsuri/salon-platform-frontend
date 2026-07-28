@@ -3,11 +3,24 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent } from "lucide-react";
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Building2,
+  Sparkles,
+  Scissors,
+  Users,
+  IndianRupee,
+  Package,
+  UserPlus,
+  Megaphone,
+  TrendingUp,
+  BadgePercent,
+} from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { MOBILE_MAIN_PADDING } from "@/components/app-nav";
+import { AppNavSection, MOBILE_MAIN_PADDING } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -21,23 +34,51 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [settingsOpen, setSettingsOpen] = useState(false);
   const themeSettings = useThemeStore();
 
-  const nav = useMemo(
-    () => [
-      { href: "/admin", label: t("nav.overview"), shortLabel: t("nav.home"), icon: LayoutDashboard, exact: true },
-      { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
-      { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
-      { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
-      { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
-      { href: "/admin/leads", label: t("nav.leads"), shortLabel: t("nav.leads"), icon: UserPlus },
-      { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
-      { href: "/admin/promotions", label: t("nav.promotions"), shortLabel: t("nav.deals"), icon: BadgePercent },
-      { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },
-      { href: "/admin/finance", label: t("nav.finance"), shortLabel: t("nav.pl"), icon: IndianRupee },
-      { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },
-      { href: "/admin/branches", label: t("nav.organization"), shortLabel: t("nav.org"), icon: Building2 },
-    ],
-    [t]
-  );
+  const nav = useMemo((): AppNavSection[] => {
+    return [
+      {
+        id: "command",
+        items: [
+          { href: "/admin", label: t("nav.overview"), shortLabel: t("nav.home"), icon: LayoutDashboard, exact: true },
+        ],
+      },
+      {
+        id: "intelligence",
+        label: t("nav.sectionIntelligence"),
+        items: [
+          { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
+          { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
+        ],
+      },
+      {
+        id: "operations",
+        label: t("nav.sectionOperations"),
+        items: [
+          { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
+          { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
+          { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },
+          { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },
+        ],
+      },
+      {
+        id: "growth",
+        label: t("nav.sectionGrowth"),
+        items: [
+          { href: "/admin/leads", label: t("nav.leads"), shortLabel: t("nav.leads"), icon: UserPlus },
+          { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
+          { href: "/admin/promotions", label: t("nav.promotions"), shortLabel: t("nav.deals"), icon: BadgePercent },
+        ],
+      },
+      {
+        id: "business",
+        label: t("nav.sectionBusiness"),
+        items: [
+          { href: "/admin/finance", label: t("nav.finance"), shortLabel: t("nav.pl"), icon: IndianRupee },
+          { href: "/admin/branches", label: t("nav.organization"), shortLabel: t("nav.org"), icon: Building2 },
+        ],
+      },
+    ];
+  }, [t]);
 
   useEffect(() => {
     if (!hydrated) return;
