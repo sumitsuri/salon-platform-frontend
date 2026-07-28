@@ -317,6 +317,7 @@ export default function AdminBookingsPage() {
                 <button
                   key={b.id}
                   type="button"
+                  data-testid="admin-booking-row"
                   onClick={() => setSelected(b)}
                   className="w-full text-left px-4 py-3 flex gap-3"
                 >
