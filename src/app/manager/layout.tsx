@@ -7,7 +7,7 @@ import { Home, UserPlus, ClipboardList, Fingerprint, Sparkles, Scissors, Package
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { MOBILE_MAIN_PADDING_FAB } from "@/components/app-nav";
+import { isNavActive, MOBILE_MAIN_PADDING_FAB } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
@@ -46,8 +46,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
   if (!user) return null;
 
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+  const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
 
   const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
 

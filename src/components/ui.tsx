@@ -19,7 +19,7 @@ export const inputClass =
 export const selectClass = inputClass;
 
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-50 disabled:pointer-events-none text-sm";
+  "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-sm";
 
 export const btnSecondary =
   "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--surface)] hover:bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm";

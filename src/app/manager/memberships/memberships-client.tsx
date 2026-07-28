@@ -44,28 +44,43 @@ export default function ManagerMembershipsPage() {
 
   const selectedPlan = useMemo(() => plans.find((p) => p.id === planId), [plans, planId]);
 
+  const needsReference = paymentMode !== "CASH";
+  const canSearch = phone.trim().length >= 8;
+
   async function searchCustomer() {
     setError("");
     setSuccess("");
+    if (!canSearch) {
+      setError(t("customerNotFound"));
+      return;
+    }
     try {
-      const c = await api.findCustomerByPhone(phone);
+      const c = await api.findCustomerByPhone(phone.trim());
       setCustomerId(c.id);
       setCustomerName(c.name);
     } catch {
       setError(t("customerNotFound"));
       setCustomerId("");
+      setCustomerName("");
     }
   }
 
   const sell = useMutation({
-    mutationFn: () =>
-      api.sellMembership({
+    mutationFn: () => {
+      if (!customerId || !planId || !branchId) {
+        throw new Error(t("customerNotFound"));
+      }
+      if (needsReference && !reference.trim()) {
+        throw new Error(t("txnReference"));
+      }
+      return api.sellMembership({
         customerId,
         planId,
         branchId,
         paymentMode,
-        paymentReference: reference || undefined,
-      }),
+        paymentReference: reference.trim() || undefined,
+      });
+    },
     onSuccess: (sub) => {
       setSuccess(
         t("soldSuccess", {
@@ -79,6 +94,11 @@ export default function ManagerMembershipsPage() {
     onError: (e: Error) => setError(e.message),
   });
 
+  const canSell =
+    Boolean(customerId && planId && branchId) &&
+    (!needsReference || reference.trim().length > 0) &&
+    !sell.isPending;
+
   return (
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
@@ -91,10 +111,31 @@ export default function ManagerMembershipsPage() {
           <input
             placeholder={t("phonePlaceholder")}
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              // Stale customer must not remain sellable after phone edits.
+              if (customerId) {
+                setCustomerId("");
+                setCustomerName("");
+              }
+              setSuccess("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void searchCustomer();
+              }
+            }}
             className={inputClass}
+            inputMode="tel"
+            autoComplete="tel"
           />
-          <button onClick={searchCustomer} className={btnSecondary}>
+          <button
+            type="button"
+            onClick={() => void searchCustomer()}
+            disabled={!canSearch}
+            className={`${btnSecondary} disabled:opacity-50 disabled:pointer-events-none`}
+          >
             {tCommon("search")}
           </button>
         </div>
@@ -145,7 +186,7 @@ export default function ManagerMembershipsPage() {
           />
         </div>
 
-        {paymentMode !== "CASH" && (
+        {needsReference && (
           <input
             placeholder={t("txnReference")}
             value={reference}
@@ -155,14 +196,20 @@ export default function ManagerMembershipsPage() {
         )}
 
         <button
+          type="button"
           onClick={() => sell.mutate()}
-          disabled={!customerId || !planId || sell.isPending}
+          disabled={!canSell}
+          aria-disabled={!canSell}
           className={`${btnPrimary} w-full`}
         >
           {sell.isPending ? tCommon("processing") : t("sell")}
         </button>
 
-        <button onClick={() => router.push("/manager/walk-in")} className={`${btnSecondary} w-full`}>
+        <button
+          type="button"
+          onClick={() => router.push("/manager/walk-in")}
+          className={`${btnSecondary} w-full`}
+        >
           {t("backToWalkIn")}
         </button>
       </Card>

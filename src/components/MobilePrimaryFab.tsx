@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { AppNavItem } from "@/components/app-nav";
+import { AppNavItem, isNavActive } from "@/components/app-nav";
 
 interface MobilePrimaryFabProps {
   items: AppNavItem[];
@@ -16,7 +16,8 @@ export function MobilePrimaryFab({ items, color = "var(--brand)", hidden }: Mobi
   const pathname = usePathname();
   const fab = items.find((item) => item.fab);
   if (!fab || hidden) return null;
-  if (pathname === fab.href || pathname.startsWith(`${fab.href}/`)) return null;
+  // Hide the floating CTA while already on (or under) the walk-in route.
+  if (isNavActive(pathname, fab.href)) return null;
 
   const Icon = fab.icon;
 

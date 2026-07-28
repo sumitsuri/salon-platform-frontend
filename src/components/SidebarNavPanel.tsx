@@ -123,6 +123,9 @@ export function SidebarNavPanel({
           const childActive = item.children?.some((child) => itemIsActive(child.href, child.exact));
           const active = itemIsActive(item.href, item.exact) || !!childActive;
           const isFab = item.fab === true;
+          // FAB solid CTA is for the mobile floating button only — in the sidebar,
+          // use normal active/inactive styles so another route can be selected cleanly.
+          const fabActive = isFab && !collapsed && active;
           const showChildren = !collapsed && item.children && item.children.length > 0;
 
           return (
@@ -131,10 +134,11 @@ export function SidebarNavPanel({
                 href={item.href}
                 onClick={onNavigate}
                 title={collapsed ? item.label : undefined}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
                   collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
-                  isFab && !collapsed
+                  fabActive
                     ? "border-transparent font-semibold text-white shadow-sm my-1"
                     : active
                       ? activeClass
@@ -142,11 +146,9 @@ export function SidebarNavPanel({
                         ? inactiveClass
                         : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                 )}
-                style={
-                  isFab && !collapsed ? { backgroundColor: brandColor } : undefined
-                }
+                style={fabActive ? { backgroundColor: brandColor } : undefined}
               >
-                <Icon className={cn("w-[18px] h-[18px] shrink-0", isFab && !collapsed ? "opacity-100" : "opacity-90")} />
+                <Icon className={cn("w-[18px] h-[18px] shrink-0", fabActive ? "opacity-100" : "opacity-90")} />
                 {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
 
