@@ -408,7 +408,7 @@ export default function ManagerSchedulePage() {
     <div className="space-y-4 min-w-0 max-w-full">
       <PageHeader
         title={t("title")}
-        description={t("subtitle")}
+        subtitle={t("subtitle")}
         action={
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
