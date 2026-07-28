@@ -11,8 +11,7 @@ permissions:
 
 env:
   AWS_REGION: ap-south-1
-  ECR_REPOSITORY: salon-platform-prod-frontend
-  DEPLOY_SSM_TARGET_PARAM: ${{ vars.DEPLOY_SSM_TARGET_PARAM || '/salon-platform-prod/deploy/ssm_target' }}
+  SSM_PREFIX: /salon-platform-prod/app/antrahq
 
 jobs:
   deploy:
@@ -20,46 +19,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Build static export
+        env:
+          NEXT_PUBLIC_API_URL: https://api.antrahq.com
+          NEXT_PUBLIC_BASE_PATH: ""
+        run: |
+          npm ci
+          npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
-        env:
-          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Resolve deploy targets from SSM
+        id: ssm
         run: |
-          docker buildx build --platform linux/arm64 \
-            --build-arg NEXT_PUBLIC_API_URL= \
-            --build-arg NEXT_PUBLIC_BASE_PATH=/app \
-            -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" \
-            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-            --push .
+          echo "bucket=$(aws ssm get-parameter --name ${SSM_PREFIX}/s3_bucket --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
+          echo "distribution_id=$(aws ssm get-parameter --name ${SSM_PREFIX}/cloudfront_distribution_id --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to EC2 via SSM
+      - name: Sync to S3
+        run: aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/__app/" --delete
+
+      - name: Invalidate CloudFront
         run: |
-          set -euo pipefail
-          DEFAULT_TARGETS="Key=tag:DeployTarget,Values=salon-platform-prod-app"
-          if TARGETS=$(aws ssm get-parameter \
-            --name "$DEPLOY_SSM_TARGET_PARAM" \
-            --query Parameter.Value --output text 2>/dev/null); then
-            echo "SSM deploy target (from parameter): $TARGETS"
-          else
-            TARGETS="$DEFAULT_TARGETS"
-            echo "SSM deploy target (fallback tag): $TARGETS"
-          fi
-          aws ssm send-command \
-            --targets "$TARGETS" \
-            --document-name "AWS-RunShellScript" \
-            --comment "Deploy frontend ${{ github.sha }}" \
-            --parameters 'commands=["/opt/salon-platform/scripts/deploy.sh frontend"]' \
-            --output text
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.ssm.outputs.distribution_id }}" \
+            --paths "/*"

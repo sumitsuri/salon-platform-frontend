@@ -10,10 +10,11 @@ import {
   Noto_Sans_Tamil,
   Noto_Sans_Telugu,
 } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
+import { ClientIntlShell } from "@/components/client-intl-shell";
 import { Providers } from "@/components/providers";
+import { defaultLocale } from "@/i18n/config";
+import enMessages from "../../messages/en-IN.json";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme-boot";
 import { localeFontVariable } from "@/i18n/config";
 
@@ -96,13 +97,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-  const activeFont = localeFontVariable(locale);
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const activeFont = localeFontVariable(defaultLocale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={defaultLocale} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
@@ -110,9 +109,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         className={`${fontVariables} min-h-screen`}
         style={{ fontFamily: `${activeFont}, system-ui, sans-serif` }}
       >
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <ClientIntlShell initialLocale={defaultLocale} initialMessages={enMessages}>
           <Providers>{children}</Providers>
-        </NextIntlClientProvider>
+        </ClientIntlShell>
       </body>
     </html>
   );
