@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
+import { isHomePath } from "@/components/app-nav";
 import { PulseStatCard, PageLoader, enterpriseTableHead } from "@/components/enterprise-ui";
 
 export { PageLoader, PulseStatCard } from "@/components/enterprise-ui";
@@ -43,7 +44,7 @@ export function PageHeader({
   const { homeHref, homeLabel } = useAppShell();
   const autoBreadcrumbs = useBreadcrumbs();
   const breadcrumbs = breadcrumbsOverride ?? autoBreadcrumbs;
-  const isSubPage = pathname !== homeHref;
+  const isSubPage = !isHomePath(pathname, homeHref);
   const shouldShowBack = (showBack ?? isSubPage) && breadcrumbs.length === 0;
 
   return (

@@ -24,6 +24,7 @@ import { SalesPipelineSummaryWidgets } from "@/modules/sales/components/SalesPip
 import { SalesLeadsListSection } from "@/modules/sales/components/SalesLeadsListSection";
 import { useSalesPipelineParams } from "@/modules/sales/hooks/useSalesPipelineParams";
 import { buildLeadListParams } from "@/modules/sales/lib/pipeline-search-params";
+import { salesLeadDetailHref } from "@/modules/sales/lib/lead-routes";
 import { UseCaseMultiSelect } from "@/modules/sales/components/UseCaseMultiSelect";
 import {
   formatUseCases,
@@ -275,7 +276,7 @@ export default function SalesPipelinePage() {
                   {byStage[stage].map((lead) => (
                     <Link
                       key={lead.id}
-                      href={`/platform/sales/leads/${lead.id}`}
+                      href={salesLeadDetailHref(lead.id)}
                       className="block rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 transition hover:border-violet-300 hover:shadow-sm"
                     >
                       <p className="text-sm font-semibold">{lead.businessName}</p>

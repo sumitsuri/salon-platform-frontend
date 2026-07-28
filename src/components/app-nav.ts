@@ -1,14 +1,42 @@
 import { LucideIcon } from "lucide-react";
 
+export type AppNavChildItem = {
+  href: string;
+  label: string;
+  exact?: boolean;
+};
+
 export type AppNavItem = {
   href: string;
   label: string;
   shortLabel?: string;
   icon: LucideIcon;
   exact?: boolean;
+  children?: AppNavChildItem[];
   /** Primary mobile action — renders as floating button, not in a bottom tab bar */
   fab?: boolean;
 };
+
+/** Normalize paths for nav matching (trailing slashes from `trailingSlash: true`). */
+export function normalizeNavPath(path: string): string {
+  if (path.length > 1 && path.endsWith("/")) {
+    return path.slice(0, -1);
+  }
+  return path;
+}
+
+export function isNavActive(pathname: string, href: string, exact?: boolean): boolean {
+  const path = normalizeNavPath(pathname);
+  const target = normalizeNavPath(href);
+  if (exact) {
+    return path === target;
+  }
+  return path === target || path.startsWith(`${target}/`);
+}
+
+export function isHomePath(pathname: string, homeHref: string): boolean {
+  return normalizeNavPath(pathname) === normalizeNavPath(homeHref);
+}
 
 /** @deprecated use AppNavItem */
 export type MobileNavItem = AppNavItem;

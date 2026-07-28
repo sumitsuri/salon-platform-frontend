@@ -372,9 +372,12 @@ export const salesApi = {
   },
 
   submitPublicLead: (data: {
-    name: string;
+    name?: string;
+    businessName?: string;
+    contactName?: string;
     email: string;
     phone: string;
+    city?: string;
     branches?: string;
     notes?: string;
   }) => publicSalesRequest<SalesLead>("/api/v1/public/sales-leads", data),

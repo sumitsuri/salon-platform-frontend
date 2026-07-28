@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { salesApi, ActivityType, LeadStage } from "@/modules/sales/api/salesApi";
@@ -20,6 +20,7 @@ import {
   PREDEFINED_USE_CASES,
 } from "@/modules/sales/lib/use-cases";
 import { formatFinalPaidPrice, monthlyRevenueFromFields, pricingFieldsFromLead } from "@/modules/sales/lib/pricing";
+import { formatLeadSource } from "@/modules/sales/lib/source-labels";
 import {
   PageHeader,
   Card,
@@ -40,7 +41,8 @@ import {
 } from "@/modules/sales/lib/query-keys";
 
 export default function SalesLeadDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const queryClient = useQueryClient();
   const isAdmin = useAuthStore((s) => s.user?.role === "PLATFORM_SUPER_ADMIN");
   const [error, setError] = useState("");
@@ -63,6 +65,7 @@ export default function SalesLeadDetailPage() {
   const { data: lead, isLoading } = useQuery({
     queryKey: salesQueryKeys.lead(id),
     queryFn: () => salesApi.getLead(id),
+    enabled: !!id,
   });
 
   const { data: activities = [] } = useQuery({
@@ -71,15 +74,25 @@ export default function SalesLeadDetailPage() {
     enabled: !!id,
   });
 
+  const pipelineLabel = isAdmin ? "Pipeline" : "My Pipeline";
+
   const breadcrumbs = useMemo(
     () =>
       lead
-        ? [
-            { label: "My Pipeline", href: "/platform/sales" },
-            { label: lead.businessName },
-          ]
+        ? isAdmin
+          ? [
+              { label: "Overview", href: "/platform/overview" },
+              { label: "Sales", href: "/platform/sales" },
+              { label: pipelineLabel, href: "/platform/sales" },
+              { label: lead.businessName },
+            ]
+          : [
+              { label: "Sales", href: "/platform/sales" },
+              { label: pipelineLabel, href: "/platform/sales" },
+              { label: lead.businessName },
+            ]
         : null,
-    [lead?.id, lead?.businessName]
+    [lead?.id, lead?.businessName, isAdmin, pipelineLabel]
   );
   useSetPageBreadcrumbs(breadcrumbs);
 
@@ -158,6 +171,14 @@ export default function SalesLeadDetailPage() {
     queryFn: () => salesApi.listUseCases(),
   });
 
+  if (!id) {
+    return (
+      <Card className="p-8 text-center text-sm text-[var(--ink-muted)]">
+        Lead not found — open a lead from the pipeline list.
+      </Card>
+    );
+  }
+
   if (isLoading || !lead) {
     return <Card className="p-8 text-center text-sm">Loading lead…</Card>;
   }
@@ -196,7 +217,7 @@ export default function SalesLeadDetailPage() {
         <Card className="space-y-3 p-4 lg:col-span-2">
           <h3 className="font-semibold">Lead details</h3>
           <DetailField label="Type" value={lead.leadType.replace("_", " ")} />
-          <DetailField label="Source" value={lead.source.replace("_", " ")} />
+          <DetailField label="Source" value={formatLeadSource(lead.source)} />
           <DetailField label="Locality" value={lead.localityName || "—"} />
           <LeadPricingSection lead={lead} updateLeadMutation={updateLeadMutation} />
           <div>

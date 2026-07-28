@@ -47,6 +47,17 @@ export function SidebarNavPanel({
     activeNavClassName ??
     "bg-[var(--brand-light)] text-[var(--brand-text)] border-[var(--brand)] font-semibold";
 
+  const inactiveClass =
+    "border-transparent text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]";
+
+  const itemIsActive = (href: string, exact?: boolean) => isActive(href, exact);
+
+  const navHasSelection = nav.some(
+    (item) =>
+      itemIsActive(item.href, item.exact) ||
+      item.children?.some((child) => itemIsActive(child.href, child.exact))
+  );
+
   return (
     <>
       <div
@@ -109,30 +120,61 @@ export function SidebarNavPanel({
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
         {nav.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.href, item.exact);
+          const childActive = item.children?.some((child) => itemIsActive(child.href, child.exact));
+          const active = itemIsActive(item.href, item.exact) || !!childActive;
           const isFab = item.fab === true;
+          const showChildren = !collapsed && item.children && item.children.length > 0;
+
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
-                collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
-                isFab && !collapsed
-                  ? "border-transparent font-semibold text-white shadow-sm my-1"
-                  : active
-                    ? activeClass
-                    : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+            <div key={item.href} className="space-y-0.5">
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                title={collapsed ? item.label : undefined}
+                className={cn(
+                  "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
+                  collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
+                  isFab && !collapsed
+                    ? "border-transparent font-semibold text-white shadow-sm my-1"
+                    : active
+                      ? activeClass
+                      : navHasSelection
+                        ? inactiveClass
+                        : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                )}
+                style={
+                  isFab && !collapsed ? { backgroundColor: brandColor } : undefined
+                }
+              >
+                <Icon className={cn("w-[18px] h-[18px] shrink-0", isFab && !collapsed ? "opacity-100" : "opacity-90")} />
+                {!collapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+
+              {showChildren && (
+                <div className="ml-3 space-y-0.5 border-l border-[var(--border)] pl-2">
+                  {item.children!.map((child) => {
+                    const childIsActive = itemIsActive(child.href, child.exact);
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
+                          childIsActive
+                            ? "bg-violet-100 text-violet-800 font-semibold"
+                            : navHasSelection
+                              ? "text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                              : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                        )}
+                      >
+                        <span className="truncate">{child.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-              style={
-                isFab && !collapsed ? { backgroundColor: brandColor } : undefined
-              }
-            >
-              <Icon className={cn("w-[18px] h-[18px] shrink-0", isFab && !collapsed ? "opacity-100" : "opacity-90")} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
+            </div>
           );
         })}
       </nav>

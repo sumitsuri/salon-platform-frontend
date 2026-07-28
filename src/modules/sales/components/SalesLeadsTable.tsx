@@ -4,13 +4,11 @@ import Link from "next/link";
 import { SalesLead } from "@/modules/sales/api/salesApi";
 import { STAGE_LABELS, isTerminalStage } from "@/modules/sales/lib/stage-utils";
 import { formatQuotedPrice, formatFinalPaidPrice, formatDiscountPercent } from "@/modules/sales/lib/pricing";
+import { formatLeadSource } from "@/modules/sales/lib/source-labels";
+import { salesLeadDetailHref } from "@/modules/sales/lib/lead-routes";
 import { Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
-
-function formatSource(source: string): string {
-  return source.replace(/_/g, " ");
-}
 
 function formatType(type: string): string {
   return type.replace(/_/g, " ");
@@ -65,7 +63,7 @@ export function SalesLeadsTable({ leads, emptyMessage = "No leads in this period
                 >
                   <td className="px-4 py-3">
                     <Link
-                      href={`/platform/sales/leads/${lead.id}`}
+                      href={salesLeadDetailHref(lead.id)}
                       className="font-medium text-violet-700 hover:underline"
                     >
                       {lead.businessName}
@@ -88,7 +86,7 @@ export function SalesLeadsTable({ leads, emptyMessage = "No leads in this period
                     </span>
                   </td>
                   <td className="px-4 py-3 capitalize text-[var(--ink-muted)]">
-                    {formatSource(lead.source)}
+                    {formatLeadSource(lead.source)}
                   </td>
                   <td className="px-4 py-3 capitalize text-[var(--ink-muted)]">
                     {formatType(lead.leadType)}
@@ -110,7 +108,7 @@ export function SalesLeadsTable({ leads, emptyMessage = "No leads in this period
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/platform/sales/leads/${lead.id}`}
+                      href={salesLeadDetailHref(lead.id)}
                       className="inline-flex items-center text-violet-600 opacity-0 transition group-hover:opacity-100"
                       aria-label={`Open ${lead.businessName}`}
                     >

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { AppNavItem } from "@/components/app-nav";
+import { AppNavItem, isNavActive, normalizeNavPath } from "@/components/app-nav";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
 
 type BreadcrumbContextValue = {
@@ -45,21 +45,52 @@ function buildRouteBreadcrumbs(
   homeLabel: string,
   nav: AppNavItem[]
 ): BreadcrumbItem[] {
-  if (pathname === homeHref) return [];
+  const path = normalizeNavPath(pathname);
+  const home = normalizeNavPath(homeHref);
 
-  const current = nav
-    .filter((item) => item.href !== homeHref)
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  if (path === home) return [];
 
-  if (!current) {
+  for (const item of nav) {
+    const matchedChild = item.children
+      ?.slice()
+      .sort((a, b) => normalizeNavPath(b.href).length - normalizeNavPath(a.href).length)
+      .find((child) => isNavActive(pathname, child.href, child.exact));
+
+    if (!matchedChild) continue;
+
+    const crumbs: BreadcrumbItem[] = [];
+    const itemPath = normalizeNavPath(item.href);
+
+    if (itemPath !== home) {
+      crumbs.push({ label: homeLabel, href: homeHref });
+    }
+
+    if (itemPath !== home || item.children?.length) {
+      crumbs.push({ label: item.label, href: item.href });
+    }
+
+    crumbs.push({ label: matchedChild.label });
+    return crumbs;
+  }
+
+  const topLevel = nav
+    .slice()
+    .sort((a, b) => normalizeNavPath(b.href).length - normalizeNavPath(a.href).length)
+    .find(
+      (item) =>
+        normalizeNavPath(item.href) !== home && isNavActive(pathname, item.href, item.exact)
+    );
+
+  if (topLevel) {
+    return [{ label: homeLabel, href: homeHref }, { label: topLevel.label }];
+  }
+
+  const homeNav = nav.find((item) => normalizeNavPath(item.href) === home);
+  if (homeNav && isNavActive(pathname, homeNav.href, false)) {
     return [{ label: homeLabel, href: homeHref }];
   }
 
-  return [
-    { label: homeLabel, href: homeHref },
-    { label: current.label },
-  ];
+  return [{ label: homeLabel, href: homeHref }];
 }
 
 export function useBreadcrumbs(): BreadcrumbItem[] {

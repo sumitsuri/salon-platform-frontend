@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import { usePathname } from "next/navigation";
+import { isHomePath } from "@/components/app-nav";
 
 export type AppShellContextValue = {
   homeHref: string;
@@ -31,5 +32,5 @@ export function useAppShell() {
 export function useIsSubPage() {
   const pathname = usePathname();
   const { homeHref } = useAppShell();
-  return pathname !== homeHref;
+  return !isHomePath(pathname, homeHref);
 }

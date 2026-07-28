@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Building2,
   ChevronRight,
@@ -79,6 +79,7 @@ export default function PlatformPage() {
   const [branchDrawer, setBranchDrawer] = useState<BranchDrawerState | null>(null);
   const [userDrawer, setUserDrawer] = useState<UserDrawerState | null>(null);
   const [error, setError] = useState("");
+  const [initialTenantSelectDone, setInitialTenantSelectDone] = useState(false);
 
   const { data: tenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ["tenants"],
@@ -86,6 +87,22 @@ export default function PlatformPage() {
   });
 
   const selectedTenant = tenants.find((t) => t.id === selectedTenantId) ?? null;
+
+  useEffect(() => {
+    if (tenantsLoading || initialTenantSelectDone) return;
+    if (tenants.length === 0) return;
+    if (!selectedTenantId) {
+      setSelectedTenantId(tenants[0].id);
+    }
+    setInitialTenantSelectDone(true);
+  }, [tenantsLoading, tenants, selectedTenantId, initialTenantSelectDone]);
+
+  useEffect(() => {
+    if (tenantsLoading || tenants.length === 0) return;
+    if (selectedTenantId && !tenants.some((t) => t.id === selectedTenantId)) {
+      setSelectedTenantId(tenants[0].id);
+    }
+  }, [tenants, selectedTenantId, tenantsLoading]);
 
   const { data: branches = [], isLoading: branchesLoading } = useQuery({
     queryKey: ["platform-branches", selectedTenantId],
@@ -175,6 +192,7 @@ export default function PlatformPage() {
   const pageBreadcrumbs = useMemo(() => {
     if (!selectedTenant) return null;
     return [
+      { label: "Overview", href: "/platform/overview" },
       {
         label: tLayout("tenants"),
         onClick: () => {

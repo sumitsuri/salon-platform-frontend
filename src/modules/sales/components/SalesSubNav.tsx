@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BarChart3, Kanban, Users } from "lucide-react";
+import { BarChart3, Inbox, Kanban, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
 import { salesPathWithSearchParams } from "@/modules/sales/lib/pipeline-search-params";
 
 const ADMIN_LINKS = [
   { href: "/platform/sales", label: "Pipeline", icon: Kanban, exact: true },
+  { href: "/platform/sales/incoming", label: "Incoming leads", icon: Inbox },
   { href: "/platform/sales/team", label: "Team", icon: Users },
 ];
 

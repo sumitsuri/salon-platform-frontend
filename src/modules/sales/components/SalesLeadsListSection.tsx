@@ -18,6 +18,10 @@ interface SalesLeadsListSectionProps {
   periodLabel: string;
   /** Leads visible on board (same date range, no list filters) — for empty-state hints. */
   boardLeadCount?: number;
+  hideSourceFilter?: boolean;
+  emptyMessage?: string;
+  title?: string;
+  subtitle?: string;
 }
 
 export function SalesLeadsListSection({
@@ -28,25 +32,36 @@ export function SalesLeadsListSection({
   isLoading,
   periodLabel,
   boardLeadCount = 0,
+  hideSourceFilter = false,
+  emptyMessage,
+  title = "List view",
+  subtitle,
 }: SalesLeadsListSectionProps) {
-  const filteredEmpty = leads.length === 0 && hasActiveFilters(filters);
+  const filterIgnore = hideSourceFilter ? (["source"] as const) : [];
+  const filteredEmpty =
+    leads.length === 0 && hasActiveFilters(filters, [...filterIgnore]);
   const boardHasMore =
     filteredEmpty && boardLeadCount > 0 && boardLeadCount > leads.length;
 
   return (
     <section data-testid="pipeline-list-section">
       <div className="mb-3 border-b border-[var(--border)] pb-2">
-        <h2 className="text-base font-semibold">List view</h2>
+        <h2 className="text-base font-semibold">{title}</h2>
         <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-          Filter and open leads · {periodLabel}
+          {subtitle ?? `Filter and open leads · ${periodLabel}`}
         </p>
       </div>
 
       <div className="mb-3" data-testid="sales-lead-filters">
-        <SalesLeadFilters filters={filters} onChange={onFiltersChange} localities={localities} />
+        <SalesLeadFilters
+          filters={filters}
+          onChange={onFiltersChange}
+          localities={localities}
+          hideSourceFilter={hideSourceFilter}
+        />
       </div>
 
-      {hasActiveFilters(filters) && (
+      {hasActiveFilters(filters, [...filterIgnore]) && (
         <p className="mb-2 text-xs text-[var(--ink-muted)]">
           {leads.length} lead{leads.length !== 1 ? "s" : ""} match filters
           {boardHasMore && (
@@ -64,11 +79,12 @@ export function SalesLeadsListSection({
         <SalesLeadsTable
           leads={leads}
           emptyMessage={
-            hasActiveFilters(filters)
+            emptyMessage ??
+            (hasActiveFilters(filters, [...filterIgnore])
               ? boardHasMore
                 ? "No leads match your filters — clear filters to see all leads in this period"
                 : "No leads match your filters for this period"
-              : "No leads created in this date range"
+              : "No leads created in this date range")
           }
         />
       )}

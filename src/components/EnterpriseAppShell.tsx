@@ -10,7 +10,7 @@ import { AppShellProvider } from "@/lib/app-shell-context";
 import { BreadcrumbProvider, useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
-import { AppNavItem, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET } from "@/components/app-nav";
+import { AppNavItem, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET, isHomePath } from "@/components/app-nav";
 import { MobilePrimaryFab } from "@/components/MobilePrimaryFab";
 import { SidebarNavPanel } from "@/components/SidebarNavPanel";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
@@ -81,7 +81,7 @@ function MobileTopBar({
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const breadcrumbs = useBreadcrumbs();
-  const isSubPage = pathname !== homeHref;
+  const isSubPage = !isHomePath(pathname, homeHref);
 
   return (
     <header

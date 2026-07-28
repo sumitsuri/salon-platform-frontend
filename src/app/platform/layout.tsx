@@ -7,6 +7,7 @@ import { BarChart3, Building2, Kanban } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
+import { isNavActive } from "@/components/app-nav";
 
 const PLATFORM_ROLES = new Set(["PLATFORM_SUPER_ADMIN", "SALES_EXECUTIVE"]);
 
@@ -27,10 +28,29 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       return [
         { href: "/platform/overview", label: "Overview", icon: BarChart3, exact: true },
         { href: "/platform", label: t("tenants"), icon: Building2, exact: true },
-        { href: "/platform/sales", label: "Sales", icon: Kanban },
+        {
+          href: "/platform/sales",
+          label: "Sales",
+          icon: Kanban,
+          children: [
+            { href: "/platform/sales", label: "Pipeline", exact: true },
+            { href: "/platform/sales/incoming", label: "Incoming leads" },
+            { href: "/platform/sales/team", label: "Team" },
+          ],
+        },
       ];
     }
-    return [{ href: "/platform/sales", label: "Sales", icon: Kanban, exact: true }];
+    return [
+      {
+        href: "/platform/sales",
+        label: "Sales",
+        icon: Kanban,
+        children: [
+          { href: "/platform/sales", label: "My Pipeline", exact: true },
+          { href: "/platform/sales/growth", label: "My Progress" },
+        ],
+      },
+    ];
   }, [t, isAdmin]);
 
   useEffect(() => {
@@ -39,13 +59,16 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       router.replace("/login");
       return;
     }
-    if (user.role === "SALES_EXECUTIVE" && pathname === "/platform") {
+    if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform", true)) {
       router.replace("/platform/sales");
     }
-    if (user.role === "SALES_EXECUTIVE" && pathname.startsWith("/platform/overview")) {
+    if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform/overview", true)) {
       router.replace("/platform/sales");
     }
-    if (user.role === "SALES_EXECUTIVE" && pathname.startsWith("/platform/sales/team")) {
+    if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform/sales/team")) {
+      router.replace("/platform/sales");
+    }
+    if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform/sales/incoming")) {
       router.replace("/platform/sales");
     }
   }, [user, router, hydrated, pathname]);
@@ -56,8 +79,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
 
   if (!user || !PLATFORM_ROLES.has(user.role)) return null;
 
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+  const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
 
   return (
     <EnterpriseAppShell

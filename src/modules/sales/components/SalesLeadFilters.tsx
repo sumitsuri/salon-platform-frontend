@@ -18,8 +18,13 @@ export const EMPTY_FILTERS: SalesLeadFilterState = {
   leadType: "",
 };
 
-export function hasActiveFilters(filters: SalesLeadFilterState): boolean {
-  return Object.values(filters).some((v) => v !== "");
+export function hasActiveFilters(
+  filters: SalesLeadFilterState,
+  ignore: (keyof SalesLeadFilterState)[] = []
+): boolean {
+  return (Object.entries(filters) as [keyof SalesLeadFilterState, string][]).some(
+    ([key, value]) => !ignore.includes(key) && value !== ""
+  );
 }
 
 export function filtersToQueryParams(
@@ -40,9 +45,15 @@ interface SalesLeadFiltersProps {
   filters: SalesLeadFilterState;
   onChange: (filters: SalesLeadFilterState) => void;
   localities: SalesLocality[];
+  hideSourceFilter?: boolean;
 }
 
-export function SalesLeadFilters({ filters, onChange, localities }: SalesLeadFiltersProps) {
+export function SalesLeadFilters({
+  filters,
+  onChange,
+  localities,
+  hideSourceFilter = false,
+}: SalesLeadFiltersProps) {
   const set = (patch: Partial<SalesLeadFilterState>) =>
     onChange({ ...filters, ...patch });
 
@@ -80,6 +91,7 @@ export function SalesLeadFilters({ filters, onChange, localities }: SalesLeadFil
         </select>
       </label>
 
+      {!hideSourceFilter && (
       <label className="block min-w-[120px] text-xs">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Source</span>
         <select
@@ -89,12 +101,22 @@ export function SalesLeadFilters({ filters, onChange, localities }: SalesLeadFil
         >
           <option value="">All sources</option>
           <option value="FIELD">Field</option>
-          <option value="MARKETING_WEB">Marketing web</option>
+          <option value="MARKETING_WEB">Marketing Web</option>
           <option value="REFERRAL">Referral</option>
           <option value="INBOUND_CALL">Inbound call</option>
           <option value="OTHER">Other</option>
         </select>
       </label>
+      )}
+
+      {hideSourceFilter && (
+        <div className="flex min-w-[140px] flex-col justify-end text-xs">
+          <span className="mb-1 block font-medium text-[var(--ink-muted)]">Source</span>
+          <span className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 font-medium text-violet-800">
+            Marketing Web
+          </span>
+        </div>
+      )}
 
       <label className="block min-w-[120px] text-xs">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Type</span>
@@ -110,11 +132,15 @@ export function SalesLeadFilters({ filters, onChange, localities }: SalesLeadFil
         </select>
       </label>
 
-      {hasActiveFilters(filters) && (
+      {hasActiveFilters(filters, hideSourceFilter ? ["source"] : []) && (
         <button
           type="button"
           className={btnSecondary}
-          onClick={() => onChange(EMPTY_FILTERS)}
+          onClick={() =>
+            onChange(
+              hideSourceFilter ? { ...EMPTY_FILTERS, source: filters.source } : EMPTY_FILTERS
+            )
+          }
         >
           Clear filters
         </button>
