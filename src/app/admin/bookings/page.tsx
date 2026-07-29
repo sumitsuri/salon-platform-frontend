@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Download, FileText, Filter } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import {
   PageHeader,
   Card,
@@ -15,7 +15,7 @@ import {
   btnSecondarySm,
   FilterableTable,
   MobileFilterPanel,
-  TablePagination,
+  InfiniteScrollFooter,
   AvatarInitial,
   SideSheet,
   AlertBanner,
@@ -62,8 +62,6 @@ export default function AdminBookingsPage() {
   const tStatus = useTranslations("components.status");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
@@ -80,7 +78,6 @@ export default function AdminBookingsPage() {
     }
     const timer = setTimeout(() => {
       setDebounced(filters);
-      setPage(0);
     }, 300);
     return () => clearTimeout(timer);
   }, [filters]);
@@ -117,9 +114,20 @@ export default function AdminBookingsPage() {
 
   const amountFilter = parseAmount(debounced.amount);
 
-  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
-    queryKey: ["all-bookings", debounced, page, size],
-    queryFn: () =>
+  const {
+    items: bookings,
+    totalElements,
+    hasMore,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+  } = useInfinitePagedList({
+    queryKey: ["all-bookings", debounced, amountFilter],
+    queryFn: (page) =>
       api.getBookings({
         customer: debounced.customer || undefined,
         branch: debounced.branch || undefined,
@@ -131,15 +139,10 @@ export default function AdminBookingsPage() {
         dateFrom: debounced.date || undefined,
         dateTo: debounced.date || undefined,
         page,
-        size,
+        size: DEFAULT_PAGE_SIZE,
       }),
     staleTime: 30_000,
-    placeholderData: (previous) => previous,
   });
-
-  const bookings = data?.content ?? [];
-  const totalPages = data?.totalPages ?? 0;
-  const totalElements = data?.totalElements ?? 0;
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -283,7 +286,7 @@ export default function AdminBookingsPage() {
       <PageHeader
         title={t("title")}
         subtitle={
-          isLoading && !data
+          isLoading && bookings.length === 0
             ? t("loading")
             : `${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`
         }
@@ -419,16 +422,13 @@ export default function AdminBookingsPage() {
           </>
         )}
 
-        <TablePagination
-          page={page}
-          size={size}
-          totalPages={totalPages}
+        <InfiniteScrollFooter
           totalElements={totalElements}
-          onPageChange={setPage}
-          onSizeChange={(next) => {
-            setSize(next);
-            setPage(0);
-          }}
+          loadedCount={bookings.length}
+          hasMore={hasMore}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoading={isLoading}
+          onLoadMore={() => void fetchNextPage()}
         />
       </Card>
 

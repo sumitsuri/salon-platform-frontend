@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "బుకింగ్‌లు",
-      "subtitle": "{count} సందర్శనలు · పేజీ {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "వాక్-ఇన్",
       "revenuePage": "ఆదాయం (పేజీ)",
       "completed": "పూర్తయింది",
@@ -485,6 +485,9 @@
       "perPage": "ప్రతి పేజీ:",
       "previousPage": "మునుపటి పేజీ",
       "nextPage": "తదుపరి పేజీ",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "ఫిల్టర్",
       "closePanel": "ప్యానెల్ మూసివేయండి",
       "close": "మూసివేయండి"

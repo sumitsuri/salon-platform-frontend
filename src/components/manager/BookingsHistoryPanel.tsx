@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { UserPlus, IndianRupee, Clock, CheckCircle2, Download, FileText, Receipt } from "lucide-react";
@@ -9,6 +8,7 @@ import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import {
   Card,
   StatusBadge,
@@ -17,7 +17,7 @@ import {
   btnSecondary,
   StatCard,
   FilterableTable,
-  TablePagination,
+  InfiniteScrollFooter,
   AvatarInitial,
   SideSheet,
   AlertBanner,
@@ -73,8 +73,6 @@ export function BookingsHistoryPanel({
   const localeKit = getTenantLocaleKit();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -90,15 +88,9 @@ export function BookingsHistoryPanel({
     }
     const timer = setTimeout(() => {
       setDebounced(filters);
-      setPage(0);
     }, 300);
     return () => clearTimeout(timer);
   }, [filters]);
-
-  useEffect(() => {
-    if (!branchId) return;
-    setPage(0);
-  }, [branchId, size]);
 
   useEffect(() => {
     if (!selected || selected.status !== "COMPLETED") {
@@ -132,9 +124,19 @@ export function BookingsHistoryPanel({
 
   const amountFilter = parseAmount(debounced.amount);
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["bookings", branchId, debounced, page, size],
-    queryFn: () =>
+  const {
+    items: bookings,
+    totalElements,
+    hasMore,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfinitePagedList({
+    queryKey: ["bookings", branchId, debounced, amountFilter],
+    queryFn: (page) =>
       api.getBookings({
         branchId,
         customer: debounced.customer || undefined,
@@ -146,16 +148,11 @@ export function BookingsHistoryPanel({
         dateFrom: debounced.date || undefined,
         dateTo: debounced.date || undefined,
         page,
-        size,
+        size: DEFAULT_PAGE_SIZE,
       }),
     enabled: !!branchId,
     staleTime: 30_000,
-    placeholderData: (previous) => previous,
   });
-
-  const bookings = data?.content ?? [];
-  const totalElements = data?.totalElements ?? 0;
-  const totalPages = data?.totalPages ?? 0;
   const completed = bookings.filter((b) => b.status === "COMPLETED");
   const active = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
   const totalRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
@@ -310,8 +307,7 @@ export function BookingsHistoryPanel({
             <p className="text-sm text-[var(--text-secondary)]">
               {t("subtitle", {
                 count: totalElements,
-                page: totalPages === 0 ? 0 : page + 1,
-                totalPages: totalPages || 1,
+                loaded: bookings.length,
               })}
             </p>
           </div>
@@ -323,8 +319,7 @@ export function BookingsHistoryPanel({
         <p className="text-sm text-[var(--text-secondary)]">
           {t("subtitle", {
             count: totalElements,
-            page: totalPages === 0 ? 0 : page + 1,
-            totalPages: totalPages || 1,
+            loaded: bookings.length,
           })}
         </p>
       )}
@@ -336,7 +331,7 @@ export function BookingsHistoryPanel({
       </div>
 
       <Card padding={false}>
-        {isLoading && !data && (
+        {isLoading && bookings.length === 0 && (
           <p className="p-4 text-[var(--text-secondary)] text-sm">{tCommon("loading")}</p>
         )}
         {isError && (
@@ -466,16 +461,13 @@ export function BookingsHistoryPanel({
           </>
         ) : null}
 
-        <TablePagination
-          page={page}
-          size={size}
-          totalPages={totalPages}
+        <InfiniteScrollFooter
           totalElements={totalElements}
-          onPageChange={setPage}
-          onSizeChange={(next) => {
-            setSize(next);
-            setPage(0);
-          }}
+          loadedCount={bookings.length}
+          hasMore={hasMore}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoading={isLoading}
+          onLoadMore={() => void fetchNextPage()}
         />
       </Card>
 

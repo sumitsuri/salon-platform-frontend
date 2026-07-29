@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "ਬੁਕਿੰਗ",
-      "subtitle": "{count} ਵਿਜ਼ਿਟ · ਪੰਨਾ {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "ਵਾਕ-ਇਨ",
       "revenuePage": "ਕਮਾਈ (ਪੰਨਾ)",
       "completed": "ਪੂਰਾ",
@@ -485,6 +485,9 @@
       "perPage": "ਪ੍ਰਤੀ ਪੰਨਾ:",
       "previousPage": "ਪਿਛਲਾ ਪੰਨਾ",
       "nextPage": "ਅਗਲਾ ਪੰਨਾ",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "ਫਿਲਟਰ",
       "closePanel": "ਪੈਨਲ ਬੰਦ ਕਰੋ",
       "close": "ਬੰਦ ਕਰੋ"

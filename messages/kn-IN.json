@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "ಬುಕಿಂಗ್‌ಗಳು",
-      "subtitle": "{count} ಭೇಟಿಗಳು · ಪುಟ {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "ವಾಕ್-ಇನ್",
       "revenuePage": "ಆದಾಯ (ಪುಟ)",
       "completed": "ಪೂರ್ಣಗೊಂಡಿದೆ",
@@ -485,6 +485,9 @@
       "perPage": "ಪ್ರತಿ ಪುಟ:",
       "previousPage": "ಹಿಂದಿನ ಪುಟ",
       "nextPage": "ಮುಂದಿನ ಪುಟ",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "ಫಿಲ್ಟರ್",
       "closePanel": "ಪ್ಯಾನಲ್ ಮುಚ್ಚಿ",
       "close": "ಮುಚ್ಚಿ"

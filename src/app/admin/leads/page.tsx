@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, Lead } from "@/lib/api";
+import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import {
   PageHeader,
   Card,
@@ -13,7 +13,7 @@ import {
   btnSecondarySm,
   FilterableTable,
   MobileFilterPanel,
-  TablePagination,
+  InfiniteScrollFooter,
   PageLoader,
   SideSheet,
   DetailField,
@@ -44,8 +44,6 @@ export default function AdminLeadsPage() {
   const tCommon = useTranslations("common");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Lead | null>(null);
 
@@ -54,13 +52,17 @@ export default function AdminLeadsPage() {
     return () => clearTimeout(timer);
   }, [filters]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [debounced, size]);
-
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["enquiries", debounced, page, size],
-    queryFn: () =>
+  const {
+    items: leads,
+    totalElements,
+    hasMore,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfinitePagedList({
+    queryKey: ["enquiries", debounced],
+    queryFn: (page) =>
       api.getEnquiries({
         name: debounced.name || undefined,
         society: debounced.society || undefined,
@@ -70,13 +72,9 @@ export default function AdminLeadsPage() {
         dateFrom: debounced.date || undefined,
         dateTo: debounced.date || undefined,
         page,
-        size,
+        size: DEFAULT_PAGE_SIZE,
       }),
   });
-
-  const leads = data?.content ?? [];
-  const totalPages = data?.totalPages ?? 0;
-  const totalElements = data?.totalElements ?? 0;
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -222,13 +220,13 @@ export default function AdminLeadsPage() {
           </>
         )}
 
-        <TablePagination
-          page={page}
-          size={size}
-          totalPages={totalPages}
+        <InfiniteScrollFooter
           totalElements={totalElements}
-          onPageChange={setPage}
-          onSizeChange={setSize}
+          loadedCount={leads.length}
+          hasMore={hasMore}
+          isFetchingNextPage={isFetchingNextPage}
+          isLoading={isLoading}
+          onLoadMore={() => void fetchNextPage()}
         />
       </Card>
 

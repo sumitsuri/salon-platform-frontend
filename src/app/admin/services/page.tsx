@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   PageHeader,
   StatCard,
@@ -23,6 +24,7 @@ import {
   Card,
   SideSheet,
   AlertBanner,
+  DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -332,8 +334,6 @@ export default function AdminServicesPage() {
   const [period, setPeriod] = useState<Period>("days60");
   const [initialized, setInitialized] = useState(false);
   const [serviceFilter, setServiceFilter] = useState("");
-  const [servicePage, setServicePage] = useState(0);
-  const [serviceSize, setServiceSize] = useState(20);
 
   // Catalog editor
   const [editorOpen, setEditorOpen] = useState(false);
@@ -509,20 +509,35 @@ export default function AdminServicesPage() {
       ? selectedBranches
       : undefined;
 
-  const { data, isLoading, isFetching, isError, error: perfError } = useQuery({
-    queryKey: ["service-contribution", selectedBranches, period, serviceFilter, servicePage, serviceSize],
-    queryFn: () =>
+  const perfInfinite = useInfiniteQuery({
+    queryKey: ["service-contribution", selectedBranches, period, serviceFilter],
+    queryFn: ({ pageParam }) =>
       api.getServiceContribution({
         ...dateRange,
         branchIds: branchFilter,
         serviceName: serviceFilter || undefined,
-        page: servicePage,
-        size: serviceSize,
+        page: pageParam as number,
+        size: DEFAULT_PAGE_SIZE,
       }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const next = lastPage.page + 1;
+      return next < lastPage.totalPages ? next : undefined;
+    },
     enabled: tab === "performance" && initialized && selectedBranches.length > 0,
   });
 
-  const heroCount = Math.min(3, data?.services.length ?? 0);
+  const data = perfInfinite.data?.pages[0];
+  const perfServices = perfInfinite.data?.pages.flatMap((p) => p.services) ?? [];
+  const perfTotalElements = data?.totalElements ?? 0;
+  const perfHasMore = perfInfinite.hasNextPage ?? false;
+  const isLoading = perfInfinite.isLoading;
+  const isFetching = perfInfinite.isFetching;
+  const isError = perfInfinite.isError;
+  const perfError = perfInfinite.error;
+  const perfFetchingNext = perfInfinite.isFetchingNextPage;
+  const fetchNextPerfPage = perfInfinite.fetchNextPage;
+  const heroCount = Math.min(3, perfServices.length ?? 0);
 
   function categoryLabel(c: CatalogCategory) {
     if (!c.parentCategoryId) return c.name;
@@ -681,7 +696,7 @@ export default function AdminServicesPage() {
               ) : (
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                    <StatCard label={t("services")} value={data?.services.length ?? 0} icon={Scissors} accent="brand" />
+                    <StatCard label={t("services")} value={perfServices.length} icon={Scissors} accent="brand" />
                     <StatCard label={t("sold")} value={data?.totalServiceCount ?? 0} icon={Hash} accent="violet" />
                     <StatCard
                       label={t("serviceRevenue")}
@@ -695,7 +710,7 @@ export default function AdminServicesPage() {
                     <p className="text-sm text-[var(--text-secondary)]">
                       {t("topServicesHint", {
                         count: heroCount,
-                        percent: data.services
+                        percent: perfServices
                           .slice(0, heroCount)
                           .reduce((sum, s) => sum + s.revenueSharePct, 0)
                           .toFixed(1),
@@ -709,19 +724,18 @@ export default function AdminServicesPage() {
                     />
                   ) : (
                     <ServiceContributionPanel
-                      data={data}
+                      data={data ? { ...data, services: perfServices } : undefined}
+                      services={perfServices}
                       loading={isLoading || isFetching}
                       serviceFilter={serviceFilter}
-                      onServiceFilterChange={(v) => {
-                        setServiceFilter(v);
-                        setServicePage(0);
-                      }}
-                      page={servicePage}
-                      size={serviceSize}
-                      onPageChange={setServicePage}
-                      onSizeChange={(s) => {
-                        setServiceSize(s);
-                        setServicePage(0);
+                      onServiceFilterChange={setServiceFilter}
+                      infiniteScroll={{
+                        totalElements: perfTotalElements,
+                        loadedCount: perfServices.length,
+                        hasMore: perfHasMore,
+                        isFetchingNextPage: perfFetchingNext,
+                        isLoading,
+                        onLoadMore: () => void fetchNextPerfPage(),
                       }}
                     />
                   )}

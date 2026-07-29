@@ -17,7 +17,7 @@ import {
   EmptyState,
   PageHeader,
   FilterableTable,
-  TablePagination,
+  InfiniteScrollFooter,
   DEFAULT_PAGE_SIZE,
   SideSheet,
   inputClass,
@@ -25,6 +25,8 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 
 interface Props {
   data?: AttendanceData;
@@ -47,16 +49,10 @@ export function AttendanceDashboardSection({
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const locale = useLocale();
-  const [staffPage, setStaffPage] = useState(0);
-  const [staffSize, setStaffSize] = useState(DEFAULT_PAGE_SIZE);
   const [logFilters, setLogFilters] = useState({ date: "", staffId: "", branchId: "", status: "", compliance: "" });
   const [logDebounced, setLogDebounced] = useState(logFilters);
-  const [logPage, setLogPage] = useState(0);
-  const [logSize, setLogSize] = useState(DEFAULT_PAGE_SIZE);
   const [leaveFilters, setLeaveFilters] = useState({ staffId: "", branchId: "", status: "" });
   const [leaveDebounced, setLeaveDebounced] = useState(leaveFilters);
-  const [leavePage, setLeavePage] = useState(0);
-  const [leaveSize, setLeaveSize] = useState(DEFAULT_PAGE_SIZE);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [incidentType, setIncidentType] = useState<"NOTE" | "PENALTY" | "IMPROVEMENT">("NOTE");
   const [incidentNote, setIncidentNote] = useState("");
@@ -90,14 +86,6 @@ export function AttendanceDashboardSection({
     return () => clearTimeout(timer);
   }, [leaveFilters]);
 
-  useEffect(() => {
-    setLogPage(0);
-  }, [logDebounced, logSize, startDate, endDate]);
-
-  useEffect(() => {
-    setLeavePage(0);
-  }, [leaveDebounced, leaveSize, startDate, endDate]);
-
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
     queryFn: () => api.getBranches(),
@@ -120,24 +108,38 @@ export function AttendanceDashboardSection({
     [branches]
   );
 
-  const { data: logData, isLoading: logLoading } = useQuery({
-    queryKey: ["attendance-log", startDate, endDate, logDebounced, logPage, logSize],
-    queryFn: () =>
+  const {
+    items: logRowsRaw,
+    totalElements: logTotalElements,
+    hasMore: logHasMore,
+    isLoading: logLoading,
+    isFetchingNextPage: logFetchingNext,
+    fetchNextPage: fetchNextLogPage,
+  } = useInfinitePagedList({
+    queryKey: ["attendance-log", startDate, endDate, logDebounced],
+    queryFn: (page) =>
       api.getAttendance({
         startDate: logDebounced.date || startDate,
         endDate: logDebounced.date || endDate,
         staffId: logDebounced.staffId || undefined,
         branchId: logDebounced.branchId || undefined,
         status: logDebounced.status || undefined,
-        page: logPage,
-        size: logSize,
+        page,
+        size: DEFAULT_PAGE_SIZE,
       }),
     enabled: showLeaveAndLogs && !!startDate && !!endDate,
   });
 
-  const { data: leaveData, isLoading: leaveLoading } = useQuery({
-    queryKey: ["leave-log", startDate, endDate, leaveDebounced, leavePage, leaveSize],
-    queryFn: () => {
+  const {
+    items: leaveRecords,
+    totalElements: leaveTotalElements,
+    hasMore: leaveHasMore,
+    isLoading: leaveLoading,
+    isFetchingNextPage: leaveFetchingNext,
+    fetchNextPage: fetchNextLeavePage,
+  } = useInfinitePagedList({
+    queryKey: ["leave-log", startDate, endDate, leaveDebounced, employees, branches],
+    queryFn: (page) => {
       const staff = leaveDebounced.staffId
         ? employees.find((e) => e.id === leaveDebounced.staffId)?.name
         : undefined;
@@ -150,8 +152,8 @@ export function AttendanceDashboardSection({
         staff,
         branch,
         status: leaveDebounced.status || undefined,
-        page: leavePage,
-        size: leaveSize,
+        page,
+        size: DEFAULT_PAGE_SIZE,
       });
     },
     enabled: showLeaveAndLogs && !!startDate && !!endDate,
@@ -179,8 +181,13 @@ export function AttendanceDashboardSection({
   );
 
   const staffSummaries = data?.staffSummaries ?? [];
-  const staffTotalPages = Math.ceil(staffSummaries.length / staffSize) || 0;
-  const staffSlice = staffSummaries.slice(staffPage * staffSize, staffPage * staffSize + staffSize);
+  const {
+    visible: staffSlice,
+    totalElements: staffTotalElements,
+    loadedCount: staffLoadedCount,
+    hasMore: staffHasMore,
+    loadMore: loadMoreStaff,
+  } = useClientInfiniteList(staffSummaries);
   const selectedStaff = staffSummaries.find((s) => s.staffId === selectedStaffId);
 
   const { data: incidentData, isLoading: incidentsLoading } = useQuery({
@@ -210,11 +217,10 @@ export function AttendanceDashboardSection({
   }, [selectedStaffId, data?.recentRecords]);
 
   const logRecords = useMemo(() => {
-    const rows = logData?.content ?? [];
-    if (logFilters.compliance === "late") return rows.filter((r) => r.late);
-    if (logFilters.compliance === "early") return rows.filter((r) => r.earlyExit);
-    return rows;
-  }, [logData?.content, logFilters.compliance]);
+    if (logFilters.compliance === "late") return logRowsRaw.filter((r) => r.late);
+    if (logFilters.compliance === "early") return logRowsRaw.filter((r) => r.earlyExit);
+    return logRowsRaw;
+  }, [logRowsRaw, logFilters.compliance]);
 
   if (loading) {
     return (
@@ -225,8 +231,6 @@ export function AttendanceDashboardSection({
   }
 
   if (!data) return null;
-
-  const leaveRecords = leaveData?.content ?? [];
 
   return (
     <section className="space-y-4">
@@ -321,16 +325,12 @@ export function AttendanceDashboardSection({
             </button>
           ))}
         </div>
-        <TablePagination
-          page={staffPage}
-          size={staffSize}
-          totalPages={staffTotalPages}
-          totalElements={staffSummaries.length}
-          onPageChange={setStaffPage}
-          onSizeChange={(s) => {
-            setStaffSize(s);
-            setStaffPage(0);
-          }}
+        <InfiniteScrollFooter
+          totalElements={staffTotalElements}
+          loadedCount={staffLoadedCount}
+          hasMore={staffHasMore}
+          isFetchingNextPage={false}
+          onLoadMore={loadMoreStaff}
         />
       </Card>
 
@@ -390,16 +390,13 @@ export function AttendanceDashboardSection({
                 ))}
               </div>
             )}
-            <TablePagination
-              page={leavePage}
-              size={leaveSize}
-              totalPages={leaveData?.totalPages ?? 0}
-              totalElements={leaveData?.totalElements ?? 0}
-              onPageChange={setLeavePage}
-              onSizeChange={(s) => {
-                setLeaveSize(s);
-                setLeavePage(0);
-              }}
+            <InfiniteScrollFooter
+              totalElements={leaveTotalElements}
+              loadedCount={leaveRecords.length}
+              hasMore={leaveHasMore}
+              isFetchingNextPage={leaveFetchingNext}
+              isLoading={leaveLoading}
+              onLoadMore={() => void fetchNextLeavePage()}
             />
           </Card>
 
@@ -550,16 +547,13 @@ export function AttendanceDashboardSection({
                 </div>
               </>
             )}
-            <TablePagination
-              page={logPage}
-              size={logSize}
-              totalPages={logData?.totalPages ?? 0}
-              totalElements={logData?.totalElements ?? 0}
-              onPageChange={setLogPage}
-              onSizeChange={(s) => {
-                setLogSize(s);
-                setLogPage(0);
-              }}
+            <InfiniteScrollFooter
+              totalElements={logTotalElements}
+              loadedCount={logRecords.length}
+              hasMore={logHasMore}
+              isFetchingNextPage={logFetchingNext}
+              isLoading={logLoading}
+              onLoadMore={() => void fetchNextLogPage()}
             />
           </Card>
         </>

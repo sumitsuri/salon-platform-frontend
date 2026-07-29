@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "முன்பதிவுகள்",
-      "subtitle": "{count} வருகைகள் · பக்கம் {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "வாக்-இன்",
       "revenuePage": "வருவாய் (பக்கம்)",
       "completed": "முடிந்தது",
@@ -485,6 +485,9 @@
       "perPage": "ஒரு பக்கம்:",
       "previousPage": "முந்தைய பக்கம்",
       "nextPage": "அடுத்த பக்கம்",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "வடிகட்டி",
       "closePanel": "பேனலை மூடு",
       "close": "மூடு"

@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "बुकिंग",
-      "subtitle": "{count} विज़िट · पृष्ठ {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "वॉक-इन",
       "revenuePage": "कमाई (पृष्ठ)",
       "completed": "पूर्ण",
@@ -485,6 +485,9 @@
       "perPage": "प्रति पृष्ठ:",
       "previousPage": "पिछला पृष्ठ",
       "nextPage": "अगला पृष्ठ",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "फ़िल्टर",
       "closePanel": "पैनल बंद करें",
       "close": "बंद करें"

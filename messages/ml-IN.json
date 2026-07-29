@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "ബുക്കിംഗുകൾ",
-      "subtitle": "{count} സന്ദർശനങ്ങൾ · പേജ് {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "Walk-in",
       "revenuePage": "വരുമാനം (പേജ്)",
       "completed": "പൂർത്തിയായി",
@@ -485,6 +485,9 @@
       "perPage": "ഓരോ പേജിലും:",
       "previousPage": "മുൻ പേജ്",
       "nextPage": "അടുത്ത പേജ്",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "ഫിൽട്ടർ",
       "closePanel": "പാനൽ അടയ്ക്കുക",
       "close": "അടയ്ക്കുക"

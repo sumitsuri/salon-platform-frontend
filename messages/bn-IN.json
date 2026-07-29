@@ -227,7 +227,7 @@
     },
     "bookings": {
       "title": "বুকিং",
-      "subtitle": "{count} ভিজিট · পৃষ্ঠা {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "ওয়াক-ইন",
       "revenuePage": "আয় (পৃষ্ঠা)",
       "completed": "সম্পন্ন",
@@ -485,6 +485,9 @@
       "perPage": "প্রতি পৃষ্ঠা:",
       "previousPage": "আগের পৃষ্ঠা",
       "nextPage": "পরের পৃষ্ঠা",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "ফিল্টার",
       "closePanel": "প্যানেল বন্ধ করুন",
       "close": "বন্ধ"

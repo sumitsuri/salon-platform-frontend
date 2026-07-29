@@ -312,7 +312,7 @@
     },
     "bookings": {
       "title": "Bookings",
-      "subtitle": "{count} visits · page {page}/{totalPages}",
+      "subtitle": "{count} visits · {loaded} loaded",
       "walkIn": "Walk-in",
       "revenuePage": "Revenue (page)",
       "completed": "Completed",
@@ -513,6 +513,9 @@
       "perPage": "Per page:",
       "previousPage": "Previous page",
       "nextPage": "Next page",
+      "loadedRows": "Showing {loaded} of {total}",
+      "loadingMore": "Loading more…",
+      "endOfList": "All rows loaded",
       "filter": "Filter",
       "closePanel": "Close panel",
       "close": "Close"
@@ -1307,6 +1310,7 @@
       "category": "Category / sub-category",
       "selectCategory": "Select category",
       "duration": "Duration (min)",
+      "gstRate": "GST %",
       "description": "Description",
       "branchAvailability": "Branch availability & price (₹)",
       "coverageLabel": "Location coverage",

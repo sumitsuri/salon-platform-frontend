@@ -5,17 +5,22 @@ import { useTranslations } from "next-intl";
 import { TrendingDown, TrendingUp, Scissors } from "lucide-react";
 import { ServiceContributionResponse } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Card, EmptyState, FilterableTable, TablePagination, DEFAULT_PAGE_SIZE } from "@/components/ui";
+import { Card, EmptyState, FilterableTable, InfiniteScrollFooter, DEFAULT_PAGE_SIZE } from "@/components/ui";
 
 interface ServiceContributionPanelProps {
   data?: ServiceContributionResponse;
   loading?: boolean;
   serviceFilter?: string;
   onServiceFilterChange?: (value: string) => void;
-  page?: number;
-  size?: number;
-  onPageChange?: (page: number) => void;
-  onSizeChange?: (size: number) => void;
+  services?: ServiceContributionResponse["services"];
+  infiniteScroll?: {
+    totalElements: number;
+    loadedCount: number;
+    hasMore: boolean;
+    isFetchingNextPage: boolean;
+    isLoading?: boolean;
+    onLoadMore: () => void;
+  };
 }
 
 function heroIndices(services: ServiceContributionResponse["services"]) {
@@ -40,10 +45,8 @@ export function ServiceContributionPanel({
   loading,
   serviceFilter = "",
   onServiceFilterChange,
-  page = 0,
-  size = DEFAULT_PAGE_SIZE,
-  onPageChange,
-  onSizeChange,
+  services: servicesOverride,
+  infiniteScroll,
 }: ServiceContributionPanelProps) {
   const t = useTranslations("components.serviceContributionPanel");
   const [localFilter, setLocalFilter] = useState(serviceFilter);
@@ -70,10 +73,10 @@ export function ServiceContributionPanel({
     );
   }
 
-  const heroes = heroIndices(data.services);
-  const laggards = laggardIndices(data.services);
-  const totalPages = data.totalPages ?? 0;
-  const totalElements = data.totalElements ?? data.services.length;
+  const services = servicesOverride ?? data.services;
+  const heroes = heroIndices(services);
+  const laggards = laggardIndices(services);
+  const totalElements = infiniteScroll?.totalElements ?? data.totalElements ?? services.length;
 
   const columns = [
     {
@@ -117,13 +120,13 @@ export function ServiceContributionPanel({
           </div>
         </div>
 
-        {data.services.length === 0 ? (
+        {services.length === 0 ? (
           <EmptyState title={t("noMatchTitle")} description={t("noMatchDesc")} />
         ) : (
           <>
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
-                {data.services.map((s, i) => (
+                {services.map((s, i) => (
                   <tr key={s.serviceName} className="border-t border-[var(--border)]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -162,7 +165,7 @@ export function ServiceContributionPanel({
             </div>
 
             <div className="md:hidden divide-y divide-[var(--border)]">
-              {data.services.map((s, i) => (
+              {services.map((s, i) => (
                 <div key={s.serviceName} className="px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -189,14 +192,14 @@ export function ServiceContributionPanel({
           </>
         )}
 
-        {onPageChange && onSizeChange && (
-          <TablePagination
-            page={page}
-            size={size}
-            totalPages={totalPages}
-            totalElements={totalElements}
-            onPageChange={onPageChange}
-            onSizeChange={onSizeChange}
+        {infiniteScroll && (
+          <InfiniteScrollFooter
+            totalElements={infiniteScroll.totalElements}
+            loadedCount={infiniteScroll.loadedCount}
+            hasMore={infiniteScroll.hasMore}
+            isFetchingNextPage={infiniteScroll.isFetchingNextPage}
+            isLoading={infiniteScroll.isLoading}
+            onLoadMore={infiniteScroll.onLoadMore}
           />
         )}
       </Card>

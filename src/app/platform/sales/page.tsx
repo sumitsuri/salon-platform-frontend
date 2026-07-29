@@ -36,17 +36,9 @@ import {
   invalidateSalesLeadLists,
   salesQueryKeys,
 } from "@/modules/sales/lib/query-keys";
-import {
-  PageHeader,
-  Card,
-  AlertBanner,
-  SideSheet,
-  inputClass,
-  selectClass,
-  btnPrimary,
-  btnSecondary,
-  EmptyState,
-} from "@/components/ui";
+import { useAutoCompleteInfiniteList } from "@/lib/use-auto-complete-infinite-list";
+import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
+import { DEFAULT_PAGE_SIZE, InfiniteScrollFooter, PageHeader, Card, AlertBanner, SideSheet, inputClass, selectClass, btnPrimary, btnSecondary, EmptyState } from "@/components/ui";
 import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -99,14 +91,27 @@ export default function SalesPipelinePage() {
     [filters, dateRange, repIdsForQuery]
   );
 
-  const { data: boardData, isLoading: boardLoading } = useQuery({
-    queryKey: salesQueryKeys.leadsBoard(boardParams),
-    queryFn: () => salesApi.listLeads(boardParams),
+  const {
+    items: boardLeads,
+    isLoading: boardLoading,
+    isFetchingNextPage: boardFetchingNext,
+  } = useAutoCompleteInfiniteList<SalesLead>({
+    queryKey: [...salesQueryKeys.leadsBoard(boardParams)],
+    queryFn: (page) => salesApi.listLeads(buildLeadListParams(EMPTY_FILTERS, dateRange, repIdsForQuery, page)),
+    pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  const { data: listData, isLoading: listLoading } = useQuery({
-    queryKey: salesQueryKeys.leadsList(listParams),
-    queryFn: () => salesApi.listLeads(listParams),
+  const {
+    items: listLeads,
+    totalElements: listTotalElements,
+    hasMore: listHasMore,
+    isLoading: listLoading,
+    isFetchingNextPage: listFetchingNext,
+    fetchNextPage: fetchNextListPage,
+  } = useInfinitePagedList<SalesLead>({
+    queryKey: [...salesQueryKeys.leadsList(listParams)],
+    queryFn: (page) => salesApi.listLeads(buildLeadListParams(filters, dateRange, repIdsForQuery, page)),
+    pageSize: DEFAULT_PAGE_SIZE,
   });
 
   const { data: localities = [] } = useQuery({
@@ -135,18 +140,18 @@ export default function SalesPipelinePage() {
       }),
   });
 
-  const boardLeads = boardData?.content ?? [];
-  const listLeads = listData?.content ?? [];
+  const boardLeadsForStage = boardLeads;
+  const listLeadsForView = listLeads;
 
   const byStage = useMemo(() => {
     const map: Record<LeadStage, SalesLead[]> = Object.fromEntries(
       PIPELINE_STAGES.map((s) => [s, [] as SalesLead[]])
     ) as Record<LeadStage, SalesLead[]>;
-    for (const lead of boardLeads) {
+    for (const lead of boardLeadsForStage) {
       if (map[lead.stage]) map[lead.stage].push(lead);
     }
     return map;
-  }, [boardLeads]);
+  }, [boardLeadsForStage]);
 
   const resetForm = () => {
     setForm({
@@ -359,6 +364,12 @@ export default function SalesPipelinePage() {
         isLoading={listLoading}
         periodLabel={periodLabel}
         boardLeadCount={boardLeads.length}
+        infiniteScroll={{
+          totalElements: listTotalElements,
+          hasMore: listHasMore,
+          isFetchingNextPage: listFetchingNext,
+          onLoadMore: () => void fetchNextListPage(),
+        }}
       />
 
       <SideSheet

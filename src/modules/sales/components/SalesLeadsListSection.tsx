@@ -7,7 +7,7 @@ import {
   hasActiveFilters,
 } from "@/modules/sales/components/SalesLeadFilters";
 import { SalesLeadsTable } from "@/modules/sales/components/SalesLeadsTable";
-import { Card } from "@/components/ui";
+import { Card, InfiniteScrollFooter } from "@/components/ui";
 
 interface SalesLeadsListSectionProps {
   leads: SalesLead[];
@@ -22,6 +22,12 @@ interface SalesLeadsListSectionProps {
   emptyMessage?: string;
   title?: string;
   subtitle?: string;
+  infiniteScroll?: {
+    totalElements: number;
+    hasMore: boolean;
+    isFetchingNextPage: boolean;
+    onLoadMore: () => void;
+  };
 }
 
 export function SalesLeadsListSection({
@@ -36,6 +42,7 @@ export function SalesLeadsListSection({
   emptyMessage,
   title = "List view",
   subtitle,
+  infiniteScroll,
 }: SalesLeadsListSectionProps) {
   const filterIgnore = hideSourceFilter ? (["source"] as const) : [];
   const filteredEmpty =
@@ -76,17 +83,29 @@ export function SalesLeadsListSection({
       {isLoading ? (
         <Card className="p-8 text-center text-sm text-[var(--ink-muted)]">Loading list…</Card>
       ) : (
-        <SalesLeadsTable
-          leads={leads}
-          emptyMessage={
-            emptyMessage ??
-            (hasActiveFilters(filters, [...filterIgnore])
-              ? boardHasMore
-                ? "No leads match your filters — clear filters to see all leads in this period"
-                : "No leads match your filters for this period"
-              : "No leads created in this date range")
-          }
-        />
+        <>
+          <SalesLeadsTable
+            leads={leads}
+            emptyMessage={
+              emptyMessage ??
+              (hasActiveFilters(filters, [...filterIgnore])
+                ? boardHasMore
+                  ? "No leads match your filters — clear filters to see all leads in this period"
+                  : "No leads match your filters for this period"
+                : "No leads created in this date range")
+            }
+          />
+          {infiniteScroll && leads.length > 0 && (
+            <InfiniteScrollFooter
+              totalElements={infiniteScroll.totalElements}
+              loadedCount={leads.length}
+              hasMore={infiniteScroll.hasMore}
+              isFetchingNextPage={infiniteScroll.isFetchingNextPage}
+              isLoading={isLoading}
+              onLoadMore={infiniteScroll.onLoadMore}
+            />
+          )}
+        </>
       )}
     </section>
   );

@@ -5,6 +5,7 @@ import { LucideIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useInfiniteScrollTrigger } from "@/lib/use-infinite-scroll-trigger";
 import { useEffect } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
@@ -581,6 +582,48 @@ export function TablePagination({
         >
           <ChevronRight className="w-4 h-4" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+export function InfiniteScrollFooter({
+  totalElements,
+  loadedCount,
+  hasMore,
+  isFetchingNextPage,
+  isLoading,
+  onLoadMore,
+}: {
+  totalElements: number;
+  loadedCount: number;
+  hasMore: boolean;
+  isFetchingNextPage: boolean;
+  isLoading?: boolean;
+  onLoadMore: () => void;
+}) {
+  const t = useTranslations("components.ui");
+  const sentinelRef = useInfiniteScrollTrigger(onLoadMore, !hasMore || isFetchingNextPage || !!isLoading);
+
+  return (
+    <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-muted)]/50">
+      <div className="flex flex-col items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+        <span data-testid="infinite-list-count">
+          {totalElements > 0
+            ? t("loadedRows", { loaded: loadedCount, total: totalElements })
+            : t("rows", { count: 0 })}
+        </span>
+        {isFetchingNextPage && (
+          <span data-testid="infinite-list-loading" className="text-xs text-[var(--text-tertiary)]">
+            {t("loadingMore")}
+          </span>
+        )}
+        {!hasMore && loadedCount > 0 && !isLoading && (
+          <span data-testid="infinite-list-end" className="text-xs text-[var(--text-tertiary)]">
+            {t("endOfList")}
+          </span>
+        )}
+        <div ref={sentinelRef} data-testid="infinite-scroll-sentinel" className="h-1 w-full shrink-0" aria-hidden />
       </div>
     </div>
   );

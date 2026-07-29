@@ -31,7 +31,7 @@ export function filtersToQueryParams(
   filters: SalesLeadFilterState,
   dateRange?: { from: string; to: string }
 ): Record<string, string | number> {
-  const params: Record<string, string | number> = { page: 0, size: 500 };
+  const params: Record<string, string | number> = { page: 0, size: 20 };
   if (filters.stage) params.stage = filters.stage;
   if (filters.localityId) params.localityId = filters.localityId;
   if (filters.source) params.source = filters.source;

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Scissors, Hash, IndianRupee } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
-import { PageHeader, StatCard, selectClass, EmptyState } from "@/components/ui";
+import { PageHeader, StatCard, selectClass, EmptyState, DEFAULT_PAGE_SIZE } from "@/components/ui";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
 import { formatCurrency } from "@/lib/utils";
@@ -21,23 +21,36 @@ export default function ManagerServicesPage() {
   const branchId = user?.branchId || "";
   const [period, setPeriod] = useState<InsightPeriod>("days60");
   const [serviceFilter, setServiceFilter] = useState("");
-  const [servicePage, setServicePage] = useState(0);
-  const [serviceSize, setServiceSize] = useState(20);
   const dateRange = insightPeriodToRange(period);
 
-  const { data, isLoading, isFetching, isError, error } = useQuery({
-    queryKey: ["service-contribution", branchId, period, serviceFilter, servicePage, serviceSize],
-    queryFn: () =>
+  const perfInfinite = useInfiniteQuery({
+    queryKey: ["service-contribution", branchId, period, serviceFilter],
+    queryFn: ({ pageParam }) =>
       api.getServiceContribution({
         ...dateRange,
         serviceName: serviceFilter || undefined,
-        page: servicePage,
-        size: serviceSize,
+        page: pageParam as number,
+        size: DEFAULT_PAGE_SIZE,
       }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const next = lastPage.page + 1;
+      return next < lastPage.totalPages ? next : undefined;
+    },
     enabled: !!branchId,
   });
 
-  const heroCount = Math.min(3, data?.services.length ?? 0);
+  const summary = perfInfinite.data?.pages[0];
+  const services = perfInfinite.data?.pages.flatMap((p) => p.services) ?? [];
+  const totalElements = summary?.totalElements ?? 0;
+  const hasMore = perfInfinite.hasNextPage ?? false;
+  const isLoading = perfInfinite.isLoading;
+  const isFetching = perfInfinite.isFetching;
+  const isError = perfInfinite.isError;
+  const error = perfInfinite.error;
+  const isFetchingNextPage = perfInfinite.isFetchingNextPage;
+  const fetchNextPage = perfInfinite.fetchNextPage;
+  const heroCount = Math.min(3, services.length ?? 0);
 
   return (
     <div className="space-y-4">
@@ -68,25 +81,25 @@ export default function ManagerServicesPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard
           label={t("services")}
-          value={data?.services.length ?? 0}
+          value={services.length}
           icon={Scissors}
           accent="brand"
         />
         <StatCard
           label={t("sold")}
-          value={data?.totalServiceCount ?? 0}
+          value={summary?.totalServiceCount ?? 0}
           icon={Hash}
           accent="violet"
         />
         <StatCard
           label={t("revenue")}
-          value={data ? formatCurrency(data.serviceRevenue) : "—"}
+          value={summary ? formatCurrency(summary.serviceRevenue) : "—"}
           icon={IndianRupee}
           accent="emerald"
         />
       </div>
 
-      {heroCount > 0 && data && (
+      {heroCount > 0 && summary && (
         <p className="text-sm text-[var(--text-secondary)]">
           <span className="font-medium text-emerald-600 dark:text-emerald-400">
             {t("heroServices", { count: heroCount })}
@@ -101,19 +114,18 @@ export default function ManagerServicesPage() {
         />
       ) : (
         <ServiceContributionPanel
-          data={data}
+          data={summary ? { ...summary, services } : undefined}
+          services={services}
           loading={isLoading}
           serviceFilter={serviceFilter}
-          onServiceFilterChange={(v) => {
-            setServiceFilter(v);
-            setServicePage(0);
-          }}
-          page={servicePage}
-          size={serviceSize}
-          onPageChange={setServicePage}
-          onSizeChange={(s) => {
-            setServiceSize(s);
-            setServicePage(0);
+          onServiceFilterChange={setServiceFilter}
+          infiniteScroll={{
+            totalElements,
+            loadedCount: services.length,
+            hasMore,
+            isFetchingNextPage,
+            isLoading,
+            onLoadMore: () => void fetchNextPage(),
           }}
         />
       )}
