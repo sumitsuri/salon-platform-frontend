@@ -57,7 +57,7 @@ function ProgressBar({
         <div
           className={cn(
             "h-full rounded-full transition-all",
-            pct >= 100 ? "bg-emerald-500" : pct >= 70 ? "bg-violet-500" : "bg-amber-500"
+            pct >= 100 ? "bg-emerald-500" : pct >= 70 ? "bg-[var(--brand-light)]0" : "bg-amber-500"
           )}
           style={{ width: `${pct}%` }}
         />
@@ -141,7 +141,7 @@ function RepProgressPage() {
           label="Leads added"
           value={perf?.leadsAdded ?? 0}
           icon={Users}
-          accent="violet"
+          accent="brand"
           trend={periodLabel}
         />
         <StatCard label="Visits" value={perf?.visits ?? 0} icon={Target} />
@@ -230,7 +230,7 @@ function RepProgressPage() {
         </div>
         <Link
           href={salesPathWithSearchParams("/platform/sales", searchParams)}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-violet-600 hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-text)] hover:underline"
         >
           Go to pipeline <ArrowRight className="h-4 w-4" />
         </Link>
@@ -240,15 +240,15 @@ function RepProgressPage() {
         <h3 className="mb-2 font-semibold">How to hit your targets</h3>
         <ul className="space-y-2 text-sm text-[var(--ink-muted)]">
           <li className="flex gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-text)]" />
             Add every shop you visit — even if they&apos;re not ready yet
           </li>
           <li className="flex gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-text)]" />
             Log a visit or call before moving to the next stage
           </li>
           <li className="flex gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-text)]" />
             Open each lead — the app shows exactly what to do next
           </li>
         </ul>

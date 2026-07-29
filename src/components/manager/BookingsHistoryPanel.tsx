@@ -2,24 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Download, FileText, Filter } from "lucide-react";
+import { UserPlus, IndianRupee, Clock, CheckCircle2, Download, FileText, Receipt } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { useAuthStore } from "@/lib/auth-store";
+import { formatCurrency, cn } from "@/lib/utils";
+import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import {
-  PageHeader,
   Card,
   StatusBadge,
   EmptyState,
   btnPrimary,
-  btnSecondarySm,
+  btnSecondary,
+  StatCard,
   FilterableTable,
-  MobileFilterPanel,
   TablePagination,
   AvatarInitial,
   SideSheet,
   AlertBanner,
-  PageLoader,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 
@@ -27,7 +28,6 @@ const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLE
 
 type Filters = {
   customer: string;
-  branch: string;
   service: string;
   stylist: string;
   amount: string;
@@ -37,7 +37,6 @@ type Filters = {
 
 const emptyFilters: Filters = {
   customer: "",
-  branch: "",
   service: "",
   stylist: "",
   amount: "",
@@ -53,17 +52,28 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
   return { minAmount: num, maxAmount: num };
 }
 
-export default function AdminBookingsPage() {
-  const t = useTranslations("admin.bookings");
-  const tMgr = useTranslations("manager.bookings");
-  const tAdmin = useTranslations("admin.common");
+function isOpenStatus(status: string) {
+  return status === "IN_PROGRESS" || status === "READY_FOR_BILLING" || status === "DRAFT";
+}
+
+export function BookingsHistoryPanel({
+  embedded = false,
+  onNewVisit,
+  wizardBaseHref = "/manager/walk-in",
+}: {
+  embedded?: boolean;
+  onNewVisit?: () => void;
+  wizardBaseHref?: string;
+}) {
+  const t = useTranslations("manager.bookings");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
+  const branchId = useAuthStore((s) => s.user?.branchId) || "";
+  const localeKit = getTenantLocaleKit();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
-  const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
@@ -77,7 +87,7 @@ export default function AdminBookingsPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, size]);
+  }, [debounced, size, branchId]);
 
   useEffect(() => {
     if (!selected || selected.status !== "COMPLETED") {
@@ -98,7 +108,7 @@ export default function AdminBookingsPage() {
       .catch((e: Error) => {
         if (!cancelled) {
           setInvoice(null);
-          setInvoiceError(e.message || tMgr("invoiceUnavailable"));
+          setInvoiceError(e.message || t("invoiceUnavailable"));
         }
       })
       .finally(() => {
@@ -107,16 +117,16 @@ export default function AdminBookingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selected, tMgr]);
+  }, [selected, t]);
 
   const amountFilter = parseAmount(debounced.amount);
 
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["all-bookings", debounced, page, size],
+  const { data, isLoading } = useQuery({
+    queryKey: ["bookings", branchId, debounced, page, size],
     queryFn: () =>
       api.getBookings({
+        branchId,
         customer: debounced.customer || undefined,
-        branch: debounced.branch || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
@@ -127,11 +137,15 @@ export default function AdminBookingsPage() {
         page,
         size,
       }),
+    enabled: !!branchId,
   });
 
   const bookings = data?.content ?? [];
-  const totalPages = data?.totalPages ?? 0;
   const totalElements = data?.totalElements ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const completed = bookings.filter((b) => b.status === "COMPLETED");
+  const active = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
+  const totalRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -150,68 +164,69 @@ export default function AdminBookingsPage() {
     }
   }
 
-  const hasFilters = Object.values(filters).some((v) => v !== "");
+  const newVisitControl = onNewVisit ? (
+    <button type="button" onClick={onNewVisit} className={`${btnPrimary} py-2.5 px-4 min-h-11`}>
+      <UserPlus className="w-4 h-4" />
+      {t("newWalkIn")}
+    </button>
+  ) : (
+    <Link href={wizardBaseHref} className={`${btnPrimary} py-2.5 px-4 min-h-11`}>
+      <UserPlus className="w-4 h-4" />
+      {t("newWalkIn")}
+    </Link>
+  );
 
   const columns = [
     {
-      label: t("customer"),
+      label: t("columns.customer"),
       filter: {
         type: "text" as const,
-        placeholder: t("nameOrPhone"),
+        placeholder: t("filters.namePhone"),
         value: filters.customer,
         onChange: (v: string) => updateFilter("customer", v),
       },
     },
     {
-      label: tCommon("branch"),
+      label: t("columns.services"),
       filter: {
         type: "text" as const,
-        placeholder: tCommon("branch"),
-        value: filters.branch,
-        onChange: (v: string) => updateFilter("branch", v),
-      },
-    },
-    {
-      label: tMgr("columns.services"),
-      filter: {
-        type: "text" as const,
-        placeholder: tMgr("filters.service"),
+        placeholder: t("filters.service"),
         value: filters.service,
         onChange: (v: string) => updateFilter("service", v),
       },
     },
     {
-      label: tMgr("columns.stylist"),
+      label: t("columns.stylist"),
       filter: {
         type: "text" as const,
-        placeholder: tMgr("filters.stylist"),
+        placeholder: t("filters.stylist"),
         value: filters.stylist,
         onChange: (v: string) => updateFilter("stylist", v),
       },
     },
     {
-      label: tCommon("amount"),
+      label: t("columns.amount"),
       filter: {
         type: "text" as const,
-        placeholder: tCommon("amount"),
+        placeholder: t("filters.amount"),
         value: filters.amount,
         onChange: (v: string) => updateFilter("amount", v),
       },
     },
     {
-      label: tCommon("status"),
+      label: t("columns.status"),
       filter: {
         type: "select" as const,
         value: filters.status,
         onChange: (v: string) => updateFilter("status", v),
         options: STATUSES.map((s) => ({
           value: s,
-          label: s ? tStatus(s as "COMPLETED") : tCommon("all"),
+          label: s ? tStatus(s as "COMPLETED") : t("filters.all"),
         })),
       },
     },
     {
-      label: tCommon("date"),
+      label: t("columns.time"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -234,7 +249,7 @@ export default function AdminBookingsPage() {
         }
       : booking.billPreview;
     if (!preview) {
-      return <p className="text-sm text-[var(--text-secondary)]">{tMgr("noBillingYet")}</p>;
+      return <p className="text-sm text-[var(--text-secondary)]">{t("noBillingYet")}</p>;
     }
     return (
       <div className="space-y-2 text-sm">
@@ -244,7 +259,7 @@ export default function AdminBookingsPage() {
         </div>
         {(preview.membershipDiscountAmount ?? 0) > 0 && (
           <div className="flex justify-between text-emerald-600">
-            <span>{preview.membershipLabel || tMgr("membershipDiscount")}</span>
+            <span>{preview.membershipLabel || t("membershipDiscount")}</span>
             <span>-{formatCurrency(preview.membershipDiscountAmount ?? 0)}</span>
           </div>
         )}
@@ -270,86 +285,59 @@ export default function AdminBookingsPage() {
     );
   }
 
+  function visitActionHref(b: Booking) {
+    return `${wizardBaseHref}?bookingId=${b.id}`;
+  }
+
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title={t("title")}
-        subtitle={`${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
-        action={
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className={`${btnSecondarySm} lg:hidden`}
-            aria-pressed={showFilters}
-            aria-label="Filters"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-        }
-      />
-
-      <MobileFilterPanel columns={columns} open={showFilters} />
-
-      {hasFilters && (
-        <button
-          type="button"
-          onClick={() => setFilters(emptyFilters)}
-          className="text-sm font-semibold text-[var(--brand-text)]"
-        >
-          {tAdmin("clearFilters")}
-        </button>
+    <div className={cn("space-y-4", embedded && "space-y-3")}>
+      {!embedded && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm text-[var(--text-secondary)]">
+              {t("subtitle", {
+                count: totalElements,
+                page: totalPages === 0 ? 0 : page + 1,
+                totalPages: totalPages || 1,
+              })}
+            </p>
+          </div>
+          <div className="hidden sm:block">{newVisitControl}</div>
+        </div>
       )}
 
+      {embedded && (
+        <p className="text-sm text-[var(--text-secondary)]">
+          {t("subtitle", {
+            count: totalElements,
+            page: totalPages === 0 ? 0 : page + 1,
+            totalPages: totalPages || 1,
+          })}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatCard label={t("revenuePage")} value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />
+        <StatCard label={t("completed")} value={completed.length} icon={CheckCircle2} accent="emerald" />
+        <StatCard label={t("active")} value={active.length} icon={Clock} accent="amber" />
+      </div>
+
       <Card padding={false}>
-        {isLoading ? (
-          <PageLoader label={t("loading")} />
-        ) : bookings.length === 0 ? (
-          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
+        {isLoading && <p className="p-4 text-[var(--text-secondary)] text-sm">{tCommon("loading")}</p>}
+        {!isLoading && bookings.length === 0 ? (
+          <EmptyState
+            title={t("noBookingsTitle")}
+            description={t("noBookingsDesc")}
+            action={newVisitControl}
+          />
         ) : (
           <>
-            <div className="lg:hidden divide-y divide-[var(--border)]">
-              {bookings.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  data-testid="admin-booking-row"
-                  onClick={() => setSelected(b)}
-                  className="w-full text-left px-4 py-3 flex gap-3 touch-manipulation min-h-[64px]"
-                >
-                  <AvatarInitial name={b.customerName} />
-                  <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-                    <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{b.customerName}</p>
-                    <p className="font-bold text-sm text-[var(--text-primary)] text-right">
-                      {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
-                    </p>
-                    <p className="text-xs text-[var(--text-secondary)] col-span-2">
-                      {b.branchName} ·{" "}
-                      {new Date(b.createdAt).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    <p className="text-xs text-[var(--text-tertiary)] col-span-2 truncate">
-                      {b.lines?.map((l) => l.serviceName).join(", ")}
-                    </p>
-                    <div className="col-span-2 flex justify-end">
-                      <StatusBadge status={b.status} />
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden lg:block">
+            <div className="hidden md:block">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
                   <tr
                     key={b.id}
-                    data-testid="admin-booking-row"
-                    className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                    className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
                     onClick={() => setSelected(b)}
                   >
                     <td className="px-4 py-3">
@@ -361,7 +349,6 @@ export default function AdminBookingsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[var(--text-primary)]">{b.branchName}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {b.lines?.map((l) => (
@@ -377,23 +364,78 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
                       {b.lines?.map((l) => l.staffName).filter(Boolean).join(", ") || "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-4 py-3 font-bold text-[var(--text-primary)] whitespace-nowrap">
                       {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
-                      {new Date(b.createdAt).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTenantDateTime(b.createdAt, localeKit)}
+                      {isOpenStatus(b.status) && (
+                        <div className="mt-1">
+                          <Link
+                            href={visitActionHref(b)}
+                            className="text-[var(--brand-text)] font-semibold hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {b.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
+                          </Link>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
               </FilterableTable>
+            </div>
+
+            <div className="md:hidden divide-y divide-[var(--border)]">
+              {bookings.map((b) => (
+                <div key={b.id} className="px-4 py-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelected(b)}
+                    className="w-full text-left flex gap-3 touch-manipulation"
+                  >
+                    <AvatarInitial name={b.customerName} />
+                    <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                      <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{b.customerName}</p>
+                      <p className="font-bold text-sm text-[var(--text-primary)] text-right">
+                        {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)] col-span-2">
+                        {formatTenantDateTime(b.createdAt, localeKit)}
+                        {" · "}
+                        {b.lines?.map((l) => l.serviceName).join(", ")}
+                      </p>
+                      <div className="col-span-2 flex items-center justify-between">
+                        <span className="text-[10px] text-[var(--text-tertiary)]">
+                          {b.lines?.map((l) => l.staffName).filter(Boolean).join(", ")}
+                        </span>
+                        <StatusBadge status={b.status} />
+                      </div>
+                    </div>
+                  </button>
+                  {isOpenStatus(b.status) && (
+                    <Link
+                      href={visitActionHref(b)}
+                      className={`${b.status === "READY_FOR_BILLING" ? btnPrimary : btnSecondary} w-full min-h-11 justify-center text-sm`}
+                    >
+                      {b.status === "READY_FOR_BILLING" ? (
+                        <>
+                          <Receipt className="w-4 h-4" />
+                          {t("billVisit")}
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4" />
+                          {t("continueVisit")}
+                        </>
+                      )}
+                    </Link>
+                  )}
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -411,24 +453,27 @@ export default function AdminBookingsPage() {
       <SideSheet
         open={!!selected}
         onClose={() => setSelected(null)}
-        title={selected?.customerName || tMgr("billingDetails")}
-        subtitle={
-          selected
-            ? `${selected.branchName} · ${selected.customerPhone} · ${selected.status}`
-            : undefined
-        }
+        title={selected?.customerName || t("billingDetails")}
+        subtitle={selected ? `${selected.customerPhone} · ${selected.status}` : undefined}
         footer={
           selected?.status === "COMPLETED" && invoice ? (
             <button
               type="button"
-              data-testid="admin-download-invoice"
               onClick={() => void downloadInvoice()}
               disabled={downloading}
-              className={`${btnPrimary} w-full`}
+              className={`${btnPrimary} w-full min-h-12`}
             >
               <Download className="w-4 h-4" />
-              {downloading ? tCommon("processing") : tMgr("downloadBill")}
+              {downloading ? tCommon("processing") : t("downloadBill")}
             </button>
+          ) : selected && isOpenStatus(selected.status) ? (
+            <Link
+              href={visitActionHref(selected)}
+              className={`${btnPrimary} w-full min-h-12 justify-center`}
+              onClick={() => setSelected(null)}
+            >
+              {selected.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
+            </Link>
           ) : undefined
         }
       >
@@ -438,7 +483,7 @@ export default function AdminBookingsPage() {
 
             <div>
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                {tMgr("services")}
+                {t("services")}
               </p>
               <ul className="space-y-1 text-sm">
                 {selected.lines?.map((l) => (
@@ -456,7 +501,7 @@ export default function AdminBookingsPage() {
             <div>
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" />
-                {tMgr("billingDetails")}
+                {t("billingDetails")}
               </p>
               {invoiceLoading ? (
                 <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
@@ -464,8 +509,8 @@ export default function AdminBookingsPage() {
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
                   {invoice && (
                     <p className="text-xs text-[var(--text-secondary)] mb-2">
-                      {tMgr("invoiceNumber", { number: invoice.invoiceNumber })}
-                      {invoice.pdfAvailable ? ` · ${tMgr("pdfStored")}` : ""}
+                      {t("invoiceNumber", { number: invoice.invoiceNumber })}
+                      {invoice.pdfAvailable ? ` · ${t("pdfStored")}` : ""}
                     </p>
                   )}
                   <BillingRows booking={selected} inv={invoice} />
@@ -474,10 +519,10 @@ export default function AdminBookingsPage() {
             </div>
 
             {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
-              <p className="text-sm text-[var(--text-secondary)]">{tMgr("invoiceUnavailable")}</p>
+              <p className="text-sm text-[var(--text-secondary)]">{t("invoiceUnavailable")}</p>
             )}
 
-            {selected.status !== "COMPLETED" && (
+            {selected.status !== "COMPLETED" && !isOpenStatus(selected.status) && (
               <p className="text-sm text-[var(--text-secondary)]">{t("completeToDownload")}</p>
             )}
           </div>

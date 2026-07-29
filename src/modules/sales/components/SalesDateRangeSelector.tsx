@@ -71,9 +71,9 @@ export function SalesDateRangeSelector({
         type="button"
         data-testid={`${testId}-trigger`}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-violet-400"
+        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-[var(--brand)]"
       >
-        <Calendar className="h-4 w-4 shrink-0 text-violet-600" />
+        <Calendar className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown
           className={cn("h-4 w-4 shrink-0 text-[var(--ink-muted)] transition", open && "rotate-180")}
@@ -97,7 +97,7 @@ export function SalesDateRangeSelector({
                 <div
                   className={cn(
                     "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                    active ? "border-violet-600 bg-violet-600" : "border-[var(--border)]"
+                    active ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--border)]"
                   )}
                 >
                   {active && <Check className="h-3 w-3 text-white" />}
@@ -144,7 +144,7 @@ export function SalesDateRangeSelector({
               </div>
               <button
                 type="button"
-                className="w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-700"
+                className="w-full rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-medium text-white hover:opacity-90"
                 onClick={applyCustom}
               >
                 Apply range

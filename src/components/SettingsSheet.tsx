@@ -142,6 +142,20 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     if (open && !user) onClose();
   }, [open, user, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
   const previewAccent = ensureReadableAccent(
     resolveAccentColor(
       { darkMode: previewDark, customAccentEnabled: previewAccentEnabled, customAccentColor: previewAccentColor },
@@ -200,12 +214,17 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
             <h2 className="font-bold text-[var(--text-primary)]">{t("title")}</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("subtitle")}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] touch-manipulation min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+            aria-label={tCommon("close")}
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain">
           {locales.length > 0 && (
             <section className="space-y-3" data-testid="settings-language-section">
               <div className="flex items-center gap-3">

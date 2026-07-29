@@ -1,11 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Trash2, Plus, CreditCard, Download, Clock, Receipt, UserPlus } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  CreditCard,
+  Download,
+  Clock,
+  Receipt,
+  UserPlus,
+  Star,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 import {
   api,
   BillPreview,
@@ -15,13 +26,29 @@ import {
   StaffItem,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { formatCurrency, cn } from "@/lib/utils";
+import { isValidIndianMobile, normalizeIndianMobile, digitsOnly } from "@/lib/phone";
+import {
+  getRecentServiceIds,
+  pushRecentService,
+  getFavoriteServiceIds,
+  toggleFavoriteService,
+  getRecentCustomers,
+  pushRecentCustomer,
+  loadWalkInDraft,
+  saveWalkInDraft,
+  clearWalkInDraft,
+  type RecentCustomer,
+  type WalkInDraft,
+} from "@/lib/walk-in-prefs";
+import { getTenantLocaleKit, formatTenantDateTime } from "@/lib/tenant-locale";
+import { formatCurrency, formatMoney, cn } from "@/lib/utils";
 import {
   PageHeader,
   Card,
   AlertBanner,
   SegmentedControl,
   StatusBadge,
+  EmptyState,
   inputClass,
   selectClass,
   btnPrimary,
@@ -29,10 +56,13 @@ import {
 } from "@/components/ui";
 import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
+import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
 
 type Screen = "hub" | "flow";
+type HubTab = "open" | "history";
 type Step = 1 | 2 | 3;
 type DiscountKind = "" | "FLAT" | "PERCENT";
+type PaymentMode = "CASH" | "UPI" | "CARD" | "SPLIT";
 
 interface CartItem {
   branchServiceId: string;
@@ -41,7 +71,14 @@ interface CartItem {
   staffId: string;
 }
 
+interface SplitRow {
+  mode: "CASH" | "UPI" | "CARD";
+  amount: string;
+  reference: string;
+}
+
 const OPEN_STATUSES = new Set(["DRAFT", "IN_PROGRESS", "READY_FOR_BILLING"]);
+const DRAFT_SAVE_DEBOUNCE_MS = 600;
 
 export default function WalkInPage() {
   const t = useTranslations("manager.walkIn");
@@ -51,18 +88,27 @@ export default function WalkInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preferredStaffId = searchParams.get("staffId") || "";
+  const wantNewVisit = searchParams.get("new") === "1";
+  const hubTabParam = searchParams.get("tab") === "history" ? "history" : "open";
   const queryClient = useQueryClient();
+  const localeKit = getTenantLocaleKit();
 
   const [screen, setScreen] = useState<Screen>("hub");
+  const [hubTab, setHubTab] = useState<HubTab>(hubTabParam);
   const [step, setStep] = useState<Step>(1);
   const [phone, setPhone] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [society, setSociety] = useState(user?.branchName ?? "");
   const [flat, setFlat] = useState("");
+  const [lookupState, setLookupState] = useState<"idle" | "loading" | "done">("idle");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMode, setPaymentMode] = useState<"CASH" | "UPI" | "CARD">("CASH");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
   const [reference, setReference] = useState("");
+  const [splitRows, setSplitRows] = useState<SplitRow[]>([
+    { mode: "CASH", amount: "", reference: "" },
+    { mode: "UPI", amount: "", reference: "" },
+  ]);
   const [bookingId, setBookingId] = useState("");
   const [bookingStatus, setBookingStatus] = useState("");
   const [billPreview, setBillPreview] = useState<BillPreview | null>(null);
@@ -75,21 +121,43 @@ export default function WalkInPage() {
   const [paidInvoiceId, setPaidInvoiceId] = useState("");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState("");
+  const [receiptQueued, setReceiptQueued] = useState(false);
   const [cgstInput, setCgstInput] = useState("0");
   const [sgstInput, setSgstInput] = useState("0");
+  const [taxAdvanced, setTaxAdvanced] = useState(false);
+  const [taxOverridden, setTaxOverridden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [catalogTop, setCatalogTop] = useState("");
-  const [catalogSub, setCatalogSub] = useState("");
   const [serviceQuery, setServiceQuery] = useState("");
+  const [recentServiceIds, setRecentServiceIds] = useState<string[]>([]);
+  const [favoriteServiceIds, setFavoriteServiceIds] = useState<string[]>([]);
+  const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
+  const [draftOffer, setDraftOffer] = useState<WalkInDraft | null>(null);
+  const [draftHandled, setDraftHandled] = useState(false);
+  const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
 
+  const lookupPhoneRef = useRef<string>("");
   const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
   const billingLocked = !!paidInvoiceId;
+
+  useEffect(() => {
+    if (!branchId) return;
+    setRecentServiceIds(getRecentServiceIds(branchId));
+    setFavoriteServiceIds(getFavoriteServiceIds(branchId));
+    setRecentCustomers(getRecentCustomers(branchId));
+  }, [branchId]);
 
   const { data: services = [] } = useQuery({
     queryKey: ["services", branchId],
     queryFn: () => api.getBranchServices(branchId),
     enabled: !!branchId,
   });
+
+  const servicesById = useMemo(() => {
+    const map = new Map<string, BranchServiceItem>();
+    for (const s of services) map.set(s.id, s);
+    return map;
+  }, [services]);
 
   const topCategories = useMemo(() => {
     const map = new Map<string, string>();
@@ -109,49 +177,41 @@ export default function WalkInPage() {
       });
   }, [services]);
 
-  useEffect(() => {
-    if (!catalogTop && topCategories.length > 0) {
-      setCatalogTop(topCategories[0].id);
-    }
-  }, [catalogTop, topCategories]);
-
-  const subCategories = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const s of services) {
-      const parentId = s.parentCategoryId || s.categoryId || "other";
-      if (catalogTop && parentId !== catalogTop) continue;
-      const id = s.categoryId || "other";
-      const name = s.categoryName || "Other";
-      if (!map.has(id)) map.set(id, name);
-    }
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [services, catalogTop]);
-
-  useEffect(() => {
-    setCatalogSub("");
-  }, [catalogTop]);
-
   const filteredServices = useMemo(() => {
     const q = serviceQuery.trim().toLowerCase();
-    return services.filter((s) => {
-      const parentId = s.parentCategoryId || s.categoryId || "other";
-      if (catalogTop && parentId !== catalogTop) return false;
-      if (catalogSub && (s.categoryId || "other") !== catalogSub) return false;
-      if (!q) return true;
-      return (
-        s.serviceName.toLowerCase().includes(q) ||
-        (s.categoryName || "").toLowerCase().includes(q) ||
-        (s.parentCategoryName || "").toLowerCase().includes(q)
+    if (q) {
+      return services.filter(
+        (s) =>
+          s.serviceName.toLowerCase().includes(q) ||
+          (s.categoryName || "").toLowerCase().includes(q) ||
+          (s.parentCategoryName || "").toLowerCase().includes(q)
       );
-    });
-  }, [services, catalogTop, catalogSub, serviceQuery]);
+    }
+    if (catalogTop) {
+      return services.filter((s) => (s.parentCategoryId || s.categoryId || "other") === catalogTop);
+    }
+    return services;
+  }, [services, catalogTop, serviceQuery]);
+
+  const recentServices = useMemo(
+    () => recentServiceIds.map((id) => servicesById.get(id)).filter((s): s is BranchServiceItem => !!s),
+    [recentServiceIds, servicesById]
+  );
+  const favoriteServices = useMemo(
+    () => favoriteServiceIds.map((id) => servicesById.get(id)).filter((s): s is BranchServiceItem => !!s),
+    [favoriteServiceIds, servicesById]
+  );
 
   const { data: staff = [] } = useQuery({
     queryKey: ["staff", branchId],
     queryFn: () => api.getStaff(branchId),
     enabled: !!branchId,
+  });
+
+  const { data: branch } = useQuery({
+    queryKey: ["branch", branchId],
+    queryFn: () => api.getBranch(branchId),
+    enabled: !!branchId && screen === "flow" && step === 3,
   });
 
   const { data: applicablePromos = [] } = useQuery({
@@ -193,10 +253,14 @@ export default function WalkInPage() {
       .catch(() => setMembership(null));
   }, [customerId]);
 
+  // Sync CGST/SGST from the server-calculated bill unless the manager is mid-edit in Advanced.
   useEffect(() => {
-    // Tax is manager-entered; default both to 0 (calculated GST is not auto-applied).
-    setCgstInput("0");
-    setSgstInput("0");
+    if (!billPreview) return;
+    if (taxAdvanced && taxOverridden) return;
+    setCgstInput(String(billPreview.cgstAmount ?? 0));
+    setSgstInput(String(billPreview.sgstAmount ?? 0));
+    setTaxOverridden(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to new billPreview identities from the server
   }, [billPreview]);
 
   const hydrateFromBooking = useCallback((b: Booking) => {
@@ -225,6 +289,15 @@ export default function WalkInPage() {
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPaymentSuccess("");
+    setReceiptQueued(false);
+    setPaymentMode("CASH");
+    setReference("");
+    setSplitRows([
+      { mode: "CASH", amount: "", reference: "" },
+      { mode: "UPI", amount: "", reference: "" },
+    ]);
+    setTaxAdvanced(false);
+    setTaxOverridden(false);
     setError("");
   }, []);
 
@@ -236,7 +309,62 @@ export default function WalkInPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open flow once when arriving from Floor with a staff preselect
   }, []);
 
+  useEffect(() => {
+    setHubTab(hubTabParam);
+  }, [hubTabParam]);
+
+  function setVisitsTab(next: HubTab) {
+    setHubTab(next);
+    if (next === "history") {
+      router.replace("/manager/walk-in?tab=history");
+    } else {
+      router.replace("/manager/walk-in");
+    }
+  }
+
+  // Offer to restore an unfinished draft when landing on the hub with no booking in the URL.
+  useEffect(() => {
+    if (!branchId || draftHandled) return;
+    if (searchParams.get("bookingId")) return;
+    const draft = loadWalkInDraft(branchId);
+    if (draft && draft.cart.length > 0) setDraftOffer(draft);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot check on load
+  }, [branchId, draftHandled]);
+
+  function acceptDraft() {
+    if (!draftOffer) return;
+    setPhone(draftOffer.phone);
+    setCustomerName(draftOffer.customerName);
+    setCustomerId(draftOffer.customerId);
+    setSociety(draftOffer.society || user?.branchName || "");
+    setFlat(draftOffer.flat);
+    setCart(draftOffer.cart);
+    setStep(draftOffer.step);
+    setScreen("flow");
+    setDraftOffer(null);
+    setDraftHandled(true);
+    setDraftRestoredNotice(true);
+    router.replace("/manager/walk-in");
+  }
+
+  function dismissDraft() {
+    clearWalkInDraft(branchId);
+    setDraftOffer(null);
+    setDraftHandled(true);
+  }
+
+  // Debounced local draft save while a visit is in progress but not yet a real booking.
+  useEffect(() => {
+    if (screen !== "flow" || bookingId || !branchId) return;
+    if (!phone && cart.length === 0) return;
+    const handle = setTimeout(() => {
+      saveWalkInDraft(branchId, { phone, customerName, customerId, society, flat, cart, step });
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [screen, bookingId, branchId, phone, customerName, customerId, society, flat, cart, step]);
+
   const startNewVisit = useCallback(() => {
+    clearWalkInDraft(branchId);
     setBookingId("");
     setBookingStatus("");
     setPhone("");
@@ -244,6 +372,8 @@ export default function WalkInPage() {
     setCustomerName("");
     setSociety(user?.branchName ?? "");
     setFlat("");
+    setLookupState("idle");
+    lookupPhoneRef.current = "";
     setCart([]);
     setBillPreview(null);
     setSelectedCouponId("");
@@ -252,14 +382,29 @@ export default function WalkInPage() {
     setBillDiscountValue("");
     setPaidInvoiceId("");
     setPaymentSuccess("");
+    setReceiptQueued(false);
+    setCatalogTop("");
+    setServiceQuery("");
     setError("");
+    setDraftOffer(null);
+    setDraftRestoredNotice(false);
+    setHubTab("open");
     setStep(1);
     setScreen("flow");
     router.replace("/manager/walk-in");
-  }, [router, user?.branchName]);
+  }, [router, user?.branchName, branchId]);
+
+  useEffect(() => {
+    if (!wantNewVisit) return;
+    if (searchParams.get("bookingId") || preferredStaffId) return;
+    startNewVisit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot from ?new=1
+  }, [wantNewVisit]);
 
   const openVisit = useCallback(
-    async (id: string, preferBill = false) => {
+    async (id: string, opts?: { preferBill?: boolean; preferEdit?: boolean }) => {
+      const preferBill = opts?.preferBill === true;
+      const preferEdit = opts?.preferEdit === true;
       setError("");
       setSaving(true);
       try {
@@ -270,12 +415,14 @@ export default function WalkInPage() {
         }
         hydrateFromBooking(b);
         setScreen("flow");
-        if (b.status === "READY_FOR_BILLING" || preferBill) {
+        if (preferEdit) {
+          setStep(2);
+        } else if (b.status === "READY_FOR_BILLING" || preferBill) {
           setStep(3);
         } else {
           setStep(2);
         }
-        router.replace(`/manager/walk-in?bookingId=${id}`);
+        router.replace(`/manager/walk-in?bookingId=${id}${preferEdit ? "&edit=1" : ""}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : tCommon("failed"));
       } finally {
@@ -290,7 +437,8 @@ export default function WalkInPage() {
     const id = searchParams.get("bookingId");
     if (!id || !branchId) return;
     if (bookingId === id && screen === "flow") return;
-    void openVisit(id);
+    const preferEdit = searchParams.get("edit") === "1";
+    void openVisit(id, { preferEdit });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot from URL
   }, [searchParams, branchId]);
 
@@ -335,101 +483,164 @@ export default function WalkInPage() {
     onError: (e: Error) => setError(e.message),
   });
 
-  const parsedCgst = Number(cgstInput);
-  const parsedSgst = Number(sgstInput);
-  const taxOverrideValid =
-    Number.isFinite(parsedCgst) &&
-    Number.isFinite(parsedSgst) &&
-    parsedCgst >= 0 &&
-    parsedSgst >= 0;
+  const cgstNum = Number(cgstInput);
+  const sgstNum = Number(sgstInput);
+  const taxValid = !taxOverridden || (Number.isFinite(cgstNum) && cgstNum >= 0 && Number.isFinite(sgstNum) && sgstNum >= 0);
 
   const displayGrandTotal = useMemo(() => {
     if (!billPreview) return 0;
-    if (!Number.isFinite(parsedCgst) || !Number.isFinite(parsedSgst)) {
-      return Number(billPreview.grandTotal) - Number(billPreview.cgstAmount) - Number(billPreview.sgstAmount);
-    }
-    const base =
-      Number(billPreview.grandTotal) - Number(billPreview.cgstAmount) - Number(billPreview.sgstAmount);
-    return Math.round((base + parsedCgst + parsedSgst) * 100) / 100;
-  }, [billPreview, parsedCgst, parsedSgst]);
+    const cgst = Number.isFinite(cgstNum) ? cgstNum : 0;
+    const sgst = Number.isFinite(sgstNum) ? sgstNum : 0;
+    return Math.round((billPreview.taxableAmount + cgst + sgst) * 100) / 100;
+  }, [billPreview, cgstNum, sgstNum]);
+
+  const splitSum = useMemo(
+    () => splitRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    [splitRows]
+  );
+  const splitValid = Math.abs(splitSum - displayGrandTotal) <= 0.01;
 
   const payBooking = useMutation({
-    mutationFn: ({
-      id,
-      amount,
-      cgstAmount,
-      sgstAmount,
-    }: {
-      id: string;
+    mutationFn: (payload: {
+      mode: PaymentMode;
       amount: number;
-      cgstAmount: number;
-      sgstAmount: number;
-    }) =>
-      api.payBooking(id, {
-        mode: paymentMode,
-        amount,
-        reference,
-        cgstAmount,
-        sgstAmount,
-      }),
+      reference?: string;
+      splits?: { mode: string; amount: number; reference?: string }[];
+      cgstAmount?: number;
+      sgstAmount?: number;
+    }) => api.payBooking(bookingId, payload),
     onSuccess: (booking) => {
       if (booking.invoiceId) setPaidInvoiceId(booking.invoiceId);
       setBookingStatus("COMPLETED");
-      if (booking.receiptQueued) {
-        setPaymentSuccess(t("receiptQueued", { phone: booking.customerPhone }));
-      } else {
-        setPaymentSuccess(t("paymentComplete"));
-      }
+      setReceiptQueued(!!booking.receiptQueued);
+      setPaymentSuccess(t("paymentComplete"));
+      clearWalkInDraft(branchId);
       void queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
     onError: (e: Error) => setError(e.message),
   });
 
+  function submitPayment() {
+    const payload: {
+      mode: PaymentMode;
+      amount: number;
+      reference?: string;
+      splits?: { mode: string; amount: number; reference?: string }[];
+      cgstAmount?: number;
+      sgstAmount?: number;
+    } = {
+      mode: paymentMode,
+      amount: Number(displayGrandTotal.toFixed(2)),
+    };
+    if (paymentMode === "SPLIT") {
+      payload.splits = splitRows.map((r) => ({
+        mode: r.mode,
+        amount: Number(r.amount) || 0,
+        reference: r.reference || undefined,
+      }));
+    } else if (reference) {
+      payload.reference = reference;
+    }
+    if (taxOverridden) {
+      payload.cgstAmount = Number((Number.isFinite(cgstNum) ? cgstNum : 0).toFixed(2));
+      payload.sgstAmount = Number((Number.isFinite(sgstNum) ? sgstNum : 0).toFixed(2));
+    }
+    payBooking.mutate(payload);
+  }
+
   function goToStep(target: number) {
     if (billingLocked) return;
     if (target < 1 || target > 3 || target >= step) return;
-    // From payment back to services — reopen if needed
     if (step === 3 && target === 2 && bookingId && bookingStatus === "READY_FOR_BILLING") {
       void api.reopenBooking(bookingId).then((b) => setBookingStatus(b.status)).catch(() => {});
     }
     setStep(target as Step);
   }
 
-  async function searchCustomer() {
+  async function lookupCustomer(rawPhone: string) {
+    const normalized = normalizeIndianMobile(rawPhone);
+    if (!normalized) return;
+    if (lookupPhoneRef.current === normalized && lookupState === "done") return;
+    lookupPhoneRef.current = normalized;
+    setLookupState("loading");
     setError("");
     try {
-      const c = await api.findCustomerByPhone(phone);
+      const c = await api.findCustomerByPhone(normalized);
       setCustomerId(c.id);
       setCustomerName(c.name);
       setSociety(c.society || society);
       setFlat(c.flatUnit || "");
     } catch {
       setCustomerId("");
-      setCustomerName("");
       setMembership(null);
+    } finally {
+      setLookupState("done");
     }
   }
 
-  async function registerAndContinue() {
+  useEffect(() => {
+    if (bookingId) return;
+    if (digitsOnly(phone).length === 10 && isValidIndianMobile(phone)) {
+      void lookupCustomer(phone);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once phone reaches a valid 10-digit length
+  }, [phone, bookingId]);
+
+  function applyRecentCustomer(rc: RecentCustomer) {
+    setPhone(rc.phone);
+    setCustomerName(rc.name);
+    setCustomerId(rc.customerId || "");
+    setSociety(rc.society || society);
+    setFlat(rc.flat || "");
     setError("");
+  }
+
+  const phoneValid = isValidIndianMobile(phone);
+  const continueCustomerDisabled = !phoneValid || !customerName.trim() || saving;
+
+  async function continueFromCustomerStep() {
+    setError("");
+    const normalized = normalizeIndianMobile(phone);
+    if (!normalized || !customerName.trim()) {
+      setError(t("phoneInvalid"));
+      return;
+    }
+    if (bookingId) {
+      setStep(2);
+      return;
+    }
     try {
       let id = customerId;
       if (!id) {
-        const c = await api.createCustomer({ name: customerName, phone, society, flatUnit: flat });
+        const c = await api.createCustomer({ name: customerName, phone: normalized, society, flatUnit: flat });
         id = c.id;
         setCustomerId(id);
       }
+      pushRecentCustomer(branchId, { phone: normalized, name: customerName, customerId: id, society, flat });
+      setRecentCustomers(getRecentCustomers(branchId));
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("failed"));
     }
   }
 
+  function defaultStaffId(currentCart: CartItem[]): string {
+    if (preferredStaffId && staff.some((st) => st.id === preferredStaffId)) return preferredStaffId;
+    const lastUsed = [...currentCart].reverse().find((c) => c.staffId)?.staffId;
+    if (lastUsed && staff.some((st) => st.id === lastUsed)) return lastUsed;
+    if (staff.length > 0) return staff[0].id;
+    return "";
+  }
+
   function addService(s: BranchServiceItem) {
-    const staffId =
-      preferredStaffId && staff.some((st) => st.id === preferredStaffId) ? preferredStaffId : "";
-    setCart([...cart, { branchServiceId: s.id, serviceName: s.serviceName, price: s.price, staffId }]);
+    setCart((prev) => [...prev, { branchServiceId: s.id, serviceName: s.serviceName, price: s.price, staffId: defaultStaffId(prev) }]);
+    pushRecentService(branchId, s.id);
+    setRecentServiceIds(getRecentServiceIds(branchId));
+  }
+
+  function toggleFavorite(serviceId: string) {
+    setFavoriteServiceIds(toggleFavoriteService(branchId, serviceId));
   }
 
   function removeFromCart(idx: number) {
@@ -442,12 +653,8 @@ export default function WalkInPage() {
     setCart(next);
   }
 
-  function linePayload() {
-    return cart.map((c) => ({
-      branchServiceId: c.branchServiceId,
-      staffId: c.staffId,
-      quantity: 1,
-    }));
+  function toLinePayload(items: CartItem[]) {
+    return items.map((c) => ({ branchServiceId: c.branchServiceId, staffId: c.staffId, quantity: 1 }));
   }
 
   function discountPayload() {
@@ -467,15 +674,21 @@ export default function WalkInPage() {
   }
 
   async function persistServices(keepOpen: boolean): Promise<Booking> {
-    if (cart.some((c) => !c.staffId)) {
-      throw new Error(t("assignStylistError"));
-    }
     if (cart.length === 0) {
       throw new Error(t("cartEmpty"));
     }
 
+    let workingCart = cart;
+    if (staff.length > 0 && cart.some((c) => !c.staffId)) {
+      workingCart = cart.map((c) => (c.staffId ? c : { ...c, staffId: defaultStaffId(cart) }));
+      setCart(workingCart);
+    }
+    if (workingCart.some((c) => !c.staffId)) {
+      throw new Error(t("assignStylistError"));
+    }
+
     if (bookingId) {
-      const updated = await api.updateBookingLines(bookingId, linePayload());
+      const updated = await api.updateBookingLines(bookingId, toLinePayload(workingCart));
       if (!keepOpen && updated.status !== "READY_FOR_BILLING") {
         return api.markBookingReadyForBilling(bookingId);
       }
@@ -488,7 +701,7 @@ export default function WalkInPage() {
     return api.createBooking({
       branchId,
       customerId,
-      lines: linePayload(),
+      lines: toLinePayload(workingCart),
       couponId: selectedCouponId || undefined,
       offerId: selectedOfferId || undefined,
       keepOpen,
@@ -502,6 +715,7 @@ export default function WalkInPage() {
     try {
       const b = await persistServices(true);
       hydrateFromBooking(b);
+      clearWalkInDraft(branchId);
       await refetchOpenVisits();
       setScreen("hub");
       setStep(1);
@@ -519,6 +733,7 @@ export default function WalkInPage() {
     try {
       const b = await persistServices(false);
       hydrateFromBooking(b);
+      clearWalkInDraft(branchId);
       setStep(3);
       router.replace(`/manager/walk-in?bookingId=${b.id}`);
     } catch (e) {
@@ -588,23 +803,38 @@ export default function WalkInPage() {
     }
   }
 
-  const estimateSubtotal = cart.reduce((s, c) => s + c.price, 0);
-  const estimateGrandTotal = estimateSubtotal * 1.18;
+  const cartTotals = useMemo(() => {
+    const subtotal = cart.reduce((s, c) => s + c.price, 0);
+    const tax = cart.reduce((s, c) => {
+      const rate = servicesById.get(c.branchServiceId)?.gstRate ?? 0;
+      return s + (c.price * rate) / 100;
+    }, 0);
+    return { subtotal, estimatedGrand: subtotal + tax };
+  }, [cart, servicesById]);
+  const cartHasFreshBill = !!billPreview && (billPreview.lines?.length ?? 0) === cart.length;
+
   const promoLocked = !!selectedCouponId || !!selectedOfferId;
   const manualDiscountActive = !!billDiscountType && Number(billDiscountValue) > 0;
 
   if (screen === "hub") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 w-full max-w-6xl mx-auto">
         <PageHeader
-          title={t("title")}
-          subtitle={user?.branchName}
+          title={t("visitsTitle")}
+          subtitle={t("visitsSubtitle")}
           action={
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <Link href="/manager/schedule" className={`${btnSecondary} py-2.5 px-3 text-sm flex-1 sm:flex-none touch-manipulation justify-center`}>
+              <Link
+                href="/manager/schedule"
+                className={`${btnSecondary} py-2.5 px-3 text-sm flex-1 sm:flex-none touch-manipulation justify-center min-h-11`}
+              >
                 {t("checkFloor")}
               </Link>
-              <button type="button" onClick={startNewVisit} className={`${btnPrimary} py-2.5 px-4 flex-1 sm:flex-none touch-manipulation justify-center`}>
+              <button
+                type="button"
+                onClick={startNewVisit}
+                className={`${btnPrimary} py-2.5 px-4 flex-1 sm:flex-none touch-manipulation justify-center min-h-11`}
+              >
                 <UserPlus className="w-4 h-4" />
                 {t("newVisit")}
               </button>
@@ -612,87 +842,131 @@ export default function WalkInPage() {
           }
         />
         <MissionStrip />
+
+        <SegmentedControl
+          options={[
+            { id: "open", label: t("tabOpen", { count: openVisits.length }) },
+            { id: "history", label: t("tabHistory") },
+          ]}
+          value={hubTab}
+          onChange={(v) => setVisitsTab(v as HubTab)}
+        />
+
         {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
-        <Card className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                {t("openVisits")}
-              </p>
-              <p className="text-sm text-[var(--text-secondary)] mt-0.5">{t("openVisitsHint")}</p>
-            </div>
-            <span className="text-sm font-semibold text-[var(--text-primary)]">{openVisits.length}</span>
-          </div>
-
-          {openVisitsLoading && <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>}
-          {!openVisitsLoading && openVisits.length === 0 && (
-            <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-8 text-center">
-              <p className="text-sm text-[var(--text-secondary)]">{t("noOpenVisits")}</p>
-              <button type="button" onClick={startNewVisit} className={`${btnPrimary} mt-4`}>
-                {t("newVisit")}
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {openVisits.map((v) => (
-              <div
-                key={v.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-[var(--text-primary)] truncate">{v.customerName}</p>
-                    <StatusBadge status={v.status} />
-                  </div>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    {v.customerPhone} ·{" "}
-                    {new Date(v.createdAt).toLocaleString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+        {hubTab === "open" && draftOffer && (
+          <AlertBanner variant="info">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+              <div>
+                <p className="font-semibold">{t("draftAvailable")}</p>
+                {draftOffer.customerName && (
+                  <p className="text-xs opacity-80 mt-0.5">
+                    {draftOffer.customerName} · {draftOffer.cart.length} {t("cart", { count: draftOffer.cart.length })}
                   </p>
-                  <p className="text-xs text-[var(--text-tertiary)] mt-1 truncate">
-                    {v.lines?.map((l) => l.serviceName).join(", ") || "—"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <p className="font-bold text-[var(--brand-text)] sm:mr-2">
-                    {v.billPreview ? formatCurrency(v.billPreview.grandTotal) : "—"}
-                  </p>
-                  {v.status === "READY_FOR_BILLING" ? (
-                    <button
-                      type="button"
-                      onClick={() => void openVisit(v.id, true)}
-                      className={`${btnPrimary} py-2 px-3 text-sm`}
-                    >
-                      <Receipt className="w-4 h-4" />
-                      {t("billNow")}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => void openVisit(v.id)}
-                      className={`${btnSecondary} py-2 px-3 text-sm`}
-                    >
-                      <Clock className="w-4 h-4" />
-                      {t("continueVisit")}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
-            ))}
-          </div>
-        </Card>
+              <div className="flex gap-2 shrink-0">
+                <button type="button" onClick={acceptDraft} className={`${btnPrimary} py-2 px-3 text-sm min-h-11`}>
+                  {t("restoreDraft")}
+                </button>
+                <button type="button" onClick={dismissDraft} className={`${btnSecondary} py-2 px-3 text-sm min-h-11`}>
+                  {t("dismissDraft")}
+                </button>
+              </div>
+            </div>
+          </AlertBanner>
+        )}
+
+        {hubTab === "history" ? (
+          <BookingsHistoryPanel embedded onNewVisit={startNewVisit} wizardBaseHref="/manager/walk-in" />
+        ) : (
+          <Card className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                  {t("openVisits")}
+                </p>
+                <p className="text-sm text-[var(--text-secondary)] mt-0.5">{t("openVisitsHint")}</p>
+              </div>
+              <span className="text-sm font-semibold text-[var(--text-primary)]">{openVisits.length}</span>
+            </div>
+
+            {openVisitsLoading && (
+              <div className="space-y-2" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-20 rounded-xl bg-[var(--surface-muted)] animate-pulse" />
+                ))}
+              </div>
+            )}
+
+            {!openVisitsLoading && openVisits.length === 0 && (
+              <EmptyState
+                title={t("noOpenVisits")}
+                description={t("noOpenVisitsHint")}
+                action={
+                  <button type="button" onClick={startNewVisit} className={`${btnPrimary} min-h-12`}>
+                    <UserPlus className="w-4 h-4" />
+                    {t("newVisit")}
+                  </button>
+                }
+              />
+            )}
+
+            {!openVisitsLoading && openVisits.length > 0 && (
+              <div className="space-y-2">
+                {openVisits.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-[var(--text-primary)] truncate">{v.customerName}</p>
+                        <StatusBadge status={v.status} />
+                      </div>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                        {v.customerPhone} · {formatTenantDateTime(v.createdAt, localeKit)}
+                      </p>
+                      <p className="text-xs text-[var(--text-tertiary)] mt-1 truncate">
+                        {v.lines?.map((l) => l.serviceName).join(", ") || "—"}
+                      </p>
+                    </div>
+                    <div className="flex items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
+                      <p className="font-bold text-[var(--brand-text)] sm:mr-2 self-center">
+                        {v.billPreview ? formatCurrency(v.billPreview.grandTotal, localeKit) : "—"}
+                      </p>
+                      {v.status === "READY_FOR_BILLING" ? (
+                        <button
+                          type="button"
+                          onClick={() => void openVisit(v.id, { preferBill: true })}
+                          className={`${btnPrimary} py-2 px-3 text-sm min-h-11 flex-1 sm:flex-none justify-center`}
+                        >
+                          <Receipt className="w-4 h-4" />
+                          {t("billNow")}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void openVisit(v.id)}
+                          className={`${btnSecondary} py-2 px-3 text-sm min-h-11 flex-1 sm:flex-none justify-center`}
+                        >
+                          <Clock className="w-4 h-4" />
+                          {t("continueVisit")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <PageHeader
         title={bookingId ? t("editVisit") : t("title")}
         subtitle={customerName || user?.branchName}
@@ -705,7 +979,7 @@ export default function WalkInPage() {
                 router.replace("/manager/walk-in");
                 void refetchOpenVisits();
               }}
-              className={`${btnSecondary} py-2 px-3 text-sm`}
+              className={`${btnSecondary} py-2 px-3 text-sm min-h-11`}
             >
               {t("backToOpenVisits")}
             </button>
@@ -716,6 +990,9 @@ export default function WalkInPage() {
       <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
       <MissionStrip />
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+      {draftRestoredNotice && step === 1 && (
+        <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
+      )}
       {bookingId && !billingLocked && (
         <p className="text-xs text-[var(--text-secondary)]">
           {t("visitStatus", { status: bookingStatus || "IN_PROGRESS" })}
@@ -724,21 +1001,46 @@ export default function WalkInPage() {
 
       {step === 1 && (
         <Card className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2">
+          {!bookingId && recentCustomers.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                {t("recentCustomers")}
+              </p>
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {recentCustomers.map((rc) => (
+                  <button
+                    key={rc.phone}
+                    type="button"
+                    onClick={() => applyRecentCustomer(rc)}
+                    className="shrink-0 min-w-[9rem] max-w-[12rem] text-left px-3 py-2.5 min-h-12 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] transition touch-manipulation"
+                  >
+                    <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{rc.name}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] truncate">{rc.phone}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
             <input
               placeholder={t("phonePlaceholder")}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(digitsOnly(e.target.value))}
+              onBlur={() => {
+                if (!bookingId) void lookupCustomer(phone);
+              }}
+              inputMode="numeric"
+              maxLength={13}
               className={inputClass}
               disabled={!!bookingId}
             />
-            <button
-              onClick={searchCustomer}
-              className={`${btnSecondary} shrink-0 sm:px-5`}
-              disabled={!!bookingId}
-            >
-              {tCommon("search")}
-            </button>
+            {phone.length > 0 && !phoneValid && (
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("phoneInvalid")}</p>
+            )}
+            {lookupState === "loading" && (
+              <p className="text-xs text-[var(--text-tertiary)] mt-1">{tCommon("loading")}</p>
+            )}
           </div>
           <input
             placeholder={t("namePlaceholder")}
@@ -747,20 +1049,22 @@ export default function WalkInPage() {
             className={inputClass}
             disabled={!!bookingId}
           />
-          <input
-            placeholder={t("societyPlaceholder")}
-            value={society}
-            onChange={(e) => setSociety(e.target.value)}
-            className={inputClass}
-            disabled={!!bookingId}
-          />
-          <input
-            placeholder={t("flatPlaceholder")}
-            value={flat}
-            onChange={(e) => setFlat(e.target.value)}
-            className={inputClass}
-            disabled={!!bookingId}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              placeholder={t("societyPlaceholder")}
+              value={society}
+              onChange={(e) => setSociety(e.target.value)}
+              className={inputClass}
+              disabled={!!bookingId}
+            />
+            <input
+              placeholder={t("flatPlaceholder")}
+              value={flat}
+              onChange={(e) => setFlat(e.target.value)}
+              className={inputClass}
+              disabled={!!bookingId}
+            />
+          </div>
 
           {membership && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
@@ -785,16 +1089,16 @@ export default function WalkInPage() {
                   `/manager/memberships?customerId=${customerId}&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(customerName)}`
                 )
               }
-              className={`${btnSecondary} w-full`}
+              className={`${btnSecondary} w-full min-h-11`}
             >
               {t("sellMembership")}
             </button>
           )}
 
           <button
-            onClick={() => (bookingId ? setStep(2) : void registerAndContinue())}
-            disabled={!phone || !customerName}
-            className={`${btnPrimary} w-full`}
+            onClick={() => void continueFromCustomerStep()}
+            disabled={continueCustomerDisabled}
+            className={`${btnPrimary} w-full min-h-12`}
           >
             {t("continueServices")}
           </button>
@@ -823,7 +1127,7 @@ export default function WalkInPage() {
               {coupons.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.code} · {c.name} (
-                  {c.discountType === "PERCENT" ? `${c.discountValue}%` : formatCurrency(c.discountValue)})
+                  {c.discountType === "PERCENT" ? `${c.discountValue}%` : formatCurrency(c.discountValue, localeKit)})
                 </option>
               ))}
             </select>
@@ -837,7 +1141,7 @@ export default function WalkInPage() {
               {offers.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name} (
-                  {o.discountType === "PERCENT" ? `${o.discountValue}%` : formatCurrency(o.discountValue)})
+                  {o.discountType === "PERCENT" ? `${o.discountValue}%` : formatCurrency(o.discountValue, localeKit)})
                 </option>
               ))}
             </select>
@@ -876,11 +1180,72 @@ export default function WalkInPage() {
 
           <Card padding={false}>
             <div className="px-4 py-3 border-b border-[var(--border)] space-y-3">
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                {t("addServices")}
-              </p>
-              {topCategories.length > 0 && (
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+                <input
+                  type="search"
+                  value={serviceQuery}
+                  onChange={(e) => setServiceQuery(e.target.value)}
+                  placeholder={t("searchServices")}
+                  className={`${inputClass} pl-10 py-3 text-sm`}
+                />
+              </div>
+
+              {!serviceQuery && recentServices.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    {t("recentServices")}
+                  </p>
+                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {recentServices.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => addService(s)}
+                        className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] transition touch-manipulation"
+                      >
+                        {s.serviceName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!serviceQuery && favoriteServices.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+                    {t("favorites")}
+                  </p>
+                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {favoriteServices.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => addService(s)}
+                        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-300 hover:opacity-80 transition touch-manipulation"
+                      >
+                        <Star className="w-3 h-3 fill-current" />
+                        {s.serviceName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!serviceQuery && topCategories.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setCatalogTop("")}
+                    className={cn(
+                      "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition border touch-manipulation",
+                      !catalogTop
+                        ? "bg-[var(--brand)] text-[var(--brand-on-brand)] border-transparent"
+                        : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--brand)]"
+                    )}
+                  >
+                    {t("allCategories")}
+                  </button>
                   {topCategories.map((top) => (
                     <button
                       key={top.id}
@@ -898,82 +1263,80 @@ export default function WalkInPage() {
                   ))}
                 </div>
               )}
-              {subCategories.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setCatalogSub("")}
-                    className={cn(
-                      "shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium transition border touch-manipulation",
-                      !catalogSub
-                        ? "bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] text-[var(--brand-text)] border-[color-mix(in_srgb,var(--brand)_35%,transparent)]"
-                        : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]"
-                    )}
-                  >
-                    {t("allSubcategories")}
-                  </button>
-                  {subCategories.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => setCatalogSub(sub.id)}
-                      className={cn(
-                        "shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium transition border touch-manipulation",
-                        catalogSub === sub.id
-                          ? "bg-[color-mix(in_srgb,var(--brand)_14%,transparent)] text-[var(--brand-text)] border-[color-mix(in_srgb,var(--brand)_35%,transparent)]"
-                          : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]"
-                      )}
-                    >
-                      {sub.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <input
-                type="search"
-                value={serviceQuery}
-                onChange={(e) => setServiceQuery(e.target.value)}
-                placeholder={t("searchServices")}
-                className={`${inputClass} py-2 text-sm`}
-              />
             </div>
-            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-[min(45vh,28rem)] overflow-y-auto overscroll-contain">
+            <div className="p-3 grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[min(50vh,32rem)] sm:max-h-[min(55vh,36rem)] overflow-y-auto overscroll-contain">
               {filteredServices.length === 0 ? (
                 <p className="col-span-full text-sm text-[var(--text-secondary)] text-center py-6">
                   {t("noServicesMatch")}
                 </p>
               ) : (
-                filteredServices.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    data-testid="walk-in-service-card"
-                    onClick={() => addService(s)}
-                    className="flex items-center justify-between gap-2 p-3 rounded-xl border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] transition text-left active:scale-[0.98] touch-manipulation min-w-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.serviceName}</p>
-                      <p className="text-xs text-[var(--text-tertiary)] truncate">
-                        {[s.parentCategoryName, s.categoryName].filter(Boolean).join(" · ")}
-                        {s.durationMinutes ? ` · ${s.durationMinutes}m` : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <span className="font-bold text-sm text-[var(--brand-text)]">{formatCurrency(s.price)}</span>
-                      <Plus className="w-4 h-4 text-[var(--brand-text)]" />
-                    </div>
-                  </button>
-                ))
+                filteredServices.map((s) => {
+                  const isFav = favoriteServiceIds.includes(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      data-testid="walk-in-service-card"
+                      onClick={() => addService(s)}
+                      className="flex items-center justify-between gap-2 p-3 min-h-[3.25rem] rounded-xl border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] transition text-left active:scale-[0.98] touch-manipulation min-w-0"
+                    >
+                      <div className="min-w-0 flex items-start gap-1.5">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={isFav ? t("unstarFavorite") : t("starFavorite")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(s.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              toggleFavorite(s.id);
+                            }
+                          }}
+                          className="p-0.5 -m-0.5 mt-0.5 shrink-0 cursor-pointer"
+                        >
+                          <Star
+                            className={cn(
+                              "w-3.5 h-3.5",
+                              isFav ? "fill-amber-400 text-amber-400" : "text-[var(--text-tertiary)]"
+                            )}
+                          />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.serviceName}</p>
+                          <p className="text-xs text-[var(--text-tertiary)] truncate">
+                            {[s.parentCategoryName, s.categoryName].filter(Boolean).join(" · ")}
+                            {s.durationMinutes ? ` · ${s.durationMinutes}m` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span className="font-bold text-sm text-[var(--brand-text)]">{formatCurrency(s.price, localeKit)}</span>
+                        <Plus className="w-4 h-4 text-[var(--brand-text)]" />
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </Card>
 
-          <Card className="sticky bottom-20 lg:bottom-4 z-10 shadow-lg space-y-3">
+          <Card className="sticky bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom)))] md:bottom-4 z-10 border border-[var(--border)] bg-[var(--surface)] space-y-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("cart", { count: cart.length })}
               </p>
-              <p className="text-lg font-bold text-[var(--text-primary)]">{formatCurrency(estimateGrandTotal)}</p>
+              <div className="text-right">
+                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
+                  {cartHasFreshBill ? t("billTotal") : t("estimatedTotal")}
+                </p>
+                <p className="text-lg font-bold text-[var(--text-primary)]">
+                  {formatMoney(cartHasFreshBill && billPreview ? billPreview.grandTotal : cartTotals.estimatedGrand, localeKit)}
+                </p>
+              </div>
             </div>
             {cart.length === 0 ? (
               <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
@@ -985,11 +1348,11 @@ export default function WalkInPage() {
                       <p className="font-medium text-sm">{item.serviceName}</p>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-sm font-semibold text-[var(--brand-text)]">
-                          {formatCurrency(item.price)}
+                          {formatCurrency(item.price, localeKit)}
                         </span>
                         <button
                           onClick={() => removeFromCart(idx)}
-                          className="text-[var(--text-tertiary)] hover:text-red-500 p-1"
+                          className="text-[var(--text-tertiary)] hover:text-red-500 p-1.5 -m-1"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -999,7 +1362,7 @@ export default function WalkInPage() {
                       data-testid="walk-in-stylist-select"
                       value={item.staffId}
                       onChange={(e) => updateStaff(idx, e.target.value)}
-                      className={`${selectClass} mt-2 py-2`}
+                      className={`${selectClass} mt-2 py-2.5 min-h-12`}
                     >
                       <option value="">{t("selectStylist")}</option>
                       {staff.map((st: StaffItem) => (
@@ -1010,6 +1373,7 @@ export default function WalkInPage() {
                     </select>
                   </div>
                 ))}
+                {staff.length > 0 && <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylistAutoAssigned")}</p>}
               </div>
             )}
 
@@ -1018,7 +1382,7 @@ export default function WalkInPage() {
                 type="button"
                 onClick={() => void saveOpenVisit()}
                 disabled={cart.length === 0 || saving}
-                className={`${btnSecondary} w-full`}
+                className={`${btnSecondary} w-full min-h-12`}
               >
                 {saving ? tCommon("processing") : t("saveOpenVisit")}
               </button>
@@ -1026,7 +1390,7 @@ export default function WalkInPage() {
                 type="button"
                 onClick={() => void proceedToBill()}
                 disabled={cart.length === 0 || saving}
-                className={`${btnPrimary} w-full`}
+                className={`${btnPrimary} w-full min-h-12`}
               >
                 {saving ? tCommon("processing") : t("continueBill")}
               </button>
@@ -1037,7 +1401,11 @@ export default function WalkInPage() {
       )}
 
       {step === 3 && billPreview && (
-        <Card className="space-y-5">
+        <Card className="space-y-5 max-w-3xl xl:max-w-4xl mx-auto w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {branch?.gstin && (
+            <p className="text-xs text-[var(--text-tertiary)]">{t("gstinLabel", { gstin: branch.gstin })}</p>
+          )}
+
           {!billingLocked && (
             <>
               <div className="space-y-3">
@@ -1104,12 +1472,12 @@ export default function WalkInPage() {
                     type="button"
                     onClick={applyManualDiscount}
                     disabled={promoLocked || !billDiscountType || applyBillDiscount.isPending}
-                    className={`${btnSecondary} flex-1`}
+                    className={`${btnSecondary} flex-1 min-h-11`}
                   >
                     {t("applyManualDiscount")}
                   </button>
                   {manualDiscountActive && (
-                    <button type="button" onClick={clearManualDiscount} className={btnSecondary}>
+                    <button type="button" onClick={clearManualDiscount} className={`${btnSecondary} min-h-11`}>
                       {t("clearDiscount")}
                     </button>
                   )}
@@ -1126,10 +1494,9 @@ export default function WalkInPage() {
               <ul className="space-y-2">
                 {(billPreview.lines && billPreview.lines.length > 0
                   ? billPreview.lines.map((line, idx) => {
-                      const stylist =
-                        cart[idx]?.staffId
-                          ? staff.find((s) => s.id === cart[idx].staffId)?.name
-                          : undefined;
+                      const stylist = cart[idx]?.staffId
+                        ? staff.find((s) => s.id === cart[idx].staffId)?.name
+                        : undefined;
                       const qty = line.quantity || 1;
                       const linePrice = line.unitPrice * qty;
                       return (
@@ -1147,7 +1514,7 @@ export default function WalkInPage() {
                             )}
                           </div>
                           <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
-                            {formatCurrency(linePrice)}
+                            {formatMoney(linePrice, localeKit)}
                           </span>
                         </li>
                       );
@@ -1166,7 +1533,7 @@ export default function WalkInPage() {
                             )}
                           </div>
                           <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
-                            {formatCurrency(item.price)}
+                            {formatMoney(item.price, localeKit)}
                           </span>
                         </li>
                       );
@@ -1177,94 +1544,134 @@ export default function WalkInPage() {
             <div className="space-y-2 pt-1 border-t border-[var(--border)]">
               <div className="flex justify-between">
                 <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
-                <span>{formatCurrency(billPreview.subtotal)}</span>
+                <span>{formatMoney(billPreview.subtotal, localeKit)}</span>
               </div>
               {(billPreview.membershipDiscountAmount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>{billPreview.membershipLabel || t("membershipDiscount")}</span>
-                  <span>-{formatCurrency(billPreview.membershipDiscountAmount ?? 0)}</span>
+                  <span>-{formatMoney(billPreview.membershipDiscountAmount ?? 0, localeKit)}</span>
                 </div>
               )}
               {(billPreview.promoDiscountAmount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>{billPreview.promoLabel || tCommon("discount")}</span>
-                  <span>-{formatCurrency(billPreview.promoDiscountAmount ?? 0)}</span>
+                  <span>-{formatMoney(billPreview.promoDiscountAmount ?? 0, localeKit)}</span>
                 </div>
               )}
               {(billPreview.manualDiscountAmount ?? 0) > 0 && (
                 <div className="flex justify-between text-emerald-600">
                   <span>{billPreview.manualDiscountLabel || t("manualDiscount")}</span>
-                  <span>-{formatCurrency(billPreview.manualDiscountAmount ?? 0)}</span>
+                  <span>-{formatMoney(billPreview.manualDiscountAmount ?? 0, localeKit)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center gap-3">
-                <span className="text-[var(--text-secondary)] shrink-0">CGST</span>
-                {billingLocked ? (
-                  <span>{formatCurrency(Number(cgstInput) || 0)}</span>
-                ) : (
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={cgstInput}
-                    onChange={(e) => setCgstInput(e.target.value)}
-                    aria-label="CGST"
-                    className={`${inputClass} w-24 sm:w-28 max-w-[40%] text-right py-1.5 px-2`}
-                  />
-                )}
+              <div className="flex justify-between">
+                <span className="text-[var(--text-secondary)]">{t("taxableAmount")}</span>
+                <span>{formatMoney(billPreview.taxableAmount, localeKit)}</span>
               </div>
-              <div className="flex justify-between items-center gap-3">
-                <span className="text-[var(--text-secondary)] shrink-0">SGST</span>
-                {billingLocked ? (
-                  <span>{formatCurrency(Number(sgstInput) || 0)}</span>
-                ) : (
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="0.01"
-                    value={sgstInput}
-                    onChange={(e) => setSgstInput(e.target.value)}
-                    aria-label="SGST"
-                    className={`${inputClass} w-24 sm:w-28 max-w-[40%] text-right py-1.5 px-2`}
-                  />
-                )}
+              <div className="flex justify-between">
+                <span className="text-[var(--text-secondary)]">CGST</span>
+                <span>{formatMoney(Number.isFinite(cgstNum) ? cgstNum : 0, localeKit)}</span>
               </div>
-              {!billingLocked && !taxOverrideValid && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">{t("taxMustBePositive")}</p>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-secondary)]">SGST</span>
+                <span>{formatMoney(Number.isFinite(sgstNum) ? sgstNum : 0, localeKit)}</span>
+              </div>
+
+              {!billingLocked && (
+                <details
+                  className="group pt-1"
+                  onToggle={(e) => setTaxAdvanced(e.currentTarget.open)}
+                >
+                  <summary className="flex items-center justify-between cursor-pointer select-none list-none text-xs font-semibold text-[var(--brand-text)]">
+                    <span>{t("advancedTax")}</span>
+                    <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-2 space-y-2 rounded-lg bg-[var(--surface)] border border-[var(--border)] p-3">
+                    <p className="text-xs text-[var(--text-tertiary)]">
+                      {taxOverridden ? t("taxOverrideHint") : t("autoTaxHint")}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="space-y-1">
+                        <span className="text-[11px] font-semibold text-[var(--text-secondary)]">CGST</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          value={cgstInput}
+                          onChange={(e) => {
+                            setCgstInput(e.target.value);
+                            setTaxOverridden(true);
+                          }}
+                          aria-label="CGST"
+                          className={`${inputClass} text-right py-2.5 px-2 min-h-11`}
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-[11px] font-semibold text-[var(--text-secondary)]">SGST</span>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step="0.01"
+                          value={sgstInput}
+                          onChange={(e) => {
+                            setSgstInput(e.target.value);
+                            setTaxOverridden(true);
+                          }}
+                          aria-label="SGST"
+                          className={`${inputClass} text-right py-2.5 px-2 min-h-11`}
+                        />
+                      </label>
+                    </div>
+                    {taxOverridden && billPreview && (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-[var(--brand-text)] hover:underline"
+                        onClick={() => {
+                          setCgstInput(String(billPreview.cgstAmount ?? 0));
+                          setSgstInput(String(billPreview.sgstAmount ?? 0));
+                          setTaxOverridden(false);
+                        }}
+                      >
+                        {t("resetTax")}
+                      </button>
+                    )}
+                    {!taxValid && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">{t("taxMustBePositive")}</p>
+                    )}
+                  </div>
+                </details>
               )}
+
               <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">
                 <span>{tCommon("grandTotal")}</span>
-                <span className="text-[var(--brand-text)]">{formatCurrency(displayGrandTotal)}</span>
+                <span className="text-[var(--brand-text)]">{formatMoney(displayGrandTotal, localeKit)}</span>
               </div>
             </div>
           </div>
 
           {!billingLocked && (
             <>
-              <button
-                type="button"
-                onClick={() => goToStep(2)}
-                className={`${btnSecondary} w-full`}
-              >
+              <button type="button" onClick={() => goToStep(2)} className={`${btnSecondary} w-full min-h-11`}>
                 {t("addMoreServices")}
               </button>
               <div>
                 <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
                   {t("paymentMode")}
                 </p>
-                <SegmentedControl
+                <SegmentedControl<PaymentMode>
                   options={[
                     { id: "CASH", label: t("cash") },
                     { id: "UPI", label: t("upi") },
                     { id: "CARD", label: t("card") },
+                    { id: "SPLIT", label: t("split") },
                   ]}
                   value={paymentMode}
-                  onChange={(m) => setPaymentMode(m as "CASH" | "UPI" | "CARD")}
+                  onChange={setPaymentMode}
                 />
               </div>
-              {paymentMode !== "CASH" && (
+              {paymentMode !== "CASH" && paymentMode !== "SPLIT" && (
                 <input
                   placeholder={t("txnReference")}
                   value={reference}
@@ -1272,13 +1679,65 @@ export default function WalkInPage() {
                   className={inputClass}
                 />
               )}
+              {paymentMode === "SPLIT" && (
+                <div className="space-y-2">
+                  {splitRows.map((row, idx) => (
+                    <div key={idx} className="grid grid-cols-1 min-[480px]:grid-cols-[7.5rem_1fr] lg:grid-cols-[7.5rem_minmax(0,1fr)_minmax(0,1fr)] gap-2">
+                      <select
+                        value={row.mode}
+                        onChange={(e) =>
+                          setSplitRows((prev) =>
+                            prev.map((r, i) => (i === idx ? { ...r, mode: e.target.value as SplitRow["mode"] } : r))
+                          )
+                        }
+                        className={`${selectClass} min-h-11`}
+                      >
+                        <option value="CASH">{t("cash")}</option>
+                        <option value="UPI">{t("upi")}</option>
+                        <option value="CARD">{t("card")}</option>
+                      </select>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="0.01"
+                        placeholder={t("splitRowAmount")}
+                        value={row.amount}
+                        onChange={(e) =>
+                          setSplitRows((prev) => prev.map((r, i) => (i === idx ? { ...r, amount: e.target.value } : r)))
+                        }
+                        className={`${inputClass} min-h-11`}
+                      />
+                      {row.mode !== "CASH" && (
+                        <input
+                          placeholder={t("txnReference")}
+                          value={row.reference}
+                          onChange={(e) =>
+                            setSplitRows((prev) =>
+                              prev.map((r, i) => (i === idx ? { ...r, reference: e.target.value } : r))
+                            )
+                          }
+                          className={`${inputClass} min-h-11 min-[480px]:col-span-2 lg:col-span-1`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                  {!splitValid && splitSum > 0 && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">{t("splitSumMismatch")}</p>
+                  )}
+                </div>
+              )}
             </>
           )}
 
           {paymentSuccess && (
-            <p className="text-sm text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl px-3 py-2">
-              {paymentSuccess}
-            </p>
+            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 space-y-1">
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{paymentSuccess}</p>
+              <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">{t("receiptShareHint")}</p>
+              {receiptQueued && (
+                <p className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60">{t("receiptQueuedHint")}</p>
+              )}
+            </div>
           )}
 
           {billingLocked ? (
@@ -1287,15 +1746,15 @@ export default function WalkInPage() {
                 type="button"
                 onClick={() => void downloadPaidInvoice()}
                 disabled={downloadingPdf}
-                className={`${btnPrimary} w-full py-3.5`}
+                className={`${btnPrimary} w-full py-3.5 min-h-12`}
               >
                 <Download className="w-4 h-4" />
                 {downloadingPdf ? tCommon("processing") : t("downloadBill")}
               </button>
               <button
                 type="button"
-                onClick={() => router.push("/manager/bookings")}
-                className={`${btnSecondary} w-full`}
+                onClick={() => router.push("/manager/walk-in?tab=history")}
+                className={`${btnSecondary} w-full min-h-11`}
               >
                 {t("viewBookings")}
               </button>
@@ -1309,7 +1768,7 @@ export default function WalkInPage() {
                   router.replace("/manager/walk-in");
                   void refetchOpenVisits();
                 }}
-                className={`${btnSecondary} w-full`}
+                className={`${btnSecondary} w-full min-h-11`}
               >
                 {t("done")}
               </button>
@@ -1317,23 +1776,17 @@ export default function WalkInPage() {
           ) : (
             <button
               type="button"
-              onClick={() =>
-                payBooking.mutate({
-                  id: bookingId,
-                  amount: Number(displayGrandTotal.toFixed(2)),
-                  cgstAmount: Number(parsedCgst.toFixed(2)),
-                  sgstAmount: Number(parsedSgst.toFixed(2)),
-                })
-              }
+              onClick={submitPayment}
               disabled={
-                !taxOverrideValid ||
+                !taxValid ||
                 payBooking.isPending ||
                 applyPromo.isPending ||
-                applyBillDiscount.isPending
+                applyBillDiscount.isPending ||
+                (paymentMode === "SPLIT" && !splitValid)
               }
-              className={`${btnPrimary} w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
+              className={`${btnPrimary} w-full py-3.5 min-h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
             >
-              {payBooking.isPending ? tCommon("processing") : t("completeInvoice")}
+              {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
             </button>
           )}
         </Card>
@@ -1341,8 +1794,8 @@ export default function WalkInPage() {
 
       {step === 3 && !billPreview && (
         <Card className="space-y-3">
-          <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-          <button type="button" onClick={() => setStep(2)} className={btnSecondary}>
+          <div className="h-24 rounded-xl bg-[var(--surface-muted)] animate-pulse" aria-hidden />
+          <button type="button" onClick={() => setStep(2)} className={`${btnSecondary} min-h-11`}>
             {t("addMoreServices")}
           </button>
         </Card>

@@ -42,14 +42,14 @@ export function StageActionPanel({
   return (
     <>
       <div className="space-y-4">
-        <div className="rounded-lg bg-violet-50 px-4 py-3 dark:bg-violet-950/30">
-          <p className="text-sm font-medium text-violet-900 dark:text-violet-200">
+        <div className="rounded-lg bg-[var(--brand-light)] px-4 py-3 dark:bg-[color-mix(in_srgb,var(--brand)_20%,transparent)]">
+          <p className="text-sm font-medium text-[var(--brand-text)]">
             You are here: {STAGE_DESCRIPTIONS[currentStage]}
           </p>
           {requirements.length > 0 && (
             <ul className="mt-2 space-y-1">
               {requirements.map((r) => (
-                <li key={r} className="flex items-start gap-2 text-xs text-violet-800 dark:text-violet-300">
+                <li key={r} className="flex items-start gap-2 text-xs text-[var(--brand-text)] dark:text-[var(--brand-text)]">
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {r}
                 </li>
@@ -77,9 +77,9 @@ export function StageActionPanel({
               className={cn(
                 "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition hover:shadow-sm",
                 action.variant === "primary" &&
-                  "border-violet-200 bg-white hover:border-violet-400 dark:bg-[var(--surface)]",
+                  "border-[var(--brand-ring)] bg-white hover:border-[var(--brand)] dark:bg-[var(--surface)]",
                 action.variant === "secondary" &&
-                  "border-[var(--border)] bg-[var(--surface-muted)] hover:border-violet-300",
+                  "border-[var(--border)] bg-[var(--surface-muted)] hover:border-[var(--brand-ring)]",
                 action.variant === "danger" &&
                   "border-red-200 bg-red-50/50 hover:border-red-300 dark:bg-red-950/20"
               )}
@@ -96,7 +96,7 @@ export function StageActionPanel({
                 <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{action.description}</p>
               </div>
               {action.variant !== "danger" && (
-                <ArrowRight className="h-4 w-4 shrink-0 text-violet-500" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
               )}
             </button>
           ))}

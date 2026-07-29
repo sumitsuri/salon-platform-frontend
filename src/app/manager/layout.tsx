@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Home, UserPlus, ClipboardList, Fingerprint, Sparkles, Scissors, Package, CreditCard, CalendarClock } from "lucide-react";
+import { Home, UserPlus, Fingerprint, Sparkles, Scissors, Package, CreditCard, CalendarClock } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -32,8 +32,14 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
         label: t("sectionFrontDesk"),
         items: [
           { href: "/manager/schedule", label: t("schedule"), shortLabel: t("floor"), icon: CalendarClock },
-          { href: "/manager/walk-in", label: t("walkIn"), shortLabel: t("walkIn"), icon: UserPlus, fab: true },
-          { href: "/manager/bookings", label: t("bookings"), shortLabel: t("book"), icon: ClipboardList },
+          {
+            href: "/manager/walk-in",
+            label: t("visits"),
+            shortLabel: t("visitsShort"),
+            icon: UserPlus,
+            fab: true,
+            fabHref: "/manager/walk-in?new=1",
+          },
           { href: "/manager/memberships", label: t("memberships"), shortLabel: t("member"), icon: CreditCard },
         ],
       },

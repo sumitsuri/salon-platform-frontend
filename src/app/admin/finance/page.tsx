@@ -47,8 +47,8 @@ import {
   selectClass,
   btnPrimary,
   btnSecondary,
+  PageLoader,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "overview" | "expenditures";
 type ExpView = "months" | "detail";
@@ -262,7 +262,7 @@ export default function AdminFinancePage() {
   };
 
   if (!initialized || branchesLoading) {
-    return <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{t("loading")}</p>;
+    return <PageLoader label={t("loading")} />;
   }
 
   const brand = pl?.brand;
@@ -288,8 +288,6 @@ export default function AdminFinancePage() {
           )
         }
       />
-
-      <MissionStrip />
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 

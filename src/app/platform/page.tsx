@@ -35,6 +35,7 @@ import {
   inputClass,
   selectClass,
   btnPrimary,
+  btnPrimarySm,
   btnSecondary,
   StatusBadge,
 } from "@/components/ui";
@@ -47,8 +48,6 @@ type BranchDrawerState = { mode: "create" } | { mode: "view"; branch: PlatformBr
 type UserDrawerState = { mode: "create" } | { mode: "view"; user: PlatformUser };
 
 const ONBOARD_ROLES: UserRole[] = ["BRAND_ADMIN", "BRANCH_MANAGER", "SALON_MANAGER"];
-
-const btnViolet = `${btnPrimary} bg-violet-600 hover:bg-violet-700 active:bg-violet-800 shadow-violet-600/20`;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -219,7 +218,7 @@ export default function PlatformPage() {
         subtitle={t("subtitle")}
         action={
           !mobileShowDetail && (
-            <button onClick={() => setTenantDrawer({ mode: "create" })} className={`${btnViolet} py-2.5 px-4`}>
+            <button onClick={() => setTenantDrawer({ mode: "create" })} className={btnPrimarySm}>
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">{t("addTenant")}</span>
             </button>
@@ -243,7 +242,7 @@ export default function PlatformPage() {
               title={t("noTenantsTitle")}
               description={t("noTenantsDesc")}
               action={
-                <button onClick={() => setTenantDrawer({ mode: "create" })} className={btnViolet}>
+                <button onClick={() => setTenantDrawer({ mode: "create" })} className={btnPrimary}>
                   <Plus className="w-4 h-4" />
                   {t("addTenant")}
                 </button>
@@ -289,7 +288,7 @@ export default function PlatformPage() {
                 {tab === "branches" && (
                   <button
                     onClick={() => setBranchDrawer({ mode: "create" })}
-                    className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
+                    className={`${btnPrimarySm} shrink-0`}
                   >
                     <Plus className="w-4 h-4" />
                     <span className="hidden sm:inline">{t("addBranch")}</span>
@@ -298,7 +297,7 @@ export default function PlatformPage() {
                 {tab === "employees" && (
                   <button
                     onClick={() => setUserDrawer({ mode: "create" })}
-                    className={`${btnViolet} py-2 px-3 text-sm shrink-0`}
+                    className={`${btnPrimarySm} shrink-0`}
                   >
                     <UserPlus className="w-4 h-4" />
                     <span className="hidden sm:inline">{t("onboard")}</span>
@@ -396,11 +395,11 @@ function TenantCard({
       onClick={onSelect}
       className={cn(
         "w-full bg-[var(--surface)] rounded-2xl border p-4 flex items-center gap-3 text-left transition active:scale-[0.98]",
-        selected ? "border-violet-400 ring-2 ring-violet-100" : "border-[var(--border)] hover:border-[var(--border-strong)]"
+        selected ? "border-[var(--brand)] ring-2 ring-[var(--brand-ring)]" : "border-[var(--border)] hover:border-[var(--border-strong)]"
       )}
     >
-      <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-        <span className="font-bold text-violet-700">{tenant.name[0]}</span>
+      <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center shrink-0">
+        <span className="font-bold text-[var(--brand-text)]">{tenant.name[0]}</span>
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold truncate text-sm">{tenant.name}</p>
@@ -424,7 +423,7 @@ function TenantCard({
           <Trash2 className="w-4 h-4" />
         </span>
       )}
-      <ChevronRight className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0", selected && "text-violet-500")} />
+      <ChevronRight className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0", selected && "text-[var(--brand-text)]")} />
     </button>
   );
 }
@@ -466,7 +465,7 @@ function BranchesList({
                   status={branch.status === "ACTIVE" ? "APPROVED" : "PENDING"}
                   className={branch.status === "ACTIVE" ? "!bg-emerald-50 !text-emerald-700 !border-emerald-200" : ""}
                 />
-                <ChevronRight className={cn("w-4 h-4", selectedId === branch.id ? "text-violet-600" : "text-[var(--text-tertiary)]")} />
+                <ChevronRight className={cn("w-4 h-4", selectedId === branch.id ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
               </div>
             }
           />
@@ -510,7 +509,7 @@ function UsersList({
             trailing={
               <div className="flex items-center gap-2">
                 {!user.active && <StatusBadge status="CANCELLED" />}
-                <ChevronRight className={cn("w-4 h-4", selectedId === user.id ? "text-violet-600" : "text-[var(--text-tertiary)]")} />
+                <ChevronRight className={cn("w-4 h-4", selectedId === user.id ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
               </div>
             }
           />
@@ -590,7 +589,7 @@ function TenantDrawer({
         {error && <AlertBanner variant="error">{error}</AlertBanner>}
         <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
           <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
-          <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
+          <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
             {loading ? t("creating") : t("createTenant")}
           </button>
         </div>
@@ -688,7 +687,7 @@ function PlatformBranchDrawer({
           </div>
           <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
             <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
-            <button type="submit" disabled={loading} className={`${btnViolet} flex-1`}>
+            <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
               {loading ? t("adding") : t("addBranch")}
             </button>
           </div>
@@ -806,7 +805,7 @@ function PlatformUserDrawer({
           )}
           <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
             <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`}>{tCommon("cancel")}</button>
-            <button type="submit" disabled={loading || (needsBranch && branches.length === 0)} className={`${btnViolet} flex-1`}>
+            <button type="submit" disabled={loading || (needsBranch && branches.length === 0)} className={`${btnPrimary} flex-1`}>
               {loading ? t("onboarding") : t("onboardEmployeeBtn")}
             </button>
           </div>

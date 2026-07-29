@@ -81,7 +81,7 @@ export default function ManagerHomePage() {
         <h1 className="text-xl font-bold mt-0.5">{user?.name?.split(" ")[0] || t("manager")}</h1>
         <p className="hero-subtitle text-sm mt-1">{user?.branchName}</p>
         <p className="hero-muted text-xs mt-2 font-medium opacity-90">{tBrand("taglineShort")}</p>
-        <Link href="/manager/walk-in" className="hero-cta mt-4 w-full sm:w-auto">
+        <Link href="/manager/walk-in?new=1" className="hero-cta mt-4 w-full sm:w-auto">
           <UserPlus className="w-4 h-4" />
           {t("newWalkIn")}
         </Link>
@@ -98,10 +98,10 @@ export default function ManagerHomePage() {
       <div>
         <SectionLabel>{t("quickActions")}</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
-          <QuickAction href="/manager/walk-in" icon={UserPlus} label={t("newWalkIn")} description={t("walkInDesc")} color="brand" />
+          <QuickAction href="/manager/walk-in?new=1" icon={UserPlus} label={t("newWalkIn")} description={t("walkInDesc")} color="brand" />
           <QuickAction href="/manager/schedule" icon={CalendarClock} label={t("schedule")} description={t("scheduleDesc")} color="emerald" />
           <QuickAction href="/manager/attendance" icon={Fingerprint} label={t("attendance")} description={t("attendanceDesc")} color="violet" />
-          <QuickAction href="/manager/bookings" icon={ClipboardList} label={tNav("bookings")} description={t("bookingsDesc")} color="emerald" />
+          <QuickAction href="/manager/walk-in?tab=history" icon={ClipboardList} label={tNav("visits")} description={t("bookingsDesc")} color="emerald" />
           <QuickAction href="/manager/insights" icon={Sparkles} label={tNav("insights")} description={t("insightsDesc")} color="amber" />
           <QuickAction href="/manager/services" icon={Scissors} label={tNav("services")} description={t("servicesDesc")} color="violet" />
         </div>
@@ -114,7 +114,7 @@ export default function ManagerHomePage() {
       <Card padding={false}>
         <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20 flex items-center justify-between">
           <h2 className="font-bold text-[var(--text-primary)] text-sm">{t("recentVisits")}</h2>
-          <Link href="/manager/bookings" className="link-brand text-xs">
+          <Link href="/manager/walk-in?tab=history" className="link-brand text-xs">
             {tCommon("viewAll")}
           </Link>
         </div>

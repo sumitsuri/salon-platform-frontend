@@ -24,7 +24,6 @@ import {
   SideSheet,
   AlertBanner,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 import { formatCurrency, cn } from "@/lib/utils";
 
 type Tab = "catalog" | "performance";
@@ -572,8 +571,6 @@ export default function AdminServicesPage() {
           )
         }
       />
-
-      <MissionStrip />
 
       <div className="flex gap-1 p-1 rounded-xl bg-[var(--surface-muted)] w-fit" data-testid="services-tabs">
         {(["catalog", "performance"] as Tab[]).map((key) => (

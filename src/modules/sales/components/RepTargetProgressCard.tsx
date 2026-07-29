@@ -51,7 +51,7 @@ export function RepTargetProgressCard({
           {onEdit && (
             <button
               type="button"
-              className="rounded p-1.5 text-[var(--ink-muted)] hover:bg-violet-50 hover:text-violet-600"
+              className="rounded p-1.5 text-[var(--ink-muted)] hover:bg-[var(--brand-light)] hover:text-[var(--brand-text)]"
               aria-label={`Edit targets for ${target.repName}`}
               data-testid="edit-rep-targets"
               onClick={onEdit}

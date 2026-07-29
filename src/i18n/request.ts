@@ -6,6 +6,7 @@ export default getRequestConfig(async () => {
   const locale = defaultLocale;
   return {
     locale,
+    timeZone: "Asia/Kolkata",
     messages: await loadMessages(locale),
   };
 });

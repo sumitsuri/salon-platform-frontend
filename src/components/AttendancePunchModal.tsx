@@ -398,13 +398,13 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
           <div className="flex gap-2">
             {preview ? (
               <>
-                <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1`} disabled={submitting}>
+                <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1 min-h-12`} disabled={submitting}>
                   {t("retakePhoto")}
                 </button>
                 <button
                   type="button"
                   onClick={handlePrimaryAction}
-                  className={`${btnPrimary} flex-1 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
+                  className={`${btnPrimary} flex-1 min-h-12 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
                   disabled={submitting}
                   data-testid="attendance-confirm-punch"
                 >

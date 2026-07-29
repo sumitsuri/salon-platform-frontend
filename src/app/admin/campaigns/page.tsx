@@ -13,8 +13,8 @@ import {
   btnPrimary,
   btnSecondary,
   inputClass,
+  PageLoader,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 
 const emptyForm: CreateCampaignRequest = {
   name: "",
@@ -68,8 +68,6 @@ export default function AdminCampaignsPage() {
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      <MissionStrip />
-
       <Card className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
           <Megaphone className="w-4 h-4 text-[var(--brand)]" />
@@ -122,8 +120,21 @@ export default function AdminCampaignsPage() {
             </p>
           )}
           <button
-            onClick={() => create.mutate()}
-            disabled={create.isPending || !form.name || !form.messageText || previewCount === 0}
+            type="button"
+            onClick={() => {
+              if (previewCount == null || previewCount <= 0) return;
+              const ok = window.confirm(
+                `Send this campaign to ${previewCount} customer${previewCount === 1 ? "" : "s"}? This cannot be undone.`
+              );
+              if (ok) create.mutate();
+            }}
+            disabled={
+              create.isPending ||
+              !form.name ||
+              !form.messageText ||
+              previewCount == null ||
+              previewCount <= 0
+            }
             className={`${btnPrimary} ml-auto`}
           >
             <Send className="w-4 h-4" />
@@ -134,7 +145,7 @@ export default function AdminCampaignsPage() {
 
       <Card padding={false}>
         {isLoading ? (
-          <p className="p-4 text-sm text-[var(--text-tertiary)]">{t("loading")}</p>
+          <PageLoader label={t("loading")} />
         ) : campaigns.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (

@@ -36,8 +36,8 @@ import {
   selectClass,
   btnPrimary,
   btnSecondary,
+  PageLoader,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Tab = "overview" | "products" | "vendors" | "stock" | "movements";
 
@@ -270,7 +270,7 @@ export default function AdminInventoryPage() {
     createMovement.isPending;
 
   if (!initialized || branchesLoading) {
-    return <p className="text-center py-8 text-sm text-[var(--text-tertiary)]">{t("loading")}</p>;
+    return <PageLoader label={t("loading")} />;
   }
 
   return (
@@ -280,8 +280,6 @@ export default function AdminInventoryPage() {
         subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : t("subtitleOverview")}
         action={tab === "overview" ? <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} /> : undefined}
       />
-
-      <MissionStrip />
 
       <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
@@ -699,9 +697,6 @@ function ProductForm({
       <Field label={tCommon("name")}>
         <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required />
       </Field>
-      <Field label={t("sku")}>
-        <input className={inputClass} value={sku} onChange={(e) => setSku(e.target.value)} />
-      </Field>
       <Field label={t("category")}>
         <select value={category} onChange={(e) => setCategory(e.target.value as ProductCategory)} className={selectClass}>
           {CATEGORIES.map((c) => (
@@ -723,17 +718,34 @@ function ProductForm({
       <Field label={t("unitCostField")}>
         <input type="number" min="0" step="0.01" className={inputClass} value={unitCost} onChange={(e) => setUnitCost(e.target.value)} required />
       </Field>
-      <Field label={t("retailPriceField")}>
-        <input type="number" min="0" step="0.01" className={inputClass} value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
-      </Field>
-      <Field label={t("reorderLevel")}>
-        <input type="number" min="0" step="0.001" className={inputClass} value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
-      </Field>
+
+      <details className="group rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 open:bg-[var(--surface)]">
+        <summary className="cursor-pointer select-none list-none px-3 py-2.5 flex items-center justify-between gap-2 text-sm font-semibold text-[var(--text-primary)]">
+          <span>
+            {t("advancedFields")}
+            <span className="block text-xs font-normal text-[var(--text-tertiary)] mt-0.5">
+              {t("advancedFieldsHint")}
+            </span>
+          </span>
+        </summary>
+        <div className="px-3 pb-3 space-y-4 border-t border-[var(--border)] pt-3">
+          <Field label={t("sku")}>
+            <input className={inputClass} value={sku} onChange={(e) => setSku(e.target.value)} />
+          </Field>
+          <Field label={t("retailPriceField")}>
+            <input type="number" min="0" step="0.01" className={inputClass} value={retailPrice} onChange={(e) => setRetailPrice(e.target.value)} />
+          </Field>
+          <Field label={t("reorderLevel")}>
+            <input type="number" min="0" step="0.001" className={inputClass} value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} />
+          </Field>
+        </div>
+      </details>
+
       <div className="flex gap-2 pt-2">
-        <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>
+        <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1 min-h-11`}>
           {cancelLabel}
         </button>
-        <button type="submit" disabled={loading} className={`${btnPrimary} flex-1`}>
+        <button type="submit" disabled={loading} className={`${btnPrimary} flex-1 min-h-11`}>
           {loading ? tCommon("saving") : tCommon("save")}
         </button>
       </div>

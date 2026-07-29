@@ -248,7 +248,7 @@ export default function SalesTeamPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="rounded p-2 text-[var(--ink-muted)] hover:bg-[var(--surface-muted)] hover:text-violet-600 touch-manipulation"
+                      className="rounded p-2 text-[var(--ink-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--brand-text)] touch-manipulation"
                       aria-label={`Edit ${r.name}`}
                       onClick={() => openEditRep(r)}
                     >
@@ -315,7 +315,7 @@ export default function SalesTeamPage() {
                       <td className="py-2 pr-4">
                         <button
                           type="button"
-                          className="text-violet-600 hover:underline touch-manipulation"
+                          className="text-[var(--brand-text)] hover:underline touch-manipulation"
                           onClick={() => openEditTarget(p.repId)}
                         >
                           {targetByRepId.get(p.repId)?.targetConversions ?? "—"} wins

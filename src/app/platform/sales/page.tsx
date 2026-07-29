@@ -73,6 +73,7 @@ export default function SalesPipelinePage() {
     useSalesPipelineParams();
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileBoardStage, setMobileBoardStage] = useState<LeadStage>(PIPELINE_STAGES[0]);
   const [selectedUseCases, setSelectedUseCases] = useState<string[]>([]);
   const [customUseCases, setCustomUseCases] = useState("");
   const [form, setForm] = useState({
@@ -250,7 +251,50 @@ export default function SalesPipelinePage() {
             }
           />
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-4">
+          <>
+            {/* Mobile: one stage at a time */}
+            <div className="md:hidden space-y-3">
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {PIPELINE_STAGES.map((stage) => (
+                  <button
+                    key={stage}
+                    type="button"
+                    onClick={() => setMobileBoardStage(stage)}
+                    className={cn(
+                      "shrink-0 rounded-full px-3 py-2 text-xs font-semibold border touch-manipulation min-h-[40px]",
+                      mobileBoardStage === stage
+                        ? "bg-[var(--brand)] text-[var(--brand-on-brand)] border-[var(--brand)]"
+                        : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]"
+                    )}
+                  >
+                    {STAGE_LABELS[stage]} ({byStage[stage].length})
+                  </button>
+                ))}
+              </div>
+              <div className={cn("rounded-xl border p-2 space-y-2", stageColumnClass(mobileBoardStage))}>
+                {byStage[mobileBoardStage].map((lead) => (
+                  <Link
+                    key={lead.id}
+                    href={salesLeadDetailHref(lead.id)}
+                    className="block rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 touch-manipulation"
+                  >
+                    <p className="text-sm font-semibold">{lead.businessName}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      {lead.contactName} · {lead.phone}
+                    </p>
+                    {lead.localityName && (
+                      <p className="mt-1 text-xs text-[var(--brand-text)]">{lead.localityName}</p>
+                    )}
+                  </Link>
+                ))}
+                {byStage[mobileBoardStage].length === 0 && (
+                  <p className="px-2 py-8 text-center text-xs text-[var(--text-tertiary)]">No leads in this stage</p>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop / tablet: horizontal kanban */}
+            <div className="hidden md:flex gap-3 overflow-x-auto pb-4">
             {PIPELINE_STAGES.map((stage) => (
               <div
                 key={stage}
@@ -265,7 +309,7 @@ export default function SalesPipelinePage() {
                       "text-xs font-semibold uppercase tracking-wide",
                       stage === "WON" && "text-emerald-700",
                       stage === "LOST" && "text-red-700",
-                      !isTerminalStage(stage) && "text-[var(--ink-muted)]"
+                      !isTerminalStage(stage) && "text-[var(--text-secondary)]"
                     )}
                   >
                     {STAGE_LABELS[stage]}
@@ -277,32 +321,33 @@ export default function SalesPipelinePage() {
                     <Link
                       key={lead.id}
                       href={salesLeadDetailHref(lead.id)}
-                      className="block rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 transition hover:border-violet-300 hover:shadow-sm"
+                      className="block rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 transition hover:border-[var(--brand-ring)] hover:shadow-sm"
                     >
                       <p className="text-sm font-semibold">{lead.businessName}</p>
-                      <p className="text-xs text-[var(--ink-muted)]">
+                      <p className="text-xs text-[var(--text-secondary)]">
                         {lead.contactName} · {lead.phone}
                       </p>
                       {lead.localityName && (
-                        <p className="mt-1 text-xs text-violet-600">{lead.localityName}</p>
+                        <p className="mt-1 text-xs text-[var(--brand-text)]">{lead.localityName}</p>
                       )}
                       {isAdmin && lead.assignedRepName && (
-                        <p className="mt-1 text-xs text-[var(--ink-muted)]">{lead.assignedRepName}</p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)]">{lead.assignedRepName}</p>
                       )}
                       {!isTerminalStage(stage) && (
-                        <p className="mt-2 text-[10px] font-medium text-violet-600">
+                        <p className="mt-2 text-[10px] font-medium text-[var(--brand-text)]">
                           Open for next step →
                         </p>
                       )}
                     </Link>
                   ))}
                   {byStage[stage].length === 0 && (
-                    <p className="px-2 py-4 text-center text-xs text-[var(--ink-muted)]">Empty</p>
+                    <p className="px-2 py-4 text-center text-xs text-[var(--text-tertiary)]">Empty</p>
                   )}
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </section>
 

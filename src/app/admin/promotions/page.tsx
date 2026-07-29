@@ -23,7 +23,6 @@ import {
   inputClass,
   selectClass,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 import { formatCurrency } from "@/lib/utils";
 
 type Tab = "coupons" | "offers" | "memberships";
@@ -208,7 +207,6 @@ export default function AdminPromotionsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <MissionStrip />
 
       <div className="flex flex-wrap gap-2">
         {(

@@ -14,7 +14,7 @@ export function TargetProgressBar({
 }) {
   const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : actual > 0 ? 100 : 0;
   const barColor =
-    pct >= 100 ? "bg-emerald-500" : pct >= 70 ? "bg-violet-500" : "bg-amber-500";
+    pct >= 100 ? "bg-emerald-500" : pct >= 70 ? "bg-[var(--brand-light)]0" : "bg-amber-500";
 
   return (
     <div>
@@ -52,6 +52,6 @@ export function overallTargetPercent(
 
 export function targetStatusLabel(pct: number): { label: string; className: string } {
   if (pct >= 100) return { label: "Exceeding", className: "bg-emerald-100 text-emerald-800" };
-  if (pct >= 70) return { label: "On track", className: "bg-violet-100 text-violet-800" };
+  if (pct >= 70) return { label: "On track", className: "bg-[var(--brand-light)] text-[var(--brand-text)]" };
   return { label: "Needs attention", className: "bg-amber-100 text-amber-800" };
 }

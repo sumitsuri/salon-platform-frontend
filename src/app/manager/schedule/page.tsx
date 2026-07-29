@@ -332,20 +332,45 @@ function VisitDetailsModal({
         </div>
 
         <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-[var(--border)] flex flex-col sm:flex-row gap-2 shrink-0">
-          {open ? (
+          {block.status === "READY_FOR_BILLING" ? (
+            <>
+              <Link
+                href={`/manager/walk-in?bookingId=${block.bookingId}`}
+                className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
+                onClick={onClose}
+              >
+                {t("billNow")}
+              </Link>
+              <Link
+                href={`/manager/walk-in?bookingId=${block.bookingId}&edit=1`}
+                className={`${btnSecondary} w-full min-h-12 touch-manipulation justify-center`}
+                onClick={onClose}
+              >
+                {t("openVisit")}
+              </Link>
+            </>
+          ) : open ? (
             <Link
               href={`/manager/walk-in?bookingId=${block.bookingId}`}
-              className={`${btnPrimary} w-full touch-manipulation`}
+              className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
               onClick={onClose}
             >
               {t("openVisit")}
             </Link>
           ) : (
-            <Link href="/manager/bookings" className={`${btnPrimary} w-full touch-manipulation`} onClick={onClose}>
+            <Link
+              href="/manager/walk-in?tab=history"
+              className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
+              onClick={onClose}
+            >
               {t("viewInBookings")}
             </Link>
           )}
-          <button type="button" className={`${btnSecondary} w-full touch-manipulation`} onClick={onClose}>
+          <button
+            type="button"
+            className={`${btnSecondary} w-full min-h-12 touch-manipulation justify-center`}
+            onClick={onClose}
+          >
             {t("close")}
           </button>
         </div>
@@ -410,21 +435,10 @@ export default function ManagerSchedulePage() {
         title={t("title")}
         subtitle={t("subtitle")}
         action={
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              className={`${btnSecondary} flex-1 sm:flex-none touch-manipulation`}
-              onClick={() => refetch()}
-              disabled={isFetching}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
-              {t("refresh")}
-            </button>
-            <Link href="/manager/walk-in" className={`${btnPrimary} flex-1 sm:flex-none touch-manipulation`}>
-              <UserPlus className="w-4 h-4" />
-              {t("newWalkIn")}
-            </Link>
-          </div>
+          <Link href="/manager/walk-in" className={`${btnPrimary} w-full sm:w-auto touch-manipulation`}>
+            <UserPlus className="w-4 h-4" />
+            {t("newWalkIn")}
+          </Link>
         }
       />
 
@@ -463,17 +477,29 @@ export default function ManagerSchedulePage() {
             </button>
           )}
         </div>
-        <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] truncate">
-          {data ? t("hours", { open: data.openTime, close: data.closeTime }) : "—"}
-          {dataUpdatedAt
-            ? ` · ${t("updated", {
-                time: new Date(dataUpdatedAt).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }),
-              })}`
-            : ""}
-        </p>
+        <div className="flex items-center gap-1.5 min-w-0 text-[11px] sm:text-xs text-[var(--text-secondary)]">
+          <p className="truncate min-w-0">
+            {data ? t("hours", { open: data.openTime, close: data.closeTime }) : "—"}
+            {dataUpdatedAt
+              ? ` · ${t("updated", {
+                  time: new Date(dataUpdatedAt).toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                })}`
+              : ""}
+          </p>
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--text-secondary)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] touch-manipulation disabled:opacity-50"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label={t("refresh")}
+            title={t("refresh")}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">

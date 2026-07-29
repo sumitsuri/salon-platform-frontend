@@ -98,7 +98,9 @@
       "floor": "Floor",
       "sectionFrontDesk": "फ्रंट डेस्क",
       "sectionOperations": "ऑपरेशन्स",
-      "sectionInsights": "इनसाइट्स"
+      "sectionInsights": "इनसाइट्स",
+      "visits": "विज़िट",
+      "visitsShort": "विज़िट"
     },
     "home": {
       "goodMorning": "सुप्रभात",
@@ -144,7 +146,7 @@
       "card": "कार्ड",
       "txnReference": "लेनदेन संदर्भ",
       "completeInvoice": "पूर्ण करें और इनवॉइस बनाएँ",
-      "receiptQueued": "भुगतान पूरा। {phone} पर WhatsApp रसीद भेजी जा रही है।",
+      "receiptQueued": "भुगतान पूरा। मैसेजिंग जुड़ने पर डिजिटल रसीद भेजी जा सकती है ({phone})।",
       "memberBadge": "{plan} · {percent}% off",
       "validUntil": "Valid until {date}",
       "sellMembership": "Sell membership card",
@@ -164,9 +166,9 @@
       "amountPlaceholder": "e.g. 100",
       "applyManualDiscount": "Apply discount",
       "manualDiscountInvalid": "Enter a discount type and a value greater than 0",
-      "paymentComplete": "Payment complete. Download the bill to share with the customer.",
+      "paymentComplete": "भुगतान पूरा। ग्राहक से साझा करने के लिए बिल डाउनलोड करें।",
       "downloadBill": "Download bill PDF",
-      "viewBookings": "View bookings",
+      "viewBookings": "हिस्ट्री देखें",
       "clearDiscount": "Clear",
       "done": "Done",
       "saveOpenVisit": "Save & keep open",
@@ -187,7 +189,41 @@
       "checkFloor": "Check floor",
       "allSubcategories": "All",
       "searchServices": "Search services…",
-      "noServicesMatch": "No services match these filters"
+      "noServicesMatch": "No services match these filters",
+      "phoneInvalid": "वैध 10 अंकों का मोबाइल नंबर दर्ज करें",
+      "recentCustomers": "हाल के ग्राहक",
+      "recentServices": "हाल की सेवाएँ",
+      "favorites": "पसंदीदा",
+      "allCategories": "सभी",
+      "advancedTax": "उन्नत — कर बदलें",
+      "autoTaxHint": "GST सेवाओं से गणना होता है। केवल इस बिल के लिए CGST/SGST बदलने हेतु Advanced खोलें।",
+      "gstinLabel": "शाखा GSTIN: {gstin}",
+      "taxOverrideHint": "आप इस इनवॉइस के लिए गणना किए गए GST को ओवरराइड कर रहे हैं।",
+      "taxableAmount": "कर योग्य",
+      "split": "विभाजित",
+      "splitSumMismatch": "विभाजित राशियाँ कुल राशि के बराबर होनी चाहिए",
+      "splitRowMode": "मोड",
+      "splitRowAmount": "राशि",
+      "collectAmount": "{amount} जमा करें",
+      "receiptShareHint": "ग्राहक से साझा करने के लिए बिल PDF डाउनलोड करें (WhatsApp/SMS जुड़ने पर उपलब्ध)।",
+      "receiptQueuedHint": "मैसेजिंग चालू होने पर डिजिटल रसीद भी कतार में लग सकती है।",
+      "draftRestored": "इस डिवाइस से अधूरी विज़िट पुनर्स्थापित की गई।",
+      "restoreDraft": "ड्राफ़्ट पुनर्स्थापित करें",
+      "dismissDraft": "हटाएँ",
+      "draftAvailable": "इस डिवाइस पर अधूरी वॉक-इन है।",
+      "estimatedTotal": "अनुमानित कुल (GST सहित)",
+      "billTotal": "बिल कुल",
+      "stylistAutoAssigned": "स्टाइलिस्ट स्वतः असाइन — ज़रूरत हो तो बदलें",
+      "starFavorite": "पसंदीदा में जोड़ें",
+      "unstarFavorite": "पसंदीदा से हटाएँ",
+      "offlineDraftSaved": "ड्राफ़्ट इस डिवाइस पर सहेजा गया",
+      "anyAvailable": "कोई भी उपलब्ध",
+      "resetTax": "गणना किए गए GST पर वापस जाएँ",
+      "visitsTitle": "विज़िट",
+      "visitsSubtitle": "ओपन क्यू और विज़िट हिस्ट्री एक ही जगह",
+      "tabOpen": "ओपन ({count})",
+      "tabHistory": "हिस्ट्री",
+      "noOpenVisitsHint": "जब कोई वॉक-इन आए, विज़िट शुरू करें — यहाँ से सर्विस जोड़ें और बिल करें।"
     },
     "bookings": {
       "title": "बुकिंग",
@@ -439,7 +475,8 @@
       "services": "Services",
       "openVisit": "Open visit",
       "viewInBookings": "View in bookings",
-      "scrollHint": "Swipe sideways to see the full day timeline"
+      "scrollHint": "Swipe sideways to see the full day timeline",
+      "billNow": "अभी बिल करें"
     }
   },
   "components": {
@@ -941,7 +978,9 @@
       "saveAndSync": "सेव करें और finance sync",
       "onHand": "हाथ में",
       "value": "वैल्यू: {amount}",
-      "deactivateConfirm": "{name} निष्क्रिय करें?"
+      "deactivateConfirm": "{name} निष्क्रिय करें?",
+      "advancedFields": "उन्नत",
+      "advancedFieldsHint": "SKU, खुदरा मूल्य और रीऑर्डर स्तर"
     },
     "finance": {
       "title": "Finance और P&L",

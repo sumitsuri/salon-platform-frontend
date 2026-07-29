@@ -57,7 +57,7 @@ export function LeadPricingSection({ lead, updateLeadMutation }: LeadPricingSect
         {!isTerminalStage(lead.stage) && !editingPricing && (
           <button
             type="button"
-            className="text-xs text-violet-600 hover:underline"
+            className="text-xs text-[var(--brand-text)] hover:underline"
             onClick={() => {
               setPricingFields(pricingFieldsFromLead(lead));
               setEditingPricing(true);

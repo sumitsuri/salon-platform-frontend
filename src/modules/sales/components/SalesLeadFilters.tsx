@@ -112,7 +112,7 @@ export function SalesLeadFilters({
       {hideSourceFilter && (
         <div className="flex min-w-[140px] flex-col justify-end text-xs">
           <span className="mb-1 block font-medium text-[var(--ink-muted)]">Source</span>
-          <span className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 font-medium text-violet-800">
+          <span className="rounded-lg border border-[var(--brand-ring)] bg-[var(--brand-light)] px-3 py-2 font-medium text-[var(--brand-text)]">
             Marketing Web
           </span>
         </div>

@@ -4,18 +4,21 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, Lead } from "@/lib/api";
 import {
   PageHeader,
   Card,
   ListRow,
   EmptyState,
-  btnSecondary,
+  btnSecondarySm,
   FilterableTable,
+  MobileFilterPanel,
   TablePagination,
+  PageLoader,
+  SideSheet,
+  DetailField,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type Filters = {
   name: string;
@@ -43,7 +46,8 @@ export default function AdminLeadsPage() {
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(DEFAULT_PAGE_SIZE);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selected, setSelected] = useState<Lead | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(filters), 300);
@@ -143,18 +147,23 @@ export default function AdminLeadsPage() {
         subtitle={`${t("subtitle", { count: totalElements })}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
           <button
+            type="button"
             onClick={() => setShowFilters((v) => !v)}
-            className={`${btnSecondary} py-2.5 px-3 lg:hidden`}
+            className={`${btnSecondarySm} lg:hidden`}
+            aria-pressed={showFilters}
+            aria-label="Filters"
           >
             <Filter className="w-4 h-4" />
+            Filters
           </button>
         }
       />
 
-      <MissionStrip />
+      <MobileFilterPanel columns={columns} open={showFilters} />
 
       {hasFilters && (
         <button
+          type="button"
           onClick={() => setFilters(emptyFilters)}
           className="text-sm font-semibold text-[var(--brand-text)]"
         >
@@ -164,7 +173,7 @@ export default function AdminLeadsPage() {
 
       <Card padding={false}>
         {isLoading ? (
-          <p className="p-4 text-[var(--text-tertiary)] text-sm">{t("loading")}</p>
+          <PageLoader label={t("loading")} />
         ) : leads.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
@@ -175,6 +184,7 @@ export default function AdminLeadsPage() {
                   key={lead.id}
                   title={lead.name}
                   subtitle={`${lead.society || "—"} · ${lead.mobile}`}
+                  onClick={() => setSelected(lead)}
                   trailing={
                     <div className="text-right max-w-[140px]">
                       <p className="text-xs text-[var(--text-tertiary)] truncate">{lead.email}</p>
@@ -187,10 +197,14 @@ export default function AdminLeadsPage() {
               ))}
             </div>
 
-            <div className={showFilters ? "hidden lg:block" : "hidden lg:block"}>
+            <div className="hidden lg:block">
               <FilterableTable columns={columns}>
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)]">
+                  <tr
+                    key={lead.id}
+                    className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
+                    onClick={() => setSelected(lead)}
+                  >
                     <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{lead.name}</td>
                     <td className="px-4 py-3 text-[var(--text-primary)]">{lead.society || "—"}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{lead.email}</td>
@@ -217,6 +231,22 @@ export default function AdminLeadsPage() {
           onSizeChange={setSize}
         />
       </Card>
+
+      <SideSheet
+        open={!!selected}
+        onClose={() => setSelected(null)}
+        title={selected?.name || t("title")}
+        subtitle={selected ? new Date(selected.createdAt).toLocaleString("en-IN") : undefined}
+      >
+        {selected && (
+          <div className="space-y-4">
+            <DetailField label={t("society")} value={selected.society || "—"} />
+            <DetailField label={tCommon("email")} value={selected.email || "—"} />
+            <DetailField label={t("mobile")} value={selected.mobile || "—"} />
+            <DetailField label={t("message")} value={selected.message || "—"} />
+          </div>
+        )}
+      </SideSheet>
     </div>
   );
 }

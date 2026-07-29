@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   assetPrefix: basePath || undefined,
   images: { unoptimized: true },
   devIndicators: false,
+  // Allow both localhost and 127.0.0.1 in next-dev (otherwise client hydration can stall).
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: path.resolve(__dirname),
   },

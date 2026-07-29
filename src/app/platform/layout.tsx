@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart3, Building2, Kanban } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
+import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { isNavActive } from "@/components/app-nav";
@@ -20,6 +21,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const themeSettings = useThemeStore();
 
   const isAdmin = user?.role === "PLATFORM_SUPER_ADMIN";
 
@@ -80,6 +82,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
   if (!user || !PLATFORM_ROLES.has(user.role)) return null;
 
   const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
+  const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
 
   return (
     <EnterpriseAppShell
@@ -91,8 +94,8 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           ? t("subtitle", { name: user.name })
           : `Field sales · ${user.name}`
       }
-      brandLetter="P"
-      brandColor="#7c3aed"
+      brandLetter="A"
+      brandColor={brandColor}
       nav={nav}
       isActive={isActive}
       settingsOpen={settingsOpen}
@@ -102,7 +105,6 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         router.push("/login");
       }}
       logoutLabel={tCommon("logout")}
-      activeNavClassName="bg-violet-600 text-white border-violet-600 font-semibold"
     >
       {children}
     </EnterpriseAppShell>

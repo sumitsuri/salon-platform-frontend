@@ -19,10 +19,10 @@ export function PageLoader({ label }: { label?: string }) {
 
 const ACCENT_STYLES = {
   brand: {
-    ring: "ring-indigo-200 dark:ring-indigo-900",
-    bar: "from-indigo-500 to-indigo-600",
-    icon: "bg-indigo-500",
-    glow: "shadow-indigo-500/20",
+    ring: "ring-[color-mix(in_srgb,var(--brand)_25%,transparent)]",
+    bar: "from-[var(--brand)] to-[var(--brand-dark)]",
+    icon: "bg-[var(--brand)]",
+    glow: "shadow-[var(--shadow-color)]",
   },
   emerald: {
     ring: "ring-emerald-200 dark:ring-emerald-900",
@@ -31,10 +31,10 @@ const ACCENT_STYLES = {
     glow: "shadow-emerald-500/20",
   },
   violet: {
-    ring: "ring-violet-200 dark:ring-violet-900",
-    bar: "from-violet-500 to-violet-600",
-    icon: "bg-violet-500",
-    glow: "shadow-violet-500/20",
+    ring: "ring-[color-mix(in_srgb,var(--brand)_25%,transparent)]",
+    bar: "from-[var(--brand)] to-[var(--brand-dark)]",
+    icon: "bg-[var(--brand)]",
+    glow: "shadow-[var(--shadow-color)]",
   },
   amber: {
     ring: "ring-amber-200 dark:ring-amber-900",
@@ -163,9 +163,9 @@ export function PanelShell({
   padding?: boolean;
 }) {
   const headerGradients: Record<AccentColor, string> = {
-    brand: "from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20",
+    brand: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     emerald: "from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20",
-    violet: "from-violet-50/80 to-purple-50/50 dark:from-violet-950/30 dark:to-purple-950/20",
+    violet: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     amber: "from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
   };
 
@@ -294,9 +294,9 @@ export function EnterpriseTableShell({
   className?: string;
 }) {
   const headerGradients: Record<AccentColor, string> = {
-    brand: "from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20",
+    brand: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     emerald: "from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20",
-    violet: "from-violet-50/80 to-purple-50/50 dark:from-violet-950/30 dark:to-purple-950/20",
+    violet: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     amber: "from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
   };
 

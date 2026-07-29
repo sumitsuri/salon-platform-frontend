@@ -98,7 +98,9 @@
       "floor": "Floor",
       "sectionFrontDesk": "ఫ్రంట్ డెస్క్",
       "sectionOperations": "ఆపరేషన్స్",
-      "sectionInsights": "ఇన్‌సైట్స్"
+      "sectionInsights": "ఇన్‌సైట్స్",
+      "visits": "Visits",
+      "visitsShort": "Visits"
     },
     "home": {
       "goodMorning": "శుభోదయం",
@@ -166,7 +168,7 @@
       "manualDiscountInvalid": "Enter a discount type and a value greater than 0",
       "paymentComplete": "Payment complete. Download the bill to share with the customer.",
       "downloadBill": "Download bill PDF",
-      "viewBookings": "View bookings",
+      "viewBookings": "View history",
       "clearDiscount": "Clear",
       "done": "Done",
       "saveOpenVisit": "Save & keep open",
@@ -187,7 +189,41 @@
       "checkFloor": "Check floor",
       "allSubcategories": "All",
       "searchServices": "Search services…",
-      "noServicesMatch": "No services match these filters"
+      "noServicesMatch": "No services match these filters",
+      "phoneInvalid": "Enter a valid 10-digit Indian mobile number",
+      "recentCustomers": "Recent customers",
+      "recentServices": "Recent",
+      "favorites": "Favorites",
+      "allCategories": "All",
+      "advancedTax": "Advanced — edit tax",
+      "autoTaxHint": "GST is calculated from services. Open Advanced only to override CGST/SGST for this bill.",
+      "gstinLabel": "Branch GSTIN: {gstin}",
+      "taxOverrideHint": "You are overriding calculated GST for this invoice.",
+      "taxableAmount": "Taxable",
+      "split": "Split",
+      "splitSumMismatch": "Split amounts must add up to the grand total",
+      "splitRowMode": "Mode",
+      "splitRowAmount": "Amount",
+      "collectAmount": "Collect {amount}",
+      "receiptShareHint": "Download the PDF bill to share with the customer (WhatsApp/SMS when connected).",
+      "receiptQueuedHint": "A digital receipt was also queued when messaging is enabled.",
+      "draftRestored": "Unfinished visit restored from this device.",
+      "restoreDraft": "Restore draft",
+      "dismissDraft": "Discard",
+      "draftAvailable": "You have an unfinished walk-in on this device.",
+      "estimatedTotal": "Est. total (incl. GST)",
+      "billTotal": "Bill total",
+      "stylistAutoAssigned": "Stylist auto-assigned — change if needed",
+      "starFavorite": "Add to favorites",
+      "unstarFavorite": "Remove from favorites",
+      "offlineDraftSaved": "Draft saved on this device",
+      "anyAvailable": "Any available",
+      "resetTax": "Reset to calculated GST",
+      "visitsTitle": "Visits",
+      "visitsSubtitle": "Open queue and visit history in one place",
+      "tabOpen": "Open ({count})",
+      "tabHistory": "History",
+      "noOpenVisitsHint": "When someone walks in, start a visit — you can add services and bill from here."
     },
     "bookings": {
       "title": "బుకింగ్‌లు",
@@ -439,7 +475,8 @@
       "services": "Services",
       "openVisit": "Open visit",
       "viewInBookings": "View in bookings",
-      "scrollHint": "Swipe sideways to see the full day timeline"
+      "scrollHint": "Swipe sideways to see the full day timeline",
+      "billNow": "Bill now"
     }
   },
   "components": {
@@ -941,7 +978,9 @@
       "saveAndSync": "సేవ్ చేసి finance sync",
       "onHand": "లభ్యం",
       "value": "విలువ: {amount}",
-      "deactivateConfirm": "{name} నిష్క్రియం చేయాలా?"
+      "deactivateConfirm": "{name} నిష్క్రియం చేయాలా?",
+      "advancedFields": "Advanced",
+      "advancedFieldsHint": "SKU, retail price, and reorder level"
     },
     "finance": {
       "title": "Finance & P&L",

@@ -31,7 +31,7 @@ export function SalesPipelineSummaryWidgets({
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7"
       data-testid="pipeline-summary-widgets"
     >
-      <StatCard label="Total leads" value={summary.totalLeads} icon={Users} accent="violet" trend={trend} />
+      <StatCard label="Total leads" value={summary.totalLeads} icon={Users} accent="brand" trend={trend} />
       <StatCard label="Won" value={summary.wonCount} icon={Trophy} accent="emerald" />
       <StatCard label="Lost" value={summary.lostCount} icon={XCircle} />
       <StatCard
@@ -48,7 +48,7 @@ export function SalesPipelineSummaryWidgets({
         trend="Monthly equivalent"
       />
       <StatCard label="Free trials" value={summary.freeTrialCount} icon={FlaskConical} accent="amber" />
-      <StatCard label="Other" value={summary.otherCount} icon={Layers} accent="violet" trend="Open pipeline" />
+      <StatCard label="Other" value={summary.otherCount} icon={Layers} accent="brand" trend="Open pipeline" />
     </div>
   );
 }

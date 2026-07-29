@@ -20,6 +20,10 @@
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --text-tertiary: #94a3b8;
+  /* Legacy aliases used by sales/platform modules — keep in sync with text tokens */
+  --ink: var(--text-primary);
+  --ink-muted: var(--text-secondary);
+  --ink-faint: var(--text-tertiary);
   --header-bg: #ffffff;
   --nav-bg: #ffffff;
   --sidebar-bg: #ffffff;
@@ -41,6 +45,9 @@
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-tertiary: #64748b;
+  --ink: var(--text-primary);
+  --ink-muted: var(--text-secondary);
+  --ink-faint: var(--text-tertiary);
   --header-bg: #1e293b;
   --nav-bg: #1e293b;
   --sidebar-bg: #1e293b;

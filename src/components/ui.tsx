@@ -1,10 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LucideIcon, ChevronLeft } from "lucide-react";
+import { LucideIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -23,6 +24,16 @@ export const btnPrimary =
 
 export const btnSecondary =
   "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--surface)] hover:bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm";
+
+/** Dense toolbar / table actions — prefer over ad-hoc padding overrides. */
+export const btnPrimarySm =
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm";
+
+export const btnSecondarySm =
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[var(--surface)] hover:bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-xs sm:text-sm";
+
+export const btnDangerSm =
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm";
 
 export function PageHeader({
   title,
@@ -87,7 +98,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition hover:shadow-md",
+        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition",
         padding && "p-4 sm:p-5",
         className
       )}
@@ -182,7 +193,7 @@ export function SegmentedControl<T extends string>({
             key={opt.id}
             onClick={() => onChange(opt.id)}
             className={cn(
-              "flex-none sm:flex-1 min-w-[4.5rem] sm:min-w-0 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap",
+            "flex-none sm:flex-1 min-w-[4.75rem] sm:min-w-0 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 text-[11px] sm:text-sm font-semibold rounded-lg transition whitespace-nowrap touch-manipulation min-h-11",
               active
                 ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -224,15 +235,17 @@ export function StatusBadge({
   const t = useTranslations("components.status");
   const label = STATUS_KEYS.has(status) ? t(status as "COMPLETED") : status.replace(/_/g, " ");
   const style =
-    status === "COMPLETED"
+    status === "COMPLETED" || status === "APPROVED" || status === "READY_FOR_BILLING"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800"
-      : status === "PRESENT"
+      : status === "PRESENT" || status === "IN_PROGRESS" || status === "INFO"
         ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800"
-        : status === "APPROVED"
-          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800"
-          : status === "PENDING"
-            ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800"
-            : "bg-[var(--surface-muted)] text-[var(--text-secondary)] border-[var(--border)]";
+        : status === "PENDING" || status === "MEDIUM" || status === "DRAFT"
+          ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800"
+          : status === "CANCELLED" || status === "REJECTED" || status === "ABSENT" || status === "HIGH"
+            ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800"
+            : status === "LOW"
+              ? "bg-[var(--brand-light)] text-[var(--brand-text)] border-[var(--brand-ring)]"
+              : "bg-[var(--surface-muted)] text-[var(--text-secondary)] border-[var(--border)]";
 
   return (
     <span className={cn("text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border", style, className)}>
@@ -264,12 +277,13 @@ export function AlertBanner({
   variant = "error",
 }: {
   children: React.ReactNode;
-  variant?: "error" | "success" | "warning";
+  variant?: "error" | "success" | "warning" | "info";
 }) {
   const styles = {
     error: "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300",
     success: "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-300",
     warning: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-300",
+    info: "bg-[var(--brand-light)] border-[var(--brand-ring)] text-[var(--brand-text)]",
   };
   return (
     <div className={cn("text-sm border rounded-xl px-4 py-3", styles[variant])}>{children}</div>
@@ -322,7 +336,7 @@ export function DataTable({
     <div className={cn("responsive-table-wrap", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/60 to-violet-50/40 dark:from-indigo-950/25 dark:to-violet-950/15">
+          <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
             {headers.map((h) => (
               <th key={h} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
                 {h}
@@ -355,10 +369,25 @@ export function SideSheet({
   wide?: boolean;
 }) {
   const t = useTranslations("components.ui");
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
+    <div className="fixed inset-0 z-[100] flex justify-end" role="dialog" aria-modal="true" aria-label={title}>
       <button
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
@@ -367,8 +396,9 @@ export function SideSheet({
       />
       <div
         className={cn(
-          "relative w-full h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col",
-          wide ? "max-w-xl" : "max-w-md"
+          "relative w-full h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200",
+          wide ? "max-w-xl" : "max-w-md",
+          "max-sm:max-w-none"
         )}
       >
         <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-[var(--border)] shrink-0">
@@ -381,17 +411,15 @@ export function SideSheet({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] shrink-0"
+            className="p-2.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] shrink-0 touch-manipulation min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
             aria-label={t("close")}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 overscroll-contain">{children}</div>
         {footer && (
-          <div className="shrink-0 p-4 border-t border-[var(--border)] bg-[var(--surface-muted)]/50 space-y-2">
+          <div className="shrink-0 p-4 border-t border-[var(--border)] bg-[var(--surface-muted)]/50 space-y-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {footer}
           </div>
         )}
@@ -488,18 +516,18 @@ export function TablePagination({
         <button
           onClick={() => onPageChange(Math.max(0, page - 1))}
           disabled={page === 0}
-          className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)]"
+          className="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)] touch-manipulation min-h-[40px] min-w-[40px] inline-flex items-center justify-center"
           aria-label={t("previousPage")}
         >
-          ‹
+          <ChevronLeft className="w-4 h-4" />
         </button>
         <button
           onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
           disabled={page >= totalPages - 1}
-          className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)]"
+          className="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] disabled:opacity-40 hover:bg-[var(--surface-muted)] touch-manipulation min-h-[40px] min-w-[40px] inline-flex items-center justify-center"
           aria-label={t("nextPage")}
         >
-          ›
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
     </div>
@@ -511,6 +539,69 @@ export type ColumnFilter =
   | { type: "text"; placeholder?: string; value: string; onChange: (v: string) => void }
   | { type: "select"; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }
   | { type: "date"; value: string; onChange: (v: string) => void };
+
+/** Mobile filter stack — pairs with desktop FilterableTable. */
+export function MobileFilterPanel({
+  columns,
+  open,
+}: {
+  columns: { label: string; filter?: ColumnFilter }[];
+  open: boolean;
+}) {
+  const t = useTranslations("components.ui");
+  if (!open) return null;
+  const active = columns.filter((c) => c.filter && c.filter.type !== "none");
+  if (active.length === 0) return null;
+
+  return (
+    <div
+      className="lg:hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3 shadow-sm"
+      data-testid="mobile-filter-panel"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {active.map((col) => {
+          const filter = col.filter!;
+          return (
+            <label key={col.label} className="block space-y-1 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                {col.label}
+              </span>
+              {filter.type === "text" && (
+                <input
+                  value={filter.value}
+                  onChange={(e) => filter.onChange(e.target.value)}
+                  placeholder={filter.placeholder ?? t("filter")}
+                  className={`${inputClass} py-2.5 text-sm`}
+                />
+              )}
+              {filter.type === "select" && (
+                <select
+                  value={filter.value}
+                  onChange={(e) => filter.onChange(e.target.value)}
+                  className={`${selectClass} py-2.5 text-sm`}
+                >
+                  {filter.options.map((o) => (
+                    <option key={o.value || "all"} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {filter.type === "date" && (
+                <input
+                  type="date"
+                  value={filter.value}
+                  onChange={(e) => filter.onChange(e.target.value)}
+                  className={`${inputClass} py-2.5 text-sm`}
+                />
+              )}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function FilterableTable({
   columns,
@@ -528,7 +619,7 @@ export function FilterableTable({
     <div className={cn("responsive-table-wrap", className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/60 to-violet-50/40 dark:from-indigo-950/25 dark:to-violet-950/15">
+          <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
             {columns.map((col) => (
               <th key={col.label} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
                 {col.label}

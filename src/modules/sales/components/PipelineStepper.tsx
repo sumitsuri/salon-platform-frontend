@@ -32,7 +32,7 @@ export function PipelineStepper({ current }: { current: LeadStage }) {
                     active && isWon && "border-emerald-600 bg-emerald-600 text-white ring-4 ring-emerald-100",
                     active && isLost && "border-red-600 bg-red-600 text-white ring-4 ring-red-100",
                     active && !isTerminalStage(stage) &&
-                      "border-violet-600 bg-violet-600 text-white ring-4 ring-violet-100",
+                      "border-[var(--brand)] bg-[var(--brand)] text-white ring-4 ring-[var(--brand-ring)]",
                     upcoming && "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--ink-muted)]",
                     done && isLost && "border-red-400 bg-red-400 text-white"
                   )}
@@ -44,7 +44,7 @@ export function PipelineStepper({ current }: { current: LeadStage }) {
                     "max-w-[72px] text-center text-[10px] font-medium leading-tight",
                     active && isWon && "text-emerald-700",
                     active && isLost && "text-red-700",
-                    active && !isTerminalStage(stage) && "text-violet-700",
+                    active && !isTerminalStage(stage) && "text-[var(--brand-text)]",
                     done && !isLost && "text-emerald-700",
                     upcoming && "text-[var(--ink-muted)]"
                   )}

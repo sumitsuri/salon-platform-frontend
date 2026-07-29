@@ -67,20 +67,20 @@ export default function IncomingLeadsPage() {
         action={
           <Link
             href="/platform/sales"
-            className="text-sm font-medium text-violet-700 hover:underline"
+            className="text-sm font-medium text-[var(--brand-text)] hover:underline"
           >
             View full pipeline
           </Link>
         }
       />
 
-      <Card className="border-violet-200 bg-violet-50/40 p-4 text-sm text-[var(--ink-muted)]">
+      <Card className="border-[var(--brand-ring)] bg-[var(--brand-light)]/40 p-4 text-sm text-[var(--ink-muted)]">
         Leads submitted via the{" "}
         <a
           href="https://antrahq.com/demo/"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-violet-700 hover:underline"
+          className="font-medium text-[var(--brand-text)] hover:underline"
         >
           marketing demo form
         </a>{" "}

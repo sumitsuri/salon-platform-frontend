@@ -15,6 +15,8 @@ export type AppNavItem = {
   children?: AppNavChildItem[];
   /** Primary mobile action — renders as floating button, not in a bottom tab bar */
   fab?: boolean;
+  /** When set, FAB links here instead of `href` (e.g. start wizard while nav highlights hub). */
+  fabHref?: string;
 };
 
 /** Labeled group of nav items (enterprise sidebar sections). Omit `label` for an unlabeled block (e.g. Overview). */

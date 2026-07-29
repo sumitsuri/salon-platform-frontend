@@ -193,7 +193,7 @@ export default function SalesLeadDetailPage() {
     <div className="space-y-4">
       <Link
         href="/platform/sales"
-        className="inline-flex items-center gap-1 text-sm text-violet-600 hover:underline"
+        className="inline-flex items-center gap-1 text-sm text-[var(--brand-text)] hover:underline"
       >
         <ArrowLeft className="h-4 w-4" /> Back to my pipeline
       </Link>
@@ -228,7 +228,7 @@ export default function SalesLeadDetailPage() {
               {!isTerminalStage(lead.stage) && !editingUseCases && (
                 <button
                   type="button"
-                  className="text-xs text-violet-600 hover:underline"
+                  className="text-xs text-[var(--brand-text)] hover:underline"
                   onClick={() => setEditingUseCases(true)}
                 >
                   Edit

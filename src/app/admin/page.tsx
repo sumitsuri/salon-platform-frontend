@@ -274,7 +274,7 @@ export default function AdminDashboardPage() {
                       <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{tCommon("branch")}</th>
                       <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-emerald-600">{t("revenue")}</th>
                       <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{t("visits")}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-violet-600">{t("avgTicket")}</th>
+                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-[var(--brand-text)]">{t("avgTicket")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -283,7 +283,7 @@ export default function AdminDashboardPage() {
                         <td className="px-4 py-2.5 font-semibold">{b.branchName}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">{formatCurrency(b.revenue)}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">{b.visits}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-violet-700 dark:text-violet-400">{formatCurrency(b.avgTicket)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-[var(--brand-text)]">{formatCurrency(b.avgTicket)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
                 {[
                   { label: tCommon("cash"), value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
                   { label: tCommon("upi"), value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
-                  { label: tCommon("card"), value: dashboard.paymentMix.card, color: "bg-violet-500" },
+                  { label: tCommon("card"), value: dashboard.paymentMix.card, color: "bg-[var(--brand)]" },
                 ].map((p) => {
                   const total =
                     dashboard.paymentMix.cash + dashboard.paymentMix.upi + dashboard.paymentMix.card || 1;

@@ -89,7 +89,7 @@ function NavItemLink({
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
                   childIsActive
-                    ? "bg-violet-100 text-violet-800 font-semibold"
+                    ? "bg-[var(--brand-light)] text-[var(--brand-text)] font-semibold"
                     : navHasSelection
                       ? "text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"

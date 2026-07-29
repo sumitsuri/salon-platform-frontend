@@ -21,9 +21,11 @@ export function MobilePrimaryFab({ items, color = "var(--brand)", hidden }: Mobi
 
   const Icon = fab.icon;
 
+  const fabHref = fab.fabHref ?? fab.href;
+
   return (
     <Link
-      href={fab.href}
+      href={fabHref}
       aria-label={fab.label}
       data-testid="mobile-primary-fab"
       className={cn(

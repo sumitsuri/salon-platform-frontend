@@ -50,7 +50,7 @@ export function UseCaseMultiSelect({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 text-sm font-medium text-[var(--ink)] shadow-sm transition hover:border-violet-400"
+        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3 text-sm font-medium text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)]"
       >
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown
@@ -76,7 +76,7 @@ export function UseCaseMultiSelect({
                   className={cn(
                     "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
                     checked
-                      ? "border-violet-600 bg-violet-600"
+                      ? "border-[var(--brand)] bg-[var(--brand)]"
                       : "border-[var(--border)]"
                   )}
                 >
@@ -94,7 +94,7 @@ export function UseCaseMultiSelect({
           {selected.map((item) => (
             <span
               key={item}
-              className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800"
+              className="rounded-full bg-[var(--brand-light)] px-2 py-0.5 text-xs font-medium text-[var(--brand-text)]"
             >
               {item}
             </span>

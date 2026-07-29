@@ -5,13 +5,14 @@ import Link from "next/link";
 import {
   Building2,
   TrendingUp,
-  TrendingDown,
   Trophy,
-  XCircle,
   FlaskConical,
   IndianRupee,
   Users,
+  UserPlus,
+  Percent,
   ArrowRight,
+  BadgeCheck,
 } from "lucide-react";
 import { PlatformOverview, RepPerformance } from "@/modules/sales/api/salesApi";
 import { formatMonthlyRevenue } from "@/modules/sales/lib/pricing";
@@ -24,7 +25,13 @@ interface PlatformOverviewDashboardProps {
 }
 
 const quickLinkClass =
-  "inline-flex w-full items-center justify-center rounded-lg border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium transition hover:border-violet-300 hover:bg-violet-50 sm:w-auto touch-manipulation";
+  "inline-flex w-full items-center justify-center rounded-lg border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium transition hover:border-[var(--brand-ring)] hover:bg-[var(--brand-light)] sm:w-auto touch-manipulation";
+
+function formatWinRate(wonCount: number, lostCount: number): string {
+  const closed = wonCount + lostCount;
+  if (closed <= 0) return "—";
+  return `${Math.round((wonCount / closed) * 100)}%`;
+}
 
 export function PlatformOverviewDashboard({
   overview,
@@ -32,6 +39,8 @@ export function PlatformOverviewDashboard({
   repLabel,
 }: PlatformOverviewDashboardProps) {
   const summary = overview.periodSummary;
+  const winRate = formatWinRate(summary.wonCount, summary.lostCount);
+  const periodRepSuffix = repLabel !== "All reps" ? ` · ${repLabel}` : "";
 
   return (
     <div className="space-y-6">
@@ -45,65 +54,80 @@ export function PlatformOverviewDashboard({
         </Link>
       </div>
 
-      {/* Primary KPIs */}
-      <div
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        data-testid="platform-overview-widgets"
-      >
-        <StatCard
-          label="Total customers (all time)"
-          value={overview.totalCustomersAllTime}
-          icon={Building2}
-          accent="violet"
-          trend="All time"
-        />
-        <StatCard
-          label="Revenue won (all time)"
-          value={formatMonthlyRevenue(overview.totalRevenueWonAllTime)}
-          icon={IndianRupee}
-          accent="emerald"
-          trend="Monthly equivalent · cumulative"
-        />
-        <StatCard
-          label="Revenue lost (all time)"
-          value={formatMonthlyRevenue(overview.totalRevenueLostAllTime)}
-          icon={TrendingDown}
-          trend="Monthly equivalent · cumulative"
-        />
-        <StatCard
-          label="Free trials not won"
-          value={overview.freeTrialNotWon}
-          icon={FlaskConical}
-          accent="amber"
-          trend="Active trial accounts"
-        />
+      {/* Platform health — stock metrics (no overlap with period row) */}
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)] break-words">
+          Platform health · all time
+        </p>
+        <div
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+          data-testid="platform-overview-widgets"
+        >
+          <StatCard
+            label="Total customers"
+            value={overview.totalCustomersAllTime}
+            icon={Building2}
+            accent="brand"
+            trend="All time"
+          />
+          <StatCard
+            label="Active customers"
+            value={overview.activeCustomers}
+            icon={BadgeCheck}
+            accent="emerald"
+            trend={`${overview.trialCustomers} on trial`}
+          />
+          <StatCard
+            label="Booked MRR"
+            value={formatMonthlyRevenue(overview.totalRevenueWonAllTime)}
+            icon={IndianRupee}
+            accent="emerald"
+            trend="Won revenue · monthly equivalent"
+          />
+          <StatCard
+            label="Trials at risk"
+            value={overview.freeTrialNotWon}
+            icon={FlaskConical}
+            accent="amber"
+            trend="Free trials not yet won"
+          />
+        </div>
       </div>
 
-      {/* Period-scoped KPIs */}
+      {/* Period activity — flow metrics */}
       <div>
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--ink-muted)] break-words">
           In selected period · {periodLabel}
-          {repLabel !== "All reps" && ` · ${repLabel}`}
+          {periodRepSuffix}
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Revenue won"
-            value={formatMonthlyRevenue(summary.wonRevenue)}
-            icon={Trophy}
+            label="New customers"
+            value={overview.customersAcquiredInPeriod}
+            icon={UserPlus}
             accent="emerald"
+            trend="Won conversions in period"
           />
-          <StatCard
-            label="Revenue lost"
-            value={formatMonthlyRevenue(summary.lostRevenue)}
-            icon={XCircle}
-          />
-          <StatCard label="Lost deals" value={summary.lostCount} icon={TrendingDown} />
           <StatCard
             label="Pipeline leads"
             value={summary.totalLeads}
             icon={Users}
-            accent="violet"
-            trend={`${summary.wonCount} won · ${summary.freeTrialCount} trials`}
+            accent="brand"
+            trend={`${summary.otherCount} still open`}
+          />
+          <StatCard
+            label="Wins"
+            value={summary.wonCount}
+            icon={Trophy}
+            accent="emerald"
+            trend={formatMonthlyRevenue(summary.wonRevenue)}
+          />
+          <StatCard
+            label="Win rate"
+            value={winRate}
+            icon={Percent}
+            accent="brand"
+            trend={`${summary.lostCount} lost · ${formatMonthlyRevenue(summary.lostRevenue)} left on table`}
           />
         </div>
       </div>
@@ -114,7 +138,7 @@ export function PlatformOverviewDashboard({
           <h3 className="font-semibold">Sales rep performance</h3>
           <Link
             href="/platform/sales/team"
-            className="inline-flex items-center gap-1 text-sm font-medium text-violet-600 hover:underline touch-manipulation"
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-text)] hover:underline touch-manipulation"
           >
             Manage team <ArrowRight className="h-4 w-4" />
           </Link>
@@ -205,7 +229,7 @@ export function RepSalesTrendTable({
 function RepTrendTableRow({ p, rank }: { p: RepPerformance; rank: number }) {
   return (
     <tr className="border-b border-[var(--border)]">
-      <td className="py-2.5 pr-4 tabular-nums font-medium text-violet-600">#{rank}</td>
+      <td className="py-2.5 pr-4 tabular-nums font-medium text-[var(--brand-text)]">#{rank}</td>
       <td className="py-2.5 pr-4 font-medium">{p.repName}</td>
       <td
         className="py-2.5 pr-4 tabular-nums font-medium text-emerald-700"
@@ -219,7 +243,7 @@ function RepTrendTableRow({ p, rank }: { p: RepPerformance; rank: number }) {
       <td className="py-2.5 pr-4 tabular-nums text-red-600">{p.lost ?? 0}</td>
       <td className="py-2.5 tabular-nums">
         <span className="inline-flex items-center gap-1">
-          <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
+          <TrendingUp className="h-3.5 w-3.5 text-[var(--brand-text)]" />
           {p.targetAchievementPercent.toFixed(0)}%
         </span>
       </td>

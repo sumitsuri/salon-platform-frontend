@@ -1450,9 +1450,9 @@ export interface PaymentRequest {
   amount: number;
   reference?: string;
   splits?: { mode: string; amount: number; reference?: string }[];
-  /** Manager tax amount; >= 0 when sent (with sgstAmount). Defaults to 0 in walk-in UI. */
+  /** Manager tax override; omit both fields to use backend-calculated GST. */
   cgstAmount?: number;
-  /** Manager tax amount; >= 0 when sent (with cgstAmount). Defaults to 0 in walk-in UI. */
+  /** Manager tax override; omit both fields to use backend-calculated GST. */
   sgstAmount?: number;
 }
 
