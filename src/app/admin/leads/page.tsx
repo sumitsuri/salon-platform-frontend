@@ -197,7 +197,7 @@ export default function AdminLeadsPage() {
               ))}
             </div>
 
-            <div className="hidden lg:block">
+            <div className="hidden lg:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {leads.map((lead) => (
                   <tr

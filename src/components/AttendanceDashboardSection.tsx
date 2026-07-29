@@ -266,7 +266,7 @@ export function AttendanceDashboardSection({
         <div className="px-4 py-3.5 border-b border-[var(--border)]">
           <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffPerformance")}</h3>
         </div>
-        <div className="hidden md:block">
+        <div className="hidden md:block responsive-table-wrap">
           <FilterableTable
             columns={[
               { label: t("staff"), filter: { type: "none" } },
@@ -426,7 +426,7 @@ export function AttendanceDashboardSection({
               <EmptyState title={t("noAttendanceRecords")} description={t("adjustFilters")} />
             ) : (
               <>
-                <div className="hidden lg:block">
+                <div className="hidden lg:block responsive-table-wrap">
                   <FilterableTable
                     columns={[
                       {

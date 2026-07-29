@@ -121,7 +121,7 @@ export function ServiceContributionPanel({
           <EmptyState title={t("noMatchTitle")} description={t("noMatchDesc")} />
         ) : (
           <>
-            <div className="hidden md:block">
+            <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {data.services.map((s, i) => (
                   <tr key={s.serviceName} className="border-t border-[var(--border)]">

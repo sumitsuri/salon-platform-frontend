@@ -56,7 +56,7 @@ export function SalesLeadsTable({ leads, emptyMessage = "No leads in this period
   return (
     <Card className="overflow-hidden p-0" padding={false}>
       {/* Mobile / tablet card list */}
-      <div className="md:hidden divide-y divide-[var(--border)]" data-testid="sales-leads-mobile-list">
+      <div className="lg:hidden divide-y divide-[var(--border)]" data-testid="sales-leads-mobile-list">
         {leads.map((lead) => (
           <Link
             key={lead.id}
@@ -85,7 +85,7 @@ export function SalesLeadsTable({ leads, emptyMessage = "No leads in this period
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden lg:block responsive-table-wrap">
         <table className="w-full min-w-[960px] text-left text-sm" data-testid="sales-leads-table">
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--brand-muted)]">

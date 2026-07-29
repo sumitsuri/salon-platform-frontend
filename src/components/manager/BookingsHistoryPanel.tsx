@@ -358,7 +358,7 @@ export function BookingsHistoryPanel({
         ) : null}
         {!isError && bookings.length > 0 ? (
           <>
-            <div className="hidden md:block">
+            <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
                   <tr

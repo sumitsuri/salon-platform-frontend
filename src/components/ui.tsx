@@ -323,17 +323,69 @@ export function ListRow({
   );
 }
 
-export function DataTable({
-  headers,
+/** Two-up stat grid for mobile table cards — label on top, value below. */
+export function MobileStatGrid({
+  items,
+  columns = 2,
+}: {
+  items: { label: string; value: React.ReactNode; accentClass?: string }[];
+  columns?: 2 | 3;
+}) {
+  return (
+    <div className={cn("grid gap-2", columns === 3 ? "grid-cols-3" : "grid-cols-2")}>
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 px-3 py-2.5 min-w-0"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)] truncate">
+            {item.label}
+          </p>
+          <p
+            className={cn(
+              "text-sm font-bold tabular-nums mt-1 truncate",
+              item.accentClass ?? "text-[var(--text-primary)]"
+            )}
+          >
+            {item.value}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** PWA-native split: stacked cards on phone, horizontal table from md+. */
+export function ResponsiveTableShell({
+  mobile,
   children,
   className,
 }: {
-  headers: string[];
+  mobile: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <div className={cn("responsive-table-wrap", className)}>
+    <>
+      <div className="md:hidden">{mobile}</div>
+      <div className={cn("hidden md:block responsive-table-wrap", className)}>{children}</div>
+    </>
+  );
+}
+
+export function DataTable({
+  headers,
+  children,
+  mobile,
+  className,
+}: {
+  headers: string[];
+  children: React.ReactNode;
+  mobile: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <ResponsiveTableShell mobile={mobile} className={className}>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
@@ -346,7 +398,7 @@ export function DataTable({
         </thead>
         <tbody>{children}</tbody>
       </table>
-    </div>
+    </ResponsiveTableShell>
   );
 }
 
@@ -616,8 +668,7 @@ export function FilterableTable({
   const hasFilters = columns.some((c) => c.filter && c.filter.type !== "none");
 
   return (
-    <div className={cn("responsive-table-wrap", className)}>
-      <table className="w-full text-sm">
+    <table className={cn("w-full text-sm", className)}>
         <thead>
           <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
             {columns.map((col) => (
@@ -668,6 +719,5 @@ export function FilterableTable({
         </thead>
         <tbody>{children}</tbody>
       </table>
-    </div>
   );
 }

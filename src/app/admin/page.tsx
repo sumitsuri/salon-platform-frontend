@@ -267,7 +267,7 @@ export default function AdminDashboardPage() {
 
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             <EnterpriseTableShell title={t("branchComparison")} accent="brand">
-              <div className="hidden md:block">
+              <div className="hidden md:block responsive-table-wrap">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]/40">

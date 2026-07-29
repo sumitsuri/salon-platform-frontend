@@ -17,7 +17,16 @@ import {
 } from "lucide-react";
 import { api, type StaffAvailabilityColumn, type StaffTimeBlock } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { PageHeader, StatCard, StatusBadge, btnPrimary, btnSecondary, EmptyState } from "@/components/ui";
+import {
+  PageHeader,
+  StatCard,
+  StatusBadge,
+  btnPrimary,
+  btnSecondary,
+  EmptyState,
+  MobileStatGrid,
+  ResponsiveTableShell,
+} from "@/components/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 
 type SelectedVisit = {
@@ -612,8 +621,34 @@ export default function ManagerSchedulePage() {
               {t("timingSubtitle", { days: 30, count: data.metrics.sampleVisitCount })}
             </p>
           </div>
-          <div className="overflow-x-auto overscroll-x-contain">
-            <table className="w-full text-sm min-w-[480px]">
+          <ResponsiveTableShell
+            mobile={
+              <div className="divide-y divide-[var(--border)]">
+                {data.metrics.byStaffService.map((row) => (
+                  <div key={`${row.staffId}-${row.serviceId}`} className="p-4 space-y-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-[var(--text-primary)]">{row.staffName}</p>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{row.serviceName}</p>
+                    </div>
+                    <MobileStatGrid
+                      columns={3}
+                      items={[
+                        { label: t("colSamples"), value: row.sampleCount },
+                        { label: t("colEst"), value: `${Math.round(row.avgEstimatedMinutes)}m` },
+                        {
+                          label: t("colActual"),
+                          value:
+                            row.avgActualMinutes != null ? `${Math.round(row.avgActualMinutes)}m` : "—",
+                          accentClass: "text-[var(--brand-text)]",
+                        },
+                      ]}
+                    />
+                  </div>
+                ))}
+              </div>
+            }
+          >
+            <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wide text-[var(--text-secondary)] border-b border-[var(--border)]">
                   <th className="px-3 sm:px-4 py-2.5 font-semibold">{t("colStaff")}</th>
@@ -637,7 +672,7 @@ export default function ManagerSchedulePage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ResponsiveTableShell>
         </section>
       )}
     </div>

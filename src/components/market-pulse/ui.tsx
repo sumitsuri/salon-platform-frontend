@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LucideIcon, ArrowRight, TrendingDown, TrendingUp, Minus, Trophy, Medal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MobileStatGrid, ResponsiveTableShell } from "@/components/ui";
 import { PulseStatCard } from "@/components/enterprise-ui";
 import {
   BenchmarkMetricComparison,
@@ -247,8 +248,57 @@ export function HeroComparisonTable({
         <p className="text-xs text-[var(--text-secondary)] mt-0.5">{labels.hint}</p>
       </div>
 
-      <div className="responsive-table-wrap">
-        <table className="w-full text-sm min-w-[520px]">
+      <ResponsiveTableShell
+        mobile={
+          <div className="divide-y divide-[var(--border)]">
+            {metrics.map((m) => {
+              const s = statusStyles(m.status);
+              const statusLabel =
+                m.status === "BEHIND" && m.gapToTopQuartile
+                  ? labels.gap(formatMetric(m.gapToTopQuartile, m.unit))
+                  : m.status === "AHEAD"
+                    ? labels.ahead
+                    : m.status === "ON_PAR"
+                      ? labels.onPar
+                      : "—";
+
+              return (
+                <div key={m.key} className="p-4 space-y-3 touch-manipulation">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex gap-3 min-w-0 flex-1">
+                      <div className={cn("w-1 rounded-full shrink-0 self-stretch min-h-[2.5rem]", s.stripe)} />
+                      <p className="font-semibold text-[var(--text-primary)] leading-snug">{m.label}</p>
+                    </div>
+                    <PulseStatusBadge status={m.status} label={statusLabel} className="shrink-0" />
+                  </div>
+                  <MobileStatGrid
+                    columns={3}
+                    items={[
+                      {
+                        label: labels.you,
+                        value: formatMetric(m.yourValue, m.unit),
+                        accentClass: "text-indigo-700 dark:text-indigo-300",
+                      },
+                      {
+                        label: labels.peerMedian,
+                        value: formatMetric(m.peerMedian ?? null, m.unit),
+                        accentClass: "text-[var(--text-secondary)]",
+                      },
+                      {
+                        label: labels.topQuartile,
+                        value: formatMetric(m.topQuartile ?? null, m.unit),
+                        accentClass: "text-violet-700 dark:text-violet-400",
+                      },
+                    ]}
+                  />
+                  <ComparisonBars you={m.yourValue} peer={m.peerMedian} top={m.topQuartile} />
+                </div>
+              );
+            })}
+          </div>
+        }
+      >
+        <table className="w-full text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wider font-bold border-b border-[var(--border)]">
               <th className="text-left py-3 pl-4 pr-3 bg-[var(--surface-muted)]/60 text-[var(--text-secondary)]">
@@ -314,7 +364,7 @@ export function HeroComparisonTable({
             })}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTableShell>
     </div>
   );
 }
@@ -344,8 +394,50 @@ export function AllMetricsPanel({
           </span>
         </div>
       </div>
-      <div className="responsive-table-wrap">
-        <table className="w-full text-sm min-w-[480px]">
+      <ResponsiveTableShell
+        mobile={
+          <div className="divide-y divide-[var(--border)]">
+            {metrics.map((m) => {
+              const s = statusStyles(m.status);
+              const Icon = s.icon;
+              return (
+                <div key={m.key} className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", s.stripe)} />
+                      <p className="font-semibold text-[var(--text-primary)] truncate">{m.label}</p>
+                    </div>
+                    <span className={cn("inline-flex items-center gap-0.5 text-xs font-bold shrink-0", s.text)}>
+                      <Icon className="w-3.5 h-3.5" />
+                      {m.percentileRank != null ? `${m.percentileRank}th` : "—"}
+                    </span>
+                  </div>
+                  <MobileStatGrid
+                    columns={3}
+                    items={[
+                      {
+                        label: labels.you,
+                        value: formatMetric(m.yourValue, m.unit),
+                        accentClass: "text-indigo-700 dark:text-indigo-300",
+                      },
+                      {
+                        label: labels.peerMedian,
+                        value: formatMetric(m.peerMedian ?? null, m.unit),
+                      },
+                      {
+                        label: labels.topQuartile,
+                        value: formatMetric(m.topQuartile ?? null, m.unit),
+                        accentClass: "text-violet-700 dark:text-violet-400",
+                      },
+                    ]}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        }
+      >
+        <table className="w-full text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)] border-b border-[var(--border)] bg-[var(--surface-muted)]/50">
               <th className="text-left py-2.5 pl-4 pr-3">{labels.metric}</th>
@@ -387,7 +479,7 @@ export function AllMetricsPanel({
             })}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTableShell>
     </div>
   );
 }
@@ -408,8 +500,62 @@ export function BranchRankTable({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in">
-      <div className="responsive-table-wrap">
-        <table className="w-full text-sm min-w-[640px]" data-testid="market-pulse-branch-table">
+      <ResponsiveTableShell
+        mobile={
+          <div className="divide-y divide-[var(--border)]">
+            {rows.map((b) => {
+              const medal = b.rankInBrand != null ? rankMedal(b.rankInBrand) : null;
+              const MedalIcon = medal?.icon;
+              return (
+                <div
+                  key={b.branchId}
+                  className={cn(
+                    "p-4 space-y-3",
+                    b.rankInBrand === 1 && "bg-emerald-50/40 dark:bg-emerald-950/15"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {medal && MedalIcon && (
+                        <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", medal.className)}>
+                          <MedalIcon className="w-4 h-4" />
+                        </span>
+                      )}
+                      <p className="font-semibold text-[var(--text-primary)] truncate">{b.branchName}</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--surface-muted)] text-xs font-bold shrink-0">
+                      #{b.rankInBrand}
+                    </span>
+                  </div>
+                  <MobileStatGrid
+                    columns={2}
+                    items={[
+                      {
+                        label: labels.revPerDay,
+                        value: `₹${Math.round(b.revenuePerBranchDay).toLocaleString("en-IN")}`,
+                      },
+                      {
+                        label: labels.atv,
+                        value: `₹${Math.round(b.avgTicket).toLocaleString("en-IN")}`,
+                      },
+                      {
+                        label: labels.retail,
+                        value: `${b.retailAttachPercent.toFixed(1)}%`,
+                      },
+                      {
+                        label: labels.margin,
+                        value: `${b.netMarginPercent.toFixed(1)}%`,
+                      },
+                    ]}
+                  />
+                  <p className="text-xs text-[var(--text-tertiary)]">{b.brandPercentileLabel}</p>
+                </div>
+              );
+            })}
+          </div>
+        }
+      >
+        <table className="w-full text-sm" data-testid="market-pulse-branch-table">
           <thead>
             <tr className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)] bg-[var(--surface-muted)]/60 border-b border-[var(--border)]">
               <th className="text-left py-3 pl-4 font-bold">{labels.branch}</th>
@@ -459,7 +605,7 @@ export function BranchRankTable({
             })}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTableShell>
     </div>
   );
 }
@@ -473,8 +619,47 @@ export function NetworkPeersTable({
 }) {
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in">
-      <div className="responsive-table-wrap">
-        <table className="w-full text-sm min-w-[520px]">
+      <ResponsiveTableShell
+        mobile={
+          <div className="divide-y divide-[var(--border)]">
+            {peers.map((p) => (
+              <div
+                key={p.peerLabel}
+                className={cn(
+                  "p-4 space-y-3",
+                  p.isYou && "bg-indigo-50/60 dark:bg-indigo-950/20 ring-1 ring-inset ring-indigo-200/80 dark:ring-indigo-800/80"
+                )}
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="font-semibold text-[var(--text-primary)]">{p.peerLabel}</p>
+                  {p.isYou && (
+                    <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-indigo-600 text-white font-bold">
+                      {labels.you}
+                    </span>
+                  )}
+                </div>
+                <MobileStatGrid
+                  columns={2}
+                  items={[
+                    { label: labels.branches, value: p.branchCount },
+                    {
+                      label: labels.revPerDay,
+                      value: `₹${Math.round(p.revenuePerBranchDay).toLocaleString("en-IN")}`,
+                    },
+                    {
+                      label: labels.atv,
+                      value: `₹${Math.round(p.avgTicket).toLocaleString("en-IN")}`,
+                    },
+                    { label: labels.retail, value: `${p.retailAttachPercent.toFixed(1)}%` },
+                    { label: labels.margin, value: `${p.netMarginPercent.toFixed(1)}%` },
+                  ]}
+                />
+              </div>
+            ))}
+          </div>
+        }
+      >
+        <table className="w-full text-sm">
           <thead>
             <tr className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)] bg-violet-50/50 dark:bg-violet-950/20 border-b border-[var(--border)]">
               <th className="text-left py-3 pl-4">{labels.peer}</th>
@@ -513,7 +698,7 @@ export function NetworkPeersTable({
             ))}
           </tbody>
         </table>
-      </div>
+      </ResponsiveTableShell>
     </div>
   );
 }

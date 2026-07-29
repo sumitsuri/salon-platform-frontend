@@ -318,7 +318,7 @@ export function EnterpriseTableShell({
           {subtitle && <p className="text-xs text-[var(--text-secondary)] mt-0.5">{subtitle}</p>}
         </div>
       )}
-      <div className="responsive-table-wrap">{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

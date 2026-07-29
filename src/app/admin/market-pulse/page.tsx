@@ -35,6 +35,8 @@ import {
   AlertBanner,
   SegmentedControl,
   PageLoader,
+  MobileStatGrid,
+  ResponsiveTableShell,
 } from "@/components/ui";
 import { insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
 
@@ -315,8 +317,55 @@ export default function MarketPulsePage() {
                 </div>
               )}
 
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden responsive-table-wrap">
-                <table className="w-full text-sm min-w-[560px]">
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden">
+                <ResponsiveTableShell
+                  mobile={
+                    <div className="divide-y divide-[var(--border)]">
+                      {data.localCompetitors.map((c) => (
+                        <div key={c.id} className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[var(--text-primary)]">{c.name}</p>
+                              <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-[var(--surface-muted)] font-medium">
+                                {c.competitorType}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-[var(--text-tertiary)] hover:text-red-600 touch-manipulation min-h-11 min-w-11 flex items-center justify-center"
+                              onClick={() => removeCompetitor.mutate(c.id)}
+                              aria-label={tCommon("remove")}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <MobileStatGrid
+                            columns={3}
+                            items={[
+                              {
+                                label: t("revPerDay"),
+                                value:
+                                  c.revenuePerBranchDay != null
+                                    ? `₹${Math.round(c.revenuePerBranchDay).toLocaleString("en-IN")}`
+                                    : "—",
+                              },
+                              {
+                                label: t("atv"),
+                                value:
+                                  c.avgTicket != null ? `₹${Math.round(c.avgTicket).toLocaleString("en-IN")}` : "—",
+                              },
+                              {
+                                label: t("retail"),
+                                value: c.retailAttachPercent != null ? `${c.retailAttachPercent}%` : "—",
+                              },
+                            ]}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <table className="w-full text-sm">
                   <thead>
                     <tr className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)] bg-amber-50/50 dark:bg-amber-950/20 border-b border-[var(--border)]">
                       <th className="text-left py-3 pl-4 font-bold">{t("name")}</th>
@@ -356,6 +405,7 @@ export default function MarketPulsePage() {
                     ))}
                   </tbody>
                 </table>
+                </ResponsiveTableShell>
               </div>
             </div>
           )}

@@ -364,7 +364,7 @@ export default function AdminBookingsPage() {
               ))}
             </div>
 
-            <div className="hidden lg:block">
+            <div className="hidden lg:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
                   <tr
