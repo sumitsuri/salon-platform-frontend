@@ -122,6 +122,21 @@ function triggerBlobDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 45_000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Request timed out. Check your connection and try again.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -136,7 +151,7 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
     headers["Accept-Language"] = locale;
   }
 
-  const res = await fetch(`${apiBase()}${path}`, { ...options, headers });
+  const res = await fetchWithTimeout(`${apiBase()}${path}`, { ...options, headers });
   const text = await res.text();
 
   let body: ApiWrapper<T> & { message?: string } = { success: false, data: undefined as T };

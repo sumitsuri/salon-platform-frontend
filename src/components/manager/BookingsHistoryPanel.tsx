@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -66,6 +66,7 @@ export function BookingsHistoryPanel({
   wizardBaseHref?: string;
 }) {
   const t = useTranslations("manager.bookings");
+  const tSchedule = useTranslations("manager.schedule");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const branchId = useAuthStore((s) => s.user?.branchId) || "";
@@ -79,15 +80,25 @@ export function BookingsHistoryPanel({
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const filtersReady = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(filters), 300);
+    if (!filtersReady.current) {
+      filtersReady.current = true;
+      setDebounced(filters);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebounced(filters);
+      setPage(0);
+    }, 300);
     return () => clearTimeout(timer);
   }, [filters]);
 
   useEffect(() => {
+    if (!branchId) return;
     setPage(0);
-  }, [debounced, size, branchId]);
+  }, [branchId, size]);
 
   useEffect(() => {
     if (!selected || selected.status !== "COMPLETED") {
@@ -121,7 +132,7 @@ export function BookingsHistoryPanel({
 
   const amountFilter = parseAmount(debounced.amount);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["bookings", branchId, debounced, page, size],
     queryFn: () =>
       api.getBookings({
@@ -138,6 +149,8 @@ export function BookingsHistoryPanel({
         size,
       }),
     enabled: !!branchId,
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
   });
 
   const bookings = data?.content ?? [];
@@ -323,14 +336,27 @@ export function BookingsHistoryPanel({
       </div>
 
       <Card padding={false}>
-        {isLoading && <p className="p-4 text-[var(--text-secondary)] text-sm">{tCommon("loading")}</p>}
-        {!isLoading && bookings.length === 0 ? (
+        {isLoading && !data && (
+          <p className="p-4 text-[var(--text-secondary)] text-sm">{tCommon("loading")}</p>
+        )}
+        {isError && (
+          <div className="p-4 space-y-3">
+            <AlertBanner variant="error">
+              {error instanceof Error ? error.message : tCommon("failed")}
+            </AlertBanner>
+            <button type="button" onClick={() => void refetch()} className={`${btnPrimary} min-h-11`}>
+              {tSchedule("refresh")}
+            </button>
+          </div>
+        )}
+        {!isLoading && !isError && bookings.length === 0 ? (
           <EmptyState
             title={t("noBookingsTitle")}
             description={t("noBookingsDesc")}
             action={newVisitControl}
           />
-        ) : (
+        ) : null}
+        {!isError && bookings.length > 0 ? (
           <>
             <div className="hidden md:block">
               <FilterableTable columns={columns}>
@@ -438,7 +464,7 @@ export function BookingsHistoryPanel({
               ))}
             </div>
           </>
-        )}
+        ) : null}
 
         <TablePagination
           page={page}
@@ -446,7 +472,10 @@ export function BookingsHistoryPanel({
           totalPages={totalPages}
           totalElements={totalElements}
           onPageChange={setPage}
-          onSizeChange={setSize}
+          onSizeChange={(next) => {
+            setSize(next);
+            setPage(0);
+          }}
         />
       </Card>
 

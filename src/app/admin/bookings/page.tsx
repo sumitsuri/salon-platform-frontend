@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Download, FileText, Filter } from "lucide-react";
@@ -56,6 +56,7 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 export default function AdminBookingsPage() {
   const t = useTranslations("admin.bookings");
   const tMgr = useTranslations("manager.bookings");
+  const tSchedule = useTranslations("manager.schedule");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
@@ -69,15 +70,20 @@ export default function AdminBookingsPage() {
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const filtersReady = useRef(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(filters), 300);
+    if (!filtersReady.current) {
+      filtersReady.current = true;
+      setDebounced(filters);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebounced(filters);
+      setPage(0);
+    }, 300);
     return () => clearTimeout(timer);
   }, [filters]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [debounced, size]);
 
   useEffect(() => {
     if (!selected || selected.status !== "COMPLETED") {
@@ -111,7 +117,7 @@ export default function AdminBookingsPage() {
 
   const amountFilter = parseAmount(debounced.amount);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["all-bookings", debounced, page, size],
     queryFn: () =>
       api.getBookings({
@@ -127,6 +133,8 @@ export default function AdminBookingsPage() {
         page,
         size,
       }),
+    staleTime: 30_000,
+    placeholderData: (previous) => previous,
   });
 
   const bookings = data?.content ?? [];
@@ -274,7 +282,11 @@ export default function AdminBookingsPage() {
     <div className="space-y-4">
       <PageHeader
         title={t("title")}
-        subtitle={`${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
+        subtitle={
+          isLoading && !data
+            ? t("loading")
+            : `${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`
+        }
         action={
           <button
             type="button"
@@ -304,6 +316,15 @@ export default function AdminBookingsPage() {
       <Card padding={false}>
         {isLoading ? (
           <PageLoader label={t("loading")} />
+        ) : isError ? (
+          <div className="p-4 space-y-3">
+            <AlertBanner variant="error">
+              {error instanceof Error ? error.message : tCommon("failed")}
+            </AlertBanner>
+            <button type="button" onClick={() => void refetch()} className={`${btnPrimary} min-h-11`}>
+              {tSchedule("refresh")}
+            </button>
+          </div>
         ) : bookings.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
@@ -404,7 +425,10 @@ export default function AdminBookingsPage() {
           totalPages={totalPages}
           totalElements={totalElements}
           onPageChange={setPage}
-          onSizeChange={setSize}
+          onSizeChange={(next) => {
+            setSize(next);
+            setPage(0);
+          }}
         />
       </Card>
 
