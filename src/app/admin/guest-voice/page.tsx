@@ -1,30 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { MessageSquareHeart, Star, AlertTriangle } from "lucide-react";
-import { api, GuestVoiceReviewItem } from "@/lib/api";
+import type { LucideIcon } from "lucide-react";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
-import { PageHeader, StatCard, PageLoader } from "@/components/ui";
+import { PageHeader, PageLoader } from "@/components/ui";
 import { DashboardHero } from "@/components/enterprise-ui";
-
-const CATEGORY_LABELS: Record<string, string> = {
-  SERVICE: "Service quality",
-  AMBIENCE: "Ambience",
-  STAFF: "Staff attitude",
-  CLEANLINESS: "Cleanliness",
-  VALUE_FOR_MONEY: "Value for money",
-};
-
-const TAG_LABELS: Record<string, string> = {
-  WAIT_TIME: "Wait time",
-  STAFF_ATTITUDE: "Staff attitude",
-  SERVICE_QUALITY: "Service quality",
-  CLEANLINESS: "Cleanliness",
-  VALUE_FOR_MONEY: "Value for money",
-  OTHER: "Other",
-};
+import {
+  GuestVoiceReviewsTable,
+  EMPTY_REVIEW_FILTERS,
+} from "@/components/reviews/GuestVoiceReviewsTable";
+import {
+  CATEGORY_LABELS,
+  ReviewListFilters,
+  ReviewSortKey,
+  TAG_LABELS,
+  formatReviewDate,
+  ratingTone,
+} from "@/components/reviews/guest-voice-utils";
 
 function last30DaysRange() {
   const to = new Date();
@@ -33,68 +30,66 @@ function last30DaysRange() {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function formatReviewDate(value: string) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function ReviewDetailCard({ review }: { review: GuestVoiceReviewItem }) {
-  const t = useTranslations("admin.guestVoice");
-  const categoryEntries = Object.entries(review.categoryRatings ?? {});
+function ClickableStatCard({
+  label,
+  value,
+  icon: Icon,
+  accent = "brand",
+  onClick,
+  testId,
+  hint,
+  description,
+}: {
+  label: string;
+  value: string | number;
+  icon: LucideIcon;
+  accent?: "brand" | "emerald" | "amber" | "violet";
+  onClick?: () => void;
+  testId?: string;
+  hint?: string;
+  description?: string;
+}) {
+  const accentRing =
+    accent === "emerald"
+      ? "ring-emerald-500/20 hover:ring-emerald-500/40"
+      : accent === "amber"
+        ? "ring-amber-500/20 hover:ring-amber-500/40"
+        : accent === "violet"
+          ? "ring-violet-500/20 hover:ring-violet-500/40"
+          : "ring-[var(--brand)]/20 hover:ring-[var(--brand)]/40";
 
   return (
-    <article className="rounded-2xl border bg-card p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="font-semibold">{review.customerFirstName}</p>
-          <p className="text-sm text-muted-foreground">
-            {review.branchName ?? t("unknownBranch")} · {formatReviewDate(review.submittedAt)}
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-          {review.overallRating}/5
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid={testId}
+      title={hint}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm text-left transition",
+        "hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]",
+        "ring-1",
+        accentRing,
+        !onClick && "cursor-default",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-[var(--brand)]">
+          <Icon className="w-5 h-5" />
         </div>
       </div>
-
-      {categoryEntries.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {categoryEntries.map(([category, rating]) => (
-            <span
-              key={category}
-              className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs"
-            >
-              {CATEGORY_LABELS[category] ?? category}: {rating}★
-            </span>
-          ))}
-        </div>
+      <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mt-3 tracking-tight tabular-nums">
+        {value}
+      </p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mt-1">{label}</p>
+      {description && (
+        <p className="text-xs text-[var(--text-secondary)] mt-1 leading-snug normal-case font-normal">
+          {description}
+        </p>
       )}
-
-      {review.improvementTags?.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {review.improvementTags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
-            >
-              {TAG_LABELS[tag] ?? tag}
-            </span>
-          ))}
-        </div>
+      {hint && onClick && !description && (
+        <p className="text-[10px] text-[var(--text-tertiary)] mt-2">{hint}</p>
       )}
-
-      {review.comment ? (
-        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{review.comment}</p>
-      ) : (
-        <p className="text-sm text-muted-foreground italic">{t("noWrittenReview")}</p>
-      )}
-    </article>
+    </button>
   );
 }
 
@@ -103,6 +98,9 @@ export default function AdminGuestVoicePage() {
   const tCommon = useTranslations("common");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [listFilters, setListFilters] = useState<ReviewListFilters>(EMPTY_REVIEW_FILTERS);
+  const [sortKey, setSortKey] = useState<ReviewSortKey>("dateDesc");
+  const tableRef = useRef<HTMLDivElement>(null);
   const range = useMemo(() => last30DaysRange(), []);
 
   const { data: branches = [] } = useQuery({
@@ -130,6 +128,27 @@ export default function AdminGuestVoicePage() {
       }),
     enabled: initialized && selectedBranches.length > 0,
   });
+
+  const scrollToReviews = useCallback(() => {
+    window.setTimeout(() => {
+      document.getElementById("guest-voice-reviews-table")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  }, []);
+
+  const applyListFilters = useCallback(
+    (patch: Partial<ReviewListFilters>) => {
+      setListFilters({ ...EMPTY_REVIEW_FILTERS, ...patch });
+      scrollToReviews();
+    },
+    [scrollToReviews],
+  );
+
+  const clearListFilters = useCallback(() => {
+    setListFilters(EMPTY_REVIEW_FILTERS);
+  }, []);
 
   if (!initialized) {
     return <PageLoader label={tCommon("loading")} />;
@@ -165,14 +184,46 @@ export default function AdminGuestVoicePage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
+            <ClickableStatCard
               label={t("avgRating")}
               value={data.totalReviews > 0 ? data.averageRating.toFixed(1) : "—"}
               icon={Star}
+              onClick={() => {
+                clearListFilters();
+                scrollToReviews();
+              }}
+              testId="guest-voice-stat-avg"
+              hint={t("drilldownHint")}
             />
-            <StatCard label={t("totalReviews")} value={String(data.totalReviews)} icon={MessageSquareHeart} />
-            <StatCard label={t("promoters")} value={String(data.promotersCount)} icon={Star} />
-            <StatCard label={t("needsAttention")} value={String(data.openRecoveries.length)} icon={AlertTriangle} />
+            <ClickableStatCard
+              label={t("totalReviews")}
+              value={String(data.totalReviews)}
+              icon={MessageSquareHeart}
+              accent="emerald"
+              onClick={() => applyListFilters({})}
+              testId="guest-voice-stat-reviews"
+              hint={t("drilldownHint")}
+            />
+            <ClickableStatCard
+              label={t("promoters")}
+              value={String(data.promotersCount)}
+              icon={Star}
+              accent="emerald"
+              description={t("promotersDescription")}
+              onClick={() => applyListFilters({ minRating: "4" })}
+              testId="guest-voice-stat-promoters"
+              hint={t("drilldownPromoters")}
+            />
+            <ClickableStatCard
+              label={t("needsAttention")}
+              value={String(data.openRecoveries.length)}
+              icon={AlertTriangle}
+              accent="amber"
+              description={t("needsAttentionDescription")}
+              onClick={() => applyListFilters({ maxRatingExclusive: "4" })}
+              testId="guest-voice-stat-recoveries"
+              hint={t("drilldownRecoveries")}
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -182,14 +233,25 @@ export default function AdminGuestVoicePage() {
                 {[5, 4, 3, 2, 1].map((stars) => {
                   const count = data.ratingDistribution[stars] ?? 0;
                   const pct = data.totalReviews > 0 ? Math.round((count / data.totalReviews) * 100) : 0;
+                  const tone = ratingTone(stars);
                   return (
-                    <div key={stars} className="flex items-center gap-2 text-sm">
-                      <span className="w-8">{stars}★</span>
+                    <button
+                      key={stars}
+                      type="button"
+                      disabled={count === 0}
+                      onClick={() => applyListFilters({ exactRating: String(stars) })}
+                      data-testid={`guest-voice-rating-mix-${stars}`}
+                      className={cn(
+                        "flex w-full items-center gap-2 text-sm rounded-lg px-2 py-1.5 transition",
+                        count > 0 ? "hover:bg-muted/60 cursor-pointer" : "opacity-50 cursor-default",
+                      )}
+                    >
+                      <span className="w-8 text-left font-medium">{stars}★</span>
                       <div className="h-2 flex-1 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                        <div className={cn("h-full", tone.bar)} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="w-10 text-right text-muted-foreground">{count}</span>
-                    </div>
+                      <span className="w-10 text-right font-semibold tabular-nums">{count}</span>
+                    </button>
                   );
                 })}
               </div>
@@ -216,67 +278,80 @@ export default function AdminGuestVoicePage() {
             <section className="rounded-2xl border bg-card p-4 space-y-3">
               <h2 className="font-semibold">{t("categoryBreakdown")}</h2>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {categoryAverages.map(([category, avg]) => (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between rounded-xl border bg-muted/20 px-3 py-2 text-sm"
-                  >
-                    <span>{CATEGORY_LABELS[category] ?? category}</span>
-                    <span className="font-semibold">{avg.toFixed(1)}★</span>
-                  </div>
-                ))}
+                {categoryAverages.map(([category, avg]) => {
+                  const rounded = Math.round(avg);
+                  const tone = ratingTone(Math.min(5, Math.max(1, rounded)));
+                  return (
+                    <div
+                      key={category}
+                      className={cn(
+                        "flex items-center justify-between rounded-xl border px-3 py-2 text-sm",
+                        tone.row,
+                      )}
+                    >
+                      <span>{CATEGORY_LABELS[category] ?? category}</span>
+                      <span className="font-semibold">{avg.toFixed(1)}★</span>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
 
-          <section className="rounded-2xl border bg-card p-4 space-y-4">
-            <div className="space-y-1">
-              <h2 className="font-semibold">{t("recentReviews")}</h2>
-              <p className="text-sm text-muted-foreground">{t("recentReviewsHint")}</p>
-            </div>
-            {reviewItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noReviewsYet")}</p>
-            ) : (
-              <div className="space-y-3">
-                {reviewItems.map((review) => (
-                  <ReviewDetailCard key={review.reviewId} review={review} />
-                ))}
-              </div>
-            )}
-          </section>
+          <div ref={tableRef}>
+            <GuestVoiceReviewsTable
+              reviews={reviewItems}
+              filters={listFilters}
+              sortKey={sortKey}
+              onFiltersChange={setListFilters}
+              onSortChange={setSortKey}
+              onClearFilters={clearListFilters}
+            />
+          </div>
 
           {data.openRecoveries.length > 0 && (
-            <section className="rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3">
+            <section
+              id="guest-voice-recoveries"
+              className="rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3 scroll-mt-24"
+            >
               <h2 className="font-semibold flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
                 {t("openRecoveries")}
               </h2>
               <ul className="space-y-3">
-                {data.openRecoveries.slice(0, 8).map((item) => (
-                  <li key={item.recoveryId} className="rounded-xl border border-amber-200/60 bg-background/70 p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{item.customerFirstName ?? t("unknownGuest")}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.branchName ?? t("unknownBranch")} · {formatReviewDate(item.createdAt)}
-                        </p>
+                {data.openRecoveries.slice(0, 8).map((item) => {
+                  const tone = ratingTone(item.overallRating);
+                  return (
+                    <li
+                      key={item.recoveryId}
+                      className={cn("rounded-xl border border-amber-200/60 bg-background/70 p-3 space-y-2", tone.row)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{item.customerFirstName ?? t("unknownCustomer")}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {item.branchName ?? t("unknownBranch")} · {formatReviewDate(item.createdAt)}
+                          </p>
+                        </div>
+                        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold ring-1", tone.badge)}>
+                          {item.overallRating}/5
+                        </span>
                       </div>
-                      <span className="font-semibold text-amber-700 dark:text-amber-300">{item.overallRating}/5</span>
-                    </div>
-                    {item.improvementTags && item.improvementTags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.improvementTags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-amber-100 px-2 py-0.5 text-xs dark:bg-amber-950/50">
-                            {TAG_LABELS[tag] ?? tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {item.comment && (
-                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{item.comment}</p>
-                    )}
-                  </li>
-                ))}
+                      {item.improvementTags && item.improvementTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {item.improvementTags.map((tag) => (
+                            <span key={tag} className="rounded-full bg-amber-100 px-2 py-0.5 text-xs dark:bg-amber-950/50">
+                              {TAG_LABELS[tag] ?? tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {item.comment && (
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{item.comment}</p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}

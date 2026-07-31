@@ -813,8 +813,8 @@
         "sectionOperations": "ऑपरेशन्स",
         "sectionGrowth": "ग्रोथ",
         "sectionBusiness": "बिजनेस",
-        "guestVoice": "Guest voice",
-        "voice": "Voice"
+        "guestVoice": "Customer voice",
+        "voice": "Reviews"
       }
     },
     "common": {
@@ -1328,26 +1328,56 @@
       "benefitPercent": "Benefit %"
     },
     "guestVoice": {
-      "title": "Guest voice",
-      "subtitle": "Ratings and recovery signals from post-visit feedback (last 30 days)",
-      "heroTitle": "What guests are saying",
-      "heroDescription": "QR-first reviews after billing — no WhatsApp or SMS required. Low scores stay private and alert branch managers.",
-      "unavailable": "Guest voice analytics is unavailable for the selected period.",
+      "title": "Customer voice",
+      "subtitle": "Ratings and feedback from customers after their visit (last 30 days)",
+      "heroTitle": "What customers are saying",
+      "heroDescription": "Reviews collected via QR after billing. Low scores stay private and alert branch managers to follow up.",
+      "unavailable": "Customer feedback is unavailable for the selected period.",
       "avgRating": "Avg rating",
-      "totalReviews": "Reviews",
-      "promoters": "Promoters (4–5★)",
-      "needsAttention": "Open recoveries",
+      "totalReviews": "Total reviews",
+      "promoters": "Happy customers",
+      "promotersDescription": "Rated 4 or 5 stars",
+      "needsAttention": "Needs follow-up",
+      "needsAttentionDescription": "Low ratings (1–3★) not yet resolved",
       "ratingMix": "Rating mix",
       "improvementAreas": "Feedback themes",
       "noTagsYet": "No feedback tags yet.",
       "categoryBreakdown": "Category ratings",
-      "openRecoveries": "Visits needing manager follow-up",
       "recentReviews": "Customer reviews",
       "recentReviewsHint": "Individual feedback submitted after billing — newest first.",
       "noReviewsYet": "No reviews in the selected period yet.",
       "noWrittenReview": "No written review provided.",
       "unknownBranch": "Branch",
-      "unknownGuest": "Guest"
+      "unknownCustomer": "Customer",
+      "openRecoveries": "Customers awaiting follow-up",
+      "reviewsTableTitle": "All reviews & ratings",
+      "reviewsTableHint": "Showing {shown} of {total} customer submissions",
+      "noReviewsMatchFilters": "No reviews match the current filters.",
+      "drilldownHint": "Tap to view all customer reviews",
+      "drilldownPromoters": "Tap to see customers who rated 4–5★",
+      "drilldownRecoveries": "Tap to see customers who rated below 4★",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "sortRatingHigh": "Highest rating",
+      "sortRatingLow": "Lowest rating",
+      "columns": {
+        "customer": "Customer",
+        "branch": "Branch",
+        "submitted": "Submitted",
+        "overall": "Overall",
+        "tags": "Tags",
+        "review": "Review"
+      },
+      "filters": {
+        "customerPlaceholder": "Name or branch",
+        "anyRating": "Any rating",
+        "ratingBelow": "Rating below",
+        "belowStars": "Below {stars}★",
+        "minRating": "Minimum rating",
+        "atLeastStars": "At least {stars}★",
+        "dateTo": "Submitted until",
+        "resetAll": "Reset filters"
+      }
     }
   },
   "platform": {
