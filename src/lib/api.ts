@@ -6,6 +6,7 @@ import {
   redirectToLogin,
   syncAuthStore,
 } from "./auth-session";
+import { deliverInvoicePdf } from "./invoice-pdf-client";
 
 function resolveApiBase(): string {
   if (typeof window !== "undefined") {
@@ -109,17 +110,6 @@ async function handleSessionExpired() {
   clearStoredAuth();
   await syncAuthStore(null);
   redirectToLogin(true);
-}
-
-function triggerBlobDownload(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 45_000): Promise<Response> {
@@ -859,29 +849,52 @@ export const api = {
 
   getInvoicePdfUrl: (invoiceId: string) => `${apiBase()}/api/v1/invoices/${invoiceId}/pdf`,
 
-  downloadInvoicePdf: async (invoiceId: string, filename?: string) => {
+  fetchInvoicePdfBlob: async (invoiceId: string, filename?: string) => {
     const token = getToken();
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${apiBase()}/api/v1/invoices/${invoiceId}/pdf`, { headers });
+
+    async function fetchPdf(authHeaders: Record<string, string>) {
+      return fetch(`${apiBase()}/api/v1/invoices/${invoiceId}/pdf`, { headers: authHeaders });
+    }
+
+    let res = await fetchPdf(headers);
     if (res.status === 401) {
       const newToken = await refreshAccessToken();
       if (newToken) {
         headers.Authorization = `Bearer ${newToken}`;
-        const retry = await fetch(`${apiBase()}/api/v1/invoices/${invoiceId}/pdf`, { headers });
-        if (!retry.ok) throw new Error(`Download failed (${retry.status})`);
-        const blob = await retry.blob();
-        triggerBlobDownload(blob, filename || `invoice-${invoiceId}.pdf`);
-        return;
+        res = await fetchPdf(headers);
+      } else {
+        await handleSessionExpired();
+        throw new Error("Session expired. Please sign in again.");
       }
-      await handleSessionExpired();
-      throw new Error("Session expired. Please sign in again.");
     }
     if (!res.ok) throw new Error(`Download failed (${res.status})`);
     const blob = await res.blob();
     const disposition = res.headers.get("Content-Disposition") || "";
     const match = disposition.match(/filename="?([^"]+)"?/i);
-    triggerBlobDownload(blob, filename || match?.[1] || `invoice-${invoiceId}.pdf`);
+    return {
+      blob,
+      filename: filename || match?.[1] || `invoice-${invoiceId}.pdf`,
+    };
+  },
+
+  downloadInvoicePdf: async (invoiceId: string, filename?: string) => {
+    const { blob, filename: resolvedFilename } = await api.fetchInvoicePdfBlob(invoiceId, filename);
+    return deliverInvoicePdf(blob, resolvedFilename, {
+      action: "download",
+      title: "Bill",
+      text: "Your salon bill",
+    });
+  },
+
+  shareInvoicePdf: async (invoiceId: string, filename?: string, shareText?: string) => {
+    const { blob, filename: resolvedFilename } = await api.fetchInvoicePdfBlob(invoiceId, filename);
+    return deliverInvoicePdf(blob, resolvedFilename, {
+      action: "share",
+      title: "Bill",
+      text: shareText ?? "Your salon bill",
+    });
   },
 
   applyBookingBillDiscount: (
@@ -2294,14 +2307,32 @@ export interface GuestVoiceSummary {
   ratingDistribution: Record<number, number>;
   improvementTagCounts: Record<string, number>;
   categoryAverageRatings?: Record<string, number>;
+  reviews?: GuestVoiceReviewItem[];
   openRecoveries: {
     recoveryId: string;
     visitId: string;
     branchId: string;
+    branchName?: string | null;
+    customerFirstName?: string | null;
     overallRating: number;
     status: string;
+    improvementTags?: string[];
+    comment?: string | null;
     createdAt: string;
   }[];
+}
+
+export interface GuestVoiceReviewItem {
+  reviewId: string;
+  visitId: string;
+  branchId: string;
+  branchName?: string | null;
+  customerFirstName: string;
+  overallRating: number;
+  categoryRatings: Record<string, number>;
+  improvementTags: string[];
+  comment?: string | null;
+  submittedAt: string;
 }
 
 export interface PublicReviewContext {

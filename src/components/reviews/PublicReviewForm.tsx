@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Star } from "lucide-react";
 import { api, PublicReviewContext, SubmitPublicReviewResult } from "@/lib/api";
 import { StarRatingRow } from "@/components/reviews/StarRatingRow";
+import { ReviewTagChip } from "@/components/reviews/ReviewTagChip";
 
 const TAG_LABELS: Record<string, string> = {
   WAIT_TIME: "Wait time",
@@ -78,7 +79,7 @@ export function PublicReviewForm({ token, context }: Props) {
         token,
         overallRating,
         categoryRatings,
-        improvementTags: tags.length > 0 ? tags : undefined,
+        improvementTags: tags,
         comment: comment.trim() || undefined,
       });
       setResult(response);
@@ -184,20 +185,23 @@ export function PublicReviewForm({ token, context }: Props) {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold">{tagPrompt}</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold">{tagPrompt}</h2>
+              {tags.length > 0 && (
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  {tags.length} selected
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">Optional — tap all that apply</p>
             <div className="flex flex-wrap gap-2">
               {tagOptions.map((tag) => (
-                <button
+                <ReviewTagChip
                   key={tag.id}
-                  type="button"
-                  onClick={() => toggleTag(tag.id)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                    tags.includes(tag.id) ? "bg-foreground text-background" : "hover:bg-muted"
-                  }`}
-                >
-                  {tag.label}
-                </button>
+                  label={tag.label}
+                  selected={tags.includes(tag.id)}
+                  onToggle={() => toggleTag(tag.id)}
+                />
               ))}
             </div>
           </section>

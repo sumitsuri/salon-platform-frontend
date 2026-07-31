@@ -166,7 +166,7 @@
       "amountPlaceholder": "e.g. 100",
       "applyManualDiscount": "Apply discount",
       "manualDiscountInvalid": "Enter a discount type and a value greater than 0",
-      "paymentComplete": "भुगतान पूरा। ग्राहक से साझा करने के लिए बिल डाउनलोड करें।",
+      "paymentComplete": "Payment complete. Share or download the bill for the customer.",
       "downloadBill": "Download bill PDF",
       "viewBookings": "हिस्ट्री देखें",
       "clearDiscount": "Clear",
@@ -205,7 +205,7 @@
       "splitRowMode": "मोड",
       "splitRowAmount": "राशि",
       "collectAmount": "{amount} जमा करें",
-      "receiptShareHint": "ग्राहक से साझा करने के लिए बिल PDF डाउनलोड करें (WhatsApp/SMS जुड़ने पर उपलब्ध)।",
+      "receiptShareHint": "Share the bill via WhatsApp or SMS, or download the PDF. Ask the customer to scan the QR to rate their visit.",
       "receiptQueuedHint": "मैसेजिंग चालू होने पर डिजिटल रसीद भी कतार में लग सकती है।",
       "draftRestored": "इस डिवाइस से अधूरी विज़िट पुनर्स्थापित की गई।",
       "restoreDraft": "ड्राफ़्ट पुनर्स्थापित करें",
@@ -228,7 +228,9 @@
       "reviewInviteSubtitle": "Customer scans this QR on their phone — takes about 10 seconds.",
       "reviewCopyLink": "Copy link",
       "reviewCopiedLink": "Copied",
-      "reviewShareLink": "Share link"
+      "reviewShareLink": "Share link",
+      "shareBill": "Share bill",
+      "shareBillMessage": "Bill for {name} — thank you for visiting!"
     },
     "bookings": {
       "title": "बुकिंग",
@@ -265,7 +267,9 @@
       "noBillingYet": "No billing breakdown yet",
       "completeToDownload": "Complete payment on Walk-in to generate and download the bill PDF.",
       "continueVisit": "Continue visit",
-      "billVisit": "Bill visit"
+      "billVisit": "Bill visit",
+      "shareBill": "Share bill",
+      "shareBillMessage": "Bill for {name} — thank you for visiting!"
     },
     "inventory": {
       "title": "इन्वेंटरी",
@@ -1337,7 +1341,13 @@
       "improvementAreas": "Feedback themes",
       "noTagsYet": "No feedback tags yet.",
       "categoryBreakdown": "Category ratings",
-      "openRecoveries": "Visits needing manager follow-up"
+      "openRecoveries": "Visits needing manager follow-up",
+      "recentReviews": "Customer reviews",
+      "recentReviewsHint": "Individual feedback submitted after billing — newest first.",
+      "noReviewsYet": "No reviews in the selected period yet.",
+      "noWrittenReview": "No written review provided.",
+      "unknownBranch": "Branch",
+      "unknownGuest": "Guest"
     }
   },
   "platform": {

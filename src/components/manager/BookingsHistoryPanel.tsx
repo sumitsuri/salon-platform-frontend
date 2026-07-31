@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { UserPlus, IndianRupee, Clock, CheckCircle2, Download, FileText, Receipt } from "lucide-react";
+import { UserPlus, IndianRupee, Clock, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
+import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import {
   Card,
   StatusBadge,
@@ -77,7 +78,6 @@ export function BookingsHistoryPanel({
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
-  const [downloading, setDownloading] = useState(false);
   const filtersReady = useRef(false);
 
   useEffect(() => {
@@ -159,19 +159,6 @@ export function BookingsHistoryPanel({
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function downloadInvoice() {
-    if (!invoice?.id) return;
-    setDownloading(true);
-    setInvoiceError("");
-    try {
-      await api.downloadInvoicePdf(invoice.id, `invoice-${invoice.invoiceNumber}.pdf`);
-    } catch (e) {
-      setInvoiceError(e instanceof Error ? e.message : tCommon("failed"));
-    } finally {
-      setDownloading(false);
-    }
   }
 
   const newVisitControl = onNewVisit ? (
@@ -478,15 +465,17 @@ export function BookingsHistoryPanel({
         subtitle={selected ? `${selected.customerPhone} · ${selected.status}` : undefined}
         footer={
           selected?.status === "COMPLETED" && invoice ? (
-            <button
-              type="button"
-              onClick={() => void downloadInvoice()}
-              disabled={downloading}
-              className={`${btnPrimary} w-full min-h-12`}
-            >
-              <Download className="w-4 h-4" />
-              {downloading ? tCommon("processing") : t("downloadBill")}
-            </button>
+            <InvoicePdfButtons
+              invoiceId={invoice.id}
+              filename={`invoice-${invoice.invoiceNumber}.pdf`}
+              shareText={t("shareBillMessage", { name: selected.customerName || "Customer" })}
+              shareLabel={t("shareBill")}
+              downloadLabel={t("downloadBill")}
+              processingLabel={tCommon("processing")}
+              primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
+              secondaryClassName={`${btnSecondary} w-full min-h-11 justify-center touch-manipulation`}
+              onError={setInvoiceError}
+            />
           ) : selected && isOpenStatus(selected.status) ? (
             <Link
               href={visitActionHref(selected)}

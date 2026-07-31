@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Download, FileText, Filter } from "lucide-react";
+import { FileText, Filter } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
+import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import {
   PageHeader,
   Card,
@@ -67,7 +68,6 @@ export default function AdminBookingsPage() {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
-  const [downloading, setDownloading] = useState(false);
   const filtersReady = useRef(false);
 
   useEffect(() => {
@@ -146,19 +146,6 @@ export default function AdminBookingsPage() {
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
-  }
-
-  async function downloadInvoice() {
-    if (!invoice?.id) return;
-    setDownloading(true);
-    setInvoiceError("");
-    try {
-      await api.downloadInvoicePdf(invoice.id, `invoice-${invoice.invoiceNumber}.pdf`);
-    } catch (e) {
-      setInvoiceError(e instanceof Error ? e.message : tCommon("failed"));
-    } finally {
-      setDownloading(false);
-    }
   }
 
   const hasFilters = Object.values(filters).some((v) => v !== "");
@@ -443,16 +430,18 @@ export default function AdminBookingsPage() {
         }
         footer={
           selected?.status === "COMPLETED" && invoice ? (
-            <button
-              type="button"
-              data-testid="admin-download-invoice"
-              onClick={() => void downloadInvoice()}
-              disabled={downloading}
-              className={`${btnPrimary} w-full`}
-            >
-              <Download className="w-4 h-4" />
-              {downloading ? tCommon("processing") : tMgr("downloadBill")}
-            </button>
+            <InvoicePdfButtons
+              invoiceId={invoice.id}
+              filename={`invoice-${invoice.invoiceNumber}.pdf`}
+              shareText={tMgr("shareBillMessage", { name: selected.customerName || "Customer" })}
+              shareLabel={tMgr("shareBill")}
+              downloadLabel={tMgr("downloadBill")}
+              processingLabel={tCommon("processing")}
+              primaryClassName={`${btnPrimary} w-full justify-center touch-manipulation`}
+              secondaryClassName={`${btnSecondarySm} w-full min-h-11 justify-center touch-manipulation`}
+              downloadTestId="admin-download-invoice"
+              onError={setInvoiceError}
+            />
           ) : undefined
         }
       >

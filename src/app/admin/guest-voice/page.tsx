@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { MessageSquareHeart, Star, AlertTriangle } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, GuestVoiceReviewItem } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { PageHeader, StatCard, PageLoader } from "@/components/ui";
 import { DashboardHero } from "@/components/enterprise-ui";
@@ -31,6 +31,71 @@ function last30DaysRange() {
   const from = new Date();
   from.setDate(from.getDate() - 30);
   return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function formatReviewDate(value: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function ReviewDetailCard({ review }: { review: GuestVoiceReviewItem }) {
+  const t = useTranslations("admin.guestVoice");
+  const categoryEntries = Object.entries(review.categoryRatings ?? {});
+
+  return (
+    <article className="rounded-2xl border bg-card p-4 space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="font-semibold">{review.customerFirstName}</p>
+          <p className="text-sm text-muted-foreground">
+            {review.branchName ?? t("unknownBranch")} · {formatReviewDate(review.submittedAt)}
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+          {review.overallRating}/5
+        </div>
+      </div>
+
+      {categoryEntries.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {categoryEntries.map(([category, rating]) => (
+            <span
+              key={category}
+              className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs"
+            >
+              {CATEGORY_LABELS[category] ?? category}: {rating}★
+            </span>
+          ))}
+        </div>
+      )}
+
+      {review.improvementTags?.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {review.improvementTags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+            >
+              {TAG_LABELS[tag] ?? tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {review.comment ? (
+        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{review.comment}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground italic">{t("noWrittenReview")}</p>
+      )}
+    </article>
+  );
 }
 
 export default function AdminGuestVoicePage() {
@@ -78,6 +143,8 @@ export default function AdminGuestVoicePage() {
   const categoryAverages = Object.entries(data?.categoryAverageRatings ?? {})
     .filter(([, avg]) => avg > 0)
     .sort((a, b) => b[1] - a[1]);
+
+  const reviewItems = data?.reviews ?? [];
 
   return (
     <div className="space-y-6 pb-8">
@@ -162,19 +229,52 @@ export default function AdminGuestVoicePage() {
             </section>
           )}
 
+          <section className="rounded-2xl border bg-card p-4 space-y-4">
+            <div className="space-y-1">
+              <h2 className="font-semibold">{t("recentReviews")}</h2>
+              <p className="text-sm text-muted-foreground">{t("recentReviewsHint")}</p>
+            </div>
+            {reviewItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noReviewsYet")}</p>
+            ) : (
+              <div className="space-y-3">
+                {reviewItems.map((review) => (
+                  <ReviewDetailCard key={review.reviewId} review={review} />
+                ))}
+              </div>
+            )}
+          </section>
+
           {data.openRecoveries.length > 0 && (
             <section className="rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3">
               <h2 className="font-semibold flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600" />
                 {t("openRecoveries")}
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {data.openRecoveries.slice(0, 8).map((item) => (
-                  <li key={item.recoveryId} className="text-sm flex items-center justify-between gap-3">
-                    <span>
-                      Visit {item.visitId.slice(0, 8)}… · Branch {item.branchId.slice(0, 8)}…
-                    </span>
-                    <span className="font-semibold text-amber-700 dark:text-amber-300">{item.overallRating}/5</span>
+                  <li key={item.recoveryId} className="rounded-xl border border-amber-200/60 bg-background/70 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{item.customerFirstName ?? t("unknownGuest")}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.branchName ?? t("unknownBranch")} · {formatReviewDate(item.createdAt)}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-amber-700 dark:text-amber-300">{item.overallRating}/5</span>
+                    </div>
+                    {item.improvementTags && item.improvementTags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.improvementTags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-amber-100 px-2 py-0.5 text-xs dark:bg-amber-950/50">
+                            {TAG_LABELS[tag] ?? tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {item.comment && (
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{item.comment}</p>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -9,7 +9,6 @@ import {
   Trash2,
   Plus,
   CreditCard,
-  Download,
   Clock,
   Receipt,
   UserPlus,
@@ -58,6 +57,7 @@ import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
 import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPanel";
+import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 
 type Screen = "hub" | "flow";
 type HubTab = "open" | "history";
@@ -120,7 +120,6 @@ export default function WalkInPage() {
   const [billDiscountType, setBillDiscountType] = useState<DiscountKind>("");
   const [billDiscountValue, setBillDiscountValue] = useState("");
   const [paidInvoiceId, setPaidInvoiceId] = useState("");
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [receiptQueued, setReceiptQueued] = useState(false);
   const [reviewInvitationUrl, setReviewInvitationUrl] = useState("");
@@ -793,19 +792,6 @@ export default function WalkInPage() {
     setBillDiscountType("");
     setBillDiscountValue("");
     if (bookingId) applyBillDiscount.mutate({ clearDiscount: true });
-  }
-
-  async function downloadPaidInvoice() {
-    if (!paidInvoiceId) return;
-    setDownloadingPdf(true);
-    setError("");
-    try {
-      await api.downloadInvoicePdf(paidInvoiceId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : tCommon("failed"));
-    } finally {
-      setDownloadingPdf(false);
-    }
   }
 
   const cartTotals = useMemo(() => {
@@ -1757,16 +1743,19 @@ export default function WalkInPage() {
           )}
 
           {billingLocked ? (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={() => void downloadPaidInvoice()}
-                disabled={downloadingPdf}
-                className={`${btnPrimary} w-full py-3.5 min-h-12`}
-              >
-                <Download className="w-4 h-4" />
-                {downloadingPdf ? tCommon("processing") : t("downloadBill")}
-              </button>
+            <div className="space-y-2">
+              {paidInvoiceId && (
+                <InvoicePdfButtons
+                  invoiceId={paidInvoiceId}
+                  shareText={t("shareBillMessage", { name: customerName || "Customer" })}
+                  shareLabel={t("shareBill")}
+                  downloadLabel={t("downloadBill")}
+                  processingLabel={tCommon("processing")}
+                  primaryClassName={`${btnPrimary} w-full py-3.5 min-h-12 justify-center touch-manipulation`}
+                  secondaryClassName={`${btnSecondary} w-full min-h-11 justify-center touch-manipulation`}
+                  onError={setError}
+                />
+              )}
               <button
                 type="button"
                 onClick={() => router.push("/manager/walk-in?tab=history")}
