@@ -9,6 +9,14 @@ import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { PageHeader, StatCard, PageLoader } from "@/components/ui";
 import { DashboardHero } from "@/components/enterprise-ui";
 
+const CATEGORY_LABELS: Record<string, string> = {
+  SERVICE: "Service quality",
+  AMBIENCE: "Ambience",
+  STAFF: "Staff attitude",
+  CLEANLINESS: "Cleanliness",
+  VALUE_FOR_MONEY: "Value for money",
+};
+
 const TAG_LABELS: Record<string, string> = {
   WAIT_TIME: "Wait time",
   STAFF_ATTITUDE: "Staff attitude",
@@ -66,6 +74,10 @@ export default function AdminGuestVoicePage() {
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
+
+  const categoryAverages = Object.entries(data?.categoryAverageRatings ?? {})
+    .filter(([, avg]) => avg > 0)
+    .sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-6 pb-8">
@@ -132,6 +144,23 @@ export default function AdminGuestVoicePage() {
               )}
             </section>
           </div>
+
+          {categoryAverages.length > 0 && (
+            <section className="rounded-2xl border bg-card p-4 space-y-3">
+              <h2 className="font-semibold">{t("categoryBreakdown")}</h2>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {categoryAverages.map(([category, avg]) => (
+                  <div
+                    key={category}
+                    className="flex items-center justify-between rounded-xl border bg-muted/20 px-3 py-2 text-sm"
+                  >
+                    <span>{CATEGORY_LABELS[category] ?? category}</span>
+                    <span className="font-semibold">{avg.toFixed(1)}★</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {data.openRecoveries.length > 0 && (
             <section className="rounded-2xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3">

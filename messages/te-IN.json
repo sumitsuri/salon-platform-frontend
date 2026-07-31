@@ -1334,8 +1334,9 @@
       "promoters": "Promoters (4–5★)",
       "needsAttention": "Open recoveries",
       "ratingMix": "Rating mix",
-      "improvementAreas": "Improvement themes",
-      "noTagsYet": "No improvement tags yet from low ratings.",
+      "improvementAreas": "Feedback themes",
+      "noTagsYet": "No feedback tags yet.",
+      "categoryBreakdown": "Category ratings",
       "openRecoveries": "Visits needing manager follow-up"
     }
   },

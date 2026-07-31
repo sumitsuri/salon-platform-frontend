@@ -2293,6 +2293,7 @@ export interface GuestVoiceSummary {
   detractorsCount: number;
   ratingDistribution: Record<number, number>;
   improvementTagCounts: Record<string, number>;
+  categoryAverageRatings?: Record<string, number>;
   openRecoveries: {
     recoveryId: string;
     visitId: string;
@@ -2311,11 +2312,13 @@ export interface PublicReviewContext {
   submittedRating?: number | null;
   googleReviewUrl?: string | null;
   improvementTagOptions: string[];
+  categoryOptions?: { id: string; label: string }[];
 }
 
 export interface SubmitPublicReviewPayload {
   token: string;
   overallRating: number;
+  categoryRatings?: Record<string, number>;
   improvementTags?: string[];
   comment?: string;
   googleReviewRedirected?: boolean;
