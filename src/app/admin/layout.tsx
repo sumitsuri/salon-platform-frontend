@@ -16,6 +16,7 @@ import {
   Megaphone,
   TrendingUp,
   BadgePercent,
+  MessageSquareHeart,
 } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
@@ -48,6 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         items: [
           { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
           { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
+          { href: "/admin/guest-voice", label: t("nav.guestVoice"), shortLabel: t("nav.voice"), icon: MessageSquareHeart },
         ],
       },
       {

@@ -223,7 +223,12 @@
       "visitsSubtitle": "Open queue and visit history in one place",
       "tabOpen": "Open ({count})",
       "tabHistory": "History",
-      "noOpenVisitsHint": "When someone walks in, start a visit — you can add services and bill from here."
+      "noOpenVisitsHint": "When someone walks in, start a visit — you can add services and bill from here.",
+      "reviewInviteTitle": "Ask for a quick rating",
+      "reviewInviteSubtitle": "Customer scans this QR on their phone — takes about 10 seconds.",
+      "reviewCopyLink": "Copy link",
+      "reviewCopiedLink": "Copied",
+      "reviewShareLink": "Share link"
     },
     "bookings": {
       "title": "முன்பதிவுகள்",
@@ -803,7 +808,9 @@
         "sectionIntelligence": "இன்டெலிஜென்ஸ்",
         "sectionOperations": "ஆபரேஷன்ஸ்",
         "sectionGrowth": "வளர்ச்சி",
-        "sectionBusiness": "பிசினஸ்"
+        "sectionBusiness": "பிசினஸ்",
+        "guestVoice": "Guest voice",
+        "voice": "Voice"
       }
     },
     "common": {
@@ -1315,6 +1322,21 @@
       "months12": "12 months",
       "fee": "Plan fee ₹",
       "benefitPercent": "Benefit %"
+    },
+    "guestVoice": {
+      "title": "Guest voice",
+      "subtitle": "Ratings and recovery signals from post-visit feedback (last 30 days)",
+      "heroTitle": "What guests are saying",
+      "heroDescription": "QR-first reviews after billing — no WhatsApp or SMS required. Low scores stay private and alert branch managers.",
+      "unavailable": "Guest voice analytics is unavailable for the selected period.",
+      "avgRating": "Avg rating",
+      "totalReviews": "Reviews",
+      "promoters": "Promoters (4–5★)",
+      "needsAttention": "Open recoveries",
+      "ratingMix": "Rating mix",
+      "improvementAreas": "Improvement themes",
+      "noTagsYet": "No improvement tags yet from low ratings.",
+      "openRecoveries": "Visits needing manager follow-up"
     }
   },
   "platform": {

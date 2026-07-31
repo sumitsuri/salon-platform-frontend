@@ -178,6 +178,27 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   return body.data;
 }
 
+async function publicRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  const res = await fetchWithTimeout(`${apiBase()}${path}`, { ...options, headers });
+  const text = await res.text();
+  let body: ApiWrapper<T> & { message?: string } = { success: false, data: undefined as T };
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(res.ok ? "Invalid server response" : `Request failed (${res.status})`);
+    }
+  }
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || `Request failed (${res.status})`);
+  }
+  return body.data;
+}
+
 async function multipartRequest<T>(path: string, formData: FormData, retried = false): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {};
@@ -911,6 +932,26 @@ export const api = {
 
   deactivatePlatformUser: (tenantId: string, userId: string) =>
     request<void>(`/api/v1/platform/tenants/${tenantId}/users/${userId}`, { method: "DELETE" }),
+
+  getReviewInvitationByVisit: (visitId: string) =>
+    request<ReviewInvitation>(`/api/v1/reviews/invitations/by-visit/${visitId}`),
+
+  getGuestVoiceSummary: (opts: { from: string; to: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    opts.branchIds?.forEach((id) => params.append("branchIds", id));
+    return request<GuestVoiceSummary>(`/api/v1/reviews/guest-voice?${params.toString()}`);
+  },
+
+  getPublicReviewContext: (token: string) =>
+    publicRequest<PublicReviewContext>(`/api/v1/public/reviews/context?token=${encodeURIComponent(token)}`),
+
+  submitPublicReview: (data: SubmitPublicReviewPayload) =>
+    publicRequest<SubmitPublicReviewResult>("/api/v1/public/reviews", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 export interface Customer {
@@ -1307,6 +1348,8 @@ export interface Booking {
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
+  reviewInvitationUrl?: string;
+  reviewInvitationToken?: string;
   createdAt: string;
   completedAt?: string;
 }
@@ -2231,5 +2274,58 @@ export interface UpsertLocalCompetitorRequest {
   retailAttachPercent?: number;
   netMarginPercent?: number;
   repeatVisitRate?: number;
+}
+
+export interface ReviewInvitation {
+  invitationId?: string;
+  visitId?: string;
+  token?: string;
+  reviewUrl?: string;
+  status?: string;
+  expiresAt?: string;
+  submittedRating?: number | null;
+}
+
+export interface GuestVoiceSummary {
+  averageRating: number;
+  totalReviews: number;
+  promotersCount: number;
+  detractorsCount: number;
+  ratingDistribution: Record<number, number>;
+  improvementTagCounts: Record<string, number>;
+  openRecoveries: {
+    recoveryId: string;
+    visitId: string;
+    branchId: string;
+    overallRating: number;
+    status: string;
+    createdAt: string;
+  }[];
+}
+
+export interface PublicReviewContext {
+  branchName: string;
+  customerFirstName: string;
+  status: string;
+  alreadySubmitted: boolean;
+  submittedRating?: number | null;
+  googleReviewUrl?: string | null;
+  improvementTagOptions: string[];
+}
+
+export interface SubmitPublicReviewPayload {
+  token: string;
+  overallRating: number;
+  improvementTags?: string[];
+  comment?: string;
+  googleReviewRedirected?: boolean;
+}
+
+export interface SubmitPublicReviewResult {
+  overallRating: number;
+  promptGoogleReview: boolean;
+  googleReviewUrl?: string | null;
+  recoveryCreated: boolean;
+  thankYouMessage: string;
 }
 

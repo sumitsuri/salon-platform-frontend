@@ -57,6 +57,7 @@ import {
 import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
+import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPanel";
 
 type Screen = "hub" | "flow";
 type HubTab = "open" | "history";
@@ -122,6 +123,8 @@ export default function WalkInPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [receiptQueued, setReceiptQueued] = useState(false);
+  const [reviewInvitationUrl, setReviewInvitationUrl] = useState("");
+  const [reviewSubmittedRating, setReviewSubmittedRating] = useState<number | null>(null);
   const [cgstInput, setCgstInput] = useState("0");
   const [sgstInput, setSgstInput] = useState("0");
   const [taxAdvanced, setTaxAdvanced] = useState(false);
@@ -513,6 +516,8 @@ export default function WalkInPage() {
       if (booking.invoiceId) setPaidInvoiceId(booking.invoiceId);
       setBookingStatus("COMPLETED");
       setReceiptQueued(!!booking.receiptQueued);
+      setReviewInvitationUrl(booking.reviewInvitationUrl ?? "");
+      setReviewSubmittedRating(null);
       setPaymentSuccess(t("paymentComplete"));
       clearWalkInDraft(branchId);
       void queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
@@ -1731,11 +1736,22 @@ export default function WalkInPage() {
           )}
 
           {paymentSuccess && (
-            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 space-y-1">
+            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 space-y-2">
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{paymentSuccess}</p>
               <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">{t("receiptShareHint")}</p>
               {receiptQueued && (
                 <p className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60">{t("receiptQueuedHint")}</p>
+              )}
+              {reviewInvitationUrl && (
+                <ReviewInvitationPanel
+                  reviewUrl={reviewInvitationUrl}
+                  title={t("reviewInviteTitle")}
+                  subtitle={t("reviewInviteSubtitle")}
+                  copyLabel={t("reviewCopyLink")}
+                  copiedLabel={t("reviewCopiedLink")}
+                  shareLabel={t("reviewShareLink")}
+                  submittedRating={reviewSubmittedRating}
+                />
               )}
             </div>
           )}
@@ -1764,6 +1780,8 @@ export default function WalkInPage() {
                   setScreen("hub");
                   setPaidInvoiceId("");
                   setPaymentSuccess("");
+                  setReviewInvitationUrl("");
+                  setReviewSubmittedRating(null);
                   setBookingId("");
                   router.replace("/manager/walk-in");
                   void refetchOpenVisits();
