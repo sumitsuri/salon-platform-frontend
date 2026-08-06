@@ -633,6 +633,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateBranchDigitalPresence: (branchId: string, data: UpdateBranchDigitalPresenceRequest) =>
+    request<Branch>(`/api/v1/branches/${branchId}/digital-presence`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   createAttendanceIncident: (data: CreateAttendanceIncidentRequest) =>
     request<AttendanceIncident>("/api/v1/attendance/incidents", {
       method: "POST",
@@ -766,6 +772,23 @@ export const api = {
 
   deleteLocalCompetitor: (id: string) =>
     request<void>(`/api/v1/analytics/benchmark/local-competitors/${id}`, { method: "DELETE" }),
+
+  getLocalSpotlight: (opts?: { branchIds?: string[]; radiusKm?: number; refresh?: boolean }) => {
+    const params = new URLSearchParams();
+    if (opts?.radiusKm != null) params.set("radiusKm", String(opts.radiusKm));
+    if (opts?.refresh) params.set("refresh", "true");
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<LocalSpotlightResponse>(`/api/v1/analytics/local-spotlight${q}`);
+  },
+
+  syncLocalSpotlight: (opts?: { radiusKm?: number; force?: boolean }) => {
+    const params = new URLSearchParams();
+    if (opts?.radiusKm != null) params.set("radiusKm", String(opts.radiusKm));
+    if (opts?.force != null) params.set("force", String(opts.force));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<LocalSpotlightSyncResponse>(`/api/v1/analytics/local-spotlight/sync${q}`, { method: "POST" });
+  },
 
   getExpenditures: (opts?: { branchId?: string; fromMonth?: string; toMonth?: string }) => {
     const params = new URLSearchParams();
@@ -1543,7 +1566,42 @@ export interface Branch {
   attendanceGraceMinutes?: number;
   monthlySalesTarget?: number;
   status?: string;
+  businessType?: BranchBusinessType;
   createdAt?: string;
+  googleReviewUrl?: string;
+  googleReviewAutoPublish?: boolean;
+  googlePlaceId?: string;
+  googleMapsUrl?: string;
+  googleRating?: number;
+  googleReviewCount?: number;
+  gbpPhotoCount?: number;
+  gbpVideoCount?: number;
+  gbpHasPhone?: boolean;
+  gbpHasWebsite?: boolean;
+  gbpHasHours?: boolean;
+  gbpHasBookButton?: boolean;
+  gbpServicesListedCount?: number;
+  estimatedSearchRank?: number;
+  digitalPresenceUpdatedAt?: string;
+}
+
+export type BranchBusinessType = "SALON" | "SPA" | "SALON_AND_SPA";
+
+export interface UpdateBranchDigitalPresenceRequest {
+  googlePlaceId?: string;
+  googleMapsUrl?: string;
+  googleReviewUrl?: string;
+  googleReviewAutoPublish?: boolean;
+  googleRating?: number;
+  googleReviewCount?: number;
+  gbpPhotoCount?: number;
+  gbpVideoCount?: number;
+  gbpHasPhone?: boolean;
+  gbpHasWebsite?: boolean;
+  gbpHasHours?: boolean;
+  gbpHasBookButton?: boolean;
+  gbpServicesListedCount?: number;
+  estimatedSearchRank?: number;
 }
 
 export interface CreateBranchRequest {
@@ -1557,6 +1615,7 @@ export interface CreateBranchRequest {
   closeTime?: string;
   monthlySalesTarget?: number;
   status?: string;
+  businessType?: BranchBusinessType;
 }
 
 export interface UpdateBranchRequest {
@@ -1570,6 +1629,7 @@ export interface UpdateBranchRequest {
   closeTime?: string;
   monthlySalesTarget?: number;
   status?: string;
+  businessType?: BranchBusinessType;
 }
 
 export interface BranchTargetPerformanceItem {
@@ -1930,6 +1990,7 @@ export interface CreatePlatformBranchRequest {
   societyDefault?: string;
   gstin?: string;
   phone?: string;
+  businessType?: BranchBusinessType;
 }
 
 export interface PlatformUser {
@@ -2238,6 +2299,12 @@ export interface LocalCompetitorRow {
   repeatVisitRate?: number;
   address?: string;
   notes?: string;
+  googleRating?: number;
+  googleReviewCount?: number;
+  gbpPhotoCount?: number;
+  gbpVideoCount?: number;
+  gbpHasPhone?: boolean;
+  estimatedSearchRank?: number;
 }
 
 export interface BenchmarkPlaybookItem {
@@ -2287,6 +2354,140 @@ export interface UpsertLocalCompetitorRequest {
   retailAttachPercent?: number;
   netMarginPercent?: number;
   repeatVisitRate?: number;
+  googleRating?: number;
+  googleReviewCount?: number;
+  gbpPhotoCount?: number;
+  gbpVideoCount?: number;
+  gbpHasPhone?: boolean;
+  estimatedSearchRank?: number;
+}
+
+export interface LocalSpotlightBranchRow {
+  branchId: string;
+  branchName: string;
+  branchCode?: string | null;
+  localityLabel: string;
+  businessType?: BranchBusinessType | null;
+  localVisibilityScore: number;
+  scoreLabel: string;
+  estimatedSearchRank?: number | null;
+  inTop3: boolean;
+  googleRating?: number | null;
+  googleReviewCount?: number | null;
+  googleLowRatingReviewCount?: number | null;
+  googleReviewsSampleSize?: number | null;
+  gbpCompletenessPercent: number;
+  listingLinked: boolean;
+  googleSynced?: boolean;
+  pilotBranch?: boolean;
+  gbpHasPhone: boolean;
+  gbpHasWebsite: boolean;
+  gbpHasHours: boolean;
+  gbpHasBookButton: boolean;
+  gbpPhotoCount?: number | null;
+  gbpVideoCount?: number | null;
+  gbpServicesListedCount?: number | null;
+  googlePlaceId?: string | null;
+  googleMapsUrl?: string | null;
+  googleReviewUrl?: string | null;
+  googleReviewAutoPublish?: boolean | null;
+  googleFormattedAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  digitalPresenceUpdatedAt?: string | null;
+  trackedRivalCount: number;
+}
+
+export interface LocalSpotlightRivalRow {
+  id: string;
+  name: string;
+  branchId?: string | null;
+  branchName?: string | null;
+  googleRating?: number | null;
+  googleReviewCount?: number | null;
+  googleLowRatingReviewCount?: number | null;
+  googleReviewsSampleSize?: number | null;
+  gbpPhotoCount?: number | null;
+  gbpVideoCount?: number | null;
+  gbpHasPhone?: boolean | null;
+  estimatedSearchRank?: number | null;
+  address?: string | null;
+  googlePlaceId?: string | null;
+  googleMapsUrl?: string | null;
+  googleAutoDiscovered?: boolean;
+}
+
+export interface LocalSpotlightTopThreeRival {
+  rank: number;
+  name: string;
+  googleMapsUrl?: string | null;
+  googlePlaceId?: string | null;
+}
+
+export interface LocalSpotlightSearchRankRow {
+  branchId: string;
+  branchName: string;
+  keyword: string;
+  yourRank?: number | null;
+  yourRankBeyondTop20?: boolean;
+  yourRankLabel?: string | null;
+  inTop3: boolean;
+  topThreeSummary: string;
+  topThreeRivals?: LocalSpotlightTopThreeRival[];
+}
+
+export interface LocalSpotlightPlaybookItem {
+  id: string;
+  severity: string;
+  section?: string | null;
+  subCategory?: string | null;
+  title: string;
+  message: string;
+  reasoning?: string | null;
+  keyword?: string | null;
+  keywords?: string[] | null;
+  metricKey: string;
+  actionTarget?: string | null;
+  actionModule?: string | null;
+  actionLabel: string;
+  branchId?: string | null;
+  branchName?: string | null;
+}
+
+export interface LocalSpotlightResponse {
+  localVisibilityScore: number;
+  scoreLabel: string;
+  branchesLinked: number;
+  branchesTotal: number;
+  notInTop3Count: number;
+  ratingBelowRivalsCount: number;
+  incompleteGbpCount: number;
+  missingPhoneCount: number;
+  dataSourceNote: string;
+  lastRefreshedAt?: string | null;
+  googleApiConfigured?: boolean;
+  pilotMode?: boolean;
+  pilotBranchCode?: string | null;
+  pilotBranchName?: string | null;
+  syncStatusMessage?: string | null;
+  branches: LocalSpotlightBranchRow[];
+  rivals: LocalSpotlightRivalRow[];
+  searchRanks: LocalSpotlightSearchRankRow[];
+  playbook: LocalSpotlightPlaybookItem[];
+}
+
+export interface LocalSpotlightSyncResponse {
+  skipped: boolean;
+  branchId?: string | null;
+  branchName?: string | null;
+  ownListingMatched?: boolean;
+  ownListingName?: string | null;
+  googleMapsUrl?: string | null;
+  googleFormattedAddress?: string | null;
+  rivalsSynced?: number;
+  searchRanks?: Record<string, number>;
+  message?: string | null;
+  syncedAt?: string | null;
 }
 
 export interface ReviewInvitation {
@@ -2333,6 +2534,7 @@ export interface GuestVoiceReviewItem {
   improvementTags: string[];
   comment?: string | null;
   submittedAt: string;
+  googleReviewRedirected?: boolean;
 }
 
 export interface PublicReviewContext {
@@ -2342,6 +2544,8 @@ export interface PublicReviewContext {
   alreadySubmitted: boolean;
   submittedRating?: number | null;
   googleReviewUrl?: string | null;
+  googleReviewAutoPublish?: boolean;
+  googleAutoPublishMinRating?: number;
   improvementTagOptions: string[];
   categoryOptions?: { id: string; label: string }[];
 }
@@ -2359,6 +2563,8 @@ export interface SubmitPublicReviewResult {
   overallRating: number;
   promptGoogleReview: boolean;
   googleReviewUrl?: string | null;
+  autoRedirectGoogle?: boolean;
+  googleReviewAutoPublished?: boolean;
   recoveryCreated: boolean;
   thankYouMessage: string;
 }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import {
   api,
+  BranchBusinessType,
   CreatePlatformBranchRequest,
   CreatePlatformUserRequest,
   CreateTenantRequest,
@@ -49,9 +50,17 @@ type UserDrawerState = { mode: "create" } | { mode: "view"; user: PlatformUser }
 
 const ONBOARD_ROLES: UserRole[] = ["BRAND_ADMIN", "BRANCH_MANAGER", "SALON_MANAGER"];
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <label className="block space-y-1.5">
+    <label className={cn("block space-y-1.5", className)}>
       <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
       {children}
     </label>
@@ -620,6 +629,7 @@ function PlatformBranchDrawer({
     address: "",
     societyDefault: "",
     phone: "",
+    businessType: "SALON",
   });
 
   if (!drawer) return null;
@@ -683,6 +693,17 @@ function PlatformBranchDrawer({
             </Field>
             <Field label={tCommon("phone")}>
               <input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </Field>
+            <Field label={tOrg("businessType")} className="sm:col-span-2">
+              <select
+                className={selectClass}
+                value={form.businessType ?? "SALON"}
+                onChange={(e) => setForm({ ...form, businessType: e.target.value as BranchBusinessType })}
+              >
+                <option value="SALON">{tOrg("businessTypes.SALON")}</option>
+                <option value="SPA">{tOrg("businessTypes.SPA")}</option>
+                <option value="SALON_AND_SPA">{tOrg("businessTypes.SALON_AND_SPA")}</option>
+              </select>
             </Field>
           </div>
           <div className="flex gap-2 pt-4 border-t border-[var(--border)]">

@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronRight, MapPin, Pencil, Plus, Target, Trash2, UserPlus, Users } from "lucide-react";
 import {
   api,
   Branch,
+  BranchBusinessType,
   CreateBranchRequest,
   CreatePlatformUserRequest,
   PlatformUser,
   UpdateBranchRequest,
   UpdateBranchGeofenceRequest,
+  UpdateBranchDigitalPresenceRequest,
   UpdatePlatformUserRequest,
   UpdateTenantRequest,
   UserRole,
@@ -49,9 +52,17 @@ function monthRange() {
   return { start, end };
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">{label}</label>
       {children}
     </div>
@@ -557,6 +568,10 @@ function BranchDetailView({
       <div className="grid grid-cols-2 gap-4">
         <DetailField label={t("code")} value={branch.code} />
         <DetailField label={tCommon("status")} value={branch.status || "ACTIVE"} />
+        <DetailField
+          label={t("businessType")}
+          value={branch.businessType ? t(`businessTypes.${branch.businessType}`) : t("businessTypes.SALON")}
+        />
         <DetailField label={t("societyLocality")} value={branch.societyDefault} />
         <DetailField label={tCommon("phone")} value={branch.phone} />
         <DetailField label={t("address")} value={branch.address} />
@@ -574,6 +589,112 @@ function BranchDetailView({
       </div>
 
       <BranchGeofencePanel branch={branch} />
+      <BranchDigitalPresencePanel branch={branch} />
+    </div>
+  );
+}
+
+function BranchDigitalPresencePanel({ branch }: { branch: Branch }) {
+  const t = useTranslations("admin.localSpotlight");
+  const tOrg = useTranslations("admin.organization");
+  const tCommon = useTranslations("common");
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<UpdateBranchDigitalPresenceRequest>({});
+
+  useEffect(() => {
+    setForm({
+      googleMapsUrl: branch.googleMapsUrl ?? "",
+      googleReviewUrl: branch.googleReviewUrl ?? "",
+      googleReviewAutoPublish: branch.googleReviewAutoPublish ?? true,
+      googleRating: branch.googleRating,
+      googleReviewCount: branch.googleReviewCount,
+      gbpPhotoCount: branch.gbpPhotoCount,
+      estimatedSearchRank: branch.estimatedSearchRank,
+      gbpHasPhone: branch.gbpHasPhone,
+      gbpHasWebsite: branch.gbpHasWebsite,
+      gbpHasHours: branch.gbpHasHours,
+      gbpHasBookButton: branch.gbpHasBookButton,
+      gbpServicesListedCount: branch.gbpServicesListedCount,
+    });
+  }, [branch]);
+
+  const mutation = useMutation({
+    mutationFn: () => api.updateBranchDigitalPresence(branch.id, form),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["branches"] });
+      queryClient.invalidateQueries({ queryKey: ["local-spotlight"] });
+      setEditing(false);
+    },
+  });
+
+  return (
+    <div className="space-y-3" data-testid="branch-digital-presence-panel">
+      <div className="flex items-center justify-between gap-2">
+        <SectionTitle>{tOrg("digitalPresenceTitle")}</SectionTitle>
+        {!editing && (
+          <button type="button" onClick={() => setEditing(true)} className="text-xs font-semibold text-[var(--brand-text)]">
+            {tCommon("edit")}
+          </button>
+        )}
+      </div>
+      {!editing ? (
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <DetailField label={t("googleMapsUrl")} value={branch.googleMapsUrl} />
+          <DetailField
+            label={t("googleReviewAutoPublish")}
+            value={branch.googleReviewAutoPublish === false ? "Disabled" : "Enabled"}
+          />
+          <DetailField label={t("searchRank")} value={branch.estimatedSearchRank != null ? `#${branch.estimatedSearchRank}` : undefined} />
+          <DetailField label={t("googleRating")} value={branch.googleRating != null ? `★ ${branch.googleRating}` : undefined} />
+          <DetailField label={t("photos")} value={branch.gbpPhotoCount?.toString()} />
+        </div>
+      ) : (
+        <form
+          className="space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+        >
+          <Field label={t("googleMapsUrl")}>
+            <input className={inputClass} value={form.googleMapsUrl ?? ""} onChange={(e) => setForm({ ...form, googleMapsUrl: e.target.value })} />
+          </Field>
+          <Field label={t("googleReviewUrl")}>
+            <input className={inputClass} value={form.googleReviewUrl ?? ""} onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })} />
+          </Field>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.googleReviewAutoPublish ?? true}
+              onChange={(e) => setForm({ ...form, googleReviewAutoPublish: e.target.checked })}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">{t("googleReviewAutoPublish")}</span>
+              <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">{t("googleReviewAutoPublishHint")}</span>
+            </span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("googleRating")}>
+              <input type="number" step="0.1" className={inputClass} value={form.googleRating ?? ""} onChange={(e) => setForm({ ...form, googleRating: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+            <Field label={t("searchRank")}>
+              <input type="number" className={inputClass} value={form.estimatedSearchRank ?? ""} onChange={(e) => setForm({ ...form, estimatedSearchRank: e.target.value ? Number(e.target.value) : undefined })} />
+            </Field>
+          </div>
+          {mutation.error && <AlertBanner variant="error">{(mutation.error as Error).message}</AlertBanner>}
+          <div className="flex gap-2">
+            <button type="submit" disabled={mutation.isPending} className={`${btnPrimary} flex-1`}>
+              {mutation.isPending ? tCommon("saving") : tCommon("save")}
+            </button>
+            <button type="button" className={btnSecondary} onClick={() => setEditing(false)}>{tCommon("cancel")}</button>
+          </div>
+        </form>
+      )}
+      <Link href="/admin/local-spotlight" className="text-xs font-semibold text-[var(--brand-text)]">
+        {tOrg("openLocalSpotlight")}
+      </Link>
     </div>
   );
 }
@@ -704,6 +825,7 @@ function BranchForm({
   );
   const [openTime, setOpenTime] = useState(initial?.openTime ?? "09:00");
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "21:00");
+  const [businessType, setBusinessType] = useState<BranchBusinessType>(initial?.businessType ?? "SALON");
 
   return (
     <form
@@ -719,6 +841,7 @@ function BranchForm({
           openTime: openTime || undefined,
           closeTime: closeTime || undefined,
           monthlySalesTarget: monthlySalesTarget ? Number(monthlySalesTarget) : undefined,
+          businessType,
         });
       }}
       className="space-y-4 pb-2"
@@ -764,6 +887,18 @@ function BranchForm({
             className={inputClass}
             placeholder={t("targetPlaceholder")}
           />
+        </Field>
+        <Field label={t("businessType")} className="sm:col-span-2">
+          <select
+            value={businessType}
+            onChange={(e) => setBusinessType(e.target.value as BranchBusinessType)}
+            className={selectClass}
+          >
+            <option value="SALON">{t("businessTypes.SALON")}</option>
+            <option value="SPA">{t("businessTypes.SPA")}</option>
+            <option value="SALON_AND_SPA">{t("businessTypes.SALON_AND_SPA")}</option>
+          </select>
+          <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("businessTypeHint")}</p>
         </Field>
       </div>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)] sticky bottom-0 bg-[var(--surface)]">

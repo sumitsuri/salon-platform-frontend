@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Star } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink, Star } from "lucide-react";
 import { api, PublicReviewContext, SubmitPublicReviewResult } from "@/lib/api";
 import { StarRatingRow } from "@/components/reviews/StarRatingRow";
 import { ReviewTagChip } from "@/components/reviews/ReviewTagChip";
@@ -30,6 +30,7 @@ export function PublicReviewForm({ token, context }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SubmitPublicReviewResult | null>(null);
+  const googleOpenedRef = useRef(false);
 
   const categoryOptions = useMemo(
     () => context.categoryOptions ?? [],
@@ -41,11 +42,20 @@ export function PublicReviewForm({ token, context }: Props) {
     [context.improvementTagOptions],
   );
 
+  const autoPublishMinRating = context.googleAutoPublishMinRating ?? 4;
   const showDetails = overallRating != null;
   const tagPrompt =
-    overallRating != null && overallRating >= 4
+    overallRating != null && overallRating >= autoPublishMinRating
       ? "What did you enjoy most?"
       : "What could we improve?";
+
+  useEffect(() => {
+    if (!result?.autoRedirectGoogle || !result.googleReviewUrl || googleOpenedRef.current) {
+      return;
+    }
+    googleOpenedRef.current = true;
+    window.open(result.googleReviewUrl, "_blank", "noopener,noreferrer");
+  }, [result]);
 
   function setCategoryRating(id: string, value: number) {
     setCategoryRatings((prev) => ({ ...prev, [id]: value }));
@@ -108,14 +118,21 @@ export function PublicReviewForm({ token, context }: Props) {
     return (
       <div className="rounded-2xl border bg-card p-6 space-y-4 text-center">
         <p className="text-lg font-semibold">{result.thankYouMessage}</p>
+        {result.googleReviewAutoPublished && (
+          <p className="text-sm text-muted-foreground">
+            Your {result.overallRating}★ rating was saved. We opened Google in a new tab so you can publish
+            your public review there.
+          </p>
+        )}
         {result.promptGoogleReview && result.googleReviewUrl && (
           <a
             href={result.googleReviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white"
           >
-            Share on Google
+            {result.autoRedirectGoogle ? "Open Google again" : "Share on Google"}
+            <ExternalLink className="h-4 w-4" />
           </a>
         )}
         {result.recoveryCreated && (
@@ -133,6 +150,11 @@ export function PublicReviewForm({ token, context }: Props) {
         <p className="text-sm text-muted-foreground">{context.branchName}</p>
         <h1 className="text-xl font-semibold">Hi {context.customerFirstName}, how was your visit?</h1>
         <p className="text-sm text-muted-foreground">Rate your experience — takes about a minute.</p>
+        {context.googleReviewAutoPublish !== false && context.googleReviewUrl && (
+          <p className="text-xs text-muted-foreground">
+            {autoPublishMinRating}★ and 5★ ratings are automatically sent to Google after you submit.
+          </p>
+        )}
       </div>
 
       <section className="space-y-3 rounded-xl border bg-muted/20 p-4">

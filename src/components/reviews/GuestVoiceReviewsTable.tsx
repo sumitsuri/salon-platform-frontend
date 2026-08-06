@@ -111,6 +111,7 @@ export function GuestVoiceReviewsTable({
     { label: CATEGORY_LABELS.STAFF },
     { label: CATEGORY_LABELS.CLEANLINESS },
     { label: CATEGORY_LABELS.VALUE_FOR_MONEY },
+    { label: t("columns.google") },
     { label: t("columns.tags") },
     { label: t("columns.review") },
   ];
@@ -249,6 +250,19 @@ export function GuestVoiceReviewsTable({
                     <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.STAFF} /></td>
                     <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.CLEANLINESS} /></td>
                     <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.VALUE_FOR_MONEY} /></td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {review.overallRating >= 4 ? (
+                        review.googleReviewRedirected ? (
+                          <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
+                            {t("googlePublished")}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{t("googlePending")}</span>
+                        )
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 min-w-[10rem]">
                       <div className="flex flex-wrap gap-1">
                         {(review.improvementTags ?? []).length === 0 ? (
