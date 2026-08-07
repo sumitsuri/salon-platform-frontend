@@ -214,6 +214,8 @@
       "cart": "Cart ({count})",
       "cartEmpty": "Tap a service above to add",
       "selectStylist": "Select stylist *",
+      "priceExtra": "Extra amount",
+      "priceFrom": "from {price}",
       "assignStylistError": "Assign stylist to every service",
       "continueBill": "Proceed to bill",
       "saveOpenVisit": "Save & keep open",

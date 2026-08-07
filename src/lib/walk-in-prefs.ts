@@ -17,8 +17,12 @@ export interface WalkInDraft {
   cart: {
     branchServiceId: string;
     serviceName: string;
-    price: number;
     staffId: string;
+    basePrice?: number;
+    priceExtra?: number;
+    variablePricing?: boolean;
+    /** @deprecated legacy total price */
+    price?: number;
   }[];
   step: 1 | 2 | 3;
   savedAt: number;

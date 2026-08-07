@@ -68,8 +68,35 @@ type PaymentMode = "CASH" | "UPI" | "CARD" | "SPLIT";
 interface CartItem {
   branchServiceId: string;
   serviceName: string;
-  price: number;
+  basePrice: number;
+  priceExtra: number;
+  variablePricing: boolean;
   staffId: string;
+}
+
+function cartLinePrice(c: CartItem) {
+  return c.basePrice + (c.priceExtra || 0);
+}
+
+function normalizeCartItem(
+  item: WalkInDraft["cart"][number],
+  servicesById: Map<string, BranchServiceItem>
+): CartItem {
+  const svc = servicesById.get(item.branchServiceId);
+  const basePrice = item.basePrice ?? svc?.price ?? item.price ?? 0;
+  const variablePricing = item.variablePricing ?? svc?.variablePricing ?? false;
+  let priceExtra = item.priceExtra ?? 0;
+  if (item.price != null && item.basePrice == null && item.priceExtra == null) {
+    priceExtra = Math.max(0, item.price - basePrice);
+  }
+  return {
+    branchServiceId: item.branchServiceId,
+    serviceName: item.serviceName,
+    basePrice,
+    priceExtra,
+    variablePricing,
+    staffId: item.staffId,
+  };
 }
 
 interface SplitRow {
@@ -282,12 +309,18 @@ export default function WalkInPage() {
     }
     setBillPreview(b.billPreview ?? null);
     setCart(
-      (b.lines || []).map((l) => ({
-        branchServiceId: l.branchServiceId,
-        serviceName: l.serviceName,
-        price: l.unitPrice,
-        staffId: l.staffId,
-      }))
+      (b.lines || []).map((l) => {
+        const svc = servicesById.get(l.branchServiceId);
+        const basePrice = svc?.price ?? l.unitPrice;
+        return {
+          branchServiceId: l.branchServiceId,
+          serviceName: l.serviceName,
+          basePrice,
+          priceExtra: Math.max(0, l.unitPrice - basePrice),
+          variablePricing: svc?.variablePricing ?? false,
+          staffId: l.staffId,
+        };
+      })
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPaymentSuccess("");
@@ -301,7 +334,7 @@ export default function WalkInPage() {
     setTaxAdvanced(false);
     setTaxOverridden(false);
     setError("");
-  }, []);
+  }, [servicesById]);
 
   useEffect(() => {
     if (preferredStaffId) {
@@ -340,7 +373,7 @@ export default function WalkInPage() {
     setCustomerId(draftOffer.customerId);
     setSociety(draftOffer.society || user?.branchName || "");
     setFlat(draftOffer.flat);
-    setCart(draftOffer.cart);
+    setCart(draftOffer.cart.map((c) => normalizeCartItem(c, servicesById)));
     setStep(draftOffer.step);
     setScreen("flow");
     setDraftOffer(null);
@@ -638,7 +671,17 @@ export default function WalkInPage() {
   }
 
   function addService(s: BranchServiceItem) {
-    setCart((prev) => [...prev, { branchServiceId: s.id, serviceName: s.serviceName, price: s.price, staffId: defaultStaffId(prev) }]);
+    setCart((prev) => [
+      ...prev,
+      {
+        branchServiceId: s.id,
+        serviceName: s.serviceName,
+        basePrice: s.price,
+        priceExtra: 0,
+        variablePricing: !!s.variablePricing,
+        staffId: defaultStaffId(prev),
+      },
+    ]);
     pushRecentService(branchId, s.id);
     setRecentServiceIds(getRecentServiceIds(branchId));
   }
@@ -657,8 +700,28 @@ export default function WalkInPage() {
     setCart(next);
   }
 
+  function updatePriceExtra(idx: number, raw: string) {
+    const extra = Math.max(0, Number(raw) || 0);
+    setCart((prev) => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], priceExtra: extra };
+      return next;
+    });
+  }
+
   function toLinePayload(items: CartItem[]) {
-    return items.map((c) => ({ branchServiceId: c.branchServiceId, staffId: c.staffId, quantity: 1 }));
+    return items.map((c) => {
+      const total = cartLinePrice(c);
+      const payload: { branchServiceId: string; staffId: string; quantity: number; unitPrice?: number } = {
+        branchServiceId: c.branchServiceId,
+        staffId: c.staffId,
+        quantity: 1,
+      };
+      if (c.variablePricing && total > c.basePrice) {
+        payload.unitPrice = total;
+      }
+      return payload;
+    });
   }
 
   function discountPayload() {
@@ -795,10 +858,10 @@ export default function WalkInPage() {
   }
 
   const cartTotals = useMemo(() => {
-    const subtotal = cart.reduce((s, c) => s + c.price, 0);
+    const subtotal = cart.reduce((s, c) => s + cartLinePrice(c), 0);
     const tax = cart.reduce((s, c) => {
       const rate = servicesById.get(c.branchServiceId)?.gstRate ?? 0;
-      return s + (c.price * rate) / 100;
+      return s + (cartLinePrice(c) * rate) / 100;
     }, 0);
     return { subtotal, estimatedGrand: subtotal + tax };
   }, [cart, servicesById]);
@@ -1305,7 +1368,11 @@ export default function WalkInPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className="font-bold text-sm text-[var(--brand-text)]">{formatCurrency(s.price, localeKit)}</span>
+                        <span className="font-bold text-sm text-[var(--brand-text)]">
+                          {s.variablePricing
+                            ? t("priceFrom", { price: formatCurrency(s.price, localeKit) })
+                            : formatCurrency(s.price, localeKit)}
+                        </span>
                         <Plus className="w-4 h-4 text-[var(--brand-text)]" />
                       </div>
                     </button>
@@ -1339,7 +1406,7 @@ export default function WalkInPage() {
                       <p className="font-medium text-sm">{item.serviceName}</p>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-sm font-semibold text-[var(--brand-text)]">
-                          {formatCurrency(item.price, localeKit)}
+                          {formatCurrency(cartLinePrice(item), localeKit)}
                         </span>
                         <button
                           onClick={() => removeFromCart(idx)}
@@ -1349,6 +1416,20 @@ export default function WalkInPage() {
                         </button>
                       </div>
                     </div>
+                    {item.variablePricing && (
+                      <label className="mt-2 block text-xs text-[var(--text-secondary)]">
+                        {t("priceExtra")}
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={item.priceExtra || ""}
+                          onChange={(e) => updatePriceExtra(idx, e.target.value)}
+                          className={`${inputClass} mt-1 py-2 min-h-10`}
+                          placeholder="0"
+                        />
+                      </label>
+                    )}
                     <select
                       data-testid="walk-in-stylist-select"
                       value={item.staffId}
@@ -1524,7 +1605,7 @@ export default function WalkInPage() {
                             )}
                           </div>
                           <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
-                            {formatMoney(item.price, localeKit)}
+                            {formatMoney(cartLinePrice(item), localeKit)}
                           </span>
                         </li>
                       );

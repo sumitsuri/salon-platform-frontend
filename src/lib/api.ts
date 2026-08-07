@@ -378,7 +378,7 @@ export const api = {
 
   updateBookingLines: (
     id: string,
-    lines: { branchServiceId: string; staffId: string; quantity: number }[]
+    lines: { branchServiceId: string; staffId: string; quantity: number; unitPrice?: number }[]
   ) =>
     request<Booking>(`/api/v1/bookings/${id}/lines`, {
       method: "PUT",
@@ -1020,6 +1020,7 @@ export interface BranchServiceItem {
   price: number;
   gstRate: number;
   durationMinutes?: number;
+  variablePricing?: boolean;
 }
 
 export interface CatalogCategory {
