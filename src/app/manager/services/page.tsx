@@ -6,28 +6,28 @@ import { Scissors, Hash, IndianRupee } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
-import { PageHeader, StatCard, selectClass, EmptyState, DEFAULT_PAGE_SIZE } from "@/components/ui";
+import { PageHeader, StatCard, EmptyState, DEFAULT_PAGE_SIZE } from "@/components/ui";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MissionStrip } from "@/components/brand/MissionStrip";
-import { insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
+import { insightPeriodToRange } from "@/lib/insights-utils";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import { formatCurrency } from "@/lib/utils";
-
-const PERIODS: InsightPeriod[] = ["days60", "month", "week"];
 
 export default function ManagerServicesPage() {
   const t = useTranslations("manager.services");
-  const tPeriods = useTranslations("components.insights.periods");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const [period, setPeriod] = useState<InsightPeriod>("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [serviceFilter, setServiceFilter] = useState("");
-  const dateRange = insightPeriodToRange(period);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const perfInfinite = useInfiniteQuery({
-    queryKey: ["service-contribution", branchId, period, serviceFilter],
+    queryKey: ["service-contribution", branchId, dateRange.preset, dateRange.from, dateRange.to, serviceFilter],
     queryFn: ({ pageParam }) =>
       api.getServiceContribution({
-        ...dateRange,
+        ...apiRange,
         serviceName: serviceFilter || undefined,
         page: pageParam as number,
         size: DEFAULT_PAGE_SIZE,
@@ -58,21 +58,15 @@ export default function ManagerServicesPage() {
         title={t("title")}
         subtitle={t("subtitle", {
           branch: user?.branchName ?? "",
-          period: tPeriods(period),
+          period: tPeriods(dateRange.preset),
           updating: isFetching && !isLoading ? t("updating") : "",
         })}
         action={
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
-            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-          >
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {tPeriods(p)}
-              </option>
-            ))}
-          </select>
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            testId="manager-services-date-range"
+          />
         }
       />
 

@@ -8,29 +8,28 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
-import { PageHeader, StatCard, selectClass } from "@/components/ui";
+import { PageHeader, StatCard } from "@/components/ui";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { DashboardHero } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import {
   countInsights,
   flattenInsights,
   insightPeriodToRange,
-  InsightPeriod,
 } from "@/lib/insights-utils";
-
-const PERIODS: InsightPeriod[] = ["days60", "month", "week"];
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 
 export default function ManagerInsightsPage() {
   const t = useTranslations("manager.insights");
-  const tPeriods = useTranslations("components.insights.periods");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const [period, setPeriod] = useState<InsightPeriod>("days60");
-  const dateRange = insightPeriodToRange(period);
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["recommendations", branchId, period],
-    queryFn: () => api.getRecommendations(dateRange),
+    queryKey: ["recommendations", branchId, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getRecommendations(apiRange),
     enabled: !!branchId,
   });
 
@@ -44,21 +43,15 @@ export default function ManagerInsightsPage() {
         title={t("title")}
         subtitle={t("subtitle", {
           branch: user?.branchName ?? "",
-          period: tPeriods(period),
+          period: tPeriods(dateRange.preset),
           updating: isFetching && !isLoading ? t("updating") : "",
         })}
         action={
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
-            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-          >
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {tPeriods(p)}
-              </option>
-            ))}
-          </select>
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            testId="manager-insights-date-range"
+          />
         }
       />
 
@@ -67,7 +60,7 @@ export default function ManagerInsightsPage() {
       <DashboardHero
         eyebrow={user?.branchName}
         title={t("title")}
-        subtitle={tPeriods(period)}
+        subtitle={tPeriods(dateRange.preset)}
         metric={countInsights(data)}
         metricLabel={t("totalTips")}
         badge={

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -19,7 +20,9 @@ import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { insightPeriodToRange } from "@/lib/insights-utils";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import {
   StatCard,
   QuickAction,
@@ -49,7 +52,8 @@ export default function ManagerHomePage() {
   const greeting = useGreeting();
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const dateRange = insightPeriodToRange("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const { data, isLoading } = useQuery({
     queryKey: ["bookings", branchId],
@@ -59,14 +63,14 @@ export default function ManagerHomePage() {
   const bookings = data?.content ?? [];
 
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
-    queryKey: ["recommendations", branchId, "days60"],
-    queryFn: () => api.getRecommendations(dateRange),
+    queryKey: ["recommendations", branchId, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getRecommendations(apiRange),
     enabled: !!branchId,
   });
 
   const { data: serviceContribution, isLoading: servicesLoading } = useQuery({
-    queryKey: ["service-contribution", branchId, "days60"],
-    queryFn: () => api.getServiceContribution(dateRange),
+    queryKey: ["service-contribution", branchId, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getServiceContribution(apiRange),
     enabled: !!branchId,
   });
 
@@ -105,6 +109,15 @@ export default function ManagerHomePage() {
           <QuickAction href="/manager/insights" icon={Sparkles} label={tNav("insights")} description={t("insightsDesc")} color="amber" />
           <QuickAction href="/manager/services" icon={Scissors} label={tNav("services")} description={t("servicesDesc")} color="violet" />
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <DateRangeSelector
+          value={dateRange}
+          onChange={setDateRange}
+          testId="manager-home-date-range"
+          className="w-full sm:max-w-sm"
+        />
       </div>
 
       <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/manager/insights" />

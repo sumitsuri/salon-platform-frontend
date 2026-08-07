@@ -29,7 +29,6 @@ import { MissionStrip } from "@/components/brand/MissionStrip";
 import {
   PageHeader,
   EmptyState,
-  selectClass,
   btnPrimary,
   btnSecondary,
   AlertBanner,
@@ -38,9 +37,9 @@ import {
   MobileStatGrid,
   ResponsiveTableShell,
 } from "@/components/ui";
-import { insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
-
-const PERIODS: InsightPeriod[] = ["days60", "month", "week"];
+import { DateRangeSelector } from "@/components/DateRangeSelector";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { insightPeriodToRange } from "@/lib/insights-utils";
 
 type Tab = "overview" | "branches" | "peers" | "local" | "playbook";
 
@@ -48,12 +47,12 @@ export default function MarketPulsePage() {
   const t = useTranslations("admin.marketPulse");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.insights.periods");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("overview");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [period, setPeriod] = useState<InsightPeriod>("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [compForm, setCompForm] = useState<UpsertLocalCompetitorRequest>({
@@ -61,7 +60,7 @@ export default function MarketPulsePage() {
     competitorType: "LOCAL",
   });
 
-  const dateRange = insightPeriodToRange(period);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -76,10 +75,10 @@ export default function MarketPulsePage() {
   }, [branches, initialized]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["benchmark", selectedBranches, period],
+    queryKey: ["benchmark", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getBenchmark({
-        ...dateRange,
+        ...apiRange,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -123,19 +122,13 @@ export default function MarketPulsePage() {
     <div className="space-y-5">
       <PageHeader
         title={t("title")}
-        subtitle={`${data?.brandName ?? ""} · ${data?.periodLabel ?? tPeriods(period)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
+        subtitle={`${data?.brandName ?? ""} · ${data?.periodLabel ?? tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
-            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-          >
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {tPeriods(p)}
-              </option>
-            ))}
-          </select>
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            testId="market-pulse-date-range"
+          />
         }
       />
 

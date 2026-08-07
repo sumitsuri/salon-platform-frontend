@@ -1,29 +1,26 @@
 import { RecommendationsResponse } from "@/lib/api";
+import {
+  DateRangePreset,
+  ProductDateRange,
+  DATE_RANGE_PRESET_LABELS,
+  resolvePresetRange,
+  toStartEndDates,
+} from "@/lib/date-range";
 
-export type InsightPeriod = "days60" | "month" | "week";
+/** @deprecated Use DateRangePreset from `@/lib/date-range`. */
+export type InsightPeriod = DateRangePreset;
 
-export const INSIGHT_PERIOD_LABELS: Record<InsightPeriod, string> = {
-  days60: "Last 60 days",
-  month: "This month",
-  week: "Last 7 days",
-};
+/** @deprecated Use DATE_RANGE_PRESET_LABELS from `@/lib/date-range`. */
+export const INSIGHT_PERIOD_LABELS = DATE_RANGE_PRESET_LABELS;
 
-export function insightPeriodToRange(period: InsightPeriod): { startDate: string; endDate: string } {
-  const today = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (period === "week") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 6);
-    return { startDate: fmt(start), endDate: fmt(today) };
+export function insightPeriodToRange(
+  period: DateRangePreset | ProductDateRange,
+): { startDate: string; endDate: string } {
+  if (typeof period === "object") {
+    return toStartEndDates(period);
   }
-  if (period === "days60") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 59);
-    return { startDate: fmt(start), endDate: fmt(today) };
-  }
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  return { startDate: fmt(start), endDate: fmt(today) };
+  const { from, to } = resolvePresetRange(period);
+  return toStartEndDates({ preset: period, from, to });
 }
 
 export function countInsights(data?: RecommendationsResponse): number {

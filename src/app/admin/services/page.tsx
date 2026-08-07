@@ -27,30 +27,11 @@ import {
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { insightPeriodToRange } from "@/lib/insights-utils";
 
 type Tab = "catalog" | "performance";
-type Period = "all" | "days60" | "month" | "week" | "today";
-const PERIODS: Period[] = ["all", "days60", "month", "week", "today"];
-
-function periodToRange(period: Period): { startDate?: string; endDate?: string } {
-  if (period === "all") return {};
-  const today = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (period === "today") return { startDate: fmt(today), endDate: fmt(today) };
-  if (period === "week") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 6);
-    return { startDate: fmt(start), endDate: fmt(today) };
-  }
-  if (period === "days60") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 59);
-    return { startDate: fmt(start), endDate: fmt(today) };
-  }
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  return { startDate: fmt(start), endDate: fmt(today) };
-}
 
 type BranchPriceDraft = { enabled: boolean; price: string };
 
@@ -320,7 +301,6 @@ export default function AdminServicesPage() {
   const t = useTranslations("admin.services");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.insights.periods");
   const queryClient = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("catalog");
@@ -331,7 +311,7 @@ export default function AdminServicesPage() {
 
   // Performance tab state
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [period, setPeriod] = useState<Period>("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
   const [serviceFilter, setServiceFilter] = useState("");
 
@@ -503,17 +483,17 @@ export default function AdminServicesPage() {
   });
 
   // Performance queries
-  const dateRange = periodToRange(period);
+  const apiRange = insightPeriodToRange(dateRange);
   const branchFilter =
     selectedBranches.length > 0 && selectedBranches.length < branches.length
       ? selectedBranches
       : undefined;
 
   const perfInfinite = useInfiniteQuery({
-    queryKey: ["service-contribution", selectedBranches, period, serviceFilter],
+    queryKey: ["service-contribution", selectedBranches, dateRange.preset, dateRange.from, dateRange.to, serviceFilter],
     queryFn: ({ pageParam }) =>
       api.getServiceContribution({
-        ...dateRange,
+        ...apiRange,
         branchIds: branchFilter,
         serviceName: serviceFilter || undefined,
         page: pageParam as number,
@@ -572,17 +552,11 @@ export default function AdminServicesPage() {
               </button>
             </div>
           ) : (
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as Period)}
-              className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-            >
-              {PERIODS.map((p) => (
-                <option key={p} value={p}>
-                  {tPeriods(p)}
-                </option>
-              ))}
-            </select>
+            <DateRangeSelector
+              value={dateRange}
+              onChange={setDateRange}
+              testId="admin-services-date-range"
+            />
           )
         }
       />

@@ -8,22 +8,22 @@ import { api } from "@/lib/api";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
-import { PageHeader, StatCard, EmptyState, selectClass, PageLoader } from "@/components/ui";
+import { PageHeader, StatCard, EmptyState, PageLoader } from "@/components/ui";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { DashboardHero } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
-import { countInsights, flattenInsights, insightPeriodToRange, InsightPeriod } from "@/lib/insights-utils";
-
-const INSIGHT_PERIODS: InsightPeriod[] = ["days60", "month", "week"];
+import { countInsights, flattenInsights, insightPeriodToRange } from "@/lib/insights-utils";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 
 export default function AdminInsightsPage() {
   const t = useTranslations("admin.insights");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.insights.periods");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [period, setPeriod] = useState<InsightPeriod>("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
-  const dateRange = insightPeriodToRange(period);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -38,10 +38,10 @@ export default function AdminInsightsPage() {
   }, [branches, initialized]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["recommendations", selectedBranches, period],
+    queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getRecommendations({
-        ...dateRange,
+        ...apiRange,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -62,19 +62,13 @@ export default function AdminInsightsPage() {
     <div className="space-y-5">
       <PageHeader
         title={t("title")}
-        subtitle={`${tPeriods(period)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
+        subtitle={`${tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
         action={
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as InsightPeriod)}
-            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-          >
-            {INSIGHT_PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {tPeriods(p)}
-              </option>
-            ))}
-          </select>
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            testId="admin-insights-date-range"
+          />
         }
       />
 
@@ -88,7 +82,7 @@ export default function AdminInsightsPage() {
         <>
           <DashboardHero
             title={t("title")}
-            subtitle={tPeriods(period)}
+            subtitle={tPeriods(dateRange.preset)}
             metric={countInsights(data)}
             metricLabel={t("totalTips")}
             badge={

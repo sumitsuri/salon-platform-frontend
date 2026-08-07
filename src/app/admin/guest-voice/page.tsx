@@ -9,6 +9,8 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { PageHeader, PageLoader } from "@/components/ui";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
+import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
 import { DashboardHero } from "@/components/enterprise-ui";
 import {
   GuestVoiceReviewsTable,
@@ -22,13 +24,6 @@ import {
   formatReviewDate,
   ratingTone,
 } from "@/components/reviews/guest-voice-utils";
-
-function last30DaysRange() {
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 30);
-  return { from: from.toISOString(), to: to.toISOString() };
-}
 
 function ClickableStatCard({
   label,
@@ -96,12 +91,17 @@ function ClickableStatCard({
 export default function AdminGuestVoicePage() {
   const t = useTranslations("admin.guestVoice");
   const tCommon = useTranslations("common");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
+    preset: "last_30_days",
+    ...resolvePresetRange("last_30_days"),
+  }));
   const [listFilters, setListFilters] = useState<ReviewListFilters>(EMPTY_REVIEW_FILTERS);
   const [sortKey, setSortKey] = useState<ReviewSortKey>("dateDesc");
   const tableRef = useRef<HTMLDivElement>(null);
-  const range = useMemo(() => last30DaysRange(), []);
+  const apiRange = useMemo(() => toIsoDateTimeRange(dateRange), [dateRange]);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -116,11 +116,11 @@ export default function AdminGuestVoicePage() {
   }, [branches, initialized]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["guest-voice", selectedBranches, range.from, range.to],
+    queryKey: ["guest-voice", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getGuestVoiceSummary({
-        from: range.from,
-        to: range.to,
+        from: apiRange.from,
+        to: apiRange.to,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -167,7 +167,17 @@ export default function AdminGuestVoicePage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader
+        title={t("title")}
+        subtitle={`${t("subtitle")} · ${tPeriods(dateRange.preset)}`}
+        action={
+          <DateRangeSelector
+            value={dateRange}
+            onChange={setDateRange}
+            testId="guest-voice-date-range"
+          />
+        }
+      />
 
       <DashboardHero title={t("heroTitle")} subtitle={t("heroDescription")} />
 

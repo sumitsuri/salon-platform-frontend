@@ -14,41 +14,22 @@ import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
-import { PageHeader, StatCard, Card, ListRow, EmptyState, selectClass, QuickAction, PageLoader } from "@/components/ui";
+import { PageHeader, StatCard, Card, ListRow, EmptyState, QuickAction, PageLoader } from "@/components/ui";
+import { DateRangeSelector } from "@/components/DateRangeSelector";
+import { ProductDateRange, dashboardSecondaryRange, getDefaultDateRange } from "@/lib/date-range";
+import { insightPeriodToRange } from "@/lib/insights-utils";
 import { DashboardHero, EnterpriseTableShell, LabeledProgressBar } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 
-type Period = "all" | "days60" | "month" | "week" | "today";
-const PERIODS: Period[] = ["all", "days60", "month", "week", "today"];
-
-function periodToRange(period: Period): { startDate?: string; endDate?: string } {
-  if (period === "all") return {};
-  const today = new Date();
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  if (period === "today") return { startDate: fmt(today), endDate: fmt(today) };
-  if (period === "week") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 6);
-    return { startDate: fmt(start), endDate: fmt(today) };
-  }
-  if (period === "days60") {
-    const start = new Date(today);
-    start.setDate(start.getDate() - 59);
-    return { startDate: fmt(start), endDate: fmt(today) };
-  }
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  return { startDate: fmt(start), endDate: fmt(today) };
-}
 
 export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.insights.periods");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const tBrand = useTranslations("brand");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [period, setPeriod] = useState<Period>("days60");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
 
   const { data: branches = [], isLoading: branchesLoading, isError: branchesError } = useQuery({
@@ -67,13 +48,13 @@ export default function AdminDashboardPage() {
     }
   }, [branches, branchesLoading, initialized]);
 
-  const dateRange = periodToRange(period);
+  const apiRange = insightPeriodToRange(dateRange);
 
   const { data: dashboard, isLoading, isFetching } = useQuery({
-    queryKey: ["dashboard", selectedBranches, period],
+    queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getDashboard({
-        ...dateRange,
+        ...apiRange,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -83,10 +64,10 @@ export default function AdminDashboardPage() {
   });
 
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
-    queryKey: ["recommendations", selectedBranches, period],
+    queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getRecommendations({
-        ...dateRange,
+        ...apiRange,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -96,10 +77,10 @@ export default function AdminDashboardPage() {
   });
 
   const { data: serviceContribution, isLoading: servicesLoading } = useQuery({
-    queryKey: ["service-contribution", selectedBranches, period],
+    queryKey: ["service-contribution", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getServiceContribution({
-        ...dateRange,
+        ...apiRange,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -108,9 +89,7 @@ export default function AdminDashboardPage() {
     enabled: initialized && selectedBranches.length > 0,
   });
 
-  const monthRange = period === "month" || period === "today" || period === "week"
-    ? dateRange
-    : periodToRange("month");
+  const monthRange = dashboardSecondaryRange(dateRange);
 
   const { data: staffTargetTrends, isLoading: staffTrendsLoading } = useQuery({
     queryKey: ["staff-target-trends", selectedBranches, monthRange.startDate, monthRange.endDate],
@@ -185,19 +164,9 @@ export default function AdminDashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title={t("title")}
-        subtitle={isFetching && !isLoading ? tAdmin("updating") : tPeriods(period)}
+        subtitle={isFetching && !isLoading ? tAdmin("updating") : tPeriods(dateRange.preset)}
         action={
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as Period)}
-            className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[7rem]`}
-          >
-            {PERIODS.map((p) => (
-              <option key={p} value={p}>
-                {tPeriods(p)}
-              </option>
-            ))}
-          </select>
+          <DateRangeSelector value={dateRange} onChange={setDateRange} testId="admin-dashboard-date-range" />
         }
       />
 
@@ -219,7 +188,7 @@ export default function AdminDashboardPage() {
           <DashboardHero
             eyebrow={tBrand("taglineShort")}
             title={t("title")}
-            subtitle={tPeriods(period)}
+            subtitle={tPeriods(dateRange.preset)}
             metric={formatCurrency(dashboard.totalRevenue)}
             metricLabel={t("totalRevenue")}
             badge={
