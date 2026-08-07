@@ -35,6 +35,24 @@ type Tab = "catalog" | "performance";
 
 type BranchPriceDraft = { enabled: boolean; price: string };
 
+function referenceBranch(branches: Branch[]) {
+  return (
+    branches.find(
+      (b) => b.code === "MW02" || b.name.toLowerCase().includes("mantri lithos")
+    ) ?? branches[0]
+  );
+}
+
+function sharedListPriceForService(svc: CatalogServiceItem | null, branches: Branch[]): string {
+  if (svc?.listPrice != null) return String(svc.listPrice);
+  const ref = referenceBranch(branches);
+  const refRow = ref ? svc?.branches.find((b) => b.branchId === ref.id && b.active) : undefined;
+  if (refRow) return String(refRow.price);
+  const first = svc?.branches.find((b) => b.active);
+  if (first) return String(first.price);
+  return "499";
+}
+
 function branchInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "B";
@@ -82,13 +100,19 @@ function BranchCoverageEditor({
   value,
   onChange,
   t,
+  sharedListPrice,
 }: {
   branches: Branch[];
   value: Record<string, BranchPriceDraft>;
   onChange: (next: Record<string, BranchPriceDraft>) => void;
   t: ReturnType<typeof useTranslations>;
+  sharedListPrice?: string;
 }) {
-  const [basePrice, setBasePrice] = useState("499");
+  const [basePrice, setBasePrice] = useState(sharedListPrice ?? "499");
+
+  useEffect(() => {
+    if (sharedListPrice) setBasePrice(sharedListPrice);
+  }, [sharedListPrice]);
   const enabledCount = branches.filter((b) => value[b.id]?.enabled).length;
   const total = branches.length;
   const coveragePct = total === 0 ? 0 : Math.round((enabledCount / total) * 100);
@@ -325,6 +349,7 @@ export default function AdminServicesPage() {
     description: "",
   });
   const [branchPrices, setBranchPrices] = useState<Record<string, BranchPriceDraft>>({});
+  const [editorSharedPrice, setEditorSharedPrice] = useState("499");
 
   // Category create
   const [catOpen, setCatOpen] = useState(false);
@@ -382,8 +407,10 @@ export default function AdminServicesPage() {
       description: "",
     });
     const draft: Record<string, BranchPriceDraft> = {};
+    const shared = sharedListPriceForService(null, branches);
+    setEditorSharedPrice(shared);
     for (const b of branches) {
-      draft[b.id] = { enabled: true, price: "499" };
+      draft[b.id] = { enabled: true, price: shared };
     }
     setBranchPrices(draft);
     setError("");
@@ -398,12 +425,14 @@ export default function AdminServicesPage() {
       durationMinutes: String(svc.durationMinutes ?? 30),
       description: svc.description ?? "",
     });
+    const shared = sharedListPriceForService(svc, branches);
+    setEditorSharedPrice(shared);
     const draft: Record<string, BranchPriceDraft> = {};
     for (const b of branches) {
       const row = svc.branches.find((x) => x.branchId === b.id && x.active);
       draft[b.id] = {
         enabled: !!row,
-        price: row ? String(row.price) : "499",
+        price: row ? String(row.price) : shared,
       };
     }
     setBranchPrices(draft);
@@ -644,6 +673,7 @@ export default function AdminServicesPage() {
                         {s.durationMinutes ? ` · ${s.durationMinutes}m` : ""}
                       </p>
                       <p className="text-xs text-[var(--text-tertiary)] mt-1 truncate">
+                        {s.listPrice != null ? `${t("sharedListPrice")}: ${formatCurrency(s.listPrice)} · ` : ""}
                         {s.branches
                           .filter((b) => b.active)
                           .map((b) => `${b.branchName} ${formatCurrency(b.price)}`)
@@ -806,6 +836,7 @@ export default function AdminServicesPage() {
             branches={branches}
             value={branchPrices}
             onChange={setBranchPrices}
+            sharedListPrice={editorSharedPrice}
             t={t}
           />
         </div>

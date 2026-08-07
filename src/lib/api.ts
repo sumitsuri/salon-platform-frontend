@@ -1053,6 +1053,7 @@ export interface CatalogServiceItem {
   gstRate?: number;
   durationMinutes?: number;
   active: boolean;
+  listPrice?: number;
   branches: ServiceBranchAssignment[];
 }
 
