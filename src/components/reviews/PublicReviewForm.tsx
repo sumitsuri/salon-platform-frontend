@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, Star } from "lucide-react";
 import { api, PublicReviewContext, SubmitPublicReviewResult } from "@/lib/api";
 import { StarRatingRow } from "@/components/reviews/StarRatingRow";
 import { ReviewTagChip } from "@/components/reviews/ReviewTagChip";
+import {
+  closeGoogleReviewTab,
+  copyReviewDraft,
+  navigateGoogleReviewTab,
+  preOpenGoogleReviewTab,
+} from "@/components/reviews/googleReviewRedirect";
 
 const TAG_LABELS: Record<string, string> = {
   WAIT_TIME: "Wait time",
@@ -20,32 +26,22 @@ type Props = {
   context: PublicReviewContext;
 };
 
-function copyToClipboard(text: string) {
-  if (!text || typeof navigator === "undefined") return;
-  void navigator.clipboard?.writeText(text).catch(() => {});
-}
+type SuccessState = {
+  result: SubmitPublicReviewResult;
+  /** Google review tab opened successfully (auto or already done). */
+  publicReviewOpened: boolean;
+};
 
 function ReviewSuccess({
   context,
-  result,
+  success,
 }: {
   context: PublicReviewContext;
-  result: SubmitPublicReviewResult;
+  success: SuccessState;
 }) {
-  const [redirectBlocked, setRedirectBlocked] = useState(false);
-
-  useEffect(() => {
-    if (!result.autoRedirectGoogle || !result.googleReviewUrl) return;
-
-    if (result.suggestedPublicReviewText) {
-      copyToClipboard(result.suggestedPublicReviewText);
-    }
-
-    const opened = window.open(result.googleReviewUrl, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      setRedirectBlocked(true);
-    }
-  }, [result]);
+  const { result, publicReviewOpened } = success;
+  const showPublicReviewCta =
+    result.autoRedirectGoogle && result.googleReviewUrl && !publicReviewOpened;
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm text-center space-y-5">
@@ -81,18 +77,15 @@ function ReviewSuccess({
           : "We appreciate you taking the time to share your experience."}
       </p>
 
-      {redirectBlocked && result.googleReviewUrl && (
-        <p className="text-xs text-[var(--text-tertiary)]">
-          Your browser blocked a background window.{" "}
-          <a
-            href={result.googleReviewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-[var(--brand-text)] underline-offset-2 hover:underline"
-          >
-            Continue here
-          </a>
-        </p>
+      {showPublicReviewCta && (
+        <a
+          href={result.googleReviewUrl!}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 w-full max-w-xs items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white touch-manipulation"
+        >
+          Complete your review
+        </a>
       )}
 
       {!result.autoRedirectGoogle && result.promptGoogleReview && result.googleReviewUrl && (
@@ -118,7 +111,7 @@ export function PublicReviewForm({ token, context }: Props) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<SubmitPublicReviewResult | null>(null);
+  const [success, setSuccess] = useState<SuccessState | null>(null);
 
   const categoryOptions = useMemo(
     () => context.categoryOptions ?? [],
@@ -153,6 +146,14 @@ export function PublicReviewForm({ token, context }: Props) {
     return categoryOptions.every((option) => categoryRatings[option.id] != null);
   }
 
+  function shouldPreOpenGoogleTab(rating: number): boolean {
+    return (
+      rating >= autoPublishMinRating &&
+      context.googleReviewAutoPublish !== false &&
+      !!context.googleReviewUrl
+    );
+  }
+
   async function submit() {
     if (overallRating == null) {
       setError("Please choose an overall rating.");
@@ -162,6 +163,10 @@ export function PublicReviewForm({ token, context }: Props) {
       setError("Please rate all categories before submitting.");
       return;
     }
+
+    // Must open synchronously inside the tap/click handler — useEffect after fetch is blocked on iOS/Android.
+    const googleTab = shouldPreOpenGoogleTab(overallRating) ? preOpenGoogleReviewTab() : null;
+
     setSubmitting(true);
     setError("");
     try {
@@ -172,8 +177,18 @@ export function PublicReviewForm({ token, context }: Props) {
         improvementTags: tags,
         comment: comment.trim() || undefined,
       });
-      setResult(response);
+
+      let publicReviewOpened = false;
+      if (response.autoRedirectGoogle && response.googleReviewUrl) {
+        await copyReviewDraft(response.suggestedPublicReviewText);
+        publicReviewOpened = navigateGoogleReviewTab(googleTab, response.googleReviewUrl);
+      } else {
+        closeGoogleReviewTab(googleTab);
+      }
+
+      setSuccess({ result: response, publicReviewOpened });
     } catch (e) {
+      closeGoogleReviewTab(googleTab);
       setError(e instanceof Error ? e.message : "Unable to submit review");
     } finally {
       setSubmitting(false);
@@ -199,8 +214,8 @@ export function PublicReviewForm({ token, context }: Props) {
     );
   }
 
-  if (result) {
-    return <ReviewSuccess context={context} result={result} />;
+  if (success) {
+    return <ReviewSuccess context={context} success={success} />;
   }
 
   return (
