@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Star } from "lucide-react";
 import { api, PublicReviewContext, SubmitPublicReviewResult } from "@/lib/api";
 import { StarRatingRow } from "@/components/reviews/StarRatingRow";
 import { ReviewTagChip } from "@/components/reviews/ReviewTagChip";
@@ -20,6 +20,95 @@ type Props = {
   context: PublicReviewContext;
 };
 
+function copyToClipboard(text: string) {
+  if (!text || typeof navigator === "undefined") return;
+  void navigator.clipboard?.writeText(text).catch(() => {});
+}
+
+function ReviewSuccess({
+  context,
+  result,
+}: {
+  context: PublicReviewContext;
+  result: SubmitPublicReviewResult;
+}) {
+  const [redirectBlocked, setRedirectBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!result.autoRedirectGoogle || !result.googleReviewUrl) return;
+
+    if (result.suggestedPublicReviewText) {
+      copyToClipboard(result.suggestedPublicReviewText);
+    }
+
+    const opened = window.open(result.googleReviewUrl, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      setRedirectBlocked(true);
+    }
+  }, [result]);
+
+  return (
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-sm text-center space-y-5">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+        <CheckCircle2 className="h-7 w-7 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
+      </div>
+
+      <div className="space-y-2">
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+          {result.thankYouMessage}
+        </h1>
+        <p className="text-sm text-[var(--text-secondary)]">
+          Your {result.overallRating}-star rating for {context.branchName} has been recorded.
+        </p>
+      </div>
+
+      <div className="flex justify-center gap-1" aria-label={`${result.overallRating} out of 5 stars`}>
+        {[1, 2, 3, 4, 5].map((value) => (
+          <Star
+            key={value}
+            className={`h-6 w-6 ${
+              value <= result.overallRating
+                ? "fill-amber-400 text-amber-400"
+                : "text-[var(--text-tertiary)]/30"
+            }`}
+          />
+        ))}
+      </div>
+
+      <p className="text-sm text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">
+        {result.recoveryCreated
+          ? "Your feedback was sent to the branch team for follow-up. We appreciate you helping us improve."
+          : "We appreciate you taking the time to share your experience."}
+      </p>
+
+      {redirectBlocked && result.googleReviewUrl && (
+        <p className="text-xs text-[var(--text-tertiary)]">
+          Your browser blocked a background window.{" "}
+          <a
+            href={result.googleReviewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--brand-text)] underline-offset-2 hover:underline"
+          >
+            Continue here
+          </a>
+        </p>
+      )}
+
+      {!result.autoRedirectGoogle && result.promptGoogleReview && result.googleReviewUrl && (
+        <a
+          href={result.googleReviewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-sm font-medium text-[var(--brand-text)] underline-offset-2 hover:underline"
+        >
+          Share your experience publicly
+        </a>
+      )}
+    </div>
+  );
+}
+
 export function PublicReviewForm({ token, context }: Props) {
   const [overallRating, setOverallRating] = useState<number | null>(null);
   const [overallHover, setOverallHover] = useState<number | null>(null);
@@ -30,7 +119,6 @@ export function PublicReviewForm({ token, context }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<SubmitPublicReviewResult | null>(null);
-  const googleOpenedRef = useRef(false);
 
   const categoryOptions = useMemo(
     () => context.categoryOptions ?? [],
@@ -48,14 +136,6 @@ export function PublicReviewForm({ token, context }: Props) {
     overallRating != null && overallRating >= autoPublishMinRating
       ? "What did you enjoy most?"
       : "What could we improve?";
-
-  useEffect(() => {
-    if (!result?.autoRedirectGoogle || !result.googleReviewUrl || googleOpenedRef.current) {
-      return;
-    }
-    googleOpenedRef.current = true;
-    window.open(result.googleReviewUrl, "_blank", "noopener,noreferrer");
-  }, [result]);
 
   function setCategoryRating(id: string, value: number) {
     setCategoryRatings((prev) => ({ ...prev, [id]: value }));
@@ -102,63 +182,41 @@ export function PublicReviewForm({ token, context }: Props) {
 
   if (context.alreadySubmitted) {
     return (
-      <div className="rounded-2xl border bg-card p-6 text-center space-y-2">
-        <p className="text-lg font-semibold">Thank you!</p>
-        <p className="text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center space-y-3 shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+          <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        </div>
+        <p className="text-lg font-semibold text-[var(--text-primary)]">Thank you</p>
+        <p className="text-sm text-[var(--text-secondary)]">
           You already shared feedback for your visit at {context.branchName}.
         </p>
         {context.submittedRating != null && (
-          <p className="text-sm font-medium">Your overall rating: {context.submittedRating}/5</p>
+          <p className="text-sm font-medium text-[var(--text-primary)]">
+            Your overall rating: {context.submittedRating}/5
+          </p>
         )}
       </div>
     );
   }
 
   if (result) {
-    return (
-      <div className="rounded-2xl border bg-card p-6 space-y-4 text-center">
-        <p className="text-lg font-semibold">{result.thankYouMessage}</p>
-        {result.googleReviewAutoPublished && (
-          <p className="text-sm text-muted-foreground">
-            Your {result.overallRating}★ rating was saved. We opened Google in a new tab so you can publish
-            your public review there.
-          </p>
-        )}
-        {result.promptGoogleReview && result.googleReviewUrl && (
-          <a
-            href={result.googleReviewUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            {result.autoRedirectGoogle ? "Open Google again" : "Share on Google"}
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
-        {result.recoveryCreated && (
-          <p className="text-xs text-muted-foreground">
-            Your feedback was sent privately to the branch manager so we can improve.
-          </p>
-        )}
-      </div>
-    );
+    return <ReviewSuccess context={context} result={result} />;
   }
 
   return (
-    <div className="rounded-2xl border bg-card p-6 space-y-6">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 space-y-6 shadow-sm">
       <div className="space-y-1 text-center">
-        <p className="text-sm text-muted-foreground">{context.branchName}</p>
-        <h1 className="text-xl font-semibold">Hi {context.customerFirstName}, how was your visit?</h1>
-        <p className="text-sm text-muted-foreground">Rate your experience — takes about a minute.</p>
-        {context.googleReviewAutoPublish !== false && context.googleReviewUrl && (
-          <p className="text-xs text-muted-foreground">
-            {autoPublishMinRating}★ and 5★ ratings are automatically sent to Google after you submit.
-          </p>
-        )}
+        <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
+          {context.branchName}
+        </p>
+        <h1 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+          Hi {context.customerFirstName}, how was your visit?
+        </h1>
+        <p className="text-sm text-[var(--text-secondary)]">Rate your experience — takes about a minute.</p>
       </div>
 
-      <section className="space-y-3 rounded-xl border bg-muted/20 p-4">
-        <h2 className="text-sm font-semibold text-center">Overall experience</h2>
+      <section className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-4">
+        <h2 className="text-sm font-semibold text-center text-[var(--text-primary)]">Overall experience</h2>
         <div className="flex justify-center gap-2">
           {[1, 2, 3, 4, 5].map((value) => {
             const displayRating = overallHover ?? overallRating ?? 0;
@@ -170,13 +228,13 @@ export function PublicReviewForm({ token, context }: Props) {
                 onMouseEnter={() => setOverallHover(value)}
                 onMouseLeave={() => setOverallHover(null)}
                 onClick={() => setOverallRating(value)}
-                className="p-1"
+                className="p-1 touch-manipulation"
               >
                 <Star
                   className={`w-10 h-10 ${
                     value <= displayRating
                       ? "fill-amber-400 text-amber-400"
-                      : "text-muted-foreground/30"
+                      : "text-[var(--text-tertiary)]/30"
                   }`}
                 />
               </button>
@@ -188,7 +246,7 @@ export function PublicReviewForm({ token, context }: Props) {
       {showDetails && (
         <>
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold">Rate by category</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Rate by category</h2>
             <div className="space-y-3">
               {categoryOptions.map((option) => (
                 <StarRatingRow
@@ -208,14 +266,14 @@ export function PublicReviewForm({ token, context }: Props) {
 
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold">{tagPrompt}</h2>
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">{tagPrompt}</h2>
               {tags.length > 0 && (
                 <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
                   {tags.length} selected
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">Optional — tap all that apply</p>
+            <p className="text-xs text-[var(--text-tertiary)]">Optional — tap all that apply</p>
             <div className="flex flex-wrap gap-2">
               {tagOptions.map((tag) => (
                 <ReviewTagChip
@@ -229,16 +287,16 @@ export function PublicReviewForm({ token, context }: Props) {
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-sm font-semibold">Your review</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Your review</h2>
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Share more about your visit (optional)"
               rows={4}
               maxLength={2000}
-              className="w-full rounded-xl border bg-background px-3 py-2 text-sm resize-none"
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm resize-none"
             />
-            <p className="text-xs text-muted-foreground text-right">{comment.length}/2000</p>
+            <p className="text-xs text-[var(--text-tertiary)] text-right">{comment.length}/2000</p>
           </section>
         </>
       )}
@@ -249,7 +307,7 @@ export function PublicReviewForm({ token, context }: Props) {
         type="button"
         disabled={submitting || overallRating == null || (showDetails && !allCategoriesRated())}
         onClick={() => void submit()}
-        className="w-full min-h-12 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50"
+        className="w-full min-h-12 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 touch-manipulation"
       >
         {submitting ? "Submitting…" : "Submit review"}
       </button>

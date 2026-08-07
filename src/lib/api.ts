@@ -2565,6 +2565,7 @@ export interface SubmitPublicReviewResult {
   googleReviewUrl?: string | null;
   autoRedirectGoogle?: boolean;
   googleReviewAutoPublished?: boolean;
+  suggestedPublicReviewText?: string | null;
   recoveryCreated: boolean;
   thankYouMessage: string;
 }
