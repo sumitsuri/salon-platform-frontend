@@ -120,7 +120,7 @@ export function GuestVoiceReviewsTable({
     <section
       id="guest-voice-reviews-table"
       data-testid="guest-voice-reviews-table"
-      className="space-y-4 scroll-mt-24"
+      className="space-y-4 scroll-mt-24 min-w-0 max-w-full"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
@@ -220,76 +220,126 @@ export function GuestVoiceReviewsTable({
         </div>
       </div>
 
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          {filtered.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">{t("noReviewsMatchFilters")}</p>
-          ) : (
-            <FilterableTable columns={columns}>
+      <Card className="overflow-hidden p-0 min-w-0 max-w-full">
+        {filtered.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">{t("noReviewsMatchFilters")}</p>
+        ) : (
+          <>
+            <div className="lg:hidden divide-y divide-[var(--border)]" data-testid="guest-voice-mobile-list">
               {filtered.map((review) => {
                 const tone = ratingTone(review.overallRating);
                 return (
-                  <tr
+                  <div
                     key={review.reviewId}
-                    className={cn("border-b border-[var(--border)] align-top", tone.row)}
+                    className={cn("px-4 py-3.5 space-y-2", tone.row)}
                     data-testid="guest-voice-review-row"
                     data-rating={review.overallRating}
                   >
-                    <td className="px-4 py-3 font-medium whitespace-nowrap">{review.customerFirstName}</td>
-                    <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {review.branchName ?? t("unknownBranch")}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                      {formatReviewDate(review.submittedAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <RatingBadge rating={review.overallRating} />
-                    </td>
-                    <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.SERVICE} /></td>
-                    <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.AMBIENCE} /></td>
-                    <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.STAFF} /></td>
-                    <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.CLEANLINESS} /></td>
-                    <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.VALUE_FOR_MONEY} /></td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {review.overallRating >= 4 ? (
-                        review.googleReviewRedirected ? (
-                          <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
-                            {t("googlePublished")}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">{t("googlePending")}</span>
-                        )
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 min-w-[10rem]">
-                      <div className="flex flex-wrap gap-1">
-                        {(review.improvementTags ?? []).length === 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          review.improvementTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium"
-                            >
-                              {TAG_LABELS[tag] ?? tag}
-                            </span>
-                          ))
-                        )}
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{review.customerFirstName}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {review.branchName ?? t("unknownBranch")} · {formatReviewDate(review.submittedAt)}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 min-w-[14rem] max-w-[24rem]">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap line-clamp-3">
-                        {review.comment || t("noWrittenReview")}
-                      </p>
-                    </td>
-                  </tr>
+                      <RatingBadge rating={review.overallRating} />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 text-[11px]">
+                      {review.categoryRatings?.SERVICE != null && (
+                        <span className="rounded-md bg-muted px-1.5 py-0.5">
+                          {CATEGORY_LABELS.SERVICE}: {review.categoryRatings.SERVICE}★
+                        </span>
+                      )}
+                      {review.categoryRatings?.STAFF != null && (
+                        <span className="rounded-md bg-muted px-1.5 py-0.5">
+                          {CATEGORY_LABELS.STAFF}: {review.categoryRatings.STAFF}★
+                        </span>
+                      )}
+                    </div>
+                    {(review.improvementTags ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {review.improvementTags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+                            {TAG_LABELS[tag] ?? tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-sm leading-relaxed text-[var(--text-secondary)] line-clamp-3">
+                      {review.comment || t("noWrittenReview")}
+                    </p>
+                  </div>
                 );
               })}
-            </FilterableTable>
-          )}
-        </div>
+            </div>
+
+            <div className="hidden lg:block responsive-table-wrap">
+              <FilterableTable columns={columns}>
+                {filtered.map((review) => {
+                  const tone = ratingTone(review.overallRating);
+                  return (
+                    <tr
+                      key={review.reviewId}
+                      className={cn("border-b border-[var(--border)] align-top", tone.row)}
+                      data-testid="guest-voice-review-row"
+                      data-rating={review.overallRating}
+                    >
+                      <td className="px-4 py-3 font-medium whitespace-nowrap">{review.customerFirstName}</td>
+                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                        {review.branchName ?? t("unknownBranch")}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                        {formatReviewDate(review.submittedAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <RatingBadge rating={review.overallRating} />
+                      </td>
+                      <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.SERVICE} /></td>
+                      <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.AMBIENCE} /></td>
+                      <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.STAFF} /></td>
+                      <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.CLEANLINESS} /></td>
+                      <td className="px-4 py-3"><CategoryCell value={review.categoryRatings?.VALUE_FOR_MONEY} /></td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {review.overallRating >= 4 ? (
+                          review.googleReviewRedirected ? (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
+                              {t("googlePublished")}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{t("googlePending")}</span>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 min-w-[10rem]">
+                        <div className="flex flex-wrap gap-1">
+                          {(review.improvementTags ?? []).length === 0 ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : (
+                            review.improvementTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium"
+                              >
+                                {TAG_LABELS[tag] ?? tag}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 min-w-[14rem] max-w-[24rem]">
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap line-clamp-3">
+                          {review.comment || t("noWrittenReview")}
+                        </p>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </FilterableTable>
+            </div>
+          </>
+        )}
       </Card>
     </section>
   );

@@ -58,8 +58,8 @@ export function SalesLeadFilters({
     onChange({ ...filters, ...patch });
 
   return (
-    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-      <label className="block min-w-[120px] text-xs">
+    <div className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-end min-w-0 max-w-full">
+      <label className="block min-w-0 w-full text-xs sm:min-w-[120px] sm:flex-1">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Stage</span>
         <select
           className={selectClass}
@@ -75,7 +75,7 @@ export function SalesLeadFilters({
         </select>
       </label>
 
-      <label className="block min-w-[140px] text-xs">
+      <label className="block min-w-0 w-full text-xs sm:min-w-[140px] sm:flex-1">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Location</span>
         <select
           className={selectClass}
@@ -92,7 +92,7 @@ export function SalesLeadFilters({
       </label>
 
       {!hideSourceFilter && (
-      <label className="block min-w-[120px] text-xs">
+      <label className="block min-w-0 w-full text-xs sm:min-w-[120px] sm:flex-1">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Source</span>
         <select
           className={selectClass}
@@ -110,7 +110,7 @@ export function SalesLeadFilters({
       )}
 
       {hideSourceFilter && (
-        <div className="flex min-w-[140px] flex-col justify-end text-xs">
+        <div className="flex min-w-0 w-full flex-col justify-end text-xs sm:min-w-[140px] sm:flex-1">
           <span className="mb-1 block font-medium text-[var(--ink-muted)]">Source</span>
           <span className="rounded-lg border border-[var(--brand-ring)] bg-[var(--brand-light)] px-3 py-2 font-medium text-[var(--brand-text)]">
             Marketing Web
@@ -118,7 +118,7 @@ export function SalesLeadFilters({
         </div>
       )}
 
-      <label className="block min-w-[120px] text-xs">
+      <label className="block min-w-0 w-full text-xs sm:min-w-[120px] sm:flex-1">
         <span className="mb-1 block font-medium text-[var(--ink-muted)]">Type</span>
         <select
           className={selectClass}

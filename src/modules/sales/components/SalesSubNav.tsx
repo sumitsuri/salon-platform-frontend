@@ -25,7 +25,7 @@ export function SalesSubNav() {
   const links = role === "PLATFORM_SUPER_ADMIN" ? ADMIN_LINKS : REP_LINKS;
 
   return (
-    <nav className="flex gap-1 overflow-x-auto border-b border-[var(--border)] pb-2">
+    <nav className="flex gap-1 overflow-x-auto overscroll-x-contain max-w-full min-w-0 border-b border-[var(--border)] pb-2">
       {links.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         const target = salesPathWithSearchParams(href, searchParams);

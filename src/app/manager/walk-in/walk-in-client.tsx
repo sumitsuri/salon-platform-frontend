@@ -872,7 +872,7 @@ export default function WalkInPage() {
 
   if (screen === "hub") {
     return (
-      <div className="space-y-4 w-full max-w-6xl mx-auto">
+      <div className="space-y-4 w-full max-w-6xl mx-auto min-w-0 overflow-x-clip">
         <PageHeader
           title={t("visitsTitle")}
           subtitle={t("visitsSubtitle")}
@@ -1020,7 +1020,7 @@ export default function WalkInPage() {
   }
 
   return (
-    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full overflow-x-clip">
       <PageHeader
         title={bookingId ? t("editVisit") : t("title")}
         subtitle={customerName || user?.branchName}
@@ -1060,7 +1060,7 @@ export default function WalkInPage() {
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
                 {t("recentCustomers")}
               </p>
-              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {recentCustomers.map((rc) => (
                   <button
                     key={rc.phone}
@@ -1250,7 +1250,7 @@ export default function WalkInPage() {
                   <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
                     {t("recentServices")}
                   </p>
-                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {recentServices.map((s) => (
                       <button
                         key={s.id}
@@ -1270,7 +1270,7 @@ export default function WalkInPage() {
                   <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
                     {t("favorites")}
                   </p>
-                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {favoriteServices.map((s) => (
                       <button
                         key={s.id}
@@ -1287,7 +1287,7 @@ export default function WalkInPage() {
               )}
 
               {!serviceQuery && topCategories.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   <button
                     type="button"
                     onClick={() => setCatalogTop("")}

@@ -35,7 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <SessionKeeper />
         <LocaleSync />
         <LanguagePickerModal />
-        {children}
+        <div className="app-viewport">{children}</div>
       </ThemeProvider>
     </QueryClientProvider>
   );

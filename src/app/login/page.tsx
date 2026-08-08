@@ -47,11 +47,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--app-bg)]">
-      <div className="flex-1 flex flex-col lg:flex-row min-h-screen">
+    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] w-full max-w-full overflow-x-clip">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-screen w-full max-w-full min-w-0 overflow-x-clip">
         <LoginHeroPanel />
 
-        <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 min-h-0 relative overflow-hidden pravaah-login-form-side">
+        <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 min-h-0 min-w-0 relative overflow-hidden pravaah-login-form-side">
           <div className="pravaah-form-orb pravaah-form-orb-1" aria-hidden />
           <div className="pravaah-form-orb pravaah-form-orb-2" aria-hidden />
 

@@ -213,7 +213,7 @@ export function BranchSpotlightTable({
   onSelectBranch?: (id: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+    <div className="responsive-table-wrap rounded-xl border border-[var(--border)]">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">
@@ -382,7 +382,7 @@ export function RivalsComparisonTable({
           </select>
         </label>
       </div>
-      <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+      <div className="responsive-table-wrap rounded-xl border border-[var(--border)]">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">
@@ -509,7 +509,7 @@ export function SearchRankTable({
   t: (key: string) => string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+    <div className="responsive-table-wrap rounded-xl border border-[var(--border)]">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">
@@ -876,7 +876,7 @@ function KeywordEvidenceTable({
   if (rows.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
+    <div className="responsive-table-wrap rounded-lg border border-[var(--border)]">
       <table className="min-w-full text-xs">
         <thead>
           <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]/50 text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">

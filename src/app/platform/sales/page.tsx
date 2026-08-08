@@ -259,7 +259,7 @@ export default function SalesPipelinePage() {
           <>
             {/* Mobile: one stage at a time */}
             <div className="md:hidden space-y-3">
-              <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 no-scrollbar pb-1">
                 {PIPELINE_STAGES.map((stage) => (
                   <button
                     key={stage}
@@ -299,7 +299,7 @@ export default function SalesPipelinePage() {
             </div>
 
             {/* Desktop / tablet: horizontal kanban */}
-            <div className="hidden md:flex gap-3 overflow-x-auto pb-4">
+            <div className="hidden md:flex gap-3 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-4">
             {PIPELINE_STAGES.map((stage) => (
               <div
                 key={stage}

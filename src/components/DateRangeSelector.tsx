@@ -71,7 +71,7 @@ export function DateRangeSelector({
   }
 
   return (
-    <div ref={ref} className={cn("relative w-full max-w-sm", className)} data-testid={testId}>
+    <div ref={ref} className={cn("relative w-full max-w-full min-w-0 sm:max-w-sm", className)} data-testid={testId}>
       <button
         type="button"
         data-testid={`${testId}-trigger`}

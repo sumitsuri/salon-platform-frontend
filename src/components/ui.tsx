@@ -60,7 +60,7 @@ export function PageHeader({
   const shouldShowBack = (showBack ?? isSubPage) && breadcrumbs.length === 0;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0 max-w-full">
       {breadcrumbs.length > 0 && (
         <Breadcrumbs items={breadcrumbs} testId="page-breadcrumbs" className="hidden md:flex" />
       )}
@@ -81,7 +81,11 @@ export function PageHeader({
             <p className="text-sm text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:truncate">{subtitle}</p>
           )}
         </div>
-        {action && <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">{action}</div>}
+        {action && (
+          <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto min-w-0 max-w-full justify-stretch sm:justify-end">
+            {action}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -99,7 +103,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition",
+        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition min-w-0 max-w-full",
         padding && "p-4 sm:p-5",
         className
       )}
@@ -185,7 +189,7 @@ export function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-1 p-1 bg-[var(--surface-muted)] rounded-xl overflow-x-auto no-scrollbar border border-[var(--border)] w-full">
+    <div className="flex gap-1 p-1 bg-[var(--surface-muted)] rounded-xl overflow-x-auto overscroll-x-contain no-scrollbar border border-[var(--border)] w-full max-w-full min-w-0">
       {options.map((opt) => {
         const Icon = opt.icon;
         const active = value === opt.id;
@@ -368,8 +372,8 @@ export function ResponsiveTableShell({
 }) {
   return (
     <>
-      <div className="md:hidden">{mobile}</div>
-      <div className={cn("hidden md:block responsive-table-wrap", className)}>{children}</div>
+      <div className="md:hidden min-w-0 max-w-full overflow-x-clip">{mobile}</div>
+      <div className={cn("hidden md:block responsive-table-wrap min-w-0 max-w-full", className)}>{children}</div>
     </>
   );
 }

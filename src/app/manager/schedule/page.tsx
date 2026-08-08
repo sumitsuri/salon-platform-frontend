@@ -538,7 +538,7 @@ export default function ManagerSchedulePage() {
         <div className="space-y-2 min-w-0">
           <p className="text-[11px] text-[var(--text-secondary)] sm:hidden px-0.5">{t("scrollHint")}</p>
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden w-full max-w-full">
-            <div className="overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch]">
+            <div className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full min-w-0 [-webkit-overflow-scrolling:touch]">
               <div className="inline-block align-top" style={{ minWidth: scale.staffColW + trackW }}>
                 <div className="flex border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))] sticky top-0 z-30">
                   <div

@@ -437,7 +437,7 @@ export function MetricChart({ title, labels, series, formatValue = (v) => String
         </select>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="responsive-table-wrap max-w-full min-w-0">
         {chartType === "line" && <LineChartView labels={labels} series={series} formatValue={formatValue} />}
         {chartType === "bar" && <BarChartView labels={labels} series={series} formatValue={formatValue} />}
         {chartType === "pie" && <PieChartView series={series} formatValue={formatValue} />}

@@ -19,7 +19,7 @@ export function LoginHeroPanel() {
   }, []);
 
   return (
-    <div className="pravaah-login-hero relative overflow-hidden lg:w-[48%] xl:w-[44%] flex flex-col justify-center min-h-[280px] sm:min-h-[340px] lg:min-h-screen p-8 sm:p-10 lg:p-12">
+    <div className="pravaah-login-hero relative overflow-hidden max-w-full lg:w-[48%] xl:w-[44%] flex flex-col justify-center min-h-[280px] sm:min-h-[340px] lg:min-h-screen p-8 sm:p-10 lg:p-12">
       <div className="pravaah-login-bg absolute inset-0" aria-hidden />
       <div className="pravaah-orb pravaah-orb-1" aria-hidden />
       <div className="pravaah-orb pravaah-orb-2" aria-hidden />

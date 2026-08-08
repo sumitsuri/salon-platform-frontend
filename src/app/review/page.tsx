@@ -45,7 +45,7 @@ function PublicReviewContent() {
 
 export default function PublicReviewPage() {
   return (
-    <main className="min-h-dvh bg-[var(--surface-muted)] px-4 py-10">
+    <main className="min-h-dvh bg-[var(--surface-muted)] px-4 py-10 w-full max-w-full min-w-0 overflow-x-clip">
       <div className="mx-auto max-w-md">
         <Suspense fallback={<PageLoader label="Loading…" />}>
           <PublicReviewContent />

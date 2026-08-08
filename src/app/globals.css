@@ -55,13 +55,32 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
+html {
+  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-inter, system-ui, -apple-system, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--app-bg);
   color: var(--text-primary);
-  overflow-x: hidden;
+  overflow-x: clip;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* Root wrapper — prevents flex/grid children from widening the viewport on iOS */
+.app-viewport {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 html[lang="hi-IN"] body,
@@ -97,9 +116,6 @@ html[lang="pa-IN"] body {
   font-family: var(--font-gurmukhi, var(--font-inter)), system-ui, sans-serif;
 }
 
-html {
-  overflow-x: hidden;
-}
 
 @media (display-mode: standalone) {
   body {
@@ -197,12 +213,54 @@ html {
 [data-theme="dark"] .badge-medium { background-color: rgba(120, 53, 15, 0.5); color: #fcd34d; }
 [data-theme="dark"] .badge-low { background-color: rgba(30, 58, 138, 0.5); color: #93c5fd; }
 
-/* Horizontal scroll tables — touch-friendly on mobile/tablet */
+/* Horizontal scroll tables — scroll inside panel, never widen the page */
 .responsive-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   max-width: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Contain decorative login backgrounds on phones */
+@media (max-width: 767px) {
+  .pravaah-login-hero {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .pravaah-orb-1 {
+    width: 200px;
+    height: 200px;
+    top: -40px;
+    right: -24px;
+  }
+
+  .pravaah-orb-2 {
+    width: 140px;
+    height: 140px;
+    left: -20px;
+  }
+
+  .pravaah-orb-3 {
+    width: 120px;
+    height: 120px;
+    right: 8%;
+    bottom: -16px;
+  }
+
+  .pravaah-form-orb-1 {
+    width: 160px;
+    height: 160px;
+    right: -8px;
+  }
+
+  .pravaah-form-orb-2 {
+    width: 120px;
+    height: 120px;
+    left: -8px;
+  }
 }
 
 .responsive-table-wrap::-webkit-scrollbar {

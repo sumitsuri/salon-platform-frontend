@@ -13,7 +13,7 @@ export function PipelineStepper({ current }: { current: LeadStage }) {
   const currentIdx = PIPELINE_STAGES.indexOf(current);
 
   return (
-    <div className="overflow-x-auto pb-1">
+    <div className="overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-1 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <ol className="flex min-w-[720px] items-center gap-0">
         {PIPELINE_STAGES.map((stage, idx) => {
           const done = currentIdx >= 0 && idx < currentIdx;

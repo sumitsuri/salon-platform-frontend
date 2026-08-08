@@ -29,7 +29,7 @@ export function MobilePrimaryFab({ items, color = "var(--brand)", hidden }: Mobi
       aria-label={fab.label}
       data-testid="mobile-primary-fab"
       className={cn(
-        "md:hidden fixed z-40 flex items-center gap-2 rounded-2xl px-4 py-3.5 text-white font-semibold text-sm shadow-lg touch-manipulation transition-transform active:scale-[0.97]",
+        "md:hidden fixed z-40 flex items-center gap-2 rounded-2xl px-4 py-3.5 text-white font-semibold text-sm shadow-lg touch-manipulation transition-transform active:scale-[0.97] max-w-[calc(100vw-2rem)]",
         "right-4 max-[380px]:right-3"
       )}
       style={{
@@ -39,7 +39,7 @@ export function MobilePrimaryFab({ items, color = "var(--brand)", hidden }: Mobi
       }}
     >
       <Icon className="w-5 h-5 shrink-0" />
-      <span>{fab.label}</span>
+      <span className="truncate">{fab.label}</span>
     </Link>
   );
 }
