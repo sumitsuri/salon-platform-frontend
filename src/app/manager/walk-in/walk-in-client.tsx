@@ -14,6 +14,7 @@ import {
   ChevronUp,
   ShoppingBag,
   X,
+  CheckCircle2,
 } from "lucide-react";
 import {
   api,
@@ -43,6 +44,7 @@ import {
   PageHeader,
   Card,
   AlertBanner,
+  Callout,
   SegmentedControl,
   StatusBadge,
   EmptyState,
@@ -1194,18 +1196,18 @@ export default function WalkInPage() {
           </div>
 
           {membership && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
-              <p className="font-semibold flex items-center gap-2">
-                <CreditCard className="w-4 h-4" />
-                {t("memberBadge", {
-                  plan: membership.planName || "Member",
-                  percent: membership.benefitPercent ?? 10,
-                })}
-              </p>
-              <p className="text-xs mt-1">
+            <Callout
+              variant="success"
+              icon={<CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden />}
+              title={t("memberBadge", {
+                plan: membership.planName || "Member",
+                percent: membership.benefitPercent ?? 10,
+              })}
+            >
+              <p className="text-xs">
                 {membership.cardNumber} · {t("validUntil", { date: membership.endsOn })}
               </p>
-            </div>
+            </Callout>
           )}
 
           <button
@@ -1241,9 +1243,7 @@ export default function WalkInPage() {
           )}
 
           {membership && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
-              {t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })}
-            </div>
+            <Callout variant="success" title={t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })} />
           )}
 
           <div className="flex flex-col md:flex-row md:gap-4 md:items-start min-w-0">
@@ -1384,9 +1384,7 @@ export default function WalkInPage() {
           )}
 
           {!billingLocked && membership && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2.5 text-sm text-emerald-800 dark:text-emerald-200">
-              {t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })}
-            </div>
+            <Callout variant="success" title={t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })} />
           )}
 
           {!billingLocked && !membership && customerId && (
@@ -1665,11 +1663,15 @@ export default function WalkInPage() {
           )}
 
           {paymentSuccess && (
-            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 space-y-2">
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{paymentSuccess}</p>
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">{t("receiptShareHint")}</p>
+            <Callout
+              variant="success"
+              icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" aria-hidden />}
+              title={paymentSuccess}
+              className="space-y-3"
+            >
+              <p>{t("receiptShareHint")}</p>
               {receiptQueued && (
-                <p className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60">{t("receiptQueuedHint")}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{t("receiptQueuedHint")}</p>
               )}
               {reviewInvitationUrl && (
                 <ReviewInvitationPanel
@@ -1682,7 +1684,7 @@ export default function WalkInPage() {
                   submittedRating={reviewSubmittedRating}
                 />
               )}
-            </div>
+            </Callout>
           )}
 
           {billingLocked ? (

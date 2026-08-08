@@ -83,9 +83,9 @@ export function WalkInServiceCatalog({
                   key={s.id}
                   type="button"
                   onClick={() => onAddService(s)}
-                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-300 hover:opacity-80 transition touch-manipulation"
+                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--brand)] transition touch-manipulation"
                 >
-                  <Star className="w-3 h-3 fill-current" />
+                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                   {s.serviceName}
                 </button>
               ))}

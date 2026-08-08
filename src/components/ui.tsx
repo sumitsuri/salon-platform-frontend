@@ -300,13 +300,60 @@ export function AlertBanner({
   variant?: "error" | "success" | "warning" | "info";
 }) {
   const styles = {
-    error: "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300",
-    success: "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-900 dark:text-emerald-300",
-    warning: "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-300",
-    info: "bg-[var(--brand-light)] border-[var(--brand-ring)] text-[var(--brand-text)]",
+    error:
+      "border-[var(--border)] border-l-4 border-l-red-600 bg-[var(--surface)] text-[var(--text-primary)] dark:border-l-red-500",
+    success:
+      "border-[var(--border)] border-l-4 border-l-emerald-600 bg-[var(--surface)] text-[var(--text-primary)] dark:border-l-emerald-500",
+    warning:
+      "border-[var(--border)] border-l-4 border-l-amber-600 bg-[var(--surface)] text-[var(--text-primary)] dark:border-l-amber-500",
+    info:
+      "border-[var(--border)] border-l-4 border-l-[var(--brand)] bg-[var(--surface)] text-[var(--text-primary)]",
   };
   return (
-    <div className={cn("text-sm border rounded-xl px-4 py-3", styles[variant])}>{children}</div>
+    <div className={cn("text-sm rounded-xl px-4 py-3 shadow-sm", styles[variant])}>{children}</div>
+  );
+}
+
+/** High-contrast inline notice — readable on any tenant brand color. */
+export function Callout({
+  title,
+  children,
+  icon,
+  variant = "info",
+  className,
+}: {
+  title?: string;
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  variant?: "info" | "success" | "warning" | "insight";
+  className?: string;
+}) {
+  const accents = {
+    info: "border-l-[var(--brand)]",
+    success: "border-l-emerald-600 dark:border-l-emerald-500",
+    warning: "border-l-amber-600 dark:border-l-amber-500",
+    insight: "border-l-amber-600 dark:border-l-amber-500",
+  };
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-[var(--border)] border-l-4 bg-[var(--surface)] px-3.5 py-3 shadow-sm",
+        accents[variant],
+        className
+      )}
+    >
+      <div className="flex gap-2.5">
+        {icon ? <div className="shrink-0 mt-0.5 text-[var(--text-secondary)]">{icon}</div> : null}
+        <div className="min-w-0 space-y-1">
+          {title ? (
+            <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug">{title}</p>
+          ) : null}
+          {children ? (
+            <div className="text-sm text-[var(--text-secondary)] leading-snug space-y-1">{children}</div>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 

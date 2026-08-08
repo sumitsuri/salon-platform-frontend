@@ -153,6 +153,10 @@ html[lang="pa-IN"] body {
   font-family: var(--font-gurmukhi, var(--font-inter)), system-ui, sans-serif;
 }
 
+.text-muted-foreground {
+  color: var(--text-secondary);
+}
+
 
 @media (display-mode: standalone) {
   body {

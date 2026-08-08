@@ -57,21 +57,31 @@ export function BillBreakdownRows({
         <span>{fmt(preview.subtotal)}</span>
       </div>
       {(preview.membershipDiscountAmount ?? 0) > 0 && (
-        <div className="flex justify-between text-emerald-600">
-          <span>{preview.membershipLabel || tWalkIn("membershipDiscount")}</span>
-          <span>-{fmt(preview.membershipDiscountAmount ?? 0)}</span>
+        <div className="flex justify-between gap-2">
+          <span className="min-w-0 truncate text-[var(--text-secondary)]">
+            {preview.membershipLabel || tWalkIn("membershipDiscount")}
+          </span>
+          <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
+            -{fmt(preview.membershipDiscountAmount ?? 0)}
+          </span>
         </div>
       )}
       {(preview.promoDiscountAmount ?? 0) > 0 && (
-        <div className="flex justify-between text-emerald-600">
-          <span>{preview.promoLabel || tCommon("discount")}</span>
-          <span>-{fmt(preview.promoDiscountAmount ?? 0)}</span>
+        <div className="flex justify-between gap-2">
+          <span className="min-w-0 truncate text-[var(--text-secondary)]">{preview.promoLabel || tCommon("discount")}</span>
+          <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
+            -{fmt(preview.promoDiscountAmount ?? 0)}
+          </span>
         </div>
       )}
       {(preview.manualDiscountAmount ?? 0) > 0 && (
-        <div className="flex justify-between text-emerald-600">
-          <span>{preview.manualDiscountLabel || tWalkIn("manualDiscount")}</span>
-          <span>-{fmt(preview.manualDiscountAmount ?? 0)}</span>
+        <div className="flex justify-between gap-2">
+          <span className="min-w-0 truncate text-[var(--text-secondary)]">
+            {preview.manualDiscountLabel || tWalkIn("manualDiscount")}
+          </span>
+          <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
+            -{fmt(preview.manualDiscountAmount ?? 0)}
+          </span>
         </div>
       )}
       {showTaxable && preview.taxableAmount != null && (
@@ -90,10 +100,15 @@ export function BillBreakdownRows({
       </div>
       {(preview.membershipFeeAmount ?? 0) > 0 && (
         <div className="flex justify-between gap-2">
-          <span className="text-[var(--text-secondary)] min-w-0 truncate">
+          <span
+            className="min-w-0 truncate text-[var(--text-secondary)]"
+            title={preview.membershipFeeLabel || tWalkIn("membershipPurchase")}
+          >
             {preview.membershipFeeLabel || tWalkIn("membershipPurchase")}
           </span>
-          <span className="shrink-0 tabular-nums">{fmt(preview.membershipFeeAmount ?? 0)}</span>
+          <span className="shrink-0 tabular-nums font-medium text-[var(--text-primary)]">
+            {fmt(preview.membershipFeeAmount ?? 0)}
+          </span>
         </div>
       )}
       {!hideGrandTotal && (

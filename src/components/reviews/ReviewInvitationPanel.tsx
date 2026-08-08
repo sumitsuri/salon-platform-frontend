@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy, QrCode, Share2 } from "lucide-react";
 import QRCode from "react-qr-code";
+import { btnSecondary } from "@/components/ui";
 
 type Props = {
   reviewUrl: string;
@@ -48,33 +49,33 @@ export function ReviewInvitationPanel({
   }
 
   return (
-    <div className="rounded-xl border border-emerald-200/80 dark:border-emerald-900/50 bg-white dark:bg-emerald-950/20 p-3 space-y-3">
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 p-2">
-          <QrCode className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3 space-y-3">
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+          <QrCode className="w-4 h-4" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">{title}</p>
-          <p className="text-xs text-emerald-800/70 dark:text-emerald-300/70">{subtitle}</p>
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{title}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5 leading-relaxed">{subtitle}</p>
           {submittedRating != null && (
-            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mt-1">
+            <p className="text-xs font-medium text-[var(--text-primary)] mt-1.5">
               Customer rated {submittedRating}/5
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3">
-        <div className="rounded-lg bg-white p-2 shadow-sm ring-1 ring-black/5">
-          <QRCode value={reviewUrl} size={128} />
+      <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+        <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-[var(--border)]">
+          <QRCode value={reviewUrl} size={120} />
         </div>
-        <div className="w-full space-y-2">
-          <p className="text-[11px] break-all text-muted-foreground">{reviewUrl}</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="w-full min-w-0 space-y-2">
+          <p className="hidden sm:block text-[11px] break-all text-[var(--text-tertiary)]">{reviewUrl}</p>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => void copyLink()}
-              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium min-h-10"
+              className={`${btnSecondary} w-full min-h-11 text-xs justify-center py-2.5`}
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? copiedLabel : copyLabel}
@@ -82,7 +83,7 @@ export function ReviewInvitationPanel({
             <button
               type="button"
               onClick={() => void shareLink()}
-              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium min-h-10"
+              className={`${btnSecondary} w-full min-h-11 text-xs justify-center py-2.5`}
             >
               <Share2 className="w-3.5 h-3.5" />
               {shareLabel}
