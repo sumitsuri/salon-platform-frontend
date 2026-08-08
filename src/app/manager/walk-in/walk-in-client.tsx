@@ -67,6 +67,12 @@ import { WalkInCartPanel } from "./WalkInCartPanel";
 import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
+import {
+  buildWalkInSubCategories,
+  filterWalkInServices,
+  groupWalkInSubCategories,
+  shouldAutoSelectSubCategory,
+} from "./walk-in-catalog";
 
 type Screen = "hub" | "flow";
 type HubTab = "open" | "history";
@@ -159,6 +165,7 @@ export default function WalkInPage() {
   const [taxOverridden, setTaxOverridden] = useState(false);
   const [saving, setSaving] = useState(false);
   const [catalogTop, setCatalogTop] = useState("");
+  const [catalogSub, setCatalogSub] = useState("");
   const [serviceQuery, setServiceQuery] = useState("");
   const [recentServiceIds, setRecentServiceIds] = useState<string[]>([]);
   const [favoriteServiceIds, setFavoriteServiceIds] = useState<string[]>([]);
@@ -221,21 +228,30 @@ export default function WalkInPage() {
       });
   }, [services]);
 
-  const filteredServices = useMemo(() => {
-    const q = serviceQuery.trim().toLowerCase();
-    if (q) {
-      return services.filter(
-        (s) =>
-          s.serviceName.toLowerCase().includes(q) ||
-          (s.categoryName || "").toLowerCase().includes(q) ||
-          (s.parentCategoryName || "").toLowerCase().includes(q)
-      );
-    }
+  const subCategories = useMemo(
+    () => buildWalkInSubCategories(services, catalogTop),
+    [services, catalogTop]
+  );
+
+  const subCategoryGroups = useMemo(() => {
     if (catalogTop) {
-      return services.filter((s) => (s.parentCategoryId || s.categoryId || "other") === catalogTop);
+      const parentName = topCategories.find((t) => t.id === catalogTop)?.name ?? "";
+      return [{ parentId: catalogTop, parentName, items: subCategories }];
     }
-    return services;
-  }, [services, catalogTop, serviceQuery]);
+    return groupWalkInSubCategories(subCategories);
+  }, [catalogTop, subCategories, topCategories]);
+
+  const filteredServices = useMemo(
+    () => filterWalkInServices(services, catalogTop, catalogSub, serviceQuery),
+    [services, catalogTop, catalogSub, serviceQuery]
+  );
+
+  function handleCatalogTopChange(id: string) {
+    setCatalogTop(id);
+    const subs = buildWalkInSubCategories(services, id);
+    const auto = shouldAutoSelectSubCategory(subs, id);
+    setCatalogSub(auto ?? "");
+  }
 
   const recentServices = useMemo(
     () => recentServiceIds.map((id) => servicesById.get(id)).filter((s): s is BranchServiceItem => !!s),
@@ -454,6 +470,7 @@ export default function WalkInPage() {
     setPaymentSuccess("");
     setReceiptQueued(false);
     setCatalogTop("");
+    setCatalogSub("");
     setServiceQuery("");
     setError("");
     setDraftOffer(null);
@@ -1256,7 +1273,11 @@ export default function WalkInPage() {
                 favoriteServiceIds={favoriteServiceIds}
                 topCategories={topCategories}
                 catalogTop={catalogTop}
-                onCatalogTopChange={setCatalogTop}
+                onCatalogTopChange={handleCatalogTopChange}
+                catalogSub={catalogSub}
+                onCatalogSubChange={setCatalogSub}
+                subCategoryGroups={subCategoryGroups}
+                subCategories={subCategories}
                 filteredServices={filteredServices}
                 localeKit={localeKit}
                 onAddService={addService}
