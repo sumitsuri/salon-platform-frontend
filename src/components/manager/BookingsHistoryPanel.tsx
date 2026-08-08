@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { UserPlus, IndianRupee, Clock, CheckCircle2, FileText, Receipt } from "lucide-react";
+import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -232,54 +233,33 @@ export function BookingsHistoryPanel({
     },
   ];
 
+  function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBreakdownPreview | null {
+    if (inv) {
+      return {
+        subtotal: inv.subtotal,
+        membershipDiscountAmount: inv.membershipDiscountAmount,
+        promoDiscountAmount: inv.promoDiscountAmount,
+        membershipLabel: inv.membershipLabel,
+        promoLabel: inv.promoLabel,
+        membershipFeeAmount: inv.membershipFeeAmount,
+        membershipFeeLabel: inv.membershipFeeLabel,
+        cgstAmount: inv.cgstAmount,
+        sgstAmount: inv.sgstAmount,
+        grandTotal: inv.grandTotal,
+      };
+    }
+    if (booking.billPreview) {
+      return booking.billPreview;
+    }
+    return null;
+  }
+
   function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
-    const preview = inv
-      ? {
-          subtotal: inv.subtotal,
-          membershipDiscountAmount: inv.membershipDiscountAmount,
-          promoDiscountAmount: inv.promoDiscountAmount,
-          membershipLabel: inv.membershipLabel,
-          promoLabel: inv.promoLabel,
-          cgstAmount: inv.cgstAmount,
-          sgstAmount: inv.sgstAmount,
-          grandTotal: inv.grandTotal,
-        }
-      : booking.billPreview;
+    const preview = resolveBillPreview(booking, inv);
     if (!preview) {
       return <p className="text-sm text-[var(--text-secondary)]">{t("noBillingYet")}</p>;
     }
-    return (
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
-          <span>{formatCurrency(preview.subtotal)}</span>
-        </div>
-        {(preview.membershipDiscountAmount ?? 0) > 0 && (
-          <div className="flex justify-between text-emerald-600">
-            <span>{preview.membershipLabel || t("membershipDiscount")}</span>
-            <span>-{formatCurrency(preview.membershipDiscountAmount ?? 0)}</span>
-          </div>
-        )}
-        {(preview.promoDiscountAmount ?? 0) > 0 && (
-          <div className="flex justify-between text-emerald-600">
-            <span>{preview.promoLabel || tCommon("discount")}</span>
-            <span>-{formatCurrency(preview.promoDiscountAmount ?? 0)}</span>
-          </div>
-        )}
-        <div className="flex justify-between">
-          <span className="text-[var(--text-secondary)]">CGST</span>
-          <span>{formatCurrency(preview.cgstAmount)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-[var(--text-secondary)]">SGST</span>
-          <span>{formatCurrency(preview.sgstAmount)}</span>
-        </div>
-        <div className="flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
-          <span>{tCommon("grandTotal")}</span>
-          <span className="text-[var(--brand-text)]">{formatCurrency(preview.grandTotal)}</span>
-        </div>
-      </div>
-    );
+    return <BillBreakdownRows preview={preview} />;
   }
 
   function visitActionHref(b: Booking) {
@@ -505,6 +485,16 @@ export function BookingsHistoryPanel({
                     <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
                   </li>
                 ))}
+                {(() => {
+                  const fee = membershipFeeServiceLine(invoice ?? selected.billPreview);
+                  if (!fee) return null;
+                  return (
+                    <li className="flex justify-between gap-2">
+                      <span>{fee.name}</span>
+                      <span className="font-medium">{formatCurrency(fee.amount)}</span>
+                    </li>
+                  );
+                })()}
               </ul>
             </div>
 

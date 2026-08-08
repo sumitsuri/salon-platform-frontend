@@ -391,6 +391,12 @@ export const api = {
   reopenBooking: (id: string) =>
     request<Booking>(`/api/v1/bookings/${id}/reopen`, { method: "POST" }),
 
+  setPendingMembershipPlan: (id: string, planId: string | null) =>
+    request<Booking>(`/api/v1/bookings/${id}/pending-membership`, {
+      method: "POST",
+      body: JSON.stringify({ planId }),
+    }),
+
   getBookings: (params?: BookingListParams) => {
     const search = new URLSearchParams();
     if (params?.branchId) search.set("branchId", params.branchId);
@@ -1366,6 +1372,8 @@ export interface BillPreview {
   membershipSubscriptionId?: string;
   membershipLabel?: string;
   promoLabel?: string;
+  membershipFeeAmount?: number;
+  membershipFeeLabel?: string;
 }
 
 export interface Booking {
@@ -1383,6 +1391,7 @@ export interface Booking {
   couponId?: string;
   offerId?: string;
   membershipSubscriptionId?: string;
+  pendingMembershipPlanId?: string;
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
@@ -1402,6 +1411,7 @@ export interface CreateBookingRequest {
   offerId?: string;
   /** Keep visit open (IN_PROGRESS) so services can be added/changed before final bill. */
   keepOpen?: boolean;
+  pendingMembershipPlanId?: string;
 }
 
 export type PromoStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
@@ -1946,6 +1956,8 @@ export interface InvoiceDetail {
   promoDiscountAmount?: number;
   membershipLabel?: string;
   promoLabel?: string;
+  membershipFeeAmount?: number;
+  membershipFeeLabel?: string;
   taxableAmount: number;
   cgstAmount: number;
   sgstAmount: number;

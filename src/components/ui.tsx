@@ -188,24 +188,39 @@ export function SegmentedControl<T extends string>({
   value: T;
   onChange: (v: T) => void;
 }) {
+  const scrollable = options.length > 5;
+
   return (
-    <div className="flex gap-0.5 sm:gap-1 p-1 bg-[var(--surface-muted)] rounded-xl overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar border border-[var(--border)] w-full max-w-full min-w-0">
+    <div
+      role="tablist"
+      className={cn(
+        "p-1 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)] w-full max-w-full min-w-0",
+        scrollable
+          ? "flex gap-0.5 overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar"
+          : "grid gap-0.5"
+      )}
+      style={scrollable ? undefined : { gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
       {options.map((opt) => {
         const Icon = opt.icon;
         const active = value === opt.id;
         return (
           <button
             key={opt.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
             onClick={() => onChange(opt.id)}
             className={cn(
-            "flex-none sm:flex-1 min-w-[4rem] max-w-[7.5rem] sm:max-w-none sm:min-w-0 flex items-center justify-center gap-1 px-2 sm:px-3 py-2.5 text-[10px] sm:text-sm font-semibold rounded-lg transition whitespace-nowrap touch-manipulation min-h-11",
+              "flex items-center justify-center gap-1 px-2 py-2.5 text-[10px] sm:text-sm font-semibold rounded-lg transition touch-manipulation min-h-11",
+              scrollable ? "flex-none min-w-[4.5rem] whitespace-nowrap" : "min-w-0 w-full",
               active
                 ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
-            {Icon && <Icon className="w-4 h-4 shrink-0" />}
-            <span className="truncate">{opt.label}</span>
+            {Icon && <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
+            <span className={scrollable ? undefined : "truncate"}>{opt.label}</span>
           </button>
         );
       })}

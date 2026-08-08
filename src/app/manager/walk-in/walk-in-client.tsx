@@ -58,8 +58,11 @@ import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPane
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCustomerChip } from "./WalkInCustomerChip";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
+import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
+import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInCartPanel } from "./WalkInCartPanel";
+import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 
@@ -163,6 +166,7 @@ export default function WalkInPage() {
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [addedToast, setAddedToast] = useState<string | null>(null);
+  const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
 
   const lookupPhoneRef = useRef<string>("");
   const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
@@ -283,13 +287,32 @@ export default function WalkInPage() {
   useEffect(() => {
     if (!customerId) {
       setMembership(null);
+      setPendingMembershipPlanId("");
       return;
     }
     api
       .getActiveMembership(customerId)
-      .then((m) => setMembership(m))
+      .then((m) => {
+        setMembership(m);
+        if (m) setPendingMembershipPlanId("");
+      })
       .catch(() => setMembership(null));
   }, [customerId]);
+
+  useEffect(() => {
+    if (!bookingId || billingLocked || screen !== "flow") return;
+    const delay = step === 3 ? 200 : 400;
+    const handle = setTimeout(() => {
+      void api
+        .setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null)
+        .then((b) => {
+          setBillPreview(b.billPreview ?? null);
+          setBookingStatus(b.status);
+        })
+        .catch((e) => setError(e instanceof Error ? e.message : tCommon("failed")));
+    }, delay);
+    return () => clearTimeout(handle);
+  }, [pendingMembershipPlanId, bookingId, billingLocked, screen, step, tCommon]);
 
   // Sync CGST/SGST from the server-calculated bill unless the manager is mid-edit in Advanced.
   useEffect(() => {
@@ -332,6 +355,7 @@ export default function WalkInPage() {
       })
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
+    setPendingMembershipPlanId(b.pendingMembershipPlanId || "");
     setPaymentSuccess("");
     setReceiptQueued(false);
     setPaymentMode("CASH");
@@ -433,6 +457,7 @@ export default function WalkInPage() {
     setDraftOffer(null);
     setDraftRestoredNotice(false);
     setHubTab("open");
+    setPendingMembershipPlanId("");
     setStep(1);
     setScreen("flow");
     router.replace("/manager/walk-in");
@@ -533,10 +558,14 @@ export default function WalkInPage() {
 
   const displayGrandTotal = useMemo(() => {
     if (!billPreview) return 0;
-    const cgst = Number.isFinite(cgstNum) ? cgstNum : 0;
-    const sgst = Number.isFinite(sgstNum) ? sgstNum : 0;
-    return Math.round((billPreview.taxableAmount + cgst + sgst) * 100) / 100;
-  }, [billPreview, cgstNum, sgstNum]);
+    const fee = billPreview.membershipFeeAmount ?? 0;
+    if (taxOverridden) {
+      const cgst = Number.isFinite(cgstNum) ? cgstNum : 0;
+      const sgst = Number.isFinite(sgstNum) ? sgstNum : 0;
+      return Math.round((billPreview.taxableAmount + cgst + sgst + fee) * 100) / 100;
+    }
+    return billPreview.grandTotal;
+  }, [billPreview, cgstNum, sgstNum, taxOverridden]);
 
   const splitSum = useMemo(
     () => splitRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
@@ -595,13 +624,24 @@ export default function WalkInPage() {
     payBooking.mutate(payload);
   }
 
-  function goToStep(target: number) {
+  async function goToStep(target: number) {
     if (billingLocked) return;
     if (target < 1 || target > 3 || target >= step) return;
-    if (step === 3 && target === 2 && bookingId && bookingStatus === "READY_FOR_BILLING") {
-      void api.reopenBooking(bookingId).then((b) => setBookingStatus(b.status)).catch(() => {});
+    if (step === 3 && target < 3 && bookingId && bookingStatus === "READY_FOR_BILLING") {
+      try {
+        const b = await api.reopenBooking(bookingId);
+        setBookingStatus(b.status);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : tCommon("failed"));
+        return;
+      }
     }
+    setCartSheetOpen(false);
+    setAddedToast(null);
     setStep(target as Step);
+    if (bookingId && target < 3) {
+      router.replace(`/manager/walk-in?bookingId=${bookingId}&edit=1`);
+    }
   }
 
   async function lookupCustomer(rawPhone: string) {
@@ -639,6 +679,7 @@ export default function WalkInPage() {
     setCustomerId(rc.customerId || "");
     setSociety(rc.society || society);
     setFlat(rc.flat || "");
+    setPendingMembershipPlanId("");
     setError("");
   }
 
@@ -770,14 +811,15 @@ export default function WalkInPage() {
     }
 
     if (bookingId) {
-      const updated = await api.updateBookingLines(bookingId, toLinePayload(workingCart));
-      if (!keepOpen && updated.status !== "READY_FOR_BILLING") {
+      await api.updateBookingLines(bookingId, toLinePayload(workingCart));
+      const synced = await api.setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null);
+      if (!keepOpen && synced.status !== "READY_FOR_BILLING") {
         return api.markBookingReadyForBilling(bookingId);
       }
-      if (keepOpen && updated.status === "READY_FOR_BILLING") {
+      if (keepOpen && synced.status === "READY_FOR_BILLING") {
         return api.reopenBooking(bookingId);
       }
-      return updated;
+      return synced;
     }
 
     return api.createBooking({
@@ -787,6 +829,7 @@ export default function WalkInPage() {
       couponId: selectedCouponId || undefined,
       offerId: selectedOfferId || undefined,
       keepOpen,
+      pendingMembershipPlanId: pendingMembershipPlanId || undefined,
       ...discountPayload(),
     });
   }
@@ -1065,7 +1108,7 @@ export default function WalkInPage() {
       <div className="hidden md:block">
         <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
       </div>
-      <WalkInCompactSteps steps={steps} current={step} />
+      <WalkInCompactSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
       {draftRestoredNotice && step === 1 && (
         <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
@@ -1165,20 +1208,6 @@ export default function WalkInPage() {
             </div>
           )}
 
-          {customerId && !membership && !bookingId && (
-            <button
-              type="button"
-              onClick={() =>
-                router.push(
-                  `/manager/memberships?customerId=${customerId}&phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(customerName)}`
-                )
-              }
-              className={`${btnSecondary} w-full min-h-11`}
-            >
-              {t("sellMembership")}
-            </button>
-          )}
-
           <button
             onClick={() => void continueFromCustomerStep()}
             disabled={continueCustomerDisabled}
@@ -1201,6 +1230,15 @@ export default function WalkInPage() {
           )}
 
           <WalkInCustomerChip name={customerName} phone={phone} onEdit={() => goToStep(1)} />
+
+          {!membership && customerId && (
+            <WalkInMembershipSavingsBanner
+              customerName={customerName}
+              cart={cart}
+              servicesById={servicesById}
+              localeKit={localeKit}
+            />
+          )}
 
           {membership && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
@@ -1345,6 +1383,22 @@ export default function WalkInPage() {
             <p className="text-xs text-[var(--text-tertiary)]">{t("gstinLabel", { gstin: branch.gstin })}</p>
           )}
 
+          {!billingLocked && membership && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2.5 text-sm text-emerald-800 dark:text-emerald-200">
+              {t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })}
+            </div>
+          )}
+
+          {!billingLocked && !membership && customerId && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+              <WalkInMembershipPicker
+                value={pendingMembershipPlanId}
+                onChange={setPendingMembershipPlanId}
+                disabled={!bookingId || saving}
+              />
+            </div>
+          )}
+
           {!billingLocked && (
             <Card className="p-0 overflow-hidden">
               <details className="group" open={!!selectedCouponId || !!selectedOfferId || manualDiscountActive}>
@@ -1409,63 +1463,54 @@ export default function WalkInPage() {
                         </li>
                       );
                     })
-                  : cart.map((item, idx) => {
-                      const stylist = staff.find((s) => s.id === item.staffId)?.name;
+                  : (() => {
+                      const fee = membershipFeeServiceLine(billPreview);
+                      const items = cart.map((item, idx) => ({ item, idx }));
                       return (
-                        <li
-                          key={`${item.branchServiceId}-${idx}`}
-                          className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-medium text-[var(--text-primary)] truncate">{item.serviceName}</p>
-                            {stylist && (
-                              <p className="text-xs text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
-                            )}
-                          </div>
-                          <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
-                            {formatMoney(cartLinePrice(item), localeKit)}
-                          </span>
-                        </li>
+                        <>
+                          {items.map(({ item, idx }) => {
+                            const stylist = staff.find((s) => s.id === item.staffId)?.name;
+                            return (
+                              <li
+                                key={`${item.branchServiceId}-${idx}`}
+                                className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0"
+                              >
+                                <div className="min-w-0">
+                                  <p className="font-medium text-[var(--text-primary)] truncate">{item.serviceName}</p>
+                                  {stylist && (
+                                    <p className="text-xs text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
+                                  )}
+                                </div>
+                                <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
+                                  {formatMoney(cartLinePrice(item), localeKit)}
+                                </span>
+                              </li>
+                            );
+                          })}
+                          {fee && (
+                            <li className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0">
+                              <p className="font-medium text-[var(--text-primary)] truncate">{fee.name}</p>
+                              <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
+                                {formatMoney(fee.amount, localeKit)}
+                              </span>
+                            </li>
+                          )}
+                        </>
                       );
-                    }))}
+                    })())}
               </ul>
             </div>
 
-            <div className="space-y-2 pt-1 border-t border-[var(--border)]">
-              <div className="flex justify-between">
-                <span className="text-[var(--text-secondary)]">{tCommon("subtotal")}</span>
-                <span>{formatMoney(billPreview.subtotal, localeKit)}</span>
-              </div>
-              {(billPreview.membershipDiscountAmount ?? 0) > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>{billPreview.membershipLabel || t("membershipDiscount")}</span>
-                  <span>-{formatMoney(billPreview.membershipDiscountAmount ?? 0, localeKit)}</span>
-                </div>
-              )}
-              {(billPreview.promoDiscountAmount ?? 0) > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>{billPreview.promoLabel || tCommon("discount")}</span>
-                  <span>-{formatMoney(billPreview.promoDiscountAmount ?? 0, localeKit)}</span>
-                </div>
-              )}
-              {(billPreview.manualDiscountAmount ?? 0) > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>{billPreview.manualDiscountLabel || t("manualDiscount")}</span>
-                  <span>-{formatMoney(billPreview.manualDiscountAmount ?? 0, localeKit)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-[var(--text-secondary)]">{t("taxableAmount")}</span>
-                <span>{formatMoney(billPreview.taxableAmount, localeKit)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--text-secondary)]">CGST</span>
-                <span>{formatMoney(Number.isFinite(cgstNum) ? cgstNum : 0, localeKit)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--text-secondary)]">SGST</span>
-                <span>{formatMoney(Number.isFinite(sgstNum) ? sgstNum : 0, localeKit)}</span>
-              </div>
+            <div className="pt-1 border-t border-[var(--border)]">
+              <BillBreakdownRows
+                preview={billPreview}
+                localeKit={localeKit}
+                showTaxable
+                cgstDisplay={Number.isFinite(cgstNum) ? cgstNum : 0}
+                sgstDisplay={Number.isFinite(sgstNum) ? sgstNum : 0}
+                hideGrandTotal
+                className="space-y-2"
+              />
 
               {!billingLocked && (
                 <details
