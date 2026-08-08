@@ -29,7 +29,7 @@ export function MissionStrip({
     return (
       <div
         className={cn(
-          "rounded-xl border border-[var(--brand-muted)] bg-gradient-to-r from-indigo-50/90 to-violet-50/70 dark:from-indigo-950/40 dark:to-violet-950/30 px-4 py-3 flex items-center gap-3 mp-animate-in",
+          "rounded-xl border border-[var(--brand-muted)] bg-gradient-to-r from-indigo-50/90 to-violet-50/70 dark:from-indigo-950/40 dark:to-violet-950/30 px-4 py-3 flex items-center gap-3 mp-animate-in min-w-0 max-w-full w-full",
           className
         )}
       >
@@ -38,7 +38,7 @@ export function MissionStrip({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--brand-text)]">{tBrand("name")}</p>
-          <p className="text-sm text-[var(--text-primary)] font-medium leading-snug transition-opacity duration-500" key={idx}>
+          <p className="text-sm text-[var(--text-primary)] font-medium leading-snug line-clamp-2 transition-opacity duration-500" key={idx}>
             {message}
           </p>
         </div>
@@ -49,7 +49,7 @@ export function MissionStrip({
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[var(--surface-muted)]/70 border border-[var(--border)] text-xs sm:text-sm text-[var(--text-secondary)]",
+        "flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[var(--surface-muted)]/70 border border-[var(--border)] text-xs sm:text-sm text-[var(--text-secondary)] min-w-0 max-w-full w-full",
         className
       )}
     >

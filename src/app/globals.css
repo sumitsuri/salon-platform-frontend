@@ -56,7 +56,7 @@
 }
 
 html {
-  overflow-x: clip;
+  overflow-x: hidden;
   width: 100%;
   max-width: 100%;
   -webkit-text-size-adjust: 100%;
@@ -68,7 +68,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--app-bg);
   color: var(--text-primary);
-  overflow-x: clip;
+  overflow-x: hidden;
   width: 100%;
   max-width: 100%;
   min-height: 100dvh;
@@ -80,7 +80,44 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  overflow-x: clip;
+}
+
+/* Standard page content stack — use on route roots inside the app shell */
+.page-stack {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Two-up KPI grids that must never overflow narrow phones */
+.mobile-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.mobile-stat-grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .mobile-stat-grid--sm-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-stat-grid--md-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-stat-grid--lg-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 html[lang="hi-IN"] body,

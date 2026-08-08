@@ -79,7 +79,7 @@ export default function ManagerHomePage() {
   const inProgress = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED").length;
 
   return (
-    <div className="space-y-5">
+    <div className="page-stack space-y-5">
       <HeroBanner>
         <p className="hero-muted text-sm font-medium">{greeting}</p>
         <h1 className="text-xl font-bold mt-0.5">{user?.name?.split(" ")[0] || t("manager")}</h1>
@@ -93,7 +93,7 @@ export default function ManagerHomePage() {
 
       <MissionStrip variant="accent" />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="mobile-stat-grid mobile-stat-grid--sm-3 gap-3">
         <StatCard label={t("todayRevenue")} value={formatCurrency(todayRevenue)} icon={TrendingUp} accent="emerald" />
         <StatCard label={t("completed")} value={completed.length} icon={Users} accent="brand" />
         <StatCard label={t("inProgress")} value={inProgress} icon={Clock} accent="amber" className="col-span-2 sm:col-span-1" />
@@ -101,7 +101,7 @@ export default function ManagerHomePage() {
 
       <div>
         <SectionLabel>{t("quickActions")}</SectionLabel>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="mobile-stat-grid gap-3">
           <QuickAction href="/manager/walk-in?new=1" icon={UserPlus} label={t("newWalkIn")} description={t("walkInDesc")} color="brand" />
           <QuickAction href="/manager/schedule" icon={CalendarClock} label={t("schedule")} description={t("scheduleDesc")} color="emerald" />
           <QuickAction href="/manager/attendance" icon={Fingerprint} label={t("attendance")} description={t("attendanceDesc")} color="violet" />
@@ -152,11 +152,11 @@ export default function ManagerHomePage() {
                 title={b.customerName}
                 subtitle={`${b.customerPhone} · ${b.lines?.map((l) => l.serviceName).join(", ")}`}
                 trailing={
-                  <div className="text-right">
+                  <div className="text-right min-w-0">
                     {b.billPreview && (
-                      <p className="text-sm font-bold text-[var(--text-primary)]">{formatCurrency(b.billPreview.grandTotal)}</p>
+                      <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] tabular-nums truncate">{formatCurrency(b.billPreview.grandTotal)}</p>
                     )}
-                    <StatusBadge status={b.status} />
+                    <StatusBadge status={b.status} className="mt-0.5" />
                   </div>
                 }
               />

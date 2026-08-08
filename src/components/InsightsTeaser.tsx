@@ -44,9 +44,9 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
             <Link
               key={item.id}
               href={href}
-              className="flex items-start justify-between gap-3 px-4 py-3.5 hover:bg-[var(--surface-muted)]/60 transition"
+              className="flex items-start justify-between gap-2 min-w-0 px-3 sm:px-4 py-3.5 hover:bg-[var(--surface-muted)]/60 transition"
             >
-              <div className="min-w-0 flex gap-3">
+              <div className="min-w-0 flex-1 flex gap-2 sm:gap-3">
                 <span
                   className={
                     item.severity === "HIGH"
@@ -56,12 +56,12 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
                         : "w-1 rounded-full bg-sky-400 shrink-0 self-stretch"
                   }
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{item.title}</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-1">{item.message}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-2">{item.message}</p>
                 </div>
               </div>
-              <StatusBadge status={item.severity} />
+              <StatusBadge status={item.severity} className="shrink-0 max-w-[4.75rem] truncate" />
             </Link>
           ))}
         </div>

@@ -184,7 +184,7 @@ export default function LocalSpotlightPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="page-stack space-y-6 pb-8">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -272,7 +272,7 @@ export default function LocalSpotlightPage() {
 
           {tab === "overview" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="mobile-stat-grid mobile-stat-grid--lg-4 gap-3">
                 <button type="button" className="text-left w-full" onClick={() => { setStatFilter("notTop3"); setTab("branches"); }}>
                   <PulseStatCard label={t("statNotTop3")} value={String(data.notInTop3Count)} icon={ScanSearch} accent="amber" />
                 </button>

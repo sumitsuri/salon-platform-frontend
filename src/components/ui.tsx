@@ -164,7 +164,7 @@ export function QuickAction({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] mp-animate-in",
+        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] mp-animate-in min-w-0 max-w-full w-full",
         colors[color]
       )}
     >
@@ -189,7 +189,7 @@ export function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-1 p-1 bg-[var(--surface-muted)] rounded-xl overflow-x-auto overscroll-x-contain no-scrollbar border border-[var(--border)] w-full max-w-full min-w-0">
+    <div className="flex gap-0.5 sm:gap-1 p-1 bg-[var(--surface-muted)] rounded-xl overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar border border-[var(--border)] w-full max-w-full min-w-0">
       {options.map((opt) => {
         const Icon = opt.icon;
         const active = value === opt.id;
@@ -198,14 +198,14 @@ export function SegmentedControl<T extends string>({
             key={opt.id}
             onClick={() => onChange(opt.id)}
             className={cn(
-            "flex-none sm:flex-1 min-w-[4.75rem] sm:min-w-0 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2.5 text-[11px] sm:text-sm font-semibold rounded-lg transition whitespace-nowrap touch-manipulation min-h-11",
+            "flex-none sm:flex-1 min-w-[4rem] max-w-[7.5rem] sm:max-w-none sm:min-w-0 flex items-center justify-center gap-1 px-2 sm:px-3 py-2.5 text-[10px] sm:text-sm font-semibold rounded-lg transition whitespace-nowrap touch-manipulation min-h-11",
               active
                 ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm"
                 : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             )}
           >
             {Icon && <Icon className="w-4 h-4 shrink-0" />}
-            <span>{opt.label}</span>
+            <span className="truncate">{opt.label}</span>
           </button>
         );
       })}
@@ -313,17 +313,25 @@ export function ListRow({
     <Comp
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 text-left transition border-b border-[var(--border)] last:border-0",
+        "w-full max-w-full min-w-0 block px-3 sm:px-4 py-3 text-left transition border-b border-[var(--border)] last:border-0",
         onClick && "hover:bg-[var(--surface-muted)] active:bg-[var(--brand-light)]",
         !onClick && "hover:bg-[var(--surface-muted)]/50"
       )}
     >
-      {meta}
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-sm text-[var(--text-primary)] truncate">{title}</p>
-        {subtitle && <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>}
+      <div className="flex items-start justify-between gap-x-2 gap-y-1 min-w-0">
+        {meta}
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-sm text-[var(--text-primary)] leading-snug truncate">{title}</p>
+          {subtitle && (
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
+          )}
+        </div>
+        {trailing && (
+          <div className="shrink-0 text-right pl-1 min-w-0 max-w-[46%] sm:max-w-[42%] [&_p]:truncate [&_span]:truncate">
+            {trailing}
+          </div>
+        )}
       </div>
-      {trailing && <div className="shrink-0 text-right">{trailing}</div>}
     </Comp>
   );
 }
@@ -372,7 +380,7 @@ export function ResponsiveTableShell({
 }) {
   return (
     <>
-      <div className="md:hidden min-w-0 max-w-full overflow-x-clip">{mobile}</div>
+      <div className="md:hidden min-w-0 max-w-full w-full">{mobile}</div>
       <div className={cn("hidden md:block responsive-table-wrap min-w-0 max-w-full", className)}>{children}</div>
     </>
   );
@@ -518,7 +526,7 @@ export function HeroBanner({
   className?: string;
 }) {
   return (
-    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-5 shadow-xl mp-animate-in", className)}>
+    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-4 sm:p-5 shadow-xl mp-animate-in min-w-0 max-w-full w-full", className)}>
       <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/10 blur-2xl mp-pulse-glow" />
       <div className="relative">{children}</div>
     </div>

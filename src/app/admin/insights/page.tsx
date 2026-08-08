@@ -59,7 +59,7 @@ export default function AdminInsightsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="page-stack space-y-5">
       <PageHeader
         title={t("title")}
         subtitle={`${tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
@@ -94,10 +94,10 @@ export default function AdminInsightsPage() {
             }
           />
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="mobile-stat-grid mobile-stat-grid--sm-3 gap-3">
             <StatCard label={t("totalTips")} value={countInsights(data)} icon={Lightbulb} accent="brand" />
             <StatCard label={t("highPriority")} value={highCount} icon={AlertTriangle} accent="amber" />
-            <StatCard label={t("medium")} value={mediumCount} icon={Sparkles} accent="violet" />
+            <StatCard label={t("medium")} value={mediumCount} icon={Sparkles} accent="violet" className="col-span-2 sm:col-span-1" />
           </div>
 
           <WeekdayBoostPanel insights={data?.weekdayInsights} loading={isLoading} variant="ceo" />

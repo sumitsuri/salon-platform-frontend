@@ -106,7 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body
-        className={`${fontVariables} min-h-screen w-full max-w-full overflow-x-clip`}
+        className={`${fontVariables} min-h-screen w-full max-w-full overflow-x-hidden`}
         style={{ fontFamily: `${activeFont}, system-ui, sans-serif` }}
       >
         <ClientIntlShell initialLocale={defaultLocale} initialMessages={enMessages}>

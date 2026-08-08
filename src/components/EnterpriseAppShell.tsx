@@ -188,7 +188,7 @@ export function EnterpriseAppShell({
   return (
     <AppShellProvider homeHref={homeHref} homeLabel={homeLabel}>
       <BreadcrumbProvider nav={flatNav} homeHref={homeHref} homeLabel={homeLabel}>
-        <div className="min-h-screen bg-[var(--app-bg)] flex w-full max-w-full overflow-x-clip min-w-0">
+        <div className="min-h-screen bg-[var(--app-bg)] flex w-full max-w-full min-w-0">
           <aside
             className={cn(
               "enterprise-sidebar hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-40 transition-[width] duration-200 ease-out",
@@ -208,7 +208,7 @@ export function EnterpriseAppShell({
           </aside>
 
           <div
-            className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full overflow-x-clip transition-[padding-left] duration-200 ease-out md:pl-[var(--sidebar-current-width)]"
+            className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full transition-[padding-left] duration-200 ease-out md:pl-[var(--sidebar-current-width)]"
             style={
               { "--sidebar-current-width": ready && usesSidebar ? sidebarWidth : "0px" } as React.CSSProperties
             }
@@ -235,7 +235,7 @@ export function EnterpriseAppShell({
                 mobileMainPadding
               )}
             >
-              <div className="w-full max-w-[1920px] mx-auto min-w-0 overflow-x-clip">{children}</div>
+              <div className="page-stack w-full max-w-[1920px] mx-auto">{children}</div>
             </main>
           </div>
 

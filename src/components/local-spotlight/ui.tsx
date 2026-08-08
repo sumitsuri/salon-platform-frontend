@@ -165,17 +165,17 @@ export function LocalSpotlightHero({
 }) {
   const linked = branchesLinked > 0;
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 md:p-6 shadow-sm">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 md:p-6 shadow-sm min-w-0 max-w-full w-full overflow-hidden">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between min-w-0">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)] truncate">
             {t("lvsTitle")}
           </p>
-          <div className="mt-2 flex items-baseline gap-3">
-            <span className={cn("text-4xl font-black tabular-nums", lvsScoreColor(score, linked))}>
+          <div className="mt-2 flex items-baseline gap-2 sm:gap-3 min-w-0">
+            <span className={cn("text-3xl sm:text-4xl font-black tabular-nums shrink-0", lvsScoreColor(score, linked))}>
               {linked ? score : "—"}
             </span>
-            {linked && <span className="text-lg text-[var(--text-tertiary)]">/100</span>}
+            {linked && <span className="text-base sm:text-lg text-[var(--text-tertiary)] shrink-0">/100</span>}
           </div>
           <p className={cn("mt-1 text-sm font-semibold", lvsScoreColor(score, linked))}>
             {scoreLabelText(scoreLabel, t)}
@@ -184,7 +184,7 @@ export function LocalSpotlightHero({
             {t("branchesLinked", { linked: branchesLinked, total: branchesTotal })}
           </p>
         </div>
-        <div className="w-full md:max-w-xs">
+        <div className="w-full md:max-w-xs min-w-0 shrink-0">
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--surface-muted)]">
             <div
               className={cn("h-full rounded-full transition-all", lvsBarColor(score, linked))}
@@ -193,7 +193,7 @@ export function LocalSpotlightHero({
           </div>
         </div>
       </div>
-      <p className="mt-4 text-[11px] text-[var(--text-tertiary)]">{dataSourceNote}</p>
+      <p className="mt-4 text-[11px] text-[var(--text-tertiary)] break-words">{dataSourceNote}</p>
       {lastRefreshedAt && (
         <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">
           {t("lastSynced")}: {new Date(lastRefreshedAt).toLocaleString()}

@@ -161,7 +161,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="page-stack space-y-5">
       <PageHeader
         title={t("title")}
         subtitle={isFetching && !isLoading ? tAdmin("updating") : tPeriods(dateRange.preset)}
@@ -198,7 +198,7 @@ export default function AdminDashboardPage() {
             }
           />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 xl:gap-4">
+          <div className="mobile-stat-grid mobile-stat-grid--md-4 gap-3 xl:gap-4">
             <StatCard label={t("totalRevenue")} value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
             <StatCard label={t("visits")} value={dashboard.totalVisits} icon={Users} accent="brand" />
             <StatCard label={t("avgTicket")} value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
@@ -234,7 +234,7 @@ export default function AdminDashboardPage() {
             />
           )}
 
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 min-w-0">
             <EnterpriseTableShell title={t("branchComparison")} accent="brand">
               <div className="hidden md:block responsive-table-wrap">
                 <table className="w-full text-sm">
@@ -265,9 +265,9 @@ export default function AdminDashboardPage() {
                     title={b.branchName}
                     subtitle={tAdmin("visits", { count: b.visits })}
                     trailing={
-                      <div className="text-right">
-                        <p className="text-sm font-bold">{formatCurrency(b.revenue)}</p>
-                        <p className="text-xs text-[var(--text-tertiary)]">{tAdmin("avg", { amount: formatCurrency(b.avgTicket) })}</p>
+                      <div className="text-right min-w-0">
+                        <p className="text-xs sm:text-sm font-bold tabular-nums truncate">{formatCurrency(b.revenue)}</p>
+                        <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] truncate">{tAdmin("avg", { amount: formatCurrency(b.avgTicket) })}</p>
                       </div>
                     }
                   />
@@ -288,7 +288,7 @@ export default function AdminDashboardPage() {
                       key={s.staffId}
                       title={`${i + 1}. ${s.staffName}`}
                       subtitle={s.branchName}
-                      trailing={<span className="text-sm font-bold text-[var(--brand-text)]">{formatCurrency(s.revenue)}</span>}
+                      trailing={<span className="text-xs sm:text-sm font-bold text-[var(--brand-text)] tabular-nums truncate">{formatCurrency(s.revenue)}</span>}
                     />
                   ))}
                 </div>

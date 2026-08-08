@@ -46,10 +46,10 @@ export function BranchMultiSelect({ branches, selected, onChange, className }: B
   }
 
   return (
-    <div className={cn("relative", className)} ref={ref}>
+    <div className={cn("relative w-full max-w-full min-w-0", className)} ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3.5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-primary)] hover:border-[var(--brand)] shadow-sm transition"
+        className="flex items-center gap-2 w-full min-w-0 max-w-full px-3.5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-primary)] hover:border-[var(--brand)] shadow-sm transition"
       >
         <span className="flex-1 text-left truncate">{label}</span>
         <ChevronDown className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0 transition", open && "rotate-180")} />

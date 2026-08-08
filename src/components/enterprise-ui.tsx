@@ -67,7 +67,7 @@ export function PulseStatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm ring-1 transition hover:shadow-md hover:-translate-y-0.5 mp-animate-in",
+        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm ring-1 transition hover:shadow-md hover:-translate-y-0.5 mp-animate-in min-w-0 max-w-full",
         a.ring,
         a.glow,
         className
@@ -75,20 +75,20 @@ export function PulseStatCard({
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r", a.bar)} />
-      <div className="flex items-start justify-between gap-2">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg", a.icon)}>
-          <Icon className="w-5 h-5" />
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0", a.icon)}>
+          <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
         {trend && (
-          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 px-2 py-0.5 rounded-full shrink-0 truncate max-w-[45%]">
             {trend}
           </span>
         )}
       </div>
-      <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mt-3 tracking-tight tabular-nums break-words min-w-0">
+      <p className="text-base sm:text-xl md:text-2xl font-bold text-[var(--text-primary)] mt-2 sm:mt-3 tracking-tight tabular-nums truncate min-w-0">
         {value}
       </p>
-      <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] mt-0.5 font-semibold uppercase tracking-wide line-clamp-2">
+      <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 font-semibold uppercase tracking-wide line-clamp-2 break-words">
         {label}
       </p>
     </div>
@@ -117,23 +117,23 @@ export function DashboardHero({
   className?: string;
 }) {
   return (
-    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-5 sm:p-6 shadow-xl mp-animate-in", className)}>
+    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-4 sm:p-6 shadow-xl mp-animate-in min-w-0 max-w-full w-full", className)}>
       <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-2xl mp-pulse-glow" />
       <div className="absolute -left-4 bottom-0 w-32 h-32 rounded-full bg-white/5 blur-xl" />
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 min-w-0">
         <div className="flex-1 min-w-0 space-y-2">
           {eyebrow && <p className="hero-muted text-sm font-medium truncate">{eyebrow}</p>}
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight break-words">{title}</h2>
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold tracking-tight break-words min-w-0">{title}</h2>
             {badge}
           </div>
-          {subtitle && <p className="text-sm hero-subtitle line-clamp-3 sm:line-clamp-none">{subtitle}</p>}
+          {subtitle && <p className="text-sm hero-subtitle line-clamp-2 sm:line-clamp-none">{subtitle}</p>}
           {action && <div className="pt-1">{action}</div>}
         </div>
         {metric != null && metricLabel && (
-          <div className="flex items-center justify-between sm:block shrink-0 w-full sm:w-auto border-t border-white/15 sm:border-0 pt-3 sm:pt-0">
-            <p className="text-[10px] hero-muted uppercase tracking-wider font-bold sm:text-right">{metricLabel}</p>
-            <p className="text-2xl sm:text-3xl font-bold tabular-nums sm:mt-0.5 sm:text-right">{metric}</p>
+          <div className="flex items-center justify-between sm:block shrink-0 w-full sm:w-auto min-w-0 border-t border-white/15 sm:border-0 pt-3 sm:pt-0 sm:max-w-[45%]">
+            <p className="text-[10px] hero-muted uppercase tracking-wider font-bold sm:text-right truncate">{metricLabel}</p>
+            <p className="text-xl sm:text-3xl font-bold tabular-nums sm:mt-0.5 sm:text-right truncate">{metric}</p>
           </div>
         )}
       </div>
@@ -172,7 +172,7 @@ export function PanelShell({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in",
+        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in min-w-0 max-w-full w-full",
         className
       )}
     >
@@ -303,7 +303,7 @@ export function EnterpriseTableShell({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in",
+        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in min-w-0 max-w-full w-full",
         className
       )}
     >
