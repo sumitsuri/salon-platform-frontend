@@ -120,6 +120,44 @@ body {
   }
 }
 
+/* Three KPI tiles — stack on narrow phones, row from 420px (matches PWA card density) */
+.period-metric-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.period-metric-grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 420px) {
+  .period-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Quick-nav tiles — 2×2 on phone, single row when sidebar is visible (md+) */
+.nav-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.nav-tile-grid > * {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .nav-tile-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 html[lang="hi-IN"] body,
 html[lang="mr-IN"] body {
   font-family: var(--font-devanagari, var(--font-inter)), system-ui, sans-serif;

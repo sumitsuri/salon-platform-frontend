@@ -82,7 +82,7 @@ export function PageHeader({
           )}
         </div>
         {action && (
-          <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto min-w-0 max-w-full justify-stretch sm:justify-end">
+          <div className="shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0 max-w-full justify-stretch sm:justify-end [&_button]:min-h-11">
             {action}
           </div>
         )}
@@ -385,7 +385,7 @@ export function ListRow({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-sm text-[var(--text-primary)] leading-snug truncate">{title}</p>
           {subtitle && (
-            <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:line-clamp-1 sm:truncate">{subtitle}</p>
           )}
         </div>
         {trailing && (
@@ -407,7 +407,12 @@ export function MobileStatGrid({
   columns?: 2 | 3;
 }) {
   return (
-    <div className={cn("grid gap-2", columns === 3 ? "grid-cols-3" : "grid-cols-2")}>
+    <div
+      className={cn(
+        "grid gap-2 min-w-0",
+        columns === 3 ? "grid-cols-1 min-[420px]:grid-cols-3" : "grid-cols-2"
+      )}
+    >
       {items.map((item) => (
         <div
           key={item.label}
@@ -528,7 +533,7 @@ export function SideSheet({
           "max-sm:max-w-none"
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-[var(--border)] shrink-0">
+        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-[var(--border)] shrink-0 pt-[max(1rem,env(safe-area-inset-top,0px))] max-sm:pt-4">
           <div className="min-w-0">
             <h2 className="font-bold text-[var(--text-primary)] truncate">{title}</h2>
             {subtitle && (
@@ -724,7 +729,7 @@ export function MobileFilterPanel({
 
   return (
     <div
-      className="lg:hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3 shadow-sm"
+      className="md:hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3 shadow-sm"
       data-testid="mobile-filter-panel"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

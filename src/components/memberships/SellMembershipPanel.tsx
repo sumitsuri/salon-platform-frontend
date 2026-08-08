@@ -7,7 +7,7 @@ import { CreditCard, Sparkles } from "lucide-react";
 import { api, MembershipPlan, MembershipSubscription } from "@/lib/api";
 import { isValidIndianMobile, normalizeIndianMobile } from "@/lib/phone";
 import { cn, formatCurrency } from "@/lib/utils";
-import { SegmentedControl, inputClass, btnPrimary, btnSecondary } from "@/components/ui";
+import { SegmentedControl, inputClass, btnPrimary, btnSecondary, Callout } from "@/components/ui";
 
 type PaymentMode = "CASH" | "UPI" | "CARD";
 
@@ -73,6 +73,14 @@ export function SellMembershipPanel({
     queryKey: ["active-membership-plans"],
     queryFn: () => api.getActiveMembershipPlans(),
   });
+
+  const { data: activeMembership, isLoading: membershipLoading } = useQuery({
+    queryKey: ["active-membership-customer", customerId],
+    queryFn: () => api.getActiveMembership(customerId),
+    enabled: Boolean(customerId),
+  });
+
+  const isAlreadyMember = Boolean(activeMembership?.cardNumber);
 
   const selectedPlan = useMemo(() => plans.find((p) => p.id === planId), [plans, planId]);
   const needsReference = paymentMode !== "CASH";
@@ -141,11 +149,13 @@ export function SellMembershipPanel({
 
   const canSell =
     Boolean(customerId && planId && branchId) &&
+    !isAlreadyMember &&
     (!needsReference || reference.trim().length > 0) &&
     !sell.isPending;
 
   const customerReady = Boolean(customerId);
   const phoneValid = isValidIndianMobile(phone);
+  const showSellForm = customerReady && !membershipLoading && !isAlreadyMember && plans.length > 0;
 
   return (
     <div
@@ -177,6 +187,7 @@ export function SellMembershipPanel({
               setPhone(next);
               setCustomerId("");
               setCustomerName("");
+              setPlanId("");
               lookupPhoneRef.current = "";
               setLookupState("idle");
               onError?.("");
@@ -211,7 +222,35 @@ export function SellMembershipPanel({
         <p className="text-sm text-[var(--text-secondary)]">{t("registerOnWalkIn")}</p>
       )}
 
-      {customerReady && plans.length > 0 && (
+      {customerReady && membershipLoading && (
+        <p className="text-xs text-[var(--text-tertiary)]">{t("checkingMembership")}</p>
+      )}
+
+      {customerReady && !membershipLoading && isAlreadyMember && activeMembership && (
+        <Callout
+          variant="success"
+          icon={<CreditCard className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-hidden />}
+          title={t("alreadyMemberTitle", { name: customerName })}
+        >
+          <p className="text-sm text-[var(--text-secondary)]">
+            {t("alreadyMemberDetail", {
+              plan: activeMembership.planName || "Member",
+              card: activeMembership.cardNumber,
+              until: activeMembership.endsOn,
+              percent: activeMembership.benefitPercent ?? 10,
+            })}
+          </p>
+          <p className="text-xs text-[var(--text-tertiary)] mt-1">{t("alreadyMemberHint")}</p>
+        </Callout>
+      )}
+
+      {customerReady && !membershipLoading && !isAlreadyMember && (
+        <Callout variant="info" title={t("notMemberYetTitle", { name: customerName })}>
+          <p className="text-sm text-[var(--text-secondary)]">{t("notMemberYetHint")}</p>
+        </Callout>
+      )}
+
+      {showSellForm && (
         <>
           <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2">
             {plans.map((plan) => {
@@ -293,7 +332,7 @@ export function SellMembershipPanel({
         </>
       )}
 
-      {customerReady && plans.length === 0 && (
+      {customerReady && !membershipLoading && !isAlreadyMember && plans.length === 0 && (
         <p className="text-sm text-[var(--text-secondary)]">{t("noPlans")}</p>
       )}
     </div>

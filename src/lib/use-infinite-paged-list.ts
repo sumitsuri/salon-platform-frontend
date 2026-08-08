@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, keepPreviousData } from "@tanstack/react-query";
 import type { PageResult } from "@/lib/api";
 import { DEFAULT_PAGE_SIZE } from "@/components/ui";
 
@@ -29,6 +29,7 @@ export function useInfinitePagedList<T>({
     },
     enabled,
     staleTime,
+    placeholderData: keepPreviousData,
   });
 
   const items = query.data?.pages.flatMap((page) => page.content) ?? [];

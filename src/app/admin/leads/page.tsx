@@ -147,7 +147,7 @@ export default function AdminLeadsPage() {
           <button
             type="button"
             onClick={() => setShowFilters((v) => !v)}
-            className={`${btnSecondarySm} lg:hidden`}
+            className={`${btnSecondarySm} md:hidden`}
             aria-pressed={showFilters}
             aria-label="Filters"
           >
@@ -176,7 +176,7 @@ export default function AdminLeadsPage() {
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
           <>
-            <div className="lg:hidden divide-y divide-[var(--border)]">
+            <div className="md:hidden divide-y divide-[var(--border)]">
               {leads.map((lead) => (
                 <ListRow
                   key={lead.id}
@@ -195,7 +195,7 @@ export default function AdminLeadsPage() {
               ))}
             </div>
 
-            <div className="hidden lg:block responsive-table-wrap">
+            <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {leads.map((lead) => (
                   <tr

@@ -1295,7 +1295,7 @@ export default function WalkInPage() {
                   aria-label={tCommon("close")}
                   onClick={() => setCartSheetOpen(false)}
                 />
-                <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+                <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
                   <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3 shrink-0">
                     <p className="font-bold text-[var(--text-primary)]">{t("viewCart")}</p>
                     <button

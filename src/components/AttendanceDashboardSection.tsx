@@ -423,7 +423,7 @@ export function AttendanceDashboardSection({
               <EmptyState title={t("noAttendanceRecords")} description={t("adjustFilters")} />
             ) : (
               <>
-                <div className="hidden lg:block responsive-table-wrap">
+                <div className="hidden md:block responsive-table-wrap">
                   <FilterableTable
                     columns={[
                       {
@@ -528,7 +528,7 @@ export function AttendanceDashboardSection({
                     ))}
                   </FilterableTable>
                 </div>
-                <div className="lg:hidden divide-y divide-[var(--border)]">
+                <div className="md:hidden divide-y divide-[var(--border)]">
                   {logRecords.map((r) => (
                     <ListRow
                       key={r.id}

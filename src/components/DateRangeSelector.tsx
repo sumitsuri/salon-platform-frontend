@@ -86,7 +86,7 @@ export function DateRangeSelector({
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-1 w-full min-w-[16rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg">
+        <div className="absolute left-0 right-0 z-50 mt-1 w-full min-w-0 sm:left-auto sm:right-0 sm:min-w-[16rem] sm:w-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg max-h-[min(70dvh,24rem)] overflow-y-auto overscroll-contain">
           {DATE_RANGE_PRESET_ORDER.map((preset) => {
             const active = value.preset === preset;
             const preview = preset !== "custom" ? resolvePresetRange(preset) : null;

@@ -16,7 +16,7 @@ import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { PageHeader, StatCard, Card, ListRow, EmptyState, QuickAction, PageLoader } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
-import { ProductDateRange, dashboardSecondaryRange, getDefaultDateRange } from "@/lib/date-range";
+import { ProductDateRange, dashboardSecondaryRange, formatDateRangeLabel, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { DashboardHero, EnterpriseTableShell, LabeledProgressBar } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
@@ -27,7 +27,6 @@ export default function AdminDashboardPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tPeriods = useTranslations("components.dateRange.periods");
-  const tBrand = useTranslations("brand");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
@@ -186,9 +185,9 @@ export default function AdminDashboardPage() {
       ) : (
         <>
           <DashboardHero
-            eyebrow={tBrand("taglineShort")}
+            eyebrow={tPeriods(dateRange.preset)}
             title={t("title")}
-            subtitle={tPeriods(dateRange.preset)}
+            subtitle={formatDateRangeLabel(dateRange.from, dateRange.to)}
             metric={formatCurrency(dashboard.totalRevenue)}
             metricLabel={t("totalRevenue")}
             badge={

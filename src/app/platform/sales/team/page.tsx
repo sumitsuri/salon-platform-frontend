@@ -283,7 +283,7 @@ export default function SalesTeamPage() {
           <p className="text-sm text-[var(--ink-muted)]">No performance data for this period.</p>
         ) : (
           <>
-            <div className="hidden lg:block responsive-table-wrap">
+            <div className="hidden md:block responsive-table-wrap">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-[var(--ink-muted)]">
@@ -330,7 +330,7 @@ export default function SalesTeamPage() {
                 </tbody>
               </table>
             </div>
-            <div className="-mx-4 divide-y divide-[var(--border)] lg:hidden sm:-mx-5">
+            <div className="-mx-4 divide-y divide-[var(--border)] md:hidden sm:-mx-5">
               {performance.map((p) => (
                 <ListRow
                   key={p.repId}

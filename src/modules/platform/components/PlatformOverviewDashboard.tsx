@@ -173,7 +173,7 @@ export function RepSalesTrendTable({
   return (
     <>
       {/* Desktop / tablet table */}
-      <div className="hidden lg:block responsive-table-wrap px-4 pb-4 sm:px-5">
+      <div className="hidden md:block responsive-table-wrap px-4 pb-4 sm:px-5">
         <table className="w-full min-w-[640px] text-left text-sm" data-testid="rep-sales-trend">
           <thead>
             <tr className="border-b border-[var(--border)] text-[var(--ink-muted)]">
@@ -196,7 +196,7 @@ export function RepSalesTrendTable({
       </div>
 
       {/* Mobile cards */}
-      <div className="divide-y divide-[var(--border)] lg:hidden" data-testid="rep-sales-trend-mobile">
+      <div className="divide-y divide-[var(--border)] md:hidden" data-testid="rep-sales-trend-mobile">
         {ranked.map((p, index) => (
           <ListRow
             key={p.repId}

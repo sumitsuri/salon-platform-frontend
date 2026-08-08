@@ -225,7 +225,7 @@ export function GuestVoiceReviewsTable({
           <p className="p-6 text-sm text-muted-foreground">{t("noReviewsMatchFilters")}</p>
         ) : (
           <>
-            <div className="lg:hidden divide-y divide-[var(--border)]" data-testid="guest-voice-mobile-list">
+            <div className="md:hidden divide-y divide-[var(--border)]" data-testid="guest-voice-mobile-list">
               {filtered.map((review) => {
                 const tone = ratingTone(review.overallRating);
                 return (
@@ -273,7 +273,7 @@ export function GuestVoiceReviewsTable({
               })}
             </div>
 
-            <div className="hidden lg:block responsive-table-wrap">
+            <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {filtered.map((review) => {
                   const tone = ratingTone(review.overallRating);

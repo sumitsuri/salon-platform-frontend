@@ -291,7 +291,7 @@ export function BookingsHistoryPanel({
         </p>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="mobile-stat-grid mobile-stat-grid--sm-3 gap-3">
         <StatCard label={t("revenuePage")} value={formatCurrency(totalRevenue)} icon={IndianRupee} accent="brand" />
         <StatCard label={t("completed")} value={completed.length} icon={CheckCircle2} accent="emerald" />
         <StatCard label={t("active")} value={active.length} icon={Clock} accent="amber" />

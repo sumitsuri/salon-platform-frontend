@@ -12,13 +12,14 @@ interface InsightsTeaserProps {
   data?: RecommendationsResponse;
   loading?: boolean;
   href: string;
+  previewCount?: number;
 }
 
-export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
+export function InsightsTeaser({ data, loading, href, previewCount = 3 }: InsightsTeaserProps) {
   const t = useTranslations("components.insightsTeaser");
   const tCommon = useTranslations("common");
   const total = countInsights(data);
-  const top = flattenInsights(data).slice(0, 2);
+  const top = flattenInsights(data).slice(0, previewCount);
 
   return (
     <PanelShell
@@ -57,8 +58,13 @@ export function InsightsTeaser({ data, loading, href }: InsightsTeaserProps) {
                   }
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{item.title}</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-2">{item.message}</p>
+                  <p className="font-semibold text-sm text-[var(--text-primary)] leading-snug">{item.title}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-2 leading-relaxed">{item.message}</p>
+                  {item.metricLabel && item.metricValue ? (
+                    <p className="text-xs font-semibold text-[var(--brand-text)] mt-1.5 tabular-nums">
+                      {item.metricLabel}: {item.metricValue}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <StatusBadge status={item.severity} className="shrink-0 max-w-[4.75rem] truncate" />

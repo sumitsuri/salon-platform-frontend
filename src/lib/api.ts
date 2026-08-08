@@ -476,6 +476,19 @@ export const api = {
     }),
   getActiveMembership: (customerId: string) =>
     request<MembershipSubscription | null>(`/api/v1/memberships/customers/${customerId}/active`),
+  listActiveMemberships: (params: MembershipListParams) => {
+    const search = new URLSearchParams();
+    if (params.branchId) search.set("branchId", params.branchId);
+    if (params.q) search.set("q", params.q);
+    if (params.phone) search.set("phone", params.phone);
+    if (params.card) search.set("card", params.card);
+    if (params.planId) search.set("planId", params.planId);
+    if (params.endsBefore) search.set("endsBefore", params.endsBefore);
+    if (params.endsAfter) search.set("endsAfter", params.endsAfter);
+    if (params.page != null) search.set("page", String(params.page));
+    if (params.size != null) search.set("size", String(params.size));
+    return request<PageResult<MembershipSubscription>>(`/api/v1/memberships/subscriptions/active?${search}`);
+  },
 
   applyBookingPromo: (id: string, data: { couponId?: string | null; offerId?: string | null; clearPromo?: boolean }) =>
     request<Booking>(`/api/v1/bookings/${id}/promotions`, { method: "POST", body: JSON.stringify(data) }),
@@ -1520,6 +1533,18 @@ export interface CreateMembershipPlanRequest {
   scopeIds?: string[];
   branchIds?: string[];
   status?: PromoStatus;
+}
+
+export interface MembershipListParams {
+  branchId?: string;
+  q?: string;
+  phone?: string;
+  card?: string;
+  planId?: string;
+  endsBefore?: string;
+  endsAfter?: string;
+  page?: number;
+  size?: number;
 }
 
 export interface MembershipSubscription {

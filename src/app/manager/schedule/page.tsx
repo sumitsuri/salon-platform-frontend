@@ -511,7 +511,7 @@ export default function ManagerSchedulePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+      <div className="nav-tile-grid gap-2 sm:gap-3">
         <StatCard label={t("freeNow")} value={data?.freeStaffCount ?? "—"} icon={Users} accent="emerald" />
         <StatCard label={t("busyNow")} value={data?.busyStaffCount ?? "—"} icon={Clock3} accent="amber" />
         <StatCard
