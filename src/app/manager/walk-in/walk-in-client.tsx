@@ -6,15 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
-  Trash2,
-  Plus,
   CreditCard,
   Clock,
   Receipt,
   UserPlus,
-  Star,
-  Search,
   ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  X,
 } from "lucide-react";
 import {
   api,
@@ -22,7 +21,6 @@ import {
   Booking,
   BranchServiceItem,
   MembershipSubscription,
-  StaffItem,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { isValidIndianMobile, normalizeIndianMobile, digitsOnly } from "@/lib/phone";
@@ -58,6 +56,12 @@ import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
 import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPanel";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
+import { WalkInCustomerChip } from "./WalkInCustomerChip";
+import { WalkInCompactSteps } from "./WalkInCompactSteps";
+import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
+import { WalkInCartPanel } from "./WalkInCartPanel";
+import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
+import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 
 type Screen = "hub" | "flow";
 type HubTab = "open" | "history";
@@ -65,17 +69,10 @@ type Step = 1 | 2 | 3;
 type DiscountKind = "" | "FLAT" | "PERCENT";
 type PaymentMode = "CASH" | "UPI" | "CARD" | "SPLIT";
 
-interface CartItem {
-  branchServiceId: string;
-  serviceName: string;
-  basePrice: number;
-  priceExtra: number;
-  variablePricing: boolean;
-  staffId: string;
-}
+interface CartItem extends WalkInCartItem {}
 
 function cartLinePrice(c: CartItem) {
-  return c.basePrice + (c.priceExtra || 0);
+  return walkInCartLinePrice(c);
 }
 
 function normalizeCartItem(
@@ -164,10 +161,22 @@ export default function WalkInPage() {
   const [draftOffer, setDraftOffer] = useState<WalkInDraft | null>(null);
   const [draftHandled, setDraftHandled] = useState(false);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
+  const [cartSheetOpen, setCartSheetOpen] = useState(false);
+  const [addedToast, setAddedToast] = useState<string | null>(null);
 
   const lookupPhoneRef = useRef<string>("");
   const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
   const billingLocked = !!paidInvoiceId;
+
+  useEffect(() => {
+    if (!addedToast) return;
+    const id = setTimeout(() => setAddedToast(null), 2200);
+    return () => clearTimeout(id);
+  }, [addedToast]);
+
+  useEffect(() => {
+    if (step !== 2) setCartSheetOpen(false);
+  }, [step]);
 
   useEffect(() => {
     if (!branchId) return;
@@ -246,7 +255,7 @@ export default function WalkInPage() {
   const { data: applicablePromos = [] } = useQuery({
     queryKey: ["applicable-promos", branchId],
     queryFn: () => api.getApplicablePromos(branchId),
-    enabled: !!branchId && screen === "flow" && step >= 2,
+    enabled: !!branchId && screen === "flow" && step === 3,
   });
 
   const {
@@ -684,6 +693,12 @@ export default function WalkInPage() {
     ]);
     pushRecentService(branchId, s.id);
     setRecentServiceIds(getRecentServiceIds(branchId));
+    setAddedToast(s.serviceName);
+  }
+
+  function applyStylistToAll(staffId: string) {
+    if (!staffId) return;
+    setCart((prev) => prev.map((c) => ({ ...c, staffId })));
   }
 
   function toggleFavorite(serviceId: string) {
@@ -869,10 +884,16 @@ export default function WalkInPage() {
 
   const promoLocked = !!selectedCouponId || !!selectedOfferId;
   const manualDiscountActive = !!billDiscountType && Number(billDiscountValue) > 0;
+  const stylistsRequired = staff.length > 0;
+  const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
+  const cartTotalDisplay = formatMoney(
+    cartHasFreshBill && billPreview ? billPreview.grandTotal : cartTotals.estimatedGrand,
+    localeKit
+  );
 
   if (screen === "hub") {
     return (
-      <div className="space-y-4 w-full max-w-6xl mx-auto min-w-0 overflow-x-clip">
+      <div className="space-y-4 w-full max-w-6xl mx-auto min-w-0 max-w-full">
         <PageHeader
           title={t("visitsTitle")}
           subtitle={t("visitsSubtitle")}
@@ -1020,7 +1041,7 @@ export default function WalkInPage() {
   }
 
   return (
-    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full overflow-x-clip">
+    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
       <PageHeader
         title={bookingId ? t("editVisit") : t("title")}
         subtitle={customerName || user?.branchName}
@@ -1041,8 +1062,10 @@ export default function WalkInPage() {
         }
       />
 
-      <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
-      <MissionStrip />
+      <div className="hidden md:block">
+        <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
+      </div>
+      <WalkInCompactSteps steps={steps} current={step} />
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
       {draftRestoredNotice && step === 1 && (
         <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
@@ -1104,20 +1127,27 @@ export default function WalkInPage() {
             disabled={!!bookingId}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              placeholder={t("societyPlaceholder")}
-              value={society}
-              onChange={(e) => setSociety(e.target.value)}
-              className={inputClass}
-              disabled={!!bookingId}
-            />
-            <input
-              placeholder={t("flatPlaceholder")}
-              value={flat}
-              onChange={(e) => setFlat(e.target.value)}
-              className={inputClass}
-              disabled={!!bookingId}
-            />
+            <details className="sm:col-span-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2">
+              <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)] touch-manipulation py-1">
+                {t("addAddressOptional")}
+              </summary>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 pb-1">
+                <input
+                  placeholder={t("societyPlaceholder")}
+                  value={society}
+                  onChange={(e) => setSociety(e.target.value)}
+                  className={inputClass}
+                  disabled={!!bookingId}
+                />
+                <input
+                  placeholder={t("flatPlaceholder")}
+                  value={flat}
+                  onChange={(e) => setFlat(e.target.value)}
+                  className={inputClass}
+                  disabled={!!bookingId}
+                />
+              </div>
+            </details>
           </div>
 
           {membership && (
@@ -1160,405 +1190,193 @@ export default function WalkInPage() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-3 min-w-0">
+          {addedToast && (
+            <div
+              role="status"
+              className="fixed left-1/2 top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.75rem)] z-50 -translate-x-1/2 max-w-[min(100vw-2rem,20rem)] rounded-xl bg-[var(--text-primary)] px-4 py-2.5 text-sm font-medium text-[var(--surface)] shadow-lg animate-in fade-in"
+            >
+              {t("serviceAdded", { name: addedToast })}
+            </div>
+          )}
+
+          <WalkInCustomerChip name={customerName} phone={phone} onEdit={() => goToStep(1)} />
+
           {membership && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
               {t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })}
             </div>
           )}
 
-          <Card className="space-y-3">
-            <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {t("applyPromo")}
-            </p>
-            <select
-              value={selectedCouponId}
-              onChange={(e) => onCouponChange(e.target.value)}
-              className={selectClass}
-              disabled={manualDiscountActive}
-            >
-              <option value="">{t("noCoupon")}</option>
-              {coupons.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} · {c.name} (
-                  {c.discountType === "PERCENT" ? `${c.discountValue}%` : formatCurrency(c.discountValue, localeKit)})
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedOfferId}
-              onChange={(e) => onOfferChange(e.target.value)}
-              className={selectClass}
-              disabled={!!selectedCouponId || manualDiscountActive}
-            >
-              <option value="">{t("noOffer")}</option>
-              {offers.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name} (
-                  {o.discountType === "PERCENT" ? `${o.discountValue}%` : formatCurrency(o.discountValue, localeKit)})
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[var(--text-tertiary)]">{t("xorHint")}</p>
+          <div className="flex flex-col md:flex-row md:gap-4 md:items-start min-w-0">
+            <div className="flex-1 min-w-0 flex flex-col min-h-[calc(100dvh-17rem)] md:min-h-[calc(100dvh-12rem)] max-h-[calc(100dvh-17rem)] md:max-h-[calc(100dvh-10rem)]">
+              <WalkInServiceCatalog
+                serviceQuery={serviceQuery}
+                onServiceQueryChange={setServiceQuery}
+                recentServices={recentServices}
+                favoriteServices={favoriteServices}
+                favoriteServiceIds={favoriteServiceIds}
+                topCategories={topCategories}
+                catalogTop={catalogTop}
+                onCatalogTopChange={setCatalogTop}
+                filteredServices={filteredServices}
+                localeKit={localeKit}
+                onAddService={addService}
+                onToggleFavorite={toggleFavorite}
+              />
+            </div>
 
-            <div className={cn("pt-2 border-t border-[var(--border)] space-y-2", promoLocked && "opacity-60")}>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                {t("manualDiscount")}
-              </p>
-              <p className="text-xs text-[var(--text-tertiary)]">{t("manualDiscountHint")}</p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={billDiscountType}
-                  onChange={(e) => setBillDiscountType(e.target.value as DiscountKind)}
-                  className={selectClass}
-                  disabled={promoLocked}
-                >
-                  <option value="">{t("noManualDiscount")}</option>
-                  <option value="PERCENT">{t("percentOff")}</option>
-                  <option value="FLAT">{t("flatOff")}</option>
-                </select>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min="0.01"
-                  step="0.01"
-                  placeholder={billDiscountType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
-                  value={billDiscountValue}
-                  onChange={(e) => setBillDiscountValue(e.target.value)}
-                  className={inputClass}
-                  disabled={promoLocked || !billDiscountType}
+            <div className="hidden md:block w-full md:w-[min(22rem,36%)] shrink-0 self-start">
+              <WalkInCartPanel
+                variant="panel"
+                cart={cart}
+                staff={staff}
+                localeKit={localeKit}
+                estimatedGrand={cartTotals.estimatedGrand}
+                cartHasFreshBill={cartHasFreshBill}
+                billPreview={billPreview}
+                saving={saving}
+                stylistsRequired={stylistsRequired}
+                stylistsComplete={stylistsComplete}
+                onRemove={removeFromCart}
+                onUpdateStaff={updateStaff}
+                onApplyStylistToAll={applyStylistToAll}
+                onUpdatePriceExtra={updatePriceExtra}
+                onSaveOpen={() => void saveOpenVisit()}
+                onProceedToBill={() => void proceedToBill()}
+              />
+            </div>
+          </div>
+
+          <div className="md:hidden">
+            {cartSheetOpen && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-40 bg-black/45"
+                  aria-label={tCommon("close")}
+                  onClick={() => setCartSheetOpen(false)}
                 />
-              </div>
-            </div>
-          </Card>
-
-          <Card padding={false}>
-            <div className="px-4 py-3 border-b border-[var(--border)] space-y-3">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-                <input
-                  type="search"
-                  value={serviceQuery}
-                  onChange={(e) => setServiceQuery(e.target.value)}
-                  placeholder={t("searchServices")}
-                  className={`${inputClass} pl-10 py-3 text-sm`}
-                />
-              </div>
-
-              {!serviceQuery && recentServices.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                    {t("recentServices")}
-                  </p>
-                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {recentServices.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => addService(s)}
-                        className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] transition touch-manipulation"
-                      >
-                        {s.serviceName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!serviceQuery && favoriteServices.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                    {t("favorites")}
-                  </p>
-                  <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {favoriteServices.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => addService(s)}
-                        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:border-amber-900 dark:text-amber-300 hover:opacity-80 transition touch-manipulation"
-                      >
-                        <Star className="w-3 h-3 fill-current" />
-                        {s.serviceName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!serviceQuery && topCategories.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  <button
-                    type="button"
-                    onClick={() => setCatalogTop("")}
-                    className={cn(
-                      "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition border touch-manipulation",
-                      !catalogTop
-                        ? "bg-[var(--brand)] text-[var(--brand-on-brand)] border-transparent"
-                        : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--brand)]"
-                    )}
-                  >
-                    {t("allCategories")}
-                  </button>
-                  {topCategories.map((top) => (
+                <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3 shrink-0">
+                    <p className="font-bold text-[var(--text-primary)]">{t("viewCart")}</p>
                     <button
-                      key={top.id}
                       type="button"
-                      onClick={() => setCatalogTop(top.id)}
-                      className={cn(
-                        "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition border touch-manipulation",
-                        catalogTop === top.id
-                          ? "bg-[var(--brand)] text-[var(--brand-on-brand)] border-transparent"
-                          : "bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--brand)]"
-                      )}
+                      onClick={() => setCartSheetOpen(false)}
+                      className="p-2 rounded-lg hover:bg-[var(--surface-muted)] touch-manipulation"
+                      aria-label={tCommon("close")}
                     >
-                      {top.name}
+                      <X className="w-5 h-5" />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="p-3 grid grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 max-h-[min(50vh,32rem)] sm:max-h-[min(55vh,36rem)] overflow-y-auto overscroll-contain">
-              {filteredServices.length === 0 ? (
-                <p className="col-span-full text-sm text-[var(--text-secondary)] text-center py-6">
-                  {t("noServicesMatch")}
-                </p>
-              ) : (
-                filteredServices.map((s) => {
-                  const isFav = favoriteServiceIds.includes(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      data-testid="walk-in-service-card"
-                      onClick={() => addService(s)}
-                      className="flex items-center justify-between gap-2 p-3 min-h-[3.25rem] rounded-xl border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] transition text-left active:scale-[0.98] touch-manipulation min-w-0"
-                    >
-                      <div className="min-w-0 flex items-start gap-1.5">
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          aria-label={isFav ? t("unstarFavorite") : t("starFavorite")}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(s.id);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              toggleFavorite(s.id);
-                            }
-                          }}
-                          className="p-0.5 -m-0.5 mt-0.5 shrink-0 cursor-pointer"
-                        >
-                          <Star
-                            className={cn(
-                              "w-3.5 h-3.5",
-                              isFav ? "fill-amber-400 text-amber-400" : "text-[var(--text-tertiary)]"
-                            )}
-                          />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{s.serviceName}</p>
-                          <p className="text-xs text-[var(--text-tertiary)] truncate">
-                            {[s.parentCategoryName, s.categoryName].filter(Boolean).join(" · ")}
-                            {s.durationMinutes ? ` · ${s.durationMinutes}m` : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span className="font-bold text-sm text-[var(--brand-text)]">
-                          {s.variablePricing
-                            ? t("priceFrom", { price: formatCurrency(s.price, localeKit) })
-                            : formatCurrency(s.price, localeKit)}
-                        </span>
-                        <Plus className="w-4 h-4 text-[var(--brand-text)]" />
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </Card>
-
-          <Card className="sticky bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom)))] md:bottom-4 z-10 border border-[var(--border)] bg-[var(--surface)] space-y-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                {t("cart", { count: cart.length })}
-              </p>
-              <div className="text-right">
-                <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-                  {cartHasFreshBill ? t("billTotal") : t("estimatedTotal")}
-                </p>
-                <p className="text-lg font-bold text-[var(--text-primary)]">
-                  {formatMoney(cartHasFreshBill && billPreview ? billPreview.grandTotal : cartTotals.estimatedGrand, localeKit)}
-                </p>
-              </div>
-            </div>
-            {cart.length === 0 ? (
-              <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
-            ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto" data-testid="walk-in-cart">
-                {cart.map((item, idx) => (
-                  <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
-                    <div className="flex justify-between items-start gap-2">
-                      <p className="font-medium text-sm">{item.serviceName}</p>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-semibold text-[var(--brand-text)]">
-                          {formatCurrency(cartLinePrice(item), localeKit)}
-                        </span>
-                        <button
-                          onClick={() => removeFromCart(idx)}
-                          className="text-[var(--text-tertiary)] hover:text-red-500 p-1.5 -m-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    {item.variablePricing && (
-                      <label className="mt-2 block text-xs text-[var(--text-secondary)]">
-                        {t("priceExtra")}
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={item.priceExtra || ""}
-                          onChange={(e) => updatePriceExtra(idx, e.target.value)}
-                          className={`${inputClass} mt-1 py-2 min-h-10`}
-                          placeholder="0"
-                        />
-                      </label>
-                    )}
-                    <select
-                      data-testid="walk-in-stylist-select"
-                      value={item.staffId}
-                      onChange={(e) => updateStaff(idx, e.target.value)}
-                      className={`${selectClass} mt-2 py-2.5 min-h-12`}
-                    >
-                      <option value="">{t("selectStylist")}</option>
-                      {staff.map((st: StaffItem) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name}
-                        </option>
-                      ))}
-                    </select>
                   </div>
-                ))}
-                {staff.length > 0 && <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylistAutoAssigned")}</p>}
-              </div>
+                  <div className="overflow-y-auto overscroll-contain px-3 py-3 min-h-0 flex-1">
+                    <WalkInCartPanel
+                      variant="sheet"
+                      cart={cart}
+                      staff={staff}
+                      localeKit={localeKit}
+                      estimatedGrand={cartTotals.estimatedGrand}
+                      cartHasFreshBill={cartHasFreshBill}
+                      billPreview={billPreview}
+                      saving={saving}
+                      stylistsRequired={stylistsRequired}
+                      stylistsComplete={stylistsComplete}
+                      onRemove={removeFromCart}
+                      onUpdateStaff={updateStaff}
+                      onApplyStylistToAll={applyStylistToAll}
+                      onUpdatePriceExtra={updatePriceExtra}
+                      onSaveOpen={() => void saveOpenVisit()}
+                      onProceedToBill={() => void proceedToBill()}
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => void saveOpenVisit()}
-                disabled={cart.length === 0 || saving}
-                className={`${btnSecondary} w-full min-h-12`}
-              >
-                {saving ? tCommon("processing") : t("saveOpenVisit")}
-              </button>
-              <button
-                type="button"
-                onClick={() => void proceedToBill()}
-                disabled={cart.length === 0 || saving}
-                className={`${btnPrimary} w-full min-h-12`}
-              >
-                {saving ? tCommon("processing") : t("continueBill")}
-              </button>
+            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+              {cart.length === 0 ? (
+                <p className="text-center text-sm text-[var(--text-tertiary)] py-2">{t("cartEmpty")}</p>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setCartSheetOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/60 px-3 py-2.5 touch-manipulation"
+                  >
+                    <ShoppingBag className="w-5 h-5 shrink-0 text-[var(--brand-text)]" />
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-xs font-semibold text-[var(--text-secondary)]">
+                        {t("cart", { count: cart.length })}
+                      </p>
+                      <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
+                        {cartTotalDisplay}
+                      </p>
+                    </div>
+                    <ChevronUp className="w-5 h-5 shrink-0 text-[var(--text-tertiary)]" />
+                  </button>
+                  {!stylistsComplete && stylistsRequired && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400 px-1">{t("assignStylistError")}</p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void proceedToBill()}
+                    disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                    className={`${btnPrimary} w-full min-h-12`}
+                  >
+                    {saving ? tCommon("processing") : t("continueBill")}
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="text-[11px] text-[var(--text-tertiary)] text-center">{t("saveOpenVisitHint")}</p>
-          </Card>
+            <div className="h-[calc(7.5rem+env(safe-area-inset-bottom))]" aria-hidden />
+          </div>
         </div>
       )}
 
       {step === 3 && billPreview && (
-        <Card className="space-y-5 max-w-3xl xl:max-w-4xl mx-auto w-full pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="space-y-4 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 md:pb-6">
+          <div className="hero-banner rounded-2xl p-4 sm:p-5 shadow-lg">
+            <p className="hero-muted text-xs font-semibold uppercase tracking-wider">{customerName || t("namePlaceholder")}</p>
+            <p className="text-3xl sm:text-4xl font-bold tabular-nums mt-1">{formatMoney(displayGrandTotal, localeKit)}</p>
+            <p className="hero-subtitle text-sm mt-1">{tCommon("grandTotal")}</p>
+          </div>
+
           {branch?.gstin && (
             <p className="text-xs text-[var(--text-tertiary)]">{t("gstinLabel", { gstin: branch.gstin })}</p>
           )}
 
           {!billingLocked && (
-            <>
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                  {t("applyPromo")}
-                </p>
-                <select
-                  value={selectedCouponId}
-                  onChange={(e) => onCouponChange(e.target.value)}
-                  className={selectClass}
-                  disabled={manualDiscountActive || applyBillDiscount.isPending}
-                >
-                  <option value="">{t("noCoupon")}</option>
-                  {coupons.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} · {c.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedOfferId}
-                  onChange={(e) => onOfferChange(e.target.value)}
-                  className={cn(selectClass, selectedCouponId && "opacity-60")}
-                  disabled={!!selectedCouponId || manualDiscountActive || applyBillDiscount.isPending}
-                >
-                  <option value="">{t("noOffer")}</option>
-                  {offers.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={cn("space-y-2", promoLocked && "opacity-60")}>
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-                  {t("manualDiscount")}
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <select
-                    value={billDiscountType}
-                    onChange={(e) => setBillDiscountType(e.target.value as DiscountKind)}
-                    className={selectClass}
-                    disabled={promoLocked}
-                  >
-                    <option value="">{t("noManualDiscount")}</option>
-                    <option value="PERCENT">{t("percentOff")}</option>
-                    <option value="FLAT">{t("flatOff")}</option>
-                  </select>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0.01"
-                    step="0.01"
-                    placeholder={billDiscountType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
-                    value={billDiscountValue}
-                    onChange={(e) => setBillDiscountValue(e.target.value)}
-                    className={inputClass}
-                    disabled={promoLocked || !billDiscountType}
+            <Card className="p-0 overflow-hidden">
+              <details className="group" open={!!selectedCouponId || !!selectedOfferId || manualDiscountActive}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 font-semibold text-sm touch-manipulation">
+                  <span>{t("adjustments")}</span>
+                  <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-[var(--border)] px-4 py-4">
+                  <WalkInPromoAdjustments
+                    coupons={coupons}
+                    offers={offers}
+                    localeKit={localeKit}
+                    selectedCouponId={selectedCouponId}
+                    selectedOfferId={selectedOfferId}
+                    billDiscountType={billDiscountType}
+                    billDiscountValue={billDiscountValue}
+                    promoLocked={promoLocked}
+                    manualDiscountActive={manualDiscountActive}
+                    onCouponChange={onCouponChange}
+                    onOfferChange={onOfferChange}
+                    onBillDiscountTypeChange={setBillDiscountType}
+                    onBillDiscountValueChange={setBillDiscountValue}
+                    onApplyManualDiscount={applyManualDiscount}
+                    onClearManualDiscount={clearManualDiscount}
+                    applyPending={applyBillDiscount.isPending}
                   />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={applyManualDiscount}
-                    disabled={promoLocked || !billDiscountType || applyBillDiscount.isPending}
-                    className={`${btnSecondary} flex-1 min-h-11`}
-                  >
-                    {t("applyManualDiscount")}
-                  </button>
-                  {manualDiscountActive && (
-                    <button type="button" onClick={clearManualDiscount} className={`${btnSecondary} min-h-11`}>
-                      {t("clearDiscount")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
+              </details>
+            </Card>
           )}
 
-          <div className="bg-[var(--surface-muted)] rounded-xl p-4 space-y-3 text-sm">
+          <Card className="space-y-5">
             <div>
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
                 {t("servicesReview")}
@@ -1721,7 +1539,6 @@ export default function WalkInPage() {
                 <span className="text-[var(--brand-text)]">{formatMoney(displayGrandTotal, localeKit)}</span>
               </div>
             </div>
-          </div>
 
           {!billingLocked && (
             <>
@@ -1862,22 +1679,49 @@ export default function WalkInPage() {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={submitPayment}
-              disabled={
-                !taxValid ||
-                payBooking.isPending ||
-                applyPromo.isPending ||
-                applyBillDiscount.isPending ||
-                (paymentMode === "SPLIT" && !splitValid)
-              }
-              className={`${btnPrimary} w-full py-3.5 min-h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
-            >
-              {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
-            </button>
+            <>
+              <div className="hidden md:block">
+                <button
+                  type="button"
+                  onClick={submitPayment}
+                  disabled={
+                    !taxValid ||
+                    payBooking.isPending ||
+                    applyPromo.isPending ||
+                    applyBillDiscount.isPending ||
+                    (paymentMode === "SPLIT" && !splitValid)
+                  }
+                  className={`${btnPrimary} w-full py-3.5 min-h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
+                >
+                  {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
+                </button>
+              </div>
+            </>
           )}
         </Card>
+
+          {!billingLocked && (
+            <div className="md:hidden">
+              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+                <button
+                  type="button"
+                  onClick={submitPayment}
+                  disabled={
+                    !taxValid ||
+                    payBooking.isPending ||
+                    applyPromo.isPending ||
+                    applyBillDiscount.isPending ||
+                    (paymentMode === "SPLIT" && !splitValid)
+                  }
+                  className={`${btnPrimary} w-full py-3.5 min-h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
+                >
+                  {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
+                </button>
+              </div>
+              <div className="h-[calc(5.5rem+env(safe-area-inset-bottom))]" aria-hidden />
+            </div>
+          )}
+        </div>
       )}
 
       {step === 3 && !billPreview && (

@@ -304,7 +304,13 @@
       "unstarFavorite": "Remove from favorites",
       "offlineDraftSaved": "Draft saved on this device",
       "anyAvailable": "Any available",
-      "resetTax": "Reset to calculated GST"
+      "resetTax": "Reset to calculated GST",
+      "addAddressOptional": "Add address (optional)",
+      "editCustomer": "Edit",
+      "sameStylistForAll": "Same stylist for all services",
+      "serviceAdded": "Added · {name}",
+      "viewCart": "Review cart",
+      "adjustments": "Coupons & discounts"
     },
     "memberships": {
       "title": "Sell membership",

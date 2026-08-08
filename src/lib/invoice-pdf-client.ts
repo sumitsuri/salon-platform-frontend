@@ -9,11 +9,25 @@ export function isMobileDevice(): boolean {
   return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
 
-function openPdfBlobUrl(url: string) {
-  const opened = window.open(url, "_blank", "noopener,noreferrer");
-  if (!opened) {
-    window.location.assign(url);
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+/** Trigger download/open via a transient anchor — never mutates the current route. */
+function deliverBlobViaAnchor(url: string, filename: string, mode: "download" | "new-tab"): void {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.rel = "noopener noreferrer";
+  anchor.style.display = "none";
+  if (mode === "new-tab") {
+    anchor.target = "_blank";
+  } else {
+    anchor.download = filename;
   }
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 export async function deliverInvoicePdf(
@@ -51,21 +65,16 @@ export async function deliverInvoicePdf(
   }
 
   const url = URL.createObjectURL(blob);
+  const revokeLater = () => window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 
-  // iOS/Android ignore <a download> for blob URLs — open the PDF so the user can save or share.
-  if (isMobileDevice()) {
-    openPdfBlobUrl(url);
-    window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+  // iOS ignores <a download> on blob URLs — open in a new tab so the walk-in flow stays put.
+  if (isIOS() || (action !== "download" && isMobileDevice())) {
+    deliverBlobViaAnchor(url, filename, "new-tab");
+    revokeLater();
     return { method: "open" };
   }
 
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = "noopener";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  deliverBlobViaAnchor(url, filename, "download");
+  revokeLater();
   return { method: "download" };
 }
