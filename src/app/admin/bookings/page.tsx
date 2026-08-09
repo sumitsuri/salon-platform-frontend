@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
+import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import {
   PageHeader,
   Card,
@@ -478,6 +479,15 @@ export default function AdminBookingsPage() {
 
             {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
               <p className="text-sm text-[var(--text-secondary)]">{tMgr("invoiceUnavailable")}</p>
+            )}
+
+            {selected.status === "COMPLETED" && (
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                  {tMgr("reviewInviteSection")}
+                </p>
+                <BookingReviewInviteSection visitId={selected.id} enabled />
+              </div>
             )}
 
             {selected.status !== "COMPLETED" && (

@@ -332,15 +332,15 @@ export default function WalkInPage() {
     return () => clearTimeout(handle);
   }, [pendingMembershipPlanId, bookingId, billingLocked, screen, step, tCommon]);
 
-  // Sync CGST/SGST from the server-calculated bill unless the manager is mid-edit in Advanced.
+  // CGST/SGST default to 0 for walk-in billing; managers set amounts in Advanced tax when needed.
   useEffect(() => {
-    if (!billPreview) return;
+    if (!billPreview || billingLocked || bookingStatus === "COMPLETED") return;
     if (taxAdvanced && taxOverridden) return;
-    setCgstInput(String(billPreview.cgstAmount ?? 0));
-    setSgstInput(String(billPreview.sgstAmount ?? 0));
+    setCgstInput("0");
+    setSgstInput("0");
     setTaxOverridden(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to new billPreview identities from the server
-  }, [billPreview]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when bill identity changes, not on every preview field
+  }, [billPreview?.taxableAmount, billPreview?.subtotal, billingLocked, bookingStatus]);
 
   const hydrateFromBooking = useCallback((b: Booking) => {
     setBookingId(b.id);
@@ -358,6 +358,13 @@ export default function WalkInPage() {
       setBillDiscountValue("");
     }
     setBillPreview(b.billPreview ?? null);
+    if (b.status === "COMPLETED" && b.billPreview) {
+      setCgstInput(String(b.billPreview.cgstAmount ?? 0));
+      setSgstInput(String(b.billPreview.sgstAmount ?? 0));
+    } else if (b.status !== "COMPLETED") {
+      setCgstInput("0");
+      setSgstInput("0");
+    }
     setCart(
       (b.lines || []).map((l) => {
         const svc = servicesById.get(l.branchServiceId);
@@ -573,18 +580,15 @@ export default function WalkInPage() {
 
   const cgstNum = Number(cgstInput);
   const sgstNum = Number(sgstInput);
-  const taxValid = !taxOverridden || (Number.isFinite(cgstNum) && cgstNum >= 0 && Number.isFinite(sgstNum) && sgstNum >= 0);
+  const taxValid = Number.isFinite(cgstNum) && cgstNum >= 0 && Number.isFinite(sgstNum) && sgstNum >= 0;
 
   const displayGrandTotal = useMemo(() => {
     if (!billPreview) return 0;
     const fee = billPreview.membershipFeeAmount ?? 0;
-    if (taxOverridden) {
-      const cgst = Number.isFinite(cgstNum) ? cgstNum : 0;
-      const sgst = Number.isFinite(sgstNum) ? sgstNum : 0;
-      return Math.round((billPreview.taxableAmount + cgst + sgst + fee) * 100) / 100;
-    }
-    return billPreview.grandTotal;
-  }, [billPreview, cgstNum, sgstNum, taxOverridden]);
+    const cgst = Number.isFinite(cgstNum) && cgstNum >= 0 ? cgstNum : 0;
+    const sgst = Number.isFinite(sgstNum) && sgstNum >= 0 ? sgstNum : 0;
+    return Math.round((billPreview.taxableAmount + cgst + sgst + fee) * 100) / 100;
+  }, [billPreview, cgstNum, sgstNum]);
 
   const splitSum = useMemo(
     () => splitRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
@@ -607,6 +611,11 @@ export default function WalkInPage() {
       setReceiptQueued(!!booking.receiptQueued);
       setReviewInvitationUrl(booking.reviewInvitationUrl ?? "");
       setReviewSubmittedRating(null);
+      if (booking.billPreview) {
+        setBillPreview(booking.billPreview);
+        setCgstInput(String(booking.billPreview.cgstAmount ?? 0));
+        setSgstInput(String(booking.billPreview.sgstAmount ?? 0));
+      }
       setPaymentSuccess(t("paymentComplete"));
       clearWalkInDraft(branchId);
       void queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
@@ -636,10 +645,8 @@ export default function WalkInPage() {
     } else if (reference) {
       payload.reference = reference;
     }
-    if (taxOverridden) {
-      payload.cgstAmount = Number((Number.isFinite(cgstNum) ? cgstNum : 0).toFixed(2));
-      payload.sgstAmount = Number((Number.isFinite(sgstNum) ? sgstNum : 0).toFixed(2));
-    }
+    payload.cgstAmount = Number((Number.isFinite(cgstNum) ? cgstNum : 0).toFixed(2));
+    payload.sgstAmount = Number((Number.isFinite(sgstNum) ? sgstNum : 0).toFixed(2));
     payBooking.mutate(payload);
   }
 
@@ -1631,13 +1638,13 @@ export default function WalkInPage() {
                         />
                       </label>
                     </div>
-                    {taxOverridden && billPreview && (
+                    {taxOverridden && (
                       <button
                         type="button"
                         className="text-xs font-semibold text-[var(--brand-text)] hover:underline"
                         onClick={() => {
-                          setCgstInput(String(billPreview.cgstAmount ?? 0));
-                          setSgstInput(String(billPreview.sgstAmount ?? 0));
+                          setCgstInput("0");
+                          setSgstInput("0");
                           setTaxOverridden(false);
                         }}
                       >

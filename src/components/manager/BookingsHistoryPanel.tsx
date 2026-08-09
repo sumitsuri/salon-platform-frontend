@@ -11,6 +11,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
+import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import {
   Card,
   StatusBadge,
@@ -520,6 +521,15 @@ export function BookingsHistoryPanel({
 
             {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
               <p className="text-sm text-[var(--text-secondary)]">{t("invoiceUnavailable")}</p>
+            )}
+
+            {selected.status === "COMPLETED" && (
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                  {t("reviewInviteSection")}
+                </p>
+                <BookingReviewInviteSection visitId={selected.id} enabled={selected.status === "COMPLETED"} />
+              </div>
             )}
 
             {selected.status !== "COMPLETED" && !isOpenStatus(selected.status) && (
