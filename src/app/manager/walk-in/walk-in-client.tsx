@@ -754,6 +754,9 @@ export default function WalkInPage() {
     pushRecentService(branchId, s.id);
     setRecentServiceIds(getRecentServiceIds(branchId));
     setAddedToast(s.serviceName);
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      setCartSheetOpen(true);
+    }
   }
 
   function applyStylistToAll(staffId: string) {
@@ -815,13 +818,41 @@ export default function WalkInPage() {
       : {};
   }
 
+  async function resolveCustomerId(): Promise<string> {
+    if (customerId) return customerId;
+    const normalized = normalizeIndianMobile(phone);
+    if (!normalized || !customerName.trim()) {
+      throw new Error(t("customerRequiredBeforeSave"));
+    }
+    const c = await api.createCustomer({
+      name: customerName.trim(),
+      phone: normalized,
+      society: society || undefined,
+      flatUnit: flat || undefined,
+    });
+    setCustomerId(c.id);
+    pushRecentCustomer(branchId, {
+      phone: normalized,
+      name: customerName.trim(),
+      customerId: c.id,
+      society,
+      flat,
+    });
+    setRecentCustomers(getRecentCustomers(branchId));
+    return c.id;
+  }
+
   async function persistServices(keepOpen: boolean): Promise<Booking> {
     if (cart.length === 0) {
       throw new Error(t("cartEmpty"));
     }
 
+    if (staff.length === 0) {
+      throw new Error(t("noStaffConfigured"));
+    }
+
     let workingCart = cart;
-    if (staff.length > 0 && cart.some((c) => !c.staffId)) {
+    if (cart.some((c) => !c.staffId)) {
       workingCart = cart.map((c) => (c.staffId ? c : { ...c, staffId: defaultStaffId(cart) }));
       setCart(workingCart);
     }
@@ -841,9 +872,11 @@ export default function WalkInPage() {
       return synced;
     }
 
+    const resolvedCustomerId = await resolveCustomerId();
+
     return api.createBooking({
       branchId,
-      customerId,
+      customerId: resolvedCustomerId,
       lines: toLinePayload(workingCart),
       couponId: selectedCouponId || undefined,
       offerId: selectedOfferId || undefined,
@@ -860,10 +893,13 @@ export default function WalkInPage() {
       const b = await persistServices(true);
       hydrateFromBooking(b);
       clearWalkInDraft(branchId);
-      await refetchOpenVisits();
+      setCartSheetOpen(false);
+      setHubTab("open");
       setScreen("hub");
       setStep(1);
       router.replace("/manager/walk-in");
+      await queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("failed"));
     } finally {
@@ -1263,6 +1299,10 @@ export default function WalkInPage() {
             <Callout variant="success" title={t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })} />
           )}
 
+          {staff.length === 0 && (
+            <Callout variant="warning" title={t("noStaffConfigured")} />
+          )}
+
           <div className="flex flex-col md:flex-row md:gap-4 md:items-start min-w-0">
             <div className="flex-1 min-w-0 flex flex-col min-h-[calc(100dvh-17rem)] md:min-h-[calc(100dvh-12rem)] max-h-[calc(100dvh-17rem)] md:max-h-[calc(100dvh-10rem)]">
               <WalkInServiceCatalog
@@ -1365,11 +1405,16 @@ export default function WalkInPage() {
                     <ShoppingBag className="w-5 h-5 shrink-0 text-[var(--brand-text)]" />
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-xs font-semibold text-[var(--text-secondary)]">
-                        {t("cart", { count: cart.length })}
+                        {t("viewCart")} · {t("cart", { count: cart.length })}
                       </p>
                       <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
                         {cartTotalDisplay}
                       </p>
+                      {stylistsRequired && !stylistsComplete && (
+                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5">
+                          {t("assignStylistsHint")}
+                        </p>
+                      )}
                     </div>
                     <ChevronUp className="w-5 h-5 shrink-0 text-[var(--text-tertiary)]" />
                   </button>
@@ -1384,10 +1429,18 @@ export default function WalkInPage() {
                   >
                     {saving ? tCommon("processing") : t("continueBill")}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void saveOpenVisit()}
+                    disabled={cart.length === 0 || saving || staff.length === 0}
+                    className={`${btnSecondary} w-full min-h-11`}
+                  >
+                    {saving ? tCommon("processing") : t("saveOpenVisit")}
+                  </button>
                 </div>
               )}
             </div>
-            <div className="h-[calc(7.5rem+env(safe-area-inset-bottom))]" aria-hidden />
+            <div className="h-[calc(10.5rem+env(safe-area-inset-bottom))]" aria-hidden />
           </div>
         </div>
       )}

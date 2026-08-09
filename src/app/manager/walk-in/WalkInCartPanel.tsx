@@ -137,19 +137,22 @@ export function WalkInCartPanel({
                   </label>
                 )}
                 {staff.length > 0 && (
-                  <select
-                    data-testid="walk-in-stylist-select"
-                    value={item.staffId}
-                    onChange={(e) => onUpdateStaff(idx, e.target.value)}
-                    className={`${selectClass} mt-2 py-2.5 min-h-11`}
-                  >
-                    <option value="">{t("selectStylist")}</option>
-                    {staff.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="mt-2 block text-xs">
+                    <span className="font-semibold text-[var(--text-secondary)]">{t("stylistPerService")}</span>
+                    <select
+                      data-testid="walk-in-stylist-select"
+                      value={item.staffId}
+                      onChange={(e) => onUpdateStaff(idx, e.target.value)}
+                      className={`${selectClass} mt-1 py-2.5 min-h-11`}
+                    >
+                      <option value="">{t("selectStylist")}</option>
+                      {staff.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 )}
               </div>
             ))}
