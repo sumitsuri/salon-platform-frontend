@@ -14,6 +14,7 @@ import {
 } from "@/lib/date-range";
 import { selectClass } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { DropdownPortal } from "@/components/DropdownPortal";
 
 interface DateRangeSelectorProps {
   value: ProductDateRange;
@@ -31,19 +32,26 @@ export function DateRangeSelector({
   const t = useTranslations("components.dateRange");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
-  const ref = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft(value);
   }, [value]);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    if (!open) return;
+
+    function handlePointerDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
 
   const resolved = resolveProductDateRange(value);
   const label = `${t(`periods.${value.preset}`)} · ${formatDateRangeLabel(resolved.from, resolved.to)}`;
@@ -54,8 +62,7 @@ export function DateRangeSelector({
 
   function applyPreset(preset: DateRangePreset) {
     if (preset === "custom") {
-      const seed = resolvePresetRange("last_60_days");
-      setDraft({ ...seed, preset: "custom" });
+      setDraft((prev) => ({ ...prev, preset: "custom" }));
       return;
     }
     const { from, to } = resolvePresetRange(preset);
@@ -70,13 +77,18 @@ export function DateRangeSelector({
     }
   }
 
+  const presetOptions = DATE_RANGE_PRESET_ORDER.filter((preset) => preset !== "custom");
+
   return (
-    <div ref={ref} className={cn("relative w-full max-w-full min-w-0 sm:max-w-sm", className)} data-testid={testId}>
+    <div ref={rootRef} className={cn("relative w-full max-w-full min-w-0 sm:max-w-sm", className)} data-testid={testId}>
       <button
+        ref={triggerRef}
         type="button"
         data-testid={`${testId}-trigger`}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-[var(--brand)] touch-manipulation"
+        className="app-select-trigger flex min-h-11 w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-[var(--brand)] touch-manipulation"
       >
         <Calendar className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
         <span className="flex-1 truncate text-left">{label}</span>
@@ -85,78 +97,102 @@ export function DateRangeSelector({
         />
       </button>
 
-      {open && (
-        <div className="absolute left-0 right-0 z-50 mt-1 w-full min-w-0 sm:left-auto sm:right-0 sm:min-w-[16rem] sm:w-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg max-h-[min(70dvh,24rem)] overflow-y-auto overscroll-contain">
-          {DATE_RANGE_PRESET_ORDER.map((preset) => {
-            const active = value.preset === preset;
-            const preview = preset !== "custom" ? resolvePresetRange(preset) : null;
-            return (
-              <button
-                key={preset}
-                type="button"
-                data-testid={`${testId}-preset-${preset}`}
-                onClick={() => applyPreset(preset)}
-                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] touch-manipulation"
-              >
-                <div
-                  className={cn(
-                    "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                    active ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--border)]",
-                  )}
+      <DropdownPortal open={open} anchorRef={triggerRef} align="end" minWidth={288}>
+        <div
+          ref={menuRef}
+          className="app-dropdown-menu flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-xl"
+        >
+          <div className="max-h-[min(36dvh,12.5rem)] overflow-y-auto overscroll-contain py-1">
+            {presetOptions.map((preset) => {
+              const active = value.preset === preset;
+              const preview = resolvePresetRange(preset);
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  data-testid={`${testId}-preset-${preset}`}
+                  onClick={() => applyPreset(preset)}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] touch-manipulation"
                 >
-                  {active && <Check className="h-3 w-3 text-white" />}
-                </div>
-                <span className="flex flex-col items-start text-left">
-                  <span>{presetLabel(preset)}</span>
-                  {preview && (
+                  <div
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                      active ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--border)]"
+                    )}
+                  >
+                    {active && <Check className="h-3 w-3 text-white" />}
+                  </div>
+                  <span className="flex min-w-0 flex-col items-start text-left">
+                    <span>{presetLabel(preset)}</span>
                     <span className="text-[10px] text-[var(--ink-muted)]">
                       {formatDateRangeLabel(preview.from, preview.to)}
                     </span>
-                  )}
-                </span>
-              </button>
-            );
-          })}
-
-          {(draft.preset === "custom" || value.preset === "custom") && (
-            <div className="space-y-2 border-t border-[var(--border)] px-3 py-3">
-              <p className="text-xs font-medium text-[var(--ink-muted)]">{t("customTitle")}</p>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block text-xs">
-                  {t("customFrom")}
-                  <input
-                    type="date"
-                    data-testid={`${testId}-from`}
-                    className={`${selectClass} mt-1`}
-                    value={draft.from}
-                    max={draft.to || todayIsoDate()}
-                    onChange={(e) => setDraft({ ...draft, from: e.target.value, preset: "custom" })}
-                  />
-                </label>
-                <label className="block text-xs">
-                  {t("customTo")}
-                  <input
-                    type="date"
-                    data-testid={`${testId}-to`}
-                    className={`${selectClass} mt-1`}
-                    value={draft.to}
-                    min={draft.from || undefined}
-                    max={todayIsoDate()}
-                    onChange={(e) => setDraft({ ...draft, to: e.target.value, preset: "custom" })}
-                  />
-                </label>
-              </div>
-              <button
-                type="button"
-                className="w-full rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-medium text-white hover:opacity-90 touch-manipulation"
-                onClick={applyCustom}
+                  </span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              data-testid={`${testId}-preset-custom`}
+              onClick={() => applyPreset("custom")}
+              className="flex w-full items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] touch-manipulation"
+            >
+              <div
+                className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
+                  value.preset === "custom" || draft.preset === "custom"
+                    ? "border-[var(--brand)] bg-[var(--brand)]"
+                    : "border-[var(--border)]"
+                )}
               >
-                {t("applyRange")}
-              </button>
+                {(value.preset === "custom" || draft.preset === "custom") && (
+                  <Check className="h-3 w-3 text-white" />
+                )}
+              </div>
+              <span>{presetLabel("custom")}</span>
+            </button>
+          </div>
+
+          <div className="app-dropdown-custom border-t border-[var(--border)] bg-[var(--surface-muted)]/45 px-3 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
+              {t("customTitle")}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                {t("customFrom")}
+                <input
+                  type="date"
+                  data-testid={`${testId}-from`}
+                  className={`${selectClass} mt-1 min-h-11`}
+                  value={draft.from}
+                  max={draft.to || todayIsoDate()}
+                  onChange={(e) => setDraft({ ...draft, from: e.target.value, preset: "custom" })}
+                />
+              </label>
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                {t("customTo")}
+                <input
+                  type="date"
+                  data-testid={`${testId}-to`}
+                  className={`${selectClass} mt-1 min-h-11`}
+                  value={draft.to}
+                  min={draft.from || undefined}
+                  max={todayIsoDate()}
+                  onChange={(e) => setDraft({ ...draft, to: e.target.value, preset: "custom" })}
+                />
+              </label>
             </div>
-          )}
+            <button
+              type="button"
+              data-testid={`${testId}-apply-custom`}
+              className="mt-2.5 w-full min-h-11 rounded-lg bg-[var(--brand)] px-3 py-2.5 text-xs font-semibold text-[var(--brand-on-brand)] hover:opacity-90 touch-manipulation"
+              onClick={applyCustom}
+            >
+              {t("applyRange")}
+            </button>
+          </div>
         </div>
-      )}
+      </DropdownPortal>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Check } from "lucide-react";
 import { Branch } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { DropdownPortal } from "@/components/DropdownPortal";
 
 interface BranchMultiSelectProps {
   branches: Branch[];
@@ -13,25 +14,48 @@ interface BranchMultiSelectProps {
   className?: string;
 }
 
+function resolveBranchLabel(
+  branches: Branch[],
+  selected: string[],
+  t: (key: string, values?: { count: number }) => string
+): string {
+  if (branches.length === 0) return t("selectBranches");
+  if (selected.length === 0) return t("selectBranches");
+
+  if (selected.length === 1) {
+    const branch = branches.find((b) => b.id === selected[0]);
+    if (branch) return branch.name;
+  }
+
+  if (selected.length === branches.length) {
+    return branches.length === 1 ? branches[0].name : t("allBranches");
+  }
+
+  return t("branchCount", { count: selected.length });
+}
+
 export function BranchMultiSelect({ branches, selected, onChange, className }: BranchMultiSelectProps) {
   const t = useTranslations("components.branchMultiSelect");
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    if (!open) return;
 
-  const allSelected = selected.length === branches.length;
-  const label = allSelected
-    ? t("allBranches")
-    : selected.length === 0
-      ? t("selectBranches")
-      : t("branchCount", { count: selected.length });
+    function handlePointerDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [open]);
+
+  const allSelected = branches.length > 0 && selected.length === branches.length;
+  const label = useMemo(() => resolveBranchLabel(branches, selected, t), [branches, selected, t]);
 
   function toggle(id: string) {
     if (selected.includes(id)) {
@@ -46,53 +70,67 @@ export function BranchMultiSelect({ branches, selected, onChange, className }: B
   }
 
   return (
-    <div className={cn("relative w-full max-w-full min-w-0", className)} ref={ref}>
+    <div className={cn("relative w-full max-w-full min-w-0", className)} ref={rootRef}>
       <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full min-w-0 max-w-full px-3.5 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text-primary)] hover:border-[var(--brand)] shadow-sm transition"
+        className="app-select-trigger flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] shadow-sm transition hover:border-[var(--brand)] touch-manipulation"
       >
-        <span className="flex-1 text-left truncate">{label}</span>
-        <ChevronDown className={cn("w-4 h-4 text-[var(--text-tertiary)] shrink-0 transition", open && "rotate-180")} />
+        <span className="flex-1 truncate text-left">{label}</span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--text-tertiary)] transition", open && "rotate-180")} />
       </button>
 
-      {open && (
-        <div className="absolute left-0 right-0 lg:right-auto lg:min-w-[16rem] mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-lg z-50 py-1 max-h-64 overflow-y-auto">
-          <button
-            onClick={toggleAll}
-            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] border-b border-[var(--border)] text-[var(--text-primary)]"
-          >
-            <div
-              className={cn(
-                "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                allSelected ? "bg-[var(--brand)] border-[var(--brand)]" : "border-[var(--border-strong)]"
-              )}
+      <DropdownPortal open={open} anchorRef={triggerRef} minWidth={240}>
+        <div
+          ref={menuRef}
+          role="listbox"
+          className="app-dropdown-menu max-h-[min(70dvh,18rem)] overflow-y-auto overscroll-contain rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-xl"
+        >
+          {branches.length > 1 && (
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="flex w-full items-center gap-2 border-b border-[var(--border)] px-3 py-2.5 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)] touch-manipulation"
             >
-              {allSelected && <Check className="w-3 h-3 text-[var(--brand-on-brand)]" />}
-            </div>
-            <span className="font-medium">{t("allBranches")}</span>
-          </button>
+              <div
+                className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                  allSelected ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--border-strong)]"
+                )}
+              >
+                {allSelected && <Check className="h-3 w-3 text-[var(--brand-on-brand)]" />}
+              </div>
+              <span className="font-medium">{t("allBranches")}</span>
+            </button>
+          )}
           {branches.map((b) => {
             const checked = selected.includes(b.id);
             return (
               <button
                 key={b.id}
+                type="button"
+                role="option"
+                aria-selected={checked}
                 onClick={() => toggle(b.id)}
-                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] text-[var(--text-primary)]"
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-muted)] touch-manipulation"
               >
                 <div
                   className={cn(
-                    "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                    checked ? "bg-[var(--brand)] border-[var(--brand)]" : "border-[var(--border-strong)]"
+                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                    checked ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--border-strong)]"
                   )}
                 >
-                  {checked && <Check className="w-3 h-3 text-[var(--brand-on-brand)]" />}
+                  {checked && <Check className="h-3 w-3 text-[var(--brand-on-brand)]" />}
                 </div>
-                <span className="truncate">{b.name}</span>
+                <span className="truncate text-left">{b.name}</span>
               </button>
             );
           })}
         </div>
-      )}
+      </DropdownPortal>
     </div>
   );
 }

@@ -32,6 +32,18 @@
   --app-bg: #eef1f6;
   --shadow-color: rgba(15, 23, 42, 0.06);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* CEO dashboard overview — neutral executive shell (brand accent only) */
+  --dashboard-shell-bg: #ffffff;
+  --dashboard-shell-border: #dbe3ee;
+  --dashboard-header-from: #1e293b;
+  --dashboard-header-to: #0f172a;
+  --dashboard-header-ink: #f8fafc;
+  --dashboard-header-muted: #94a3b8;
+  --dashboard-toolbar-bg: #f8fafc;
+  --dashboard-toolbar-border: #e8edf4;
+  --dashboard-kpi-header-bg: #f8fafc;
+  --dashboard-control-bg: #ffffff;
+  --dashboard-control-border: #dbe3ee;
 }
 
 [data-theme="dark"] {
@@ -53,6 +65,17 @@
   --sidebar-bg: #1e293b;
   --app-bg: #0b1120;
   --shadow-color: rgba(0, 0, 0, 0.3);
+  --dashboard-shell-bg: #1e293b;
+  --dashboard-shell-border: #334155;
+  --dashboard-header-from: #0f172a;
+  --dashboard-header-to: #020617;
+  --dashboard-header-ink: #f1f5f9;
+  --dashboard-header-muted: #64748b;
+  --dashboard-toolbar-bg: #0f172a;
+  --dashboard-toolbar-border: #334155;
+  --dashboard-kpi-header-bg: #0f172a;
+  --dashboard-control-bg: #334155;
+  --dashboard-control-border: #475569;
 }
 
 html {
@@ -136,6 +159,303 @@ body {
 @media (min-width: 420px) {
   .period-metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Enterprise dashboard overview — command bar + KPI strip */
+.dashboard-overview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+  border-radius: 0.875rem;
+  border: 1px solid var(--dashboard-shell-border);
+  background: var(--dashboard-shell-bg);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-command-bar {
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-command-bar-header {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.875rem 0.875rem 0 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--dashboard-header-to) 88%, black);
+  background: linear-gradient(180deg, var(--dashboard-header-from) 0%, var(--dashboard-header-to) 100%);
+  color: var(--dashboard-header-ink);
+}
+
+.dashboard-command-bar-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--brand) 85%, white) 0%,
+    color-mix(in srgb, var(--brand) 35%, transparent) 48%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.dashboard-command-bar-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--brand) 55%, var(--dashboard-header-ink));
+}
+
+.dashboard-command-bar-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--dashboard-header-ink);
+}
+
+@media (min-width: 640px) {
+  .dashboard-command-bar-title {
+    font-size: 1.3125rem;
+  }
+}
+
+.dashboard-command-bar-subtitle {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--dashboard-header-muted);
+}
+
+.dashboard-command-bar-period-label {
+  margin-bottom: 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dashboard-header-muted);
+}
+
+@media (min-width: 640px) {
+  .dashboard-command-bar-period-label {
+    text-align: right;
+  }
+}
+
+.dashboard-command-bar-period > div > div > button,
+.dashboard-command-bar-period button[data-testid$="-trigger"] {
+  min-height: 2.5rem;
+  border: 1px solid var(--dashboard-control-border);
+  background: var(--dashboard-control-bg);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
+.dashboard-command-bar-period > div > div > button:hover,
+.dashboard-command-bar-period button[data-testid$="-trigger"]:hover {
+  border-color: var(--border-strong);
+  background: var(--dashboard-control-bg);
+}
+
+.dashboard-command-bar-period button[data-testid$="-trigger"] svg:first-of-type {
+  color: var(--brand-text);
+}
+
+.dashboard-command-bar-period button[data-testid$="-trigger"] svg:last-of-type {
+  color: var(--text-tertiary);
+}
+
+.dashboard-command-bar-toolbar .dashboard-section-label {
+  margin-bottom: 0.375rem;
+}
+
+.dashboard-command-bar-toolbar .dashboard-section-label--end {
+  text-align: right;
+}
+
+.dashboard-section-label {
+  margin-bottom: 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.dashboard-kpi-strip-header .dashboard-section-label {
+  margin-bottom: 0;
+}
+
+.dashboard-command-bar-toolbar [class*="BranchMultiSelect"] button,
+.dashboard-command-bar-toolbar > div:first-child button {
+  min-height: 2.5rem;
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-command-bar-accent {
+  width: 3px;
+  align-self: stretch;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--brand), color-mix(in srgb, var(--brand) 45%, transparent));
+  flex-shrink: 0;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+.dashboard-command-bar-toolbar {
+  position: relative;
+  z-index: 20;
+  background: var(--dashboard-toolbar-bg);
+  border-top: 1px solid var(--dashboard-toolbar-border);
+  border-bottom: 1px solid var(--dashboard-toolbar-border);
+}
+
+.dashboard-command-bar-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .dashboard-command-bar-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}
+
+.app-dropdown-menu {
+  width: 100%;
+}
+
+.app-dropdown-portal {
+  pointer-events: auto;
+}
+
+.app-select-trigger {
+  color: var(--text-primary);
+}
+
+.dashboard-kpi-strip {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border: none;
+  border-radius: 0 0 0.875rem 0.875rem;
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.dashboard-kpi-strip-header {
+  border-bottom: 1px solid var(--dashboard-toolbar-border);
+  background: var(--dashboard-toolbar-bg);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--brand) 70%, var(--dashboard-header-from));
+}
+
+.dashboard-kpi-strip-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.dashboard-kpi-strip-cell {
+  background: var(--dashboard-kpi-header-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-kpi-strip-cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.dashboard-kpi-strip-cell-value {
+  margin-top: 0.375rem;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+@media (min-width: 640px) {
+  .dashboard-kpi-strip-cell-value {
+    font-size: 1.375rem;
+  }
+}
+
+.dashboard-quick-link {
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-quick-link:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.dashboard-quick-link-icon {
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.dashboard-quick-link:hover .dashboard-quick-link-icon {
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand) 25%, var(--border));
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+}
+
+/* Enterprise KPI strip — single row with dividers (CEO dashboard) */
+.dashboard-kpi-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-kpi-strip-cell:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+
+.dashboard-kpi-strip-cell:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+@media (min-width: 768px) {
+  .dashboard-kpi-strip-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .dashboard-kpi-strip-cell {
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+
+  .dashboard-kpi-strip-cell:nth-child(odd) {
+    border-right: 1px solid var(--border);
+  }
+
+  .dashboard-kpi-strip-cell:last-child {
+    border-right: none;
   }
 }
 

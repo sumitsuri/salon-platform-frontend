@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { TrendingUp, Users, Receipt, Tag, Building2, Target } from "lucide-react";
+import { Building2, Target } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
@@ -14,19 +14,23 @@ import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
-import { PageHeader, StatCard, Card, ListRow, EmptyState, QuickAction, PageLoader } from "@/components/ui";
+import { Card, ListRow, EmptyState, PageLoader } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
-import { ProductDateRange, dashboardSecondaryRange, formatDateRangeLabel, getDefaultDateRange } from "@/lib/date-range";
+import { ProductDateRange, dashboardSecondaryRange, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
-import { DashboardHero, EnterpriseTableShell, LabeledProgressBar } from "@/components/enterprise-ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
-
+import {
+  DashboardCommandBar,
+  DashboardQuickLink,
+  DashboardKpiStrip,
+  DashboardOverviewPanel,
+  EnterpriseTableShell,
+  LabeledProgressBar,
+} from "@/components/enterprise-ui";
 
 export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.dateRange.periods");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [initialized, setInitialized] = useState(false);
@@ -146,6 +150,8 @@ export default function AdminDashboardPage() {
     enabled: initialized && selectedBranches.length > 0 && !!inventoryMonth,
   });
 
+  const periodSubtitle = isFetching && !isLoading ? tAdmin("updating") : undefined;
+
   if (!initialized || branchesLoading) {
     return <PageLoader label={tAdmin("loadingDashboard")} />;
   }
@@ -160,50 +166,54 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="page-stack space-y-5">
-      <PageHeader
-        title={t("title")}
-        subtitle={isFetching && !isLoading ? tAdmin("updating") : tPeriods(dateRange.preset)}
-        action={
-          <DateRangeSelector value={dateRange} onChange={setDateRange} testId="admin-dashboard-date-range" />
-        }
-      />
+    <div className="page-stack space-y-4">
+      <DashboardOverviewPanel>
+        <DashboardCommandBar
+          eyebrow={t("overviewEyebrow")}
+          title={t("title")}
+          subtitle={periodSubtitle}
+          action={
+            <DateRangeSelector value={dateRange} onChange={setDateRange} testId="admin-dashboard-date-range" />
+          }
+          filters={
+            <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+          }
+          links={
+            <>
+              <DashboardQuickLink href="/admin/employees" icon={Target} label={t("employeesQuick")} />
+              <DashboardQuickLink href="/admin/branches" icon={Building2} label={t("organizationQuick")} />
+            </>
+          }
+        />
 
-      <MissionStrip variant="accent" />
-
-      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <QuickAction href="/admin/employees" icon={Target} label={t("employeesQuick")} description={t("employeesQuickDesc")} />
-        <QuickAction href="/admin/branches" icon={Building2} label={t("organizationQuick")} description={t("organizationQuickDesc")} />
-      </div>
+        {selectedBranches.length === 0 ? null : isLoading || !dashboard ? (
+          <DashboardKpiStrip
+            loading
+            headerLabel={t("keyMetricsLabel")}
+            items={[
+              { label: t("totalRevenue"), value: "…" },
+              { label: t("visits"), value: "…" },
+              { label: t("avgTicket"), value: "…" },
+              { label: t("discounts"), value: "…" },
+            ]}
+          />
+        ) : (
+          <DashboardKpiStrip
+            headerLabel={t("keyMetricsLabel")}
+            items={[
+              { label: t("totalRevenue"), value: formatCurrency(dashboard.totalRevenue) },
+              { label: t("visits"), value: dashboard.totalVisits },
+              { label: t("avgTicket"), value: formatCurrency(dashboard.avgTicketSize) },
+              { label: t("discounts"), value: formatCurrency(dashboard.totalDiscounts) },
+            ]}
+          />
+        )}
+      </DashboardOverviewPanel>
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
-      ) : isLoading || !dashboard ? (
-        <PageLoader label={tAdmin("loadingDashboard")} />
-      ) : (
+      ) : isLoading || !dashboard ? null : (
         <>
-          <DashboardHero
-            eyebrow={tPeriods(dateRange.preset)}
-            title={t("title")}
-            subtitle={formatDateRangeLabel(dateRange.from, dateRange.to)}
-            metric={formatCurrency(dashboard.totalRevenue)}
-            metricLabel={t("totalRevenue")}
-            badge={
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/20">
-                {t("visits")}: {dashboard.totalVisits}
-              </span>
-            }
-          />
-
-          <div className="mobile-stat-grid mobile-stat-grid--md-4 gap-3 xl:gap-4">
-            <StatCard label={t("totalRevenue")} value={formatCurrency(dashboard.totalRevenue)} icon={TrendingUp} accent="emerald" />
-            <StatCard label={t("visits")} value={dashboard.totalVisits} icon={Users} accent="brand" />
-            <StatCard label={t("avgTicket")} value={formatCurrency(dashboard.avgTicketSize)} icon={Receipt} accent="violet" />
-            <StatCard label={t("discounts")} value={formatCurrency(dashboard.totalDiscounts)} icon={Tag} accent="amber" />
-          </div>
-
           <div className="grid gap-4 xl:grid-cols-2">
             <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
             <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />

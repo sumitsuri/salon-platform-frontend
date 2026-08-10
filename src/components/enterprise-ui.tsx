@@ -97,6 +97,118 @@ export function PulseStatCard({
 
 /* ── Dashboard hero banner ── */
 
+export function DashboardCommandBar({
+  title,
+  subtitle,
+  eyebrow,
+  periodLabel,
+  branchesLabel,
+  shortcutsLabel,
+  action,
+  filters,
+  links,
+  className,
+}: {
+  title: string;
+  subtitle?: string;
+  eyebrow?: string;
+  periodLabel?: string;
+  branchesLabel?: string;
+  shortcutsLabel?: string;
+  action?: React.ReactNode;
+  filters?: React.ReactNode;
+  links?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("dashboard-command-bar min-w-0 max-w-full", className)}>
+      <div className="dashboard-command-bar-header flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="dashboard-command-bar-accent hidden sm:block" aria-hidden />
+          <div className="min-w-0 flex-1">
+            {eyebrow && <p className="dashboard-command-bar-eyebrow">{eyebrow}</p>}
+            <h1 className="dashboard-command-bar-title">{title}</h1>
+            {subtitle && <p className="dashboard-command-bar-subtitle">{subtitle}</p>}
+          </div>
+        </div>
+        {action && (
+          <div className="dashboard-command-bar-period shrink-0 w-full sm:w-auto min-w-0 sm:max-w-[20rem]">
+            <div>{action}</div>
+          </div>
+        )}
+      </div>
+      {(filters || links) && (
+        <div className="dashboard-command-bar-toolbar grid grid-cols-1 gap-2.5 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+          {filters && <div className="min-w-0 w-full sm:max-w-xs">{filters}</div>}
+          {links && <div className="dashboard-command-bar-links min-w-0 w-full sm:w-auto">{links}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DashboardQuickLink({
+  href,
+  icon: Icon,
+  label,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="dashboard-quick-link inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold transition active:scale-[0.98] touch-manipulation sm:w-auto sm:justify-start"
+    >
+      <span className="dashboard-quick-link-icon flex h-6 w-6 items-center justify-center rounded-md shrink-0">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+      </span>
+      {label}
+    </Link>
+  );
+}
+
+export function DashboardOverviewPanel({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <section className={cn("dashboard-overview-panel", className)}>{children}</section>;
+}
+
+export function DashboardKpiStrip({
+  items,
+  loading,
+  headerLabel,
+  className,
+}: {
+  items: { label: string; value: string | number }[];
+  loading?: boolean;
+  headerLabel?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("dashboard-kpi-strip min-w-0 max-w-full", className)}>
+      {headerLabel && (
+        <div className="dashboard-kpi-strip-header px-4 py-3">
+          <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+        </div>
+      )}
+      <div className="dashboard-kpi-strip-grid">
+        {items.map((item) => (
+          <div key={item.label} className="dashboard-kpi-strip-cell min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4">
+            <p className="dashboard-kpi-strip-cell-label truncate">{item.label}</p>
+            <p className="dashboard-kpi-strip-cell-value truncate">{loading ? "…" : item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardHero({
   eyebrow,
   title,
