@@ -217,7 +217,7 @@ export default function WalkInPage() {
       const name = s.parentCategoryName || s.categoryName || "Other";
       if (!map.has(id)) map.set(id, name);
     }
-    const preferred = ["Men", "Women", "Kids", "Shared"];
+    const preferred = ["Men", "Women", "Kids", "Shared", "Spa"];
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => {

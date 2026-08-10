@@ -72,7 +72,7 @@ export function groupWalkInSubCategories(items: WalkInSubCategory[]): WalkInSubC
     }
     group.items.push(item);
   }
-  const preferred = ["Men", "Women", "Kids", "Shared"];
+  const preferred = ["Men", "Women", "Kids", "Shared", "Spa"];
   return [...groups.values()].sort((a, b) => {
     const ai = preferred.indexOf(a.parentName);
     const bi = preferred.indexOf(b.parentName);
