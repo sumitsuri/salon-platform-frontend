@@ -302,8 +302,50 @@ html[lang="pa-IN"] body {
   min-width: 0;
 }
 
-/* Contain decorative login backgrounds on phones */
-@media (max-width: 767px) {
+/* Login — mobile sheet, tablet, and PWA safe areas */
+.pravaah-login-page {
+  min-height: 100dvh;
+}
+
+.pravaah-login-mobile {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.pravaah-login-sheet {
+  background: var(--surface);
+  border-radius: 28px 28px 0 0;
+  box-shadow:
+    0 -1px 0 rgba(15, 23, 42, 0.06),
+    0 -16px 48px rgba(15, 23, 42, 0.12);
+}
+
+.pravaah-login-mobile-orb-1 {
+  width: 220px;
+  height: 220px;
+  top: -48px;
+  right: -40px;
+  opacity: 0.45;
+}
+
+.pravaah-login-mobile-orb-2 {
+  width: 180px;
+  height: 180px;
+  top: 18%;
+  left: -56px;
+  opacity: 0.35;
+}
+
+.pravaah-login-mobile-orb-3 {
+  width: 140px;
+  height: 140px;
+  bottom: 72%;
+  right: 10%;
+  opacity: 0.3;
+}
+
+/* Contain decorative login backgrounds on phones & tablets */
+@media (max-width: 1023px) {
   .pravaah-login-hero {
     max-width: 100%;
     overflow-x: clip;

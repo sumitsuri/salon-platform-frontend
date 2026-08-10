@@ -54,7 +54,8 @@
     "loginFailed": "Login failed",
     "demoAccounts": "Demo accounts",
     "welcomeBack": "Welcome back",
-    "formHint": "Sign in to your connected workspace"
+    "formHint": "Sign in to your connected workspace",
+    "workspaceSecurity": "Enterprise-grade workspace security"
   },
   "brand": {
     "name": "Antrahq",

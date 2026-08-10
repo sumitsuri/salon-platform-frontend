@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
-import { AlertBanner, btnPrimary, inputClass } from "@/components/ui";
-import { LoginHeroPanel } from "@/components/brand/LoginHeroPanel";
-import { AntrahqLogo } from "@/components/brand/AntrahqLogo";
+import { LoginFormCard } from "@/components/brand/LoginFormCard";
+import { LoginMobileShell } from "@/components/brand/LoginMobileShell";
+import { LoginHeroPanel, LoginHeroTablet } from "@/components/brand/LoginHeroPanel";
 import { isLocalDev } from "@/lib/env";
 
 export default function LoginPage() {
@@ -46,59 +46,37 @@ export default function LoginPage() {
     }
   }
 
+  const formProps = {
+    email,
+    password,
+    error,
+    sessionExpired,
+    loading,
+    onEmailChange: setEmail,
+    onPasswordChange: setPassword,
+    onSubmit: handleSubmit,
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--app-bg)] w-full max-w-full overflow-x-clip">
-      <div className="flex-1 flex flex-col lg:flex-row min-h-screen w-full max-w-full min-w-0 overflow-x-clip">
+    <div className="pravaah-login-page w-full max-w-full overflow-x-clip">
+      <LoginMobileShell {...formProps} />
+
+      <div className="hidden min-h-[100dvh] flex-col bg-[var(--app-bg)] md:flex md:flex-row">
+        <LoginHeroTablet />
         <LoginHeroPanel />
 
-        <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12 min-h-0 min-w-0 relative overflow-hidden pravaah-login-form-side">
+        <main className="relative flex flex-1 flex-col justify-center overflow-x-clip overflow-y-auto px-8 py-8 lg:p-12 min-w-0 pravaah-login-form-side">
           <div className="pravaah-form-orb pravaah-form-orb-1" aria-hidden />
           <div className="pravaah-form-orb pravaah-form-orb-2" aria-hidden />
 
-          <div className="w-full max-w-sm mp-animate-in relative z-10">
-            <div className="lg:hidden mb-6 flex justify-center">
-              <AntrahqLogo size="md" variant="dark" />
-            </div>
+          <div className="relative z-10 mx-auto w-full max-w-sm mp-animate-in">
+            <LoginFormCard {...formProps} />
 
-            <div className="pravaah-form-card bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-lg p-6 sm:p-8">
-              <h2 className="text-lg font-bold text-[var(--text-primary)] mb-0.5">{t("welcomeBack")}</h2>
-              <p className="text-sm text-[var(--text-secondary)] mb-6">{t("formHint")}</p>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1.5">{t("email")}</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1.5">{t("password")}</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                    className={inputClass}
-                  />
-                </div>
-                {sessionExpired && <AlertBanner variant="warning">{t("sessionExpired")}</AlertBanner>}
-                {error && <AlertBanner variant="error">{error}</AlertBanner>}
-                <button type="submit" disabled={loading} className={`${btnPrimary} w-full shadow-md`}>
-                  {loading ? t("signingIn") : t("signIn")}
-                </button>
-              </form>
-            </div>
-
-            <p className="mt-4 text-center text-[11px] text-[var(--text-tertiary)] font-medium">{tBrand("taglineShort")}</p>
+            <p className="mt-4 text-center text-[11px] font-medium text-[var(--text-tertiary)]">{tBrand("taglineShort")}</p>
 
             {isLocalDev && (
-              <details className="mt-3 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
-                <summary className="font-semibold text-[var(--text-primary)] cursor-pointer">{t("demoAccounts")}</summary>
+              <details className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
+                <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">{t("demoAccounts")}</summary>
                 <div className="mt-2 space-y-1">
                   <p>Platform: platform@salonplatform.local / admin123</p>
                   <p>Sales rep: sales1@antrahq.local / sales123</p>
@@ -111,7 +89,7 @@ export default function LoginPage() {
               </details>
             )}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
