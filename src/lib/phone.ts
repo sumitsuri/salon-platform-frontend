@@ -17,3 +17,19 @@ export function normalizeIndianMobile(value: string): string | null {
 export function isValidIndianMobile(value: string): boolean {
   return normalizeIndianMobile(value) != null;
 }
+
+/** Optional phone: partial digits are ignored; only a full invalid 10-digit entry blocks. */
+export function optionalPhoneBlocksContinue(raw: string, phoneValid: boolean): boolean {
+  const digits = digitsOnly(raw);
+  if (digits.length === 0 || phoneValid) return false;
+  return digits.length >= 10;
+}
+
+export function shouldShowInvalidPhoneHint(
+  raw: string,
+  phoneValid: boolean,
+  phoneRequired: boolean,
+): boolean {
+  if (digitsOnly(raw).length === 0 || phoneValid) return false;
+  return phoneRequired || digitsOnly(raw).length >= 10;
+}

@@ -25,7 +25,13 @@ import {
   MembershipSubscription,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
-import { isValidIndianMobile, normalizeIndianMobile, digitsOnly } from "@/lib/phone";
+import {
+  digitsOnly,
+  isValidIndianMobile,
+  normalizeIndianMobile,
+  optionalPhoneBlocksContinue,
+  shouldShowInvalidPhoneHint,
+} from "@/lib/phone";
 import {
   getRecentServiceIds,
   pushRecentService,
@@ -1083,7 +1089,7 @@ export default function WalkInPage() {
     (customerLookupMode === "existing"
       ? existingLookupStatus !== "found" || !customerId
       : !customerName.trim() ||
-        (phoneNumberRequired ? !phoneValid : phone.length > 0 && !phoneValid));
+        (phoneNumberRequired ? !phoneValid : optionalPhoneBlocksContinue(phone, phoneValid)));
 
   async function continueFromCustomerStep() {
     setError("");
@@ -1118,7 +1124,7 @@ export default function WalkInPage() {
       setError(t("phoneInvalid"));
       return;
     }
-    if (phone.length > 0 && !phoneValid) {
+    if (optionalPhoneBlocksContinue(phone, phoneValid)) {
       setError(t("phoneInvalid"));
       return;
     }
@@ -1835,7 +1841,7 @@ export default function WalkInPage() {
                   className={inputClass}
                   disabled={!!bookingId}
                 />
-                {phone.length > 0 && !phoneValid && (
+                {shouldShowInvalidPhoneHint(phone, phoneValid, phoneNumberRequired) && (
                   <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("phoneInvalid")}</p>
                 )}
                 {!phoneNumberRequired && (
@@ -2231,7 +2237,6 @@ export default function WalkInPage() {
               <BillBreakdownRows
                 preview={billPreview}
                 localeKit={localeKit}
-                showTaxable
                 cgstDisplay={taxOverridden ? (Number.isFinite(cgstNum) ? cgstNum : 0) : undefined}
                 sgstDisplay={taxOverridden ? (Number.isFinite(sgstNum) ? sgstNum : 0) : undefined}
                 hideGrandTotal
