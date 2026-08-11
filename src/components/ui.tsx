@@ -16,7 +16,7 @@ import { PulseStatCard, PageLoader, enterpriseTableHead } from "@/components/ent
 export { PageLoader, PulseStatCard } from "@/components/enterprise-ui";
 
 export const inputClass =
-  "w-full px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm";
+  "w-full min-h-11 px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-base sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm touch-manipulation";
 
 export const selectClass = inputClass;
 
@@ -42,6 +42,7 @@ export function PageHeader({
   action,
   showBack,
   breadcrumbs: breadcrumbsOverride,
+  breadcrumbsAlwaysVisible = false,
 }: {
   title: string;
   subtitle?: string;
@@ -50,6 +51,8 @@ export function PageHeader({
   showBack?: boolean;
   /** Override auto breadcrumbs entirely */
   breadcrumbs?: BreadcrumbItem[];
+  /** When set, breadcrumbs render on all breakpoints (e.g. drill-down pages on mobile). */
+  breadcrumbsAlwaysVisible?: boolean;
 }) {
   const tCommon = useTranslations("common");
   const pathname = usePathname();
@@ -62,7 +65,11 @@ export function PageHeader({
   return (
     <div className="space-y-2 min-w-0 max-w-full">
       {breadcrumbs.length > 0 && (
-        <Breadcrumbs items={breadcrumbs} testId="page-breadcrumbs" className="hidden md:flex" />
+        <Breadcrumbs
+          items={breadcrumbs}
+          testId="page-breadcrumbs"
+          className={cn(breadcrumbsAlwaysVisible ? "flex" : "hidden md:flex")}
+        />
       )}
       {shouldShowBack && (
         <Link
@@ -346,7 +353,7 @@ export function Callout({
         {icon ? <div className="shrink-0 mt-0.5 text-[var(--text-secondary)]">{icon}</div> : null}
         <div className="min-w-0 space-y-1">
           {title ? (
-            <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug">{title}</p>
+            <p className="text-sm font-semibold text-[var(--text-primary)] leading-snug break-words">{title}</p>
           ) : null}
           {children ? (
             <div className="text-sm text-[var(--text-secondary)] leading-snug space-y-1">{children}</div>

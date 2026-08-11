@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { CreditCard, Sparkles } from "lucide-react";
 import { api, MembershipPlan, MembershipSubscription } from "@/lib/api";
 import { isValidIndianMobile, normalizeIndianMobile } from "@/lib/phone";
+import { bumpLookupGeneration, isLookupGenerationStale } from "@/lib/customer-lookup-session";
 import { cn, formatCurrency } from "@/lib/utils";
 import { SegmentedControl, inputClass, btnPrimary, btnSecondary, Callout } from "@/components/ui";
 
@@ -55,6 +56,7 @@ export function SellMembershipPanel({
     customerIdProp ? "done" : "idle"
   );
   const lookupPhoneRef = useRef(customerIdProp ? normalizeIndianMobile(phoneProp) || phoneProp : "");
+  const phoneLookupGenerationRef = useRef(0);
 
   useEffect(() => {
     setPhone(phoneProp);
@@ -98,6 +100,7 @@ export function SellMembershipPanel({
     }
 
     lookupPhoneRef.current = normalized;
+    const generationAtStart = phoneLookupGenerationRef.current;
     setLookupState("loading");
     onError?.("");
 
@@ -105,14 +108,16 @@ export function SellMembershipPanel({
     void api
       .findCustomerByPhone(normalized)
       .then((c) => {
-        if (cancelled) return;
+        if (cancelled || isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
+        if (lookupPhoneRef.current !== normalized) return;
         setCustomerId(c.id);
         setCustomerName(c.name);
         setLookupState("done");
         onCustomerResolved?.({ id: c.id, name: c.name, phone: normalized });
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
+        if (lookupPhoneRef.current !== normalized) return;
         setCustomerId("");
         setCustomerName("");
         setLookupState("done");
@@ -184,6 +189,7 @@ export function SellMembershipPanel({
             value={phone}
             onChange={(e) => {
               const next = e.target.value;
+              bumpLookupGeneration(phoneLookupGenerationRef);
               setPhone(next);
               setCustomerId("");
               setCustomerName("");

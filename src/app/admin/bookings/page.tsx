@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { FileText, Filter } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
@@ -9,6 +10,9 @@ import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
+import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
+import { adminBookingsPath } from "@/lib/navigation-scope";
+import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
 import {
   PageHeader,
   Card,
@@ -57,7 +61,9 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 }
 
 export default function AdminBookingsPage() {
+  const router = useRouter();
   const t = useTranslations("admin.bookings");
+  const tCustomers = useTranslations("customers");
   const tMgr = useTranslations("manager.bookings");
   const tSchedule = useTranslations("manager.schedule");
   const tAdmin = useTranslations("admin.common");
@@ -65,12 +71,29 @@ export default function AdminBookingsPage() {
   const tStatus = useTranslations("components.status");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
+  const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
   const filtersReady = useRef(false);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("customerId");
+    if (id) setCustomerIdFilter(id);
+  }, []);
+
+  const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
+    customerId: customerIdFilter || undefined,
+    scope: "admin",
+    currentPageLabel: t("title"),
+  });
+
+  function clearCustomerScope() {
+    setCustomerIdFilter("");
+    router.replace(adminBookingsPath());
+  }
 
   useEffect(() => {
     if (!filtersReady.current) {
@@ -128,10 +151,11 @@ export default function AdminBookingsPage() {
     refetch,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["all-bookings", debounced, amountFilter],
+    queryKey: ["all-bookings", debounced, amountFilter, customerIdFilter],
     queryFn: (page) =>
       api.getBookings({
-        customer: debounced.customer || undefined,
+        customerId: customerIdFilter || undefined,
+        customer: customerIdFilter ? undefined : debounced.customer || undefined,
         branch: debounced.branch || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
@@ -271,6 +295,20 @@ export default function AdminBookingsPage() {
           </button>
         }
       />
+
+      {isScoped && (
+        <NavigationScopeBanner
+          backHref={customerDetailHref}
+          backLabel={customer?.name ? tCommon("backTo", { page: customer.name }) : tCustomers("backToCustomers")}
+          title={customer?.name ?? tCommon("loading")}
+          subtitle={
+            customer
+              ? tCommon("showingFor", { name: customer.name })
+              : undefined
+          }
+          onClear={clearCustomerScope}
+        />
+      )}
 
       <MobileFilterPanel columns={columns} open={showFilters} />
 

@@ -14,7 +14,7 @@ export function LoginHeroTablet() {
   const t = useTranslations("brand");
 
   return (
-    <div className="pravaah-login-hero relative overflow-hidden hidden md:flex lg:hidden md:w-[42%] shrink-0 flex-col justify-center min-h-0 p-8">
+    <div className="pravaah-login-hero relative hidden min-h-[100dvh] w-[42%] max-w-md shrink-0 flex-col justify-center overflow-hidden p-6 md:flex lg:hidden sm:p-8">
       <div className="pravaah-login-bg absolute inset-0" aria-hidden />
       <div className="pravaah-orb pravaah-orb-1 opacity-40" aria-hidden />
       <div className="pravaah-orb pravaah-orb-2 opacity-35" aria-hidden />

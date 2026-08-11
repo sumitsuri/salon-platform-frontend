@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Home, UserPlus, Fingerprint, Sparkles, Scissors, Package, CreditCard, CalendarClock } from "lucide-react";
+import { Home, UserPlus, Fingerprint, Sparkles, Scissors, Package, CreditCard, CalendarClock, Contact } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -41,6 +41,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
             fabHref: "/manager/walk-in?new=1",
           },
           { href: "/manager/memberships", label: t("memberships"), shortLabel: t("member"), icon: CreditCard },
+          { href: "/manager/customers", label: t("customers"), shortLabel: t("customersShort"), icon: Contact },
         ],
       },
       {

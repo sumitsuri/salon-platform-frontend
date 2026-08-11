@@ -10,6 +10,7 @@ import {
   Sparkles,
   Scissors,
   Users,
+  Contact,
   IndianRupee,
   Package,
   UserPlus,
@@ -59,6 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         label: t("nav.sectionOperations"),
         items: [
           { href: "/admin/bookings", label: t("nav.bookings"), shortLabel: t("nav.book"), icon: ClipboardList },
+          { href: "/admin/customers", label: t("nav.customers"), shortLabel: t("nav.customersShort"), icon: Contact },
           { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
           { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },
           { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },

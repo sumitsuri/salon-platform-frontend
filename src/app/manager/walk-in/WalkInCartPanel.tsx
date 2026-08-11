@@ -12,7 +12,11 @@ interface WalkInCartPanelProps {
   cart: WalkInCartItem[];
   staff: StaffItem[];
   localeKit: TenantLocaleKit;
+  cartSubtotal: number;
+  estimatedCgst: number;
+  estimatedSgst: number;
   estimatedGrand: number;
+  gstEffective: boolean;
   cartHasFreshBill: boolean;
   billPreview: BillPreview | null;
   saving: boolean;
@@ -32,7 +36,11 @@ export function WalkInCartPanel({
   cart,
   staff,
   localeKit,
+  cartSubtotal,
+  estimatedCgst,
+  estimatedSgst,
   estimatedGrand,
+  gstEffective,
   cartHasFreshBill,
   billPreview,
   saving,
@@ -50,10 +58,16 @@ export function WalkInCartPanel({
   const t = useTranslations("manager.walkIn");
   const tCommon = useTranslations("common");
 
-  const totalDisplay = formatMoney(
-    cartHasFreshBill && billPreview ? billPreview.grandTotal : estimatedGrand,
-    localeKit
-  );
+  const useBillPreview = cartHasFreshBill && billPreview && gstEffective;
+  const servicesBase = useBillPreview
+    ? (billPreview.taxableAmount ?? billPreview.subtotal)
+    : cartSubtotal;
+  const cgst = useBillPreview ? billPreview.cgstAmount : estimatedCgst;
+  const sgst = useBillPreview ? (billPreview.sgstAmount ?? 0) : estimatedSgst;
+  const grand = useBillPreview ? billPreview.grandTotal : estimatedGrand;
+  const gstTotal = cgst + sgst;
+
+  const totalDisplay = formatMoney(grand, localeKit);
 
   if (variant === "dock-summary") {
     return null;
@@ -65,12 +79,14 @@ export function WalkInCartPanel({
         <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
           {t("cart", { count: cart.length })}
         </p>
-        <div className="text-right min-w-0">
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-            {cartHasFreshBill ? t("billTotal") : t("estimatedTotal")}
-          </p>
-          <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums truncate">{totalDisplay}</p>
-        </div>
+        {cart.length > 0 && (
+          <div className="text-right min-w-0">
+            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
+              {useBillPreview ? t("billTotal") : t("estimatedTotal")}
+            </p>
+            <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums truncate">{totalDisplay}</p>
+          </div>
+        )}
       </div>
 
       {cart.length === 0 ? (
@@ -160,6 +176,26 @@ export function WalkInCartPanel({
               <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylistAutoAssigned")}</p>
             )}
           </div>
+
+          {cart.length > 0 && gstEffective && gstTotal > 0 && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 space-y-1.5 text-sm">
+              <p className="text-[10px] text-[var(--text-tertiary)] leading-snug">{t("cartPricesExcludeGst")}</p>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--text-secondary)]">{t("cartServicesSubtotal")}</span>
+                <span className="tabular-nums font-medium">{formatMoney(servicesBase, localeKit)}</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                <span className="text-[var(--text-secondary)]">{t("cartGstEstimated")}</span>
+                <span className="tabular-nums font-medium">{formatMoney(gstTotal, localeKit)}</span>
+              </div>
+              <div className="flex justify-between gap-2 pt-1.5 border-t border-[var(--border)] font-bold">
+                <span className="text-[var(--text-primary)]">
+                  {useBillPreview ? t("billTotal") : t("estimatedTotal")}
+                </span>
+                <span className="tabular-nums text-[var(--brand-text)]">{totalDisplay}</span>
+              </div>
+            </div>
+          )}
         </>
       )}
 

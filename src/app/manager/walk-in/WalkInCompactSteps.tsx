@@ -31,7 +31,7 @@ export function WalkInCompactSteps({
               aria-label={clickable ? `Go back to ${label}` : active ? label : `Step ${n}`}
               aria-current={active ? "step" : undefined}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition",
+                "flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs font-bold transition touch-manipulation",
                 active && "bg-[var(--brand)] text-[var(--brand-on-brand)]",
                 done && !active && "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
                 !active && !done && "bg-[var(--surface-muted)] text-[var(--text-tertiary)]",
@@ -42,7 +42,7 @@ export function WalkInCompactSteps({
               {done ? "✓" : n}
             </button>
             {active && (
-              <span className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[8rem]">{label}</span>
+              <span className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[min(8rem,28vw)] sm:max-w-[8rem]">{label}</span>
             )}
             {i < steps.length - 1 && <div className="h-px w-4 bg-[var(--border)]" aria-hidden />}
           </div>

@@ -58,18 +58,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="pravaah-login-page w-full max-w-full overflow-x-clip">
+    <div className="pravaah-login-page flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-clip">
       <LoginMobileShell {...formProps} />
 
-      <div className="hidden min-h-[100dvh] flex-col bg-[var(--app-bg)] md:flex md:flex-row">
+      <div className="hidden min-h-[100dvh] w-full flex-1 flex-col bg-[var(--app-bg)] md:flex md:flex-row">
         <LoginHeroTablet />
         <LoginHeroPanel />
 
-        <main className="relative flex flex-1 flex-col justify-center overflow-x-clip overflow-y-auto px-8 py-8 lg:p-12 min-w-0 pravaah-login-form-side">
+        <main className="relative flex min-h-[100dvh] w-full min-w-0 flex-1 flex-col justify-center overflow-x-clip overflow-y-auto px-6 py-8 sm:px-10 lg:px-12 lg:py-12 pravaah-login-form-side">
           <div className="pravaah-form-orb pravaah-form-orb-1" aria-hidden />
           <div className="pravaah-form-orb pravaah-form-orb-2" aria-hidden />
 
-          <div className="relative z-10 mx-auto w-full max-w-sm mp-animate-in">
+          <div className="relative z-10 mx-auto w-full max-w-md mp-animate-in lg:max-w-sm">
             <LoginFormCard {...formProps} />
 
             <p className="mt-4 text-center text-[11px] font-medium text-[var(--text-tertiary)]">{tBrand("taglineShort")}</p>

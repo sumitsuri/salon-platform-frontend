@@ -21,6 +21,7 @@ import {
   BillPreview,
   Booking,
   BranchServiceItem,
+  CustomerRegistrationCard,
   MembershipSubscription,
 } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -39,6 +40,16 @@ import {
   type WalkInDraft,
 } from "@/lib/walk-in-prefs";
 import { getTenantLocaleKit, formatTenantDateTime } from "@/lib/tenant-locale";
+import { buildWalkInUrl, customerDetailPath } from "@/lib/navigation-scope";
+import { matchCustomerByExactName } from "@/lib/walk-in-customer-match";
+import {
+  bumpLookupGeneration,
+  emptyAutoFilledFields,
+  isLookupGenerationStale,
+  resolveLookupField,
+  type AutoFilledLookupFields,
+  type CustomerLookupField,
+} from "@/lib/customer-lookup-session";
 import { formatCurrency, formatMoney, cn } from "@/lib/utils";
 import {
   PageHeader,
@@ -58,14 +69,15 @@ import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
 import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPanel";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
-import { WalkInCustomerChip } from "./WalkInCustomerChip";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
+import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
 import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInCartPanel } from "./WalkInCartPanel";
 import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
+import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 import {
   buildWalkInSubCategories,
@@ -115,9 +127,21 @@ interface SplitRow {
 
 const OPEN_STATUSES = new Set(["DRAFT", "IN_PROGRESS", "READY_FOR_BILLING"]);
 const DRAFT_SAVE_DEBOUNCE_MS = 600;
+const VISIT_PASS_RE = /^[A-Z0-9]{2,4}-([A-Z0-9]{2,10}-)?\d{6}$/;
+
+type ExistingLookupStatus = "idle" | "loading" | "found" | "not_found";
+
+function normalizeVisitPassInput(raw: string) {
+  return raw.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function isValidVisitPassFormat(raw: string) {
+  return VISIT_PASS_RE.test(normalizeVisitPassInput(raw));
+}
 
 export default function WalkInPage() {
   const t = useTranslations("manager.walkIn");
+  const tCustomers = useTranslations("customers");
   const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
@@ -126,6 +150,7 @@ export default function WalkInPage() {
   const preferredStaffId = searchParams.get("staffId") || "";
   const wantNewVisit = searchParams.get("new") === "1";
   const hubTabParam = searchParams.get("tab") === "history" ? "history" : "open";
+  const urlCustomerId = searchParams.get("customerId") || undefined;
   const queryClient = useQueryClient();
   const localeKit = getTenantLocaleKit();
 
@@ -133,11 +158,24 @@ export default function WalkInPage() {
   const [hubTab, setHubTab] = useState<HubTab>(hubTabParam);
   const [step, setStep] = useState<Step>(1);
   const [phone, setPhone] = useState("");
+  const [visitPassInput, setVisitPassInput] = useState("");
+  const [visitPassId, setVisitPassId] = useState("");
+  const [customerLookupMode, setCustomerLookupMode] = useState<"new" | "existing">("existing");
+  const [newGuestFromExisting, setNewGuestFromExisting] = useState(false);
+  const [registrationCard, setRegistrationCard] = useState<CustomerRegistrationCard | null>(null);
   const [customerId, setCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [society, setSociety] = useState(user?.branchName ?? "");
   const [flat, setFlat] = useState("");
   const [lookupState, setLookupState] = useState<"idle" | "loading" | "done">("idle");
+  const [existingLookupStatus, setExistingLookupStatus] = useState<ExistingLookupStatus>("idle");
+  const existingLookupRef = useRef<string>("");
+  const existingLookupGenerationRef = useRef(0);
+  const existingSearchFieldRef = useRef<CustomerLookupField | null>(null);
+  const existingAutoFilledRef = useRef<AutoFilledLookupFields>(emptyAutoFilledFields());
+  const newPhoneLookupGenerationRef = useRef(0);
+  const newPhoneAutoFilledRef = useRef({ name: false, visitPass: false });
+  const existingAutoAdvanceKeyRef = useRef("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
   const [reference, setReference] = useState("");
@@ -271,8 +309,11 @@ export default function WalkInPage() {
   const { data: branch } = useQuery({
     queryKey: ["branch", branchId],
     queryFn: () => api.getBranch(branchId),
-    enabled: !!branchId && screen === "flow" && step === 3,
+    enabled: !!branchId && screen === "flow",
   });
+
+  const phoneNumberRequired = branch?.phoneNumberRequired !== false;
+  const gstEffective = branch?.gstEffective === true;
 
   const { data: applicablePromos = [] } = useQuery({
     queryKey: ["applicable-promos", branchId],
@@ -332,15 +373,29 @@ export default function WalkInPage() {
     return () => clearTimeout(handle);
   }, [pendingMembershipPlanId, bookingId, billingLocked, screen, step, tCommon]);
 
-  // CGST/SGST default to 0 for walk-in billing; managers set amounts in Advanced tax when needed.
+  // Sync editable CGST/SGST from server bill preview when GST is enabled for this branch.
   useEffect(() => {
     if (!billPreview || billingLocked || bookingStatus === "COMPLETED") return;
-    if (taxAdvanced && taxOverridden) return;
-    setCgstInput("0");
-    setSgstInput("0");
-    setTaxOverridden(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when bill identity changes, not on every preview field
-  }, [billPreview?.taxableAmount, billPreview?.subtotal, billingLocked, bookingStatus]);
+    if (taxOverridden) return;
+    if (!gstEffective) {
+      setCgstInput("0");
+      setSgstInput("0");
+      return;
+    }
+    setCgstInput(String(billPreview.cgstAmount ?? 0));
+    setSgstInput(String(billPreview.sgstAmount ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when bill amounts change, not on every preview field
+  }, [
+    billPreview?.taxableAmount,
+    billPreview?.subtotal,
+    billPreview?.cgstAmount,
+    billPreview?.sgstAmount,
+    billPreview?.grandTotal,
+    billingLocked,
+    bookingStatus,
+    taxOverridden,
+    gstEffective,
+  ]);
 
   const hydrateFromBooking = useCallback((b: Booking) => {
     setBookingId(b.id);
@@ -358,10 +413,10 @@ export default function WalkInPage() {
       setBillDiscountValue("");
     }
     setBillPreview(b.billPreview ?? null);
-    if (b.status === "COMPLETED" && b.billPreview) {
+    if (b.billPreview) {
       setCgstInput(String(b.billPreview.cgstAmount ?? 0));
       setSgstInput(String(b.billPreview.sgstAmount ?? 0));
-    } else if (b.status !== "COMPLETED") {
+    } else {
       setCgstInput("0");
       setSgstInput("0");
     }
@@ -392,6 +447,13 @@ export default function WalkInPage() {
     setTaxAdvanced(false);
     setTaxOverridden(false);
     setError("");
+    setRegistrationCard(null);
+    if (b.customerId) {
+      void api.getCustomer(b.customerId).then((c) => {
+        setVisitPassId(c.visitPassId || "");
+        setVisitPassInput(c.visitPassId || "");
+      }).catch(() => undefined);
+    }
   }, [servicesById]);
 
   useEffect(() => {
@@ -406,14 +468,43 @@ export default function WalkInPage() {
     setHubTab(hubTabParam);
   }, [hubTabParam]);
 
+  function returnFromFlow() {
+    setScreen("hub");
+    router.replace(urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl());
+    void refetchOpenVisits();
+  }
+
   function setVisitsTab(next: HubTab) {
     setHubTab(next);
-    if (next === "history") {
-      router.replace("/manager/walk-in?tab=history");
-    } else {
-      router.replace("/manager/walk-in");
-    }
+    router.replace(
+      buildWalkInUrl({
+        tab: next === "history" ? "history" : undefined,
+        customerId: urlCustomerId,
+      })
+    );
   }
+
+  useEffect(() => {
+    if (screen !== "flow" || !customerId || !branchId) return;
+    let cancelled = false;
+    void api
+      .getCustomerRegistrationCard(customerId, branchId)
+      .then((card) => {
+        if (!cancelled) {
+          setRegistrationCard(card);
+          if (card.visitPassId) {
+            setVisitPassId(card.visitPassId);
+            setVisitPassInput(card.visitPassId);
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRegistrationCard(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, branchId, screen]);
 
   // Offer to restore an unfinished draft when landing on the hub with no booking in the URL.
   useEffect(() => {
@@ -427,6 +518,18 @@ export default function WalkInPage() {
   function acceptDraft() {
     if (!draftOffer) return;
     setPhone(draftOffer.phone);
+    setVisitPassInput(draftOffer.visitPassId || "");
+    setVisitPassId(draftOffer.visitPassId || "");
+    if (draftOffer.customerId) {
+      setCustomerLookupMode("existing");
+      setNewGuestFromExisting(false);
+    } else if (draftOffer.phone || draftOffer.visitPassId) {
+      setCustomerLookupMode("new");
+      setNewGuestFromExisting(true);
+    } else {
+      setCustomerLookupMode("existing");
+      setNewGuestFromExisting(false);
+    }
     setCustomerName(draftOffer.customerName);
     setCustomerId(draftOffer.customerId);
     setSociety(draftOffer.society || user?.branchName || "");
@@ -449,23 +552,45 @@ export default function WalkInPage() {
   // Debounced local draft save while a visit is in progress but not yet a real booking.
   useEffect(() => {
     if (screen !== "flow" || bookingId || !branchId) return;
-    if (!phone && cart.length === 0) return;
+    if (!phone && !visitPassInput && !customerName && cart.length === 0) return;
     const handle = setTimeout(() => {
-      saveWalkInDraft(branchId, { phone, customerName, customerId, society, flat, cart, step });
+      saveWalkInDraft(branchId, {
+        phone,
+        visitPassId: visitPassInput,
+        customerName,
+        customerId,
+        society,
+        flat,
+        cart,
+        step,
+      });
     }, DRAFT_SAVE_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [screen, bookingId, branchId, phone, customerName, customerId, society, flat, cart, step]);
+  }, [screen, bookingId, branchId, phone, visitPassInput, customerName, customerId, society, flat, cart, step]);
 
   const startNewVisit = useCallback(() => {
     clearWalkInDraft(branchId);
     setBookingId("");
     setBookingStatus("");
     setPhone("");
+    setVisitPassInput("");
+    setVisitPassId("");
+    setCustomerLookupMode("existing");
+    setNewGuestFromExisting(false);
+    setRegistrationCard(null);
     setCustomerId("");
     setCustomerName("");
     setSociety(user?.branchName ?? "");
     setFlat("");
     setLookupState("idle");
+    setExistingLookupStatus("idle");
+    existingLookupRef.current = "";
+    existingLookupGenerationRef.current = 0;
+    existingSearchFieldRef.current = null;
+    existingAutoFilledRef.current = emptyAutoFilledFields();
+    existingAutoAdvanceKeyRef.current = "";
+    newPhoneLookupGenerationRef.current = 0;
+    newPhoneAutoFilledRef.current = { name: false, visitPass: false };
     lookupPhoneRef.current = "";
     setCart([]);
     setBillPreview(null);
@@ -584,11 +709,15 @@ export default function WalkInPage() {
 
   const displayGrandTotal = useMemo(() => {
     if (!billPreview) return 0;
+    if (!taxOverridden) {
+      return billPreview.grandTotal ?? 0;
+    }
     const fee = billPreview.membershipFeeAmount ?? 0;
     const cgst = Number.isFinite(cgstNum) && cgstNum >= 0 ? cgstNum : 0;
     const sgst = Number.isFinite(sgstNum) && sgstNum >= 0 ? sgstNum : 0;
-    return Math.round((billPreview.taxableAmount + cgst + sgst + fee) * 100) / 100;
-  }, [billPreview, cgstNum, sgstNum]);
+    const taxable = billPreview.taxableAmount ?? 0;
+    return Math.round((taxable + cgst + sgst + fee) * 100) / 100;
+  }, [billPreview, cgstNum, sgstNum, taxOverridden]);
 
   const splitSum = useMemo(
     () => splitRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
@@ -645,8 +774,10 @@ export default function WalkInPage() {
     } else if (reference) {
       payload.reference = reference;
     }
-    payload.cgstAmount = Number((Number.isFinite(cgstNum) ? cgstNum : 0).toFixed(2));
-    payload.sgstAmount = Number((Number.isFinite(sgstNum) ? sgstNum : 0).toFixed(2));
+    if (taxOverridden && gstEffective) {
+      payload.cgstAmount = Number((Number.isFinite(cgstNum) ? cgstNum : 0).toFixed(2));
+      payload.sgstAmount = Number((Number.isFinite(sgstNum) ? sgstNum : 0).toFixed(2));
+    }
     payBooking.mutate(payload);
   }
 
@@ -670,52 +801,324 @@ export default function WalkInPage() {
     }
   }
 
+  async function loadRegistrationCardForCustomer(id: string) {
+    try {
+      const card = await api.getCustomerRegistrationCard(id, branchId);
+      setRegistrationCard(card);
+      setVisitPassId(card.visitPassId);
+      setVisitPassInput(card.visitPassId);
+    } catch {
+      setRegistrationCard(null);
+    }
+  }
+
+  function clearExistingLookupResult() {
+    setCustomerId("");
+    setCustomerName("");
+    setVisitPassId("");
+    setMembership(null);
+    setRegistrationCard(null);
+  }
+
+  function invalidateExistingCustomerLookup(editedField: CustomerLookupField) {
+    bumpLookupGeneration(existingLookupGenerationRef);
+    existingLookupRef.current = "";
+    existingSearchFieldRef.current = editedField;
+    setExistingLookupStatus("idle");
+    clearExistingLookupResult();
+    if (editedField === "phone" && existingAutoFilledRef.current.visitPass) {
+      setVisitPassInput("");
+    }
+    if (editedField === "visitPass" && existingAutoFilledRef.current.phone) {
+      setPhone("");
+    }
+    existingAutoFilledRef.current = emptyAutoFilledFields();
+  }
+
+  function applyExistingCustomer(
+    c: {
+      id: string;
+      name: string;
+      visitPassId?: string | null;
+      phone?: string | null;
+      society?: string | null;
+      flatUnit?: string | null;
+    },
+    passRaw: string,
+    phoneRaw: string
+  ) {
+    setCustomerId(c.id);
+    setCustomerName(c.name);
+    setVisitPassId(c.visitPassId || "");
+    const passWasEmpty = !normalizeVisitPassInput(passRaw);
+    const phoneWasEmpty = digitsOnly(phoneRaw).length === 0;
+    const phoneDigits = c.phone ? digitsOnly(c.phone) : "";
+    if (c.visitPassId && passWasEmpty) {
+      setVisitPassInput(c.visitPassId);
+    }
+    if (phoneDigits && phoneWasEmpty) {
+      setPhone(phoneDigits);
+    }
+    existingAutoFilledRef.current = {
+      visitPass: Boolean(c.visitPassId && passWasEmpty),
+      phone: Boolean(phoneDigits && phoneWasEmpty),
+    };
+    setSociety(c.society || society);
+    setFlat(c.flatUnit || flat);
+    setExistingLookupStatus("found");
+    void loadRegistrationCardForCustomer(c.id);
+  }
+
+  function recordExistingCustomerAndAdvance(
+    c: {
+      id: string;
+      name: string;
+      visitPassId?: string | null;
+      phone?: string | null;
+    },
+    lookupKey: string
+  ) {
+    if (bookingId || step !== 1) return;
+    if (existingAutoAdvanceKeyRef.current === lookupKey) return;
+    existingAutoAdvanceKeyRef.current = lookupKey;
+    pushRecentCustomer(branchId, {
+      visitPassId: c.visitPassId || visitPassInput || visitPassId,
+      name: c.name,
+      customerId: c.id,
+      phone: c.phone ? digitsOnly(c.phone) : phone || undefined,
+      society,
+      flat,
+    });
+    setRecentCustomers(getRecentCustomers(branchId));
+    setStep(2);
+  }
+
+  async function lookupExistingCustomer(passRaw: string, phoneRaw: string) {
+    const passNorm = normalizeVisitPassInput(passRaw);
+    const phoneNorm = normalizeIndianMobile(phoneRaw);
+    const passValid = Boolean(passNorm && isValidVisitPassFormat(passNorm));
+    const phoneValid = Boolean(phoneNorm && isValidIndianMobile(phoneRaw));
+    const lookupField = resolveLookupField(existingSearchFieldRef.current, phoneValid, passValid);
+
+    if (!lookupField) {
+      existingLookupRef.current = "";
+      setExistingLookupStatus("idle");
+      if (!passNorm && digitsOnly(phoneRaw).length === 0) {
+        clearExistingLookupResult();
+      }
+      return;
+    }
+
+    const lookupKey =
+      lookupField === "visitPass"
+        ? `pass:${passNorm}`
+        : `phone:${phoneNorm}`;
+
+    if (existingLookupRef.current === lookupKey && existingLookupStatus === "found") {
+      return;
+    }
+
+    const generationAtStart = existingLookupGenerationRef.current;
+    existingLookupRef.current = lookupKey;
+    setExistingLookupStatus("loading");
+    setError("");
+    clearExistingLookupResult();
+
+    try {
+      const customer =
+        lookupField === "visitPass"
+          ? await api.findCustomerByVisitPass(passNorm)
+          : await api.findCustomerByPhone(phoneNorm!);
+      if (isLookupGenerationStale(existingLookupGenerationRef, generationAtStart)) return;
+      if (existingLookupRef.current !== lookupKey) return;
+      applyExistingCustomer(customer, passRaw, phoneRaw);
+      recordExistingCustomerAndAdvance(customer, lookupKey);
+    } catch {
+      if (isLookupGenerationStale(existingLookupGenerationRef, generationAtStart)) return;
+      if (existingLookupRef.current !== lookupKey) return;
+      clearExistingLookupResult();
+      setExistingLookupStatus("not_found");
+      if (!bookingId && step === 1) {
+        switchToNewGuestFlow({ preserveIdentifiers: true, fromExistingNotFound: true });
+      }
+    }
+  }
+
+  function switchToNewGuestFlow(opts?: { preserveIdentifiers?: boolean; fromExistingNotFound?: boolean }) {
+    const preservedPhone = phone;
+    const preservedPass = visitPassInput;
+    setCustomerLookupMode("new");
+    setExistingLookupStatus("idle");
+    existingLookupRef.current = "";
+    bumpLookupGeneration(existingLookupGenerationRef);
+    existingSearchFieldRef.current = null;
+    existingAutoFilledRef.current = emptyAutoFilledFields();
+    existingAutoAdvanceKeyRef.current = "";
+    setCustomerId("");
+    setCustomerName("");
+    setMembership(null);
+    setRegistrationCard(null);
+    setError("");
+    setNewGuestFromExisting(Boolean(opts?.fromExistingNotFound));
+    bumpLookupGeneration(newPhoneLookupGenerationRef);
+    newPhoneAutoFilledRef.current = { name: false, visitPass: false };
+    lookupPhoneRef.current = "";
+    setLookupState("idle");
+    if (opts?.preserveIdentifiers) {
+      setPhone(preservedPhone);
+      setVisitPassInput(preservedPass);
+      setVisitPassId("");
+    } else {
+      setPhone("");
+      setVisitPassInput("");
+      setVisitPassId("");
+    }
+  }
+
+  function clearNewPhoneLookupDerived() {
+    setCustomerId("");
+    setMembership(null);
+    setRegistrationCard(null);
+    if (newPhoneAutoFilledRef.current.visitPass) {
+      setVisitPassId("");
+      setVisitPassInput("");
+    }
+    if (newPhoneAutoFilledRef.current.name) {
+      setCustomerName("");
+    }
+    newPhoneAutoFilledRef.current = { name: false, visitPass: false };
+  }
+
+  function invalidateNewPhoneLookup() {
+    bumpLookupGeneration(newPhoneLookupGenerationRef);
+    lookupPhoneRef.current = "";
+    setLookupState("idle");
+    clearNewPhoneLookupDerived();
+  }
+
   async function lookupCustomer(rawPhone: string) {
     const normalized = normalizeIndianMobile(rawPhone);
     if (!normalized) return;
     if (lookupPhoneRef.current === normalized && lookupState === "done") return;
+
+    const generationAtStart = newPhoneLookupGenerationRef.current;
     lookupPhoneRef.current = normalized;
     setLookupState("loading");
     setError("");
     try {
       const c = await api.findCustomerByPhone(normalized);
+      if (isLookupGenerationStale(newPhoneLookupGenerationRef, generationAtStart)) return;
+      if (lookupPhoneRef.current !== normalized) return;
       setCustomerId(c.id);
       setCustomerName(c.name);
+      newPhoneAutoFilledRef.current = {
+        name: true,
+        visitPass: Boolean(c.visitPassId),
+      };
+      if (c.visitPassId) {
+        setVisitPassId(c.visitPassId);
+        setVisitPassInput(c.visitPassId);
+      }
       setSociety(c.society || society);
       setFlat(c.flatUnit || "");
     } catch {
-      setCustomerId("");
-      setMembership(null);
+      if (isLookupGenerationStale(newPhoneLookupGenerationRef, generationAtStart)) return;
+      if (lookupPhoneRef.current !== normalized) return;
+      clearNewPhoneLookupDerived();
     } finally {
-      setLookupState("done");
+      if (
+        !isLookupGenerationStale(newPhoneLookupGenerationRef, generationAtStart) &&
+        lookupPhoneRef.current === normalized
+      ) {
+        setLookupState("done");
+      }
     }
   }
 
   useEffect(() => {
-    if (bookingId) return;
+    if (bookingId || customerLookupMode !== "new") return;
     if (digitsOnly(phone).length === 10 && isValidIndianMobile(phone)) {
       void lookupCustomer(phone);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once phone reaches a valid 10-digit length
-  }, [phone, bookingId]);
+  }, [phone, bookingId, customerLookupMode]);
+
+  useEffect(() => {
+    if (bookingId || customerLookupMode !== "existing") return;
+    const timer = setTimeout(() => {
+      void lookupExistingCustomer(visitPassInput, phone);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced lookup when phone or pass changes
+  }, [visitPassInput, phone, customerLookupMode, bookingId]);
 
   function applyRecentCustomer(rc: RecentCustomer) {
-    setPhone(rc.phone);
-    setCustomerName(rc.name);
-    setCustomerId(rc.customerId || "");
-    setSociety(rc.society || society);
-    setFlat(rc.flat || "");
     setPendingMembershipPlanId("");
     setError("");
+    setCustomerLookupMode("existing");
+    existingAutoFilledRef.current = emptyAutoFilledFields();
+    existingSearchFieldRef.current = rc.visitPassId ? "visitPass" : "phone";
+    setVisitPassInput(rc.visitPassId || "");
+    setPhone(rc.phone ? digitsOnly(rc.phone) : "");
+    if (rc.visitPassId || rc.phone) {
+      bumpLookupGeneration(existingLookupGenerationRef);
+      void lookupExistingCustomer(rc.visitPassId || "", rc.phone || "");
+      return;
+    }
+    setExistingLookupStatus("idle");
+    existingLookupRef.current = "";
+    setCustomerName(rc.name);
+    setCustomerId(rc.customerId || "");
+    setVisitPassId(rc.visitPassId || "");
+    setSociety(rc.society || society);
+    setFlat(rc.flat || "");
   }
 
   const phoneValid = isValidIndianMobile(phone);
-  const continueCustomerDisabled = !phoneValid || !customerName.trim() || saving;
+  const visitPassLooksValid = isValidVisitPassFormat(visitPassInput);
+  const existingLookupReady = visitPassLooksValid || phoneValid;
+
+  const continueCustomerDisabled =
+    saving ||
+    (customerLookupMode === "existing"
+      ? existingLookupStatus !== "found" || !customerId
+      : !customerName.trim() ||
+        (phoneNumberRequired ? !phoneValid : phone.length > 0 && !phoneValid));
 
   async function continueFromCustomerStep() {
     setError("");
+    if (customerLookupMode === "existing") {
+      if (!existingLookupReady) {
+        setError(t("existingLookupRequired"));
+        return;
+      }
+      if (existingLookupStatus !== "found" || !customerId) {
+        if (existingLookupStatus === "loading") return;
+        return;
+      }
+      pushRecentCustomer(branchId, {
+        visitPassId: visitPassId || visitPassInput,
+        name: customerName,
+        customerId,
+        phone: phone || undefined,
+        society,
+        flat,
+      });
+      setRecentCustomers(getRecentCustomers(branchId));
+      setStep(2);
+      return;
+    }
+
     const normalized = normalizeIndianMobile(phone);
-    if (!normalized || !customerName.trim()) {
+    if (!customerName.trim()) {
+      setError(t("nameRequired"));
+      return;
+    }
+    if (phoneNumberRequired && !normalized) {
+      setError(t("phoneInvalid"));
+      return;
+    }
+    if (phone.length > 0 && !phoneValid) {
       setError(t("phoneInvalid"));
       return;
     }
@@ -725,13 +1128,49 @@ export default function WalkInPage() {
     }
     try {
       let id = customerId;
+      let isNew = false;
+      let createdVisitPassId = visitPassId;
       if (!id) {
-        const c = await api.createCustomer({ name: customerName, phone: normalized, society, flatUnit: flat });
-        id = c.id;
-        setCustomerId(id);
+        const existing = await matchCustomerByExactName(customerName.trim());
+        if (existing === "ambiguous") {
+          setError(t("multipleCustomersSameName", { name: customerName.trim() }));
+          return;
+        }
+        if (existing) {
+          id = existing.id;
+          setCustomerId(id);
+          setVisitPassId(existing.visitPassId || "");
+          setVisitPassInput(existing.visitPassId || "");
+          if (existing.society) setSociety(existing.society);
+          if (existing.flatUnit) setFlat(existing.flatUnit);
+          createdVisitPassId = existing.visitPassId || "";
+        } else {
+          const c = await api.createCustomer({
+            name: customerName.trim(),
+            phone: normalized || undefined,
+            branchId,
+            society,
+            flatUnit: flat,
+          });
+          id = c.id;
+          isNew = true;
+          setCustomerId(id);
+          createdVisitPassId = c.visitPassId || "";
+          setVisitPassId(createdVisitPassId);
+        }
       }
-      pushRecentCustomer(branchId, { phone: normalized, name: customerName, customerId: id, society, flat });
+      pushRecentCustomer(branchId, {
+        phone: normalized || undefined,
+        visitPassId: createdVisitPassId || undefined,
+        name: customerName.trim(),
+        customerId: id,
+        society,
+        flat,
+      });
       setRecentCustomers(getRecentCustomers(branchId));
+      if (isNew) {
+        await loadRegistrationCardForCustomer(id);
+      }
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("failed"));
@@ -761,9 +1200,6 @@ export default function WalkInPage() {
     pushRecentService(branchId, s.id);
     setRecentServiceIds(getRecentServiceIds(branchId));
     setAddedToast(s.serviceName);
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-      setCartSheetOpen(true);
-    }
   }
 
   function applyStylistToAll(staffId: string) {
@@ -828,18 +1264,41 @@ export default function WalkInPage() {
   async function resolveCustomerId(): Promise<string> {
     if (customerId) return customerId;
     const normalized = normalizeIndianMobile(phone);
-    if (!normalized || !customerName.trim()) {
+    if (!customerName.trim()) {
       throw new Error(t("customerRequiredBeforeSave"));
+    }
+    if (phoneNumberRequired && !normalized) {
+      throw new Error(t("customerRequiredBeforeSave"));
+    }
+    const existing = await matchCustomerByExactName(customerName.trim());
+    if (existing === "ambiguous") {
+      throw new Error(t("multipleCustomersSameName", { name: customerName.trim() }));
+    }
+    if (existing) {
+      setCustomerId(existing.id);
+      setVisitPassId(existing.visitPassId || "");
+      pushRecentCustomer(branchId, {
+        phone: normalized || undefined,
+        visitPassId: existing.visitPassId,
+        name: existing.name,
+        customerId: existing.id,
+        society: existing.society,
+        flat: existing.flatUnit,
+      });
+      return existing.id;
     }
     const c = await api.createCustomer({
       name: customerName.trim(),
-      phone: normalized,
+      phone: normalized || undefined,
+      branchId,
       society: society || undefined,
       flatUnit: flat || undefined,
     });
     setCustomerId(c.id);
+    setVisitPassId(c.visitPassId || "");
     pushRecentCustomer(branchId, {
-      phone: normalized,
+      phone: normalized || undefined,
+      visitPassId: c.visitPassId,
       name: customerName.trim(),
       customerId: c.id,
       society,
@@ -979,12 +1438,21 @@ export default function WalkInPage() {
 
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((s, c) => s + cartLinePrice(c), 0);
-    const tax = cart.reduce((s, c) => {
-      const rate = servicesById.get(c.branchServiceId)?.gstRate ?? 0;
-      return s + (cartLinePrice(c) * rate) / 100;
-    }, 0);
-    return { subtotal, estimatedGrand: subtotal + tax };
-  }, [cart, servicesById]);
+    const estimatedTax = gstEffective
+      ? cart.reduce((s, c) => {
+          const rate = servicesById.get(c.branchServiceId)?.gstRate ?? 0;
+          return s + (cartLinePrice(c) * rate) / 100;
+        }, 0)
+      : 0;
+    const half = estimatedTax / 2;
+    return {
+      subtotal,
+      estimatedTax,
+      estimatedCgst: half,
+      estimatedSgst: half,
+      estimatedGrand: subtotal + estimatedTax,
+    };
+  }, [cart, servicesById, gstEffective]);
   const cartHasFreshBill = !!billPreview && (billPreview.lines?.length ?? 0) === cart.length;
 
   const promoLocked = !!selectedCouponId || !!selectedOfferId;
@@ -1045,11 +1513,11 @@ export default function WalkInPage() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2 shrink-0">
-                <button type="button" onClick={acceptDraft} className={`${btnPrimary} py-2 px-3 text-sm min-h-11`}>
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+                <button type="button" onClick={acceptDraft} className={`${btnPrimary} py-2 px-3 text-sm min-h-11 w-full sm:w-auto justify-center touch-manipulation`}>
                   {t("restoreDraft")}
                 </button>
-                <button type="button" onClick={dismissDraft} className={`${btnSecondary} py-2 px-3 text-sm min-h-11`}>
+                <button type="button" onClick={dismissDraft} className={`${btnSecondary} py-2 px-3 text-sm min-h-11 w-full sm:w-auto justify-center touch-manipulation`}>
                   {t("dismissDraft")}
                 </button>
               </div>
@@ -1058,7 +1526,13 @@ export default function WalkInPage() {
         )}
 
         {hubTab === "history" ? (
-          <BookingsHistoryPanel embedded onNewVisit={startNewVisit} wizardBaseHref="/manager/walk-in" />
+          <BookingsHistoryPanel
+            embedded
+            onNewVisit={startNewVisit}
+            wizardBaseHref="/manager/walk-in"
+            initialCustomerId={urlCustomerId}
+            navigationScope="manager"
+          />
         ) : (
           <Card className="space-y-3">
             <div className="flex items-center justify-between gap-2">
@@ -1149,19 +1623,19 @@ export default function WalkInPage() {
     <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
       <PageHeader
         title={bookingId ? t("editVisit") : t("title")}
-        subtitle={customerName || user?.branchName}
+        subtitle={
+          visitPassId && customerName
+            ? `${customerName} · ${visitPassId}`
+            : customerName || user?.branchName
+        }
         action={
           !billingLocked ? (
             <button
               type="button"
-              onClick={() => {
-                setScreen("hub");
-                router.replace("/manager/walk-in");
-                void refetchOpenVisits();
-              }}
-              className={`${btnSecondary} py-2 px-3 text-sm min-h-11`}
+              onClick={returnFromFlow}
+              className={`${btnSecondary} w-full sm:w-auto justify-center py-2 px-3 text-sm min-h-11 touch-manipulation`}
             >
-              {t("backToOpenVisits")}
+              {urlCustomerId ? tCustomers("backToCustomers") : t("backToOpenVisits")}
             </button>
           ) : undefined
         }
@@ -1171,6 +1645,18 @@ export default function WalkInPage() {
         <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
       </div>
       <WalkInCompactSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
+
+      {visitPassId && customerName && (
+        <WalkInVisitPassBanner
+          visitPassId={visitPassId}
+          customerName={customerName}
+          card={registrationCard}
+          step={step}
+          onEdit={step > 1 && !billingLocked ? () => goToStep(1) : undefined}
+          highlightScreenshot={step === 3}
+        />
+      )}
+
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
       {draftRestoredNotice && step === 1 && (
         <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
@@ -1183,6 +1669,35 @@ export default function WalkInPage() {
 
       {step === 1 && (
         <Card className="space-y-4">
+          {!bookingId && (
+            <SegmentedControl
+              value={customerLookupMode}
+              onChange={(v) => {
+                const mode = v as "new" | "existing";
+                setCustomerLookupMode(mode);
+                setError("");
+                if (mode === "new") {
+                  setExistingLookupStatus("idle");
+                  existingLookupRef.current = "";
+                  bumpLookupGeneration(existingLookupGenerationRef);
+                  existingSearchFieldRef.current = null;
+                  existingAutoFilledRef.current = emptyAutoFilledFields();
+                  existingAutoAdvanceKeyRef.current = "";
+                } else {
+                  setNewGuestFromExisting(false);
+                  bumpLookupGeneration(newPhoneLookupGenerationRef);
+                  newPhoneAutoFilledRef.current = { name: false, visitPass: false };
+                  lookupPhoneRef.current = "";
+                  setLookupState("idle");
+                }
+              }}
+              options={[
+                { id: "existing", label: t("lookupExisting") },
+                { id: "new", label: t("lookupNew") },
+              ]}
+            />
+          )}
+
           {!bookingId && recentCustomers.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
@@ -1191,46 +1706,162 @@ export default function WalkInPage() {
               <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {recentCustomers.map((rc) => (
                   <button
-                    key={rc.phone}
+                    key={rc.customerId || rc.visitPassId || rc.phone || rc.name}
                     type="button"
                     onClick={() => applyRecentCustomer(rc)}
                     className="shrink-0 min-w-[9rem] max-w-[12rem] text-left px-3 py-2.5 min-h-12 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] transition touch-manipulation"
                   >
                     <p className="text-xs font-semibold text-[var(--text-primary)] truncate">{rc.name}</p>
-                    <p className="text-[11px] text-[var(--text-tertiary)] truncate">{rc.phone}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] truncate">
+                      {rc.visitPassId || rc.phone || "—"}
+                    </p>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          <div>
-            <input
-              placeholder={t("phonePlaceholder")}
-              value={phone}
-              onChange={(e) => setPhone(digitsOnly(e.target.value))}
-              onBlur={() => {
-                if (!bookingId) void lookupCustomer(phone);
-              }}
-              inputMode="numeric"
-              maxLength={13}
-              className={inputClass}
-              disabled={!!bookingId}
-            />
-            {phone.length > 0 && !phoneValid && (
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("phoneInvalid")}</p>
-            )}
-            {lookupState === "loading" && (
-              <p className="text-xs text-[var(--text-tertiary)] mt-1">{tCommon("loading")}</p>
-            )}
-          </div>
-          <input
-            placeholder={t("namePlaceholder")}
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className={inputClass}
-            disabled={!!bookingId}
-          />
+          {customerLookupMode === "existing" ? (
+            <div className="space-y-3 min-w-0">
+              <p className="text-xs sm:text-sm text-[var(--text-tertiary)] leading-relaxed">{t("existingLookupHint")}</p>
+              <div className="min-w-0">
+                <input
+                  placeholder={t("phonePlaceholder")}
+                  value={phone}
+                  onChange={(e) => {
+                    invalidateExistingCustomerLookup("phone");
+                    setPhone(digitsOnly(e.target.value));
+                  }}
+                  onBlur={() => {
+                    if (existingLookupReady) void lookupExistingCustomer(visitPassInput, phone);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={13}
+                  className={cn(
+                    inputClass,
+                    existingLookupStatus === "found" && phoneValid && "border-emerald-500 ring-2 ring-emerald-500/20",
+                    existingLookupStatus === "not_found" && phoneValid && "border-amber-500 ring-2 ring-amber-500/20"
+                  )}
+                  disabled={!!bookingId}
+                />
+                {phone.length > 0 && !phoneValid && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("phoneInvalid")}</p>
+                )}
+              </div>
+              <div className="min-w-0">
+                <input
+                  placeholder={t("visitPassPlaceholder")}
+                  value={visitPassInput}
+                  onChange={(e) => {
+                    invalidateExistingCustomerLookup("visitPass");
+                    setVisitPassInput(e.target.value.toUpperCase());
+                  }}
+                  onBlur={() => {
+                    if (existingLookupReady) void lookupExistingCustomer(visitPassInput, phone);
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                  className={cn(
+                    inputClass,
+                    "font-mono text-[0.9375rem] sm:text-sm",
+                    existingLookupStatus === "found" && visitPassLooksValid && "border-emerald-500 ring-2 ring-emerald-500/20",
+                    existingLookupStatus === "not_found" && visitPassLooksValid && "border-amber-500 ring-2 ring-amber-500/20"
+                  )}
+                  disabled={!!bookingId}
+                  aria-invalid={existingLookupStatus === "not_found"}
+                />
+                {!visitPassLooksValid && visitPassInput.trim().length > 0 && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("visitPassInvalid")}</p>
+                )}
+              </div>
+              {existingLookupStatus === "loading" && (
+                <p className="text-xs text-[var(--text-secondary)]">{t("existingLookupLoading")}</p>
+              )}
+
+              <div className="min-w-0">
+                <input
+                  placeholder={t("namePlaceholder")}
+                  value={customerName}
+                  readOnly
+                  disabled={existingLookupStatus !== "found" || !customerName || !!bookingId}
+                  autoComplete="name"
+                  className={cn(
+                    inputClass,
+                    existingLookupStatus === "found" &&
+                      customerName &&
+                      "border-emerald-500 ring-2 ring-emerald-500/20 bg-[var(--surface-muted)]/40"
+                  )}
+                  aria-label={tCommon("name")}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              {newGuestFromExisting && (
+                <AlertBanner variant="info">
+                  <p className="leading-relaxed break-words">{t("existingFirstTime")}</p>
+                </AlertBanner>
+              )}
+              {!phoneNumberRequired && (
+                <input
+                  placeholder={t("namePlaceholder")}
+                  value={customerName}
+                  onChange={(e) => {
+                    newPhoneAutoFilledRef.current.name = false;
+                    setCustomerName(e.target.value);
+                  }}
+                  className={inputClass}
+                  disabled={!!bookingId}
+                  autoComplete="name"
+                />
+              )}
+              <div>
+                <input
+                  placeholder={
+                    phoneNumberRequired ? t("phonePlaceholder") : t("phoneOptionalPlaceholder")
+                  }
+                  value={phone}
+                  onChange={(e) => {
+                    invalidateNewPhoneLookup();
+                    setPhone(digitsOnly(e.target.value));
+                  }}
+                  onBlur={() => {
+                    if (!bookingId) void lookupCustomer(phone);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="tel"
+                  maxLength={13}
+                  className={inputClass}
+                  disabled={!!bookingId}
+                />
+                {phone.length > 0 && !phoneValid && (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">{t("phoneInvalid")}</p>
+                )}
+                {!phoneNumberRequired && (
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1">{t("phoneOptionalHint")}</p>
+                )}
+                {lookupState === "loading" && (
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1">{tCommon("loading")}</p>
+                )}
+              </div>
+              {phoneNumberRequired && (
+                <input
+                  placeholder={t("namePlaceholder")}
+                  value={customerName}
+                  onChange={(e) => {
+                    newPhoneAutoFilledRef.current.name = false;
+                    setCustomerName(e.target.value);
+                  }}
+                  className={inputClass}
+                  disabled={!!bookingId}
+                  autoComplete="name"
+                />
+              )}
+            </>
+          )}
+
+          {customerLookupMode === "new" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <details className="sm:col-span-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2">
               <summary className="cursor-pointer text-sm font-semibold text-[var(--text-secondary)] touch-manipulation py-1">
@@ -1254,6 +1885,7 @@ export default function WalkInPage() {
               </div>
             </details>
           </div>
+          )}
 
           {membership && (
             <Callout
@@ -1273,7 +1905,7 @@ export default function WalkInPage() {
           <button
             onClick={() => void continueFromCustomerStep()}
             disabled={continueCustomerDisabled}
-            className={`${btnPrimary} w-full min-h-12`}
+            className={`${btnPrimary} w-full min-h-12 touch-manipulation`}
           >
             {t("continueServices")}
           </button>
@@ -1290,8 +1922,6 @@ export default function WalkInPage() {
               {t("serviceAdded", { name: addedToast })}
             </div>
           )}
-
-          <WalkInCustomerChip name={customerName} phone={phone} onEdit={() => goToStep(1)} />
 
           {!membership && customerId && (
             <WalkInMembershipSavingsBanner
@@ -1338,7 +1968,11 @@ export default function WalkInPage() {
                 cart={cart}
                 staff={staff}
                 localeKit={localeKit}
+                cartSubtotal={cartTotals.subtotal}
+                estimatedCgst={cartTotals.estimatedCgst}
+                estimatedSgst={cartTotals.estimatedSgst}
                 estimatedGrand={cartTotals.estimatedGrand}
+                gstEffective={gstEffective}
                 cartHasFreshBill={cartHasFreshBill}
                 billPreview={billPreview}
                 saving={saving}
@@ -1381,7 +2015,11 @@ export default function WalkInPage() {
                       cart={cart}
                       staff={staff}
                       localeKit={localeKit}
+                      cartSubtotal={cartTotals.subtotal}
+                      estimatedCgst={cartTotals.estimatedCgst}
+                      estimatedSgst={cartTotals.estimatedSgst}
                       estimatedGrand={cartTotals.estimatedGrand}
+                      gstEffective={gstEffective}
                       cartHasFreshBill={cartHasFreshBill}
                       billPreview={billPreview}
                       saving={saving}
@@ -1417,6 +2055,12 @@ export default function WalkInPage() {
                       <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
                         {cartTotalDisplay}
                       </p>
+                      {gstEffective && cartTotals.estimatedTax > 0 && !cartHasFreshBill && (
+                        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                          {t("cartServicesSubtotal")} {formatMoney(cartTotals.subtotal, localeKit)} + {t("cartGstEstimated")}{" "}
+                          {formatMoney(cartTotals.estimatedTax, localeKit)}
+                        </p>
+                      )}
                       {stylistsRequired && !stylistsComplete && (
                         <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5">
                           {t("assignStylistsHint")}
@@ -1456,6 +2100,9 @@ export default function WalkInPage() {
         <div className="space-y-4 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 md:pb-6">
           <div className="hero-banner rounded-2xl p-4 sm:p-5 shadow-lg">
             <p className="hero-muted text-xs font-semibold uppercase tracking-wider">{customerName || t("namePlaceholder")}</p>
+            {visitPassId && (
+              <p className="text-sm font-mono font-semibold mt-1 opacity-90">{visitPassId}</p>
+            )}
             <p className="text-3xl sm:text-4xl font-bold tabular-nums mt-1">{formatMoney(displayGrandTotal, localeKit)}</p>
             <p className="hero-subtitle text-sm mt-1">{tCommon("grandTotal")}</p>
           </div>
@@ -1585,13 +2232,13 @@ export default function WalkInPage() {
                 preview={billPreview}
                 localeKit={localeKit}
                 showTaxable
-                cgstDisplay={Number.isFinite(cgstNum) ? cgstNum : 0}
-                sgstDisplay={Number.isFinite(sgstNum) ? sgstNum : 0}
+                cgstDisplay={taxOverridden ? (Number.isFinite(cgstNum) ? cgstNum : 0) : undefined}
+                sgstDisplay={taxOverridden ? (Number.isFinite(sgstNum) ? sgstNum : 0) : undefined}
                 hideGrandTotal
                 className="space-y-2"
               />
 
-              {!billingLocked && (
+              {!billingLocked && gstEffective && (
                 <details
                   className="group pt-1"
                   onToggle={(e) => setTaxAdvanced(e.currentTarget.open)}
@@ -1643,8 +2290,8 @@ export default function WalkInPage() {
                         type="button"
                         className="text-xs font-semibold text-[var(--brand-text)] hover:underline"
                         onClick={() => {
-                          setCgstInput("0");
-                          setSgstInput("0");
+                          setCgstInput(String(billPreview.cgstAmount ?? 0));
+                          setSgstInput(String(billPreview.sgstAmount ?? 0));
                           setTaxOverridden(false);
                         }}
                       >
@@ -1765,6 +2412,12 @@ export default function WalkInPage() {
                   submittedRating={reviewSubmittedRating}
                 />
               )}
+              {registrationCard && (
+                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
+                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">{t("visitPassSaveReminder")}</p>
+                  <RegistrationCardPanel card={registrationCard} />
+                </div>
+              )}
             </Callout>
           )}
 
@@ -1784,7 +2437,11 @@ export default function WalkInPage() {
               )}
               <button
                 type="button"
-                onClick={() => router.push("/manager/walk-in?tab=history")}
+                onClick={() =>
+                  router.push(
+                    urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl({ tab: "history" })
+                  )
+                }
                 className={`${btnSecondary} w-full min-h-11`}
               >
                 {t("viewBookings")}
@@ -1798,8 +2455,7 @@ export default function WalkInPage() {
                   setReviewInvitationUrl("");
                   setReviewSubmittedRating(null);
                   setBookingId("");
-                  router.replace("/manager/walk-in");
-                  void refetchOpenVisits();
+                  returnFromFlow();
                 }}
                 className={`${btnSecondary} w-full min-h-11`}
               >

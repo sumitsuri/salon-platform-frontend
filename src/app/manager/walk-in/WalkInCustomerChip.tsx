@@ -6,13 +6,16 @@ import { useTranslations } from "next-intl";
 export function WalkInCustomerChip({
   name,
   phone,
+  visitPassId,
   onEdit,
 }: {
   name: string;
-  phone: string;
+  phone?: string;
+  visitPassId?: string;
   onEdit: () => void;
 }) {
   const t = useTranslations("manager.walkIn");
+  const secondary = visitPassId || phone || t("phonePlaceholder");
 
   return (
     <button
@@ -22,7 +25,7 @@ export function WalkInCustomerChip({
     >
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{name || t("namePlaceholder")}</p>
-        <p className="text-xs text-[var(--text-secondary)] truncate">{phone || t("phonePlaceholder")}</p>
+        <p className="text-xs text-[var(--text-secondary)] truncate font-mono">{secondary}</p>
       </div>
       <span className="shrink-0 text-xs font-semibold text-[var(--brand-text)]">{t("editCustomer")}</span>
       <ChevronLeft className="w-4 h-4 shrink-0 rotate-180 text-[var(--text-tertiary)]" />

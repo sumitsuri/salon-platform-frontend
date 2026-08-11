@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CreditCard, Filter, Users } from "lucide-react";
@@ -11,6 +11,9 @@ import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { SellMembershipPanel } from "@/components/memberships/SellMembershipPanel";
+import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
+import { managerMembershipsPath } from "@/lib/navigation-scope";
+import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
 import {
   PageHeader,
   AlertBanner,
@@ -58,6 +61,7 @@ function filtersActive(filters: Filters) {
 }
 
 export default function ManagerMembershipsPage() {
+  const router = useRouter();
   const t = useTranslations("manager.memberships");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
@@ -80,6 +84,18 @@ export default function ManagerMembershipsPage() {
   const initialPhone = params.get("phone") || "";
   const initialCustomerId = params.get("customerId") || "";
   const initialName = params.get("name") || "";
+
+  const { customer, customersHref, customersLabel, isScoped } = useCustomerScopeNavigation({
+    customerId: initialCustomerId || undefined,
+    scope: "manager",
+    currentPageLabel: t("title"),
+    enabled: !!initialCustomerId,
+  });
+
+  function clearCustomerScope() {
+    router.replace(managerMembershipsPath());
+    setSellOpen(false);
+  }
 
   const hasActiveFilters = filtersActive(filters);
   const hasDebouncedFilters = filtersActive(debounced);
@@ -272,6 +288,15 @@ export default function ManagerMembershipsPage() {
         action={headerActions}
       />
       <MissionStrip />
+      {isScoped && (
+        <NavigationScopeBanner
+          backHref={customersHref}
+          backLabel={tCommon("backTo", { page: customersLabel })}
+          title={customer?.name ?? initialName ?? tCommon("loading")}
+          subtitle={customer ? tCommon("showingFor", { name: customer.name }) : undefined}
+          onClear={clearCustomerScope}
+        />
+      )}
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
       {success && <AlertBanner variant="success">{success}</AlertBanner>}
 

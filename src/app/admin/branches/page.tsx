@@ -17,6 +17,7 @@ import {
   UpdateBranchDigitalPresenceRequest,
   UpdatePlatformUserRequest,
   UpdateTenantRequest,
+  Tenant,
   UserRole,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
@@ -360,6 +361,7 @@ export default function AdminBranchesPage() {
 
       <BranchDrawer
         drawer={branchDrawer}
+        tenant={tenant}
         performance={selectedBranchPerf}
         loading={branchFormLoading}
         onClose={closeBranchDrawer}
@@ -425,7 +427,7 @@ function BrandSummaryCard({
   loading,
   onView,
 }: {
-  tenant?: { name: string; slug: string; primaryColor?: string; status: string };
+  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean };
   loading: boolean;
   onView: () => void;
 }) {
@@ -455,6 +457,7 @@ function BrandSummaryCard({
 
 function BranchDrawer({
   drawer,
+  tenant,
   performance,
   loading,
   onClose,
@@ -465,6 +468,7 @@ function BranchDrawer({
   onUpdate,
 }: {
   drawer: BranchDrawerState | null;
+  tenant?: Tenant;
   performance?: { actualSales: number; monthlySalesTarget: number; achievementPercent: number; meetingTarget: boolean; onTrack: boolean } | null;
   loading: boolean;
   onClose: () => void;
@@ -513,11 +517,12 @@ function BranchDrawer({
         ) : undefined
       }
     >
-      {isView && branch && <BranchDetailView branch={branch} performance={performance} />}
+      {isView && branch && <BranchDetailView branch={branch} tenant={tenant} performance={performance} />}
       {isForm && (
         <BranchForm
           key={drawer.mode === "create" ? "create" : branch!.id}
           initial={branch}
+          tenant={tenant}
           loading={loading}
           onCancel={() => {
             if (drawer.mode === "edit") onBackToView();
@@ -536,9 +541,11 @@ function BranchDrawer({
 
 function BranchDetailView({
   branch,
+  tenant,
   performance,
 }: {
   branch: Branch;
+  tenant?: Tenant;
   performance?: { actualSales: number; monthlySalesTarget: number; achievementPercent: number; meetingTarget: boolean; onTrack: boolean } | null;
 }) {
   const t = useTranslations("admin.organization");
@@ -571,6 +578,26 @@ function BranchDetailView({
         <DetailField
           label={t("businessType")}
           value={branch.businessType ? t(`businessTypes.${branch.businessType}`) : t("businessTypes.SALON")}
+        />
+        <DetailField
+          label={t("phoneNumberRequired")}
+          value={branch.phoneNumberRequired !== false ? t("yes") : t("no")}
+        />
+        <DetailField
+          label={t("gstEffective")}
+          value={branch.gstEffective ? t("gstPolicyEnabled") : t("gstPolicyDisabled")}
+        />
+        <DetailField
+          label={t("gstPolicy")}
+          value={
+            branch.gstEnabled === true
+              ? t("gstPolicyEnabled")
+              : branch.gstEnabled === false
+                ? t("gstPolicyDisabled")
+                : t("gstPolicyInherit", {
+                    status: tenant?.gstEnabled ? t("gstPolicyEnabled") : t("gstPolicyDisabled"),
+                  })
+          }
         />
         <DetailField label={t("societyLocality")} value={branch.societyDefault} />
         <DetailField label={tCommon("phone")} value={branch.phone} />
@@ -800,12 +827,14 @@ function BranchGeofencePanel({ branch }: { branch: Branch }) {
 
 function BranchForm({
   initial,
+  tenant,
   loading,
   onCancel,
   onSubmit,
   cancelLabel = "Cancel",
 }: {
   initial: Branch | null;
+  tenant?: Tenant;
   loading: boolean;
   onCancel: () => void;
   onSubmit: (data: CreateBranchRequest | UpdateBranchRequest) => void;
@@ -826,6 +855,10 @@ function BranchForm({
   const [openTime, setOpenTime] = useState(initial?.openTime ?? "09:00");
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "21:00");
   const [businessType, setBusinessType] = useState<BranchBusinessType>(initial?.businessType ?? "SALON");
+  const [phoneNumberRequired, setPhoneNumberRequired] = useState(initial?.phoneNumberRequired !== false);
+  const [gstPolicy, setGstPolicy] = useState<"INHERIT" | "ENABLED" | "DISABLED">(
+    initial?.gstEnabled === true ? "ENABLED" : initial?.gstEnabled === false ? "DISABLED" : "INHERIT"
+  );
 
   return (
     <form
@@ -842,6 +875,8 @@ function BranchForm({
           closeTime: closeTime || undefined,
           monthlySalesTarget: monthlySalesTarget ? Number(monthlySalesTarget) : undefined,
           businessType,
+          phoneNumberRequired,
+          gstPolicy: initial ? gstPolicy : undefined,
         });
       }}
       className="space-y-4 pb-2"
@@ -900,6 +935,38 @@ function BranchForm({
           </select>
           <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("businessTypeHint")}</p>
         </Field>
+        <Field label={t("phoneNumberRequired")} className="sm:col-span-2">
+          <label className="flex items-start gap-3 rounded-xl border border-[var(--border)] px-3 py-3 cursor-pointer touch-manipulation">
+            <input
+              type="checkbox"
+              checked={phoneNumberRequired}
+              onChange={(e) => setPhoneNumberRequired(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-[var(--text-primary)]">{t("phoneNumberRequiredLabel")}</span>
+              <span className="block text-xs text-[var(--text-tertiary)] mt-0.5">{t("phoneNumberRequiredHint")}</span>
+            </span>
+          </label>
+        </Field>
+        {initial && (
+          <Field label={t("gstPolicy")} className="sm:col-span-2">
+            <select
+              value={gstPolicy}
+              onChange={(e) => setGstPolicy(e.target.value as "INHERIT" | "ENABLED" | "DISABLED")}
+              className={selectClass}
+            >
+              <option value="INHERIT">
+                {t("gstPolicyInherit", {
+                  status: tenant?.gstEnabled ? t("gstPolicyEnabled") : t("gstPolicyDisabled"),
+                })}
+              </option>
+              <option value="ENABLED">{t("gstPolicyEnabled")}</option>
+              <option value="DISABLED">{t("gstPolicyDisabled")}</option>
+            </select>
+            <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("gstEnabledHint")}</p>
+          </Field>
+        )}
       </div>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)] sticky bottom-0 bg-[var(--surface)]">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>{cancelLabel}</button>
@@ -1131,7 +1198,7 @@ function BrandDrawer({
   onSave,
 }: {
   drawer: BrandDrawerState | null;
-  tenant?: { name: string; slug: string; primaryColor?: string; status: string };
+  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean };
   loading: boolean;
   saving: boolean;
   onClose: () => void;
@@ -1149,8 +1216,14 @@ function BrandDrawer({
     <SideSheet
       open
       onClose={onClose}
-      title={isView ? tenant?.name ?? t("brandProfile") : t("editBrandProfile")}
-      subtitle={isView ? `${tenant?.slug} · ${tenant?.status}` : t("editBrandSubtitle")}
+      title={isView ? (tenant?.name ?? t("brandProfile")) : t("editBrandProfile")}
+      subtitle={
+        isView
+          ? tenant
+            ? `${tenant.slug} · ${tenant.status}`
+            : t("loadingBrand")
+          : t("editBrandSubtitle")
+      }
       footer={
         isView ? (
           <button onClick={onEdit} className={`${btnPrimary} w-full`}>
@@ -1162,7 +1235,9 @@ function BrandDrawer({
     >
       {loading ? (
         <p className="text-sm text-[var(--text-secondary)]">{t("loadingBrand")}</p>
-      ) : isView && tenant ? (
+      ) : !tenant ? (
+        <p className="text-sm text-[var(--text-secondary)]">{tCommon("failed")}</p>
+      ) : isView ? (
         <div className="space-y-5">
           <SectionTitle>{t("brand")}</SectionTitle>
           <div className="grid grid-cols-2 gap-4">
@@ -1179,6 +1254,10 @@ function BrandDrawer({
                   </span>
                 ) : undefined
               }
+            />
+            <DetailField
+              label={t("gstBilling")}
+              value={tenant.gstEnabled ? t("gstPolicyEnabled") : t("gstPolicyDisabled")}
             />
           </div>
         </div>
@@ -1200,7 +1279,7 @@ function BrandForm({
   onCancel,
   onSave,
 }: {
-  tenant?: { name: string; primaryColor?: string };
+  tenant?: { name: string; primaryColor?: string; gstEnabled?: boolean };
   saving: boolean;
   onCancel: () => void;
   onSave: (data: UpdateTenantRequest) => void;
@@ -1210,11 +1289,13 @@ function BrandForm({
   const tCommon = useTranslations("common");
   const [name, setName] = useState(tenant?.name ?? "");
   const [primaryColor, setPrimaryColor] = useState(tenant?.primaryColor || "#6366f1");
+  const [gstEnabled, setGstEnabled] = useState(tenant?.gstEnabled === true);
 
   useEffect(() => {
     if (tenant) {
       setName(tenant.name);
       setPrimaryColor(tenant.primaryColor || "#6366f1");
+      setGstEnabled(tenant.gstEnabled === true);
     }
   }, [tenant]);
 
@@ -1222,7 +1303,7 @@ function BrandForm({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSave({ name, primaryColor });
+        onSave({ name, primaryColor, gstEnabled });
       }}
       className="space-y-4 pb-2"
     >
@@ -1242,6 +1323,20 @@ function BrandForm({
           </div>
         </Field>
       </div>
+      <Field label={t("gstBilling")} className="sm:col-span-2">
+        <label className="flex items-start gap-3 rounded-xl border border-[var(--border)] px-3 py-3 cursor-pointer touch-manipulation">
+          <input
+            type="checkbox"
+            checked={gstEnabled}
+            onChange={(e) => setGstEnabled(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="block text-sm font-semibold text-[var(--text-primary)]">{t("gstEnabledLabel")}</span>
+            <span className="block text-xs text-[var(--text-tertiary)] mt-0.5">{t("gstEnabledHint")}</span>
+          </span>
+        </label>
+      </Field>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)]">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>{tAdmin("backToDetails")}</button>
         <button type="submit" disabled={saving || !name} className={`${btnPrimary} flex-1`}>

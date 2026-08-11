@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import { AntrahqLogo } from "./AntrahqLogo";
 import { LoginFormCard } from "./LoginFormCard";
 import { isLocalDev } from "@/lib/env";
+import { cn } from "@/lib/utils";
 
 type LoginMobileShellProps = {
   email: string;
@@ -17,11 +18,11 @@ type LoginMobileShellProps = {
   onSubmit: (e: React.FormEvent) => void;
 };
 
-export function LoginMobileShell(props: LoginMobileShellProps) {
+export function LoginMobileShell({ className, ...props }: LoginMobileShellProps & { className?: string }) {
   const t = useTranslations("auth");
 
   return (
-    <div className="pravaah-login-mobile relative flex min-h-[100dvh] flex-col overflow-hidden">
+    <div className={cn("pravaah-login-mobile relative flex min-h-[100dvh] w-full flex-col overflow-hidden md:hidden", className)}>
       <div className="pravaah-login-bg absolute inset-0" aria-hidden />
       <div className="pravaah-orb pravaah-orb-1 pravaah-login-mobile-orb-1" aria-hidden />
       <div className="pravaah-orb pravaah-orb-2 pravaah-login-mobile-orb-2" aria-hidden />

@@ -1,7 +1,8 @@
 /** Client-only prefs for walk-in speed: recent/favorites/draft. Safe without backend. */
 
 export interface RecentCustomer {
-  phone: string;
+  phone?: string;
+  visitPassId?: string;
   name: string;
   customerId?: string;
   society?: string;
@@ -10,6 +11,7 @@ export interface RecentCustomer {
 
 export interface WalkInDraft {
   phone: string;
+  visitPassId: string;
   customerName: string;
   customerId: string;
   society: string;
@@ -100,12 +102,21 @@ export function getRecentCustomers(branchId: string): RecentCustomer[] {
   if (!branchId || typeof window === "undefined") return [];
   const parsed = safeParse<RecentCustomer[]>(localStorage.getItem(recentCustomersKey(branchId)));
   if (!Array.isArray(parsed)) return [];
-  return parsed.filter((c) => c && typeof c.phone === "string" && typeof c.name === "string").slice(0, MAX_RECENT);
+  return parsed
+    .filter((c) => c && typeof c.name === "string" && (c.phone || c.visitPassId || c.customerId))
+    .slice(0, MAX_RECENT);
 }
 
 export function pushRecentCustomer(branchId: string, customer: RecentCustomer) {
-  if (!branchId || !customer.phone) return;
-  const rest = getRecentCustomers(branchId).filter((c) => c.phone !== customer.phone);
+  if (!branchId || !customer.name) return;
+  const key = customer.customerId || customer.visitPassId || customer.phone;
+  if (!key) return;
+  const rest = getRecentCustomers(branchId).filter(
+    (c) =>
+      (customer.customerId && c.customerId !== customer.customerId) ||
+      (customer.visitPassId && c.visitPassId !== customer.visitPassId) ||
+      (customer.phone && c.phone !== customer.phone)
+  );
   const next = [customer, ...rest].slice(0, MAX_RECENT);
   try {
     localStorage.setItem(recentCustomersKey(branchId), JSON.stringify(next));

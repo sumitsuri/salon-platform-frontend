@@ -625,9 +625,11 @@ html[lang="pa-IN"] body {
 /* Login — mobile sheet, tablet, and PWA safe areas */
 .pravaah-login-page {
   min-height: 100dvh;
+  width: 100%;
 }
 
 .pravaah-login-mobile {
+  width: 100%;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }

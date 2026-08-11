@@ -264,8 +264,38 @@ export const api = {
   findCustomerByPhone: (phone: string) =>
     request<Customer>(`/api/v1/customers/phone/${encodeURIComponent(phone)}`),
 
+  findCustomerByVisitPass: (visitPassId: string) =>
+    request<Customer>(`/api/v1/customers/visit-pass/${encodeURIComponent(visitPassId)}`),
+
   createCustomer: (data: CreateCustomerRequest) =>
     request<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(data) }),
+
+  getCustomerRegistrationCard: (customerId: string, branchId?: string) => {
+    const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+    return request<CustomerRegistrationCard>(`/api/v1/customers/${customerId}/registration-card${q}`);
+  },
+
+  getCustomer: (id: string) => request<Customer>(`/api/v1/customers/${id}`),
+
+  listCustomers: (params?: CustomerListParams) => {
+    const search = new URLSearchParams();
+    if (params?.name) search.set("name", params.name);
+    if (params?.society) search.set("society", params.society);
+    if (params?.phone) search.set("phone", params.phone);
+    if (params?.visitPassId) search.set("visitPassId", params.visitPassId);
+    if (params?.minVisitCount != null) search.set("minVisitCount", String(params.minVisitCount));
+    if (params?.maxVisitCount != null) search.set("maxVisitCount", String(params.maxVisitCount));
+    if (params?.minLifetimeSpend != null) search.set("minLifetimeSpend", String(params.minLifetimeSpend));
+    if (params?.maxLifetimeSpend != null) search.set("maxLifetimeSpend", String(params.maxLifetimeSpend));
+    if (params?.lastVisitFrom) search.set("lastVisitFrom", params.lastVisitFrom);
+    if (params?.lastVisitTo) search.set("lastVisitTo", params.lastVisitTo);
+    search.set("page", String(params?.page ?? 0));
+    search.set("size", String(params?.size ?? 20));
+    return request<PageResult<Customer>>(`/api/v1/customers?${search.toString()}`);
+  },
+
+  getPublicPassCard: (token: string) =>
+    publicRequest<CustomerRegistrationCard>(`/api/v1/public/pass/${encodeURIComponent(token)}`),
 
   getBranchServices: (branchId: string) =>
     request<BranchServiceItem[]>(`/api/v1/catalog/branches/${branchId}/services`),
@@ -400,6 +430,7 @@ export const api = {
   getBookings: (params?: BookingListParams) => {
     const search = new URLSearchParams();
     if (params?.branchId) search.set("branchId", params.branchId);
+    if (params?.customerId) search.set("customerId", params.customerId);
     if (params?.customer) search.set("customer", params.customer);
     if (params?.branch) search.set("branch", params.branch);
     if (params?.service) search.set("service", params.service);
@@ -1012,7 +1043,10 @@ export const api = {
 export interface Customer {
   id: string;
   name: string;
-  phone: string;
+  phone?: string | null;
+  visitPassId?: string;
+  identityStatus?: "PHONE_VERIFIED" | "PASS_ONLY" | "UPGRADED";
+  passPublicToken?: string;
   society?: string;
   flatUnit?: string;
   visitCount: number;
@@ -1022,9 +1056,23 @@ export interface Customer {
 
 export interface CreateCustomerRequest {
   name: string;
-  phone: string;
+  phone?: string;
+  branchId?: string;
   society?: string;
   flatUnit?: string;
+}
+
+export interface CustomerRegistrationCard {
+  tenantName?: string;
+  tenantLogoUrl?: string;
+  primaryColor?: string;
+  branchName?: string;
+  branchAddress?: string;
+  customerName: string;
+  visitPassId: string;
+  phone?: string | null;
+  publicPassUrl?: string;
+  issuedAt?: string;
 }
 
 export interface BranchServiceItem {
@@ -1244,8 +1292,24 @@ export interface StaffTargetTrends {
   branches: BranchStaffTargetTrends[];
 }
 
+export interface CustomerListParams {
+  name?: string;
+  society?: string;
+  phone?: string;
+  visitPassId?: string;
+  minVisitCount?: number;
+  maxVisitCount?: number;
+  minLifetimeSpend?: number;
+  maxLifetimeSpend?: number;
+  lastVisitFrom?: string;
+  lastVisitTo?: string;
+  page?: number;
+  size?: number;
+}
+
 export interface BookingListParams {
   branchId?: string;
+  customerId?: string;
   customer?: string;
   branch?: string;
   service?: string;
@@ -1604,6 +1668,9 @@ export interface Branch {
   monthlySalesTarget?: number;
   status?: string;
   businessType?: BranchBusinessType;
+  phoneNumberRequired?: boolean;
+  gstEnabled?: boolean | null;
+  gstEffective?: boolean;
   createdAt?: string;
   googleReviewUrl?: string;
   googleReviewAutoPublish?: boolean;
@@ -1653,6 +1720,7 @@ export interface CreateBranchRequest {
   monthlySalesTarget?: number;
   status?: string;
   businessType?: BranchBusinessType;
+  phoneNumberRequired?: boolean;
 }
 
 export interface UpdateBranchRequest {
@@ -1667,6 +1735,8 @@ export interface UpdateBranchRequest {
   monthlySalesTarget?: number;
   status?: string;
   businessType?: BranchBusinessType;
+  phoneNumberRequired?: boolean;
+  gstPolicy?: "INHERIT" | "ENABLED" | "DISABLED";
 }
 
 export interface BranchTargetPerformanceItem {
@@ -1711,6 +1781,7 @@ export interface UpdateTenantRequest {
   name?: string;
   logoUrl?: string;
   primaryColor?: string;
+  gstEnabled?: boolean;
 }
 
 export interface UpdatePlatformUserRequest {
@@ -2000,6 +2071,7 @@ export interface Tenant {
   slug: string;
   status: string;
   primaryColor?: string;
+  gstEnabled?: boolean;
 }
 
 export interface CreateTenantRequest {

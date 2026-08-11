@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { UserPlus, IndianRupee, Clock, CheckCircle2, FileText, Receipt } from "lucide-react";
 import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
@@ -12,6 +13,9 @@ import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
+import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
+import { AppScope, buildWalkInUrl } from "@/lib/navigation-scope";
+import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
 import {
   Card,
   StatusBadge,
@@ -63,12 +67,20 @@ export function BookingsHistoryPanel({
   embedded = false,
   onNewVisit,
   wizardBaseHref = "/manager/walk-in",
+  initialCustomerId,
+  navigationScope,
 }: {
   embedded?: boolean;
   onNewVisit?: () => void;
   wizardBaseHref?: string;
+  initialCustomerId?: string;
+  /** When set, shows breadcrumbs and back link to customers when filtered by customerId. */
+  navigationScope?: AppScope;
 }) {
+  const router = useRouter();
   const t = useTranslations("manager.bookings");
+  const tWalkIn = useTranslations("manager.walkIn");
+  const tCustomers = useTranslations("customers");
   const tSchedule = useTranslations("manager.schedule");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
@@ -76,11 +88,31 @@ export function BookingsHistoryPanel({
   const localeKit = getTenantLocaleKit();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
+  const [customerIdFilter, setCustomerIdFilter] = useState(initialCustomerId || "");
   const [selected, setSelected] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
   const filtersReady = useRef(false);
+
+  useEffect(() => {
+    if (initialCustomerId) setCustomerIdFilter(initialCustomerId);
+  }, [initialCustomerId]);
+
+  const historyTabLabel = tWalkIn("tabHistory");
+  const { customer, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
+    customerId: navigationScope && customerIdFilter ? customerIdFilter : undefined,
+    scope: navigationScope ?? "manager",
+    currentPageLabel: embedded ? historyTabLabel : t("title"),
+    enabled: !!navigationScope && !!customerIdFilter,
+  });
+
+  function clearCustomerScope() {
+    setCustomerIdFilter("");
+    if (navigationScope === "manager") {
+      router.replace(buildWalkInUrl({ tab: "history" }));
+    }
+  }
 
   useEffect(() => {
     if (!filtersReady.current) {
@@ -137,11 +169,12 @@ export function BookingsHistoryPanel({
     isFetchingNextPage,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["bookings", branchId, debounced, amountFilter],
+    queryKey: ["bookings", branchId, debounced, amountFilter, customerIdFilter],
     queryFn: (page) =>
       api.getBookings({
         branchId,
-        customer: debounced.customer || undefined,
+        customerId: customerIdFilter || undefined,
+        customer: customerIdFilter ? undefined : debounced.customer || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
@@ -264,11 +297,30 @@ export function BookingsHistoryPanel({
   }
 
   function visitActionHref(b: Booking) {
-    return `${wizardBaseHref}?bookingId=${b.id}`;
+    const params = new URLSearchParams({ bookingId: b.id });
+    if (customerIdFilter) params.set("customerId", customerIdFilter);
+    return `${wizardBaseHref}?${params.toString()}`;
   }
+
+  const scopeSubtitle =
+    customer?.phone || customer?.visitPassId
+      ? [customer.phone, customer.visitPassId ? `${tCustomers("visitPass")}: ${customer.visitPassId}` : null]
+          .filter(Boolean)
+          .join(" · ")
+      : undefined;
 
   return (
     <div className={cn("space-y-4", embedded && "space-y-3")}>
+      {isScoped && (
+        <NavigationScopeBanner
+          backHref={customerDetailHref}
+          backLabel={customer?.name ? tCommon("backTo", { page: customer.name }) : tCustomers("backToCustomers")}
+          title={customer?.name ?? tCommon("loading")}
+          subtitle={customer ? scopeSubtitle ?? tCommon("showingFor", { name: customer.name }) : undefined}
+          onClear={clearCustomerScope}
+        />
+      )}
+
       {!embedded && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
