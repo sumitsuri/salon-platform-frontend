@@ -30,7 +30,7 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ""
         run: |
           npm ci
-          npm run build
+          npm run build -- --webpack
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
