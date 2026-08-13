@@ -208,7 +208,7 @@ export function EnterpriseAppShell({
           </aside>
 
           <div
-            className="flex-1 flex flex-col min-h-screen min-w-0 max-w-full transition-[padding-left] duration-200 ease-out md:pl-[var(--sidebar-current-width)]"
+            className="flex-1 flex flex-col min-h-0 md:min-h-screen max-md:max-h-[100dvh] max-md:overflow-hidden min-w-0 max-w-full transition-[padding-left] duration-200 ease-out md:pl-[var(--sidebar-current-width)]"
             style={
               { "--sidebar-current-width": ready && usesSidebar ? sidebarWidth : "0px" } as React.CSSProperties
             }
@@ -229,11 +229,14 @@ export function EnterpriseAppShell({
             />
 
             <main
+              id="app-mobile-scroll"
               className={cn(
                 "flex-1 w-full px-4 sm:px-6 md:px-6 lg:px-8 pb-4 sm:pb-5 md:py-6 min-w-0",
+                "max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:touch-scroll-y",
                 MOBILE_TOP_BAR_OFFSET,
                 mobileMainPadding
               )}
+              data-touch-scroll
             >
               <div className="page-stack w-full max-w-[1920px] mx-auto">{children}</div>
             </main>

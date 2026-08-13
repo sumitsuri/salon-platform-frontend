@@ -517,8 +517,21 @@ html[lang="pa-IN"] body {
 
 
 @media (display-mode: standalone) {
+  html {
+    height: 100%;
+  }
+
   body {
-    overscroll-behavior-y: contain;
+    min-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* contain + overflow-x:hidden breaks touch scroll on Android installed PWAs */
+    overscroll-behavior-y: auto;
+  }
+
+  #app-mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 }
 

@@ -7,6 +7,7 @@ import { getStoredUser, redirectToLogin } from "@/lib/auth-session";
 import { useAuthHydrated, useAuthStore } from "@/lib/auth-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguagePickerModal, LocaleSync } from "@/components/LanguagePickerModal";
+import { PwaScrollRecovery } from "@/components/PwaScrollRecovery";
 
 function SessionKeeper() {
   const hydrated = useAuthHydrated();
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <SessionKeeper />
+        <PwaScrollRecovery />
         <LocaleSync />
         <LanguagePickerModal />
         <div className="app-viewport">{children}</div>
