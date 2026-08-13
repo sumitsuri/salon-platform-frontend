@@ -12,7 +12,6 @@ export type BillBreakdownPreview = {
   promoLabel?: string;
   manualDiscountAmount?: number;
   manualDiscountLabel?: string;
-  taxableAmount?: number;
   membershipFeeAmount?: number;
   membershipFeeLabel?: string;
   cgstAmount: number;
@@ -23,8 +22,6 @@ export type BillBreakdownPreview = {
 type Props = {
   preview: BillBreakdownPreview;
   localeKit?: TenantLocaleKit;
-  /** Show taxable amount row (walk-in payment step). */
-  showTaxable?: boolean;
   /** Override CGST/SGST display (walk-in tax override). */
   cgstDisplay?: number;
   sgstDisplay?: number;
@@ -37,7 +34,6 @@ type Props = {
 export function BillBreakdownRows({
   preview,
   localeKit,
-  showTaxable = false,
   cgstDisplay,
   sgstDisplay,
   hideGrandTotal = false,
@@ -82,12 +78,6 @@ export function BillBreakdownRows({
           <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
             -{fmt(preview.manualDiscountAmount ?? 0)}
           </span>
-        </div>
-      )}
-      {showTaxable && preview.taxableAmount != null && (
-        <div className="flex justify-between">
-          <span className="text-[var(--text-secondary)]">{tWalkIn("taxableAmount")}</span>
-          <span>{fmt(preview.taxableAmount)}</span>
         </div>
       )}
       <div className="flex justify-between">
