@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { api, type StaffAvailabilityColumn, type StaffTimeBlock } from "@/lib/api";
+import { lockBodyScroll } from "@/lib/scroll-lock";
 import { useAuthStore } from "@/lib/auth-store";
 import {
   PageHeader,
@@ -243,11 +244,7 @@ function VisitDetailsModal({
   const open = block.status === "IN_PROGRESS" || block.status === "READY_FOR_BILLING";
 
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockBodyScroll();
   }, []);
 
   return (

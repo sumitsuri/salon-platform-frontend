@@ -2015,7 +2015,7 @@ export default function WalkInPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <div className="overflow-y-auto overscroll-contain px-3 py-3 min-h-0 flex-1">
+                  <div className="overflow-y-auto overscroll-contain touch-scroll-y px-3 py-3 min-h-0 flex-1" data-touch-scroll>
                     <WalkInCartPanel
                       variant="sheet"
                       cart={cart}

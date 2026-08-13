@@ -115,10 +115,11 @@ export function WalkInCartPanel({
 
           <div
             className={cn(
-              "space-y-2 overflow-y-auto overscroll-contain",
+              "space-y-2 overflow-y-auto overscroll-contain touch-scroll-y",
               variant === "panel" ? "max-h-[min(50vh,24rem)]" : "max-h-[min(45vh,20rem)]"
             )}
             data-testid="walk-in-cart"
+            data-touch-scroll
           >
             {cart.map((item, idx) => (
               <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
@@ -234,7 +235,7 @@ export function WalkInCartPanel({
 
   return (
     <Card className="space-y-3 sticky top-4 max-h-[calc(100dvh-6rem)] overflow-hidden flex flex-col">
-      <div className="overflow-y-auto overscroll-contain space-y-3 min-h-0 flex-1">{inner}</div>
+      <div className="overflow-y-auto overscroll-contain touch-scroll-y space-y-3 min-h-0 flex-1" data-touch-scroll>{inner}</div>
     </Card>
   );
 }

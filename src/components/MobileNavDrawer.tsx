@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import { SidebarNavPanel, SidebarNavPanelProps } from "@/components/SidebarNavPanel";
 
 interface MobileNavDrawerProps extends SidebarNavPanelProps {
@@ -14,18 +15,15 @@ interface MobileNavDrawerProps extends SidebarNavPanelProps {
 export function MobileNavDrawer({ open, onClose, ...panelProps }: MobileNavDrawerProps) {
   const tCommon = useTranslations("common");
 
+  useScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   return (
@@ -41,7 +39,7 @@ export function MobileNavDrawer({ open, onClose, ...panelProps }: MobileNavDrawe
       <aside
         className={cn(
           "md:hidden enterprise-sidebar fixed inset-y-0 left-0 z-[70] flex flex-col w-[min(var(--sidebar-width),88vw)] shadow-xl transition-transform duration-200 ease-out",
-          open ? "translate-x-0" : "-translate-x-full"
+          open ? "translate-x-0" : "-translate-x-full pointer-events-none"
         )}
         aria-label={tCommon("navigationMenu")}
         aria-hidden={!open}

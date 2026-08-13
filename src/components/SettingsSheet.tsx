@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from "@/lib/auth-store";
 import { api, type LocaleInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import { btnPrimary, btnSecondary } from "@/components/ui";
 import { applyLocaleChange } from "@/lib/locale-client";
 import { resolveLocale, type AppLocale } from "@/i18n/config";
@@ -142,18 +143,15 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     if (open && !user) onClose();
   }, [open, user, onClose]);
 
+  useScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   const previewAccent = ensureReadableAccent(
@@ -224,7 +222,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 overscroll-contain touch-scroll-y" data-touch-scroll>
           {locales.length > 0 && (
             <section className="space-y-3" data-testid="settings-language-section">
               <div className="flex items-center gap-3">

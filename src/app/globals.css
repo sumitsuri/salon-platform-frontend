@@ -536,6 +536,12 @@ html[lang="pa-IN"] body {
   scrollbar-width: none;
 }
 
+/* Nested scroll regions — helps Android Chrome after overlay scroll-lock unlock */
+.touch-scroll-y {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 .hero-banner {
   background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
   color: var(--hero-text);

@@ -187,7 +187,7 @@ export function WalkInServiceCatalog({
         </div>
       )}
 
-      <div className="p-2 sm:p-3 flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <div className="p-2 sm:p-3 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-scroll-y" data-touch-scroll>
         {inBrowseMode ? (
           <div className="space-y-4">
             <div className="flex items-start gap-2 rounded-xl border border-[var(--brand-muted)] bg-[var(--brand-light)]/40 px-3 py-2.5">

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useInfiniteScrollTrigger } from "@/lib/use-infinite-scroll-trigger";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import { useEffect } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
@@ -509,18 +510,15 @@ export function SideSheet({
 }) {
   const t = useTranslations("components.ui");
 
+  useScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
   if (!open) return null;
@@ -556,7 +554,7 @@ export function SideSheet({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 overscroll-contain">{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 overscroll-contain touch-scroll-y" data-touch-scroll>{children}</div>
         {footer && (
           <div className="shrink-0 p-4 border-t border-[var(--border)] bg-[var(--surface-muted)]/50 space-y-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {footer}
