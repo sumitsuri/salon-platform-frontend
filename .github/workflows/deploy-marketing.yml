@@ -49,6 +49,7 @@ jobs:
 
       - name: Sync to S3
         run: |
+          # __app* (not __app/*) — single-level exclude leaves nested keys like __app/login/index.html deletable.
           aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/" --delete \
             --exclude "__app*"
 

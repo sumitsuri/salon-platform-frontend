@@ -31,6 +31,14 @@ jobs:
         run: |
           npm ci
           npm run build -- --webpack
+          if rg -q "localhost:8080" out/_next/static/chunks/; then
+            echo "::error::Production build contains localhost API URL. Unset .env.local or override NEXT_PUBLIC_API_URL."
+            exit 1
+          fi
+          if ! rg -q "api.antrahq.com" out/_next/static/chunks/; then
+            echo "::error::Production build is missing https://api.antrahq.com in client bundles."
+            exit 1
+          fi
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -48,9 +56,19 @@ jobs:
 
       - name: Verify app entrypoint exists
         run: |
-          aws s3api head-object \
-            --bucket "${{ steps.ssm.outputs.bucket }}" \
-            --key "__app/login/index.html"
+          BUCKET="${{ steps.ssm.outputs.bucket }}"
+          aws s3api head-object --bucket "$BUCKET" --key "__app/login/index.html"
+          CHUNK_KEY=$(aws s3 ls "s3://${BUCKET}/__app/_next/static/chunks/" | awk '/1863-/{print $4; exit}')
+          test -n "$CHUNK_KEY"
+          aws s3 cp "s3://${BUCKET}/__app/_next/static/chunks/${CHUNK_KEY}" /tmp/app-chunk.js
+          if rg -q "localhost:8080" /tmp/app-chunk.js; then
+            echo "::error::Deployed app bundle still references localhost:8080"
+            exit 1
+          fi
+          if ! rg -q "api.antrahq.com" /tmp/app-chunk.js; then
+            echo "::error::Deployed app bundle missing api.antrahq.com"
+            exit 1
+          fi
 
       - name: Invalidate CloudFront
         run: |
