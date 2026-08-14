@@ -7,7 +7,7 @@ import { Home, UserPlus, Fingerprint, Sparkles, Scissors, Package, CreditCard, C
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { AppNavSection, isNavActive, MOBILE_MAIN_PADDING_FAB } from "@/components/app-nav";
+import { AppNavSection, isNavActive, MOBILE_MAIN_PADDING, MOBILE_MAIN_PADDING_FAB } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
@@ -78,6 +78,8 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
   const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
 
+  const isWalkInRoute = pathname.startsWith("/manager/walk-in");
+
   return (
     <EnterpriseAppShell
       homeHref="/manager"
@@ -95,7 +97,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
         router.push("/login");
       }}
       logoutLabel={tCommon("logout")}
-      mobileMainPadding={MOBILE_MAIN_PADDING_FAB}
+      mobileMainPadding={isWalkInRoute ? MOBILE_MAIN_PADDING : MOBILE_MAIN_PADDING_FAB}
       mobileNavFabColor={brandColor}
     >
       {children}

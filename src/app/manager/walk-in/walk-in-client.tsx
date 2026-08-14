@@ -246,6 +246,17 @@ export default function WalkInPage() {
   }, [step]);
 
   useEffect(() => {
+    const scrollRoot = document.getElementById("app-mobile-scroll");
+    if (!scrollRoot) return;
+    if (step === 2) {
+      scrollRoot.classList.add("walk-in-step-2-scroll");
+    } else {
+      scrollRoot.classList.remove("walk-in-step-2-scroll");
+    }
+    return () => scrollRoot.classList.remove("walk-in-step-2-scroll");
+  }, [step]);
+
+  useEffect(() => {
     if (!branchId) return;
     setRecentServiceIds(getRecentServiceIds(branchId));
     setFavoriteServiceIds(getFavoriteServiceIds(branchId));
@@ -1764,9 +1775,21 @@ export default function WalkInPage() {
   const showFlowChrome = step === 2 || step === 3;
 
   return (
-    <div className="space-y-2 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
+    <div
+      className={cn(
+        "space-y-2 w-full max-w-6xl mx-auto min-w-0 max-w-full",
+        step === 2
+          ? "max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0"
+          : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      )}
+    >
       {showFlowChrome ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
+        <div
+          className={cn(
+            "rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm",
+            step === 2 && "max-lg:shrink-0"
+          )}
+        >
           <div className="flex items-center gap-2 px-2 py-2 min-w-0">
             {flowBackButton}
             <div className="min-w-0 flex-1">
@@ -2134,7 +2157,14 @@ export default function WalkInPage() {
       )}
 
       {step === 2 && (
-        <div className="min-w-0 space-y-2">
+        <div
+          className={cn(
+            "min-w-0 space-y-2 max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0",
+            cart.length === 0
+              ? "max-lg:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]"
+              : "max-lg:pb-[calc(11rem+env(safe-area-inset-bottom,0px))]"
+          )}
+        >
           {addedToast && (
             <div
               role="status"
@@ -2153,21 +2183,23 @@ export default function WalkInPage() {
           )}
 
           {!membership && customerId && (
-            <WalkInMembershipSavingsBanner
-              compact
-              customerName={customerName}
-              cart={cart}
-              servicesById={servicesById}
-              localeKit={localeKit}
-            />
+            <div className="shrink-0">
+              <WalkInMembershipSavingsBanner
+                compact
+                customerName={customerName}
+                cart={cart}
+                servicesById={servicesById}
+                localeKit={localeKit}
+              />
+            </div>
           )}
 
           {staff.length === 0 && (
-            <Callout variant="warning" title={t("noStaffConfigured")} />
+            <Callout variant="warning" title={t("noStaffConfigured")} className="shrink-0" />
           )}
 
-          <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0">
-            <div className="flex min-h-[calc(100dvh-26rem-env(safe-area-inset-bottom,0px))] max-h-[calc(100dvh-26rem-env(safe-area-inset-bottom,0px))] flex-1 flex-col min-w-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
+          <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0 max-lg:flex-1 max-lg:min-h-0">
+            <div className="flex flex-1 flex-col min-w-0 min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
               <WalkInServiceCatalog
                 serviceQuery={serviceQuery}
                 onServiceQueryChange={setServiceQuery}
@@ -2318,7 +2350,6 @@ export default function WalkInPage() {
                 </div>
               )}
             </div>
-            <div className="h-[calc(10.5rem+env(safe-area-inset-bottom))]" aria-hidden />
           </div>
         </div>
       )}
