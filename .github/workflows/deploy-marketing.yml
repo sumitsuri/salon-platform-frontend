@@ -50,7 +50,13 @@ jobs:
       - name: Sync to S3
         run: |
           aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/" --delete \
-            --exclude "__app/*"
+            --exclude "__app*"
+
+      - name: Verify ops app prefix was not touched
+        run: |
+          aws s3api head-object \
+            --bucket "${{ steps.ssm.outputs.bucket }}" \
+            --key "__app/login/index.html"
 
       - name: Invalidate CloudFront
         run: |

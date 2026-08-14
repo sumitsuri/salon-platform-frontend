@@ -46,6 +46,12 @@ jobs:
       - name: Sync to S3
         run: aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/__app/" --delete
 
+      - name: Verify app entrypoint exists
+        run: |
+          aws s3api head-object \
+            --bucket "${{ steps.ssm.outputs.bucket }}" \
+            --key "__app/login/index.html"
+
       - name: Invalidate CloudFront
         run: |
           aws cloudfront create-invalidation \
