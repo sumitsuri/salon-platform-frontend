@@ -35,6 +35,11 @@ jobs:
         run: |
           npm ci
           npm run build
+          # CloudFront custom error page expects /404.html at bucket root
+          if [ -f out/404/index.html ] && [ ! -f out/404.html ]; then
+            cp out/404/index.html out/404.html
+          fi
+          test -f out/404.html || test -f out/404/index.html
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
