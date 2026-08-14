@@ -1406,8 +1406,8 @@
         "dateTo": "Submitted until",
         "resetAll": "Reset filters"
       },
-      "googlePublished": "Sent to Google",
-      "googlePending": "Not sent yet"
+      "googlePublished": "Routed to Google",
+      "googlePending": "Not routed yet"
     },
     "localSpotlight": {
       "title": "Local Spotlight",

@@ -16,7 +16,7 @@ import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { Card, ListRow, EmptyState, PageLoader } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
-import { ProductDateRange, dashboardSecondaryRange, getDefaultDateRange } from "@/lib/date-range";
+import { ProductDateRange, dashboardSecondaryRange, getTodayRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
   DashboardCommandBar,
@@ -32,7 +32,10 @@ export default function AdminDashboardPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
+    preset: "today",
+    ...getTodayRange(),
+  }));
   const [initialized, setInitialized] = useState(false);
 
   const { data: branches = [], isLoading: branchesLoading, isError: branchesError } = useQuery({

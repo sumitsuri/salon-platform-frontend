@@ -1406,8 +1406,8 @@
         "dateTo": "Submitted until",
         "resetAll": "Reset filters"
       },
-      "googlePublished": "Sent to Google",
-      "googlePending": "Not sent yet"
+      "googlePublished": "Google की ओर भेजा गया",
+      "googlePending": "अभी Google की ओर नहीं भेजा"
     },
     "localSpotlight": {
       "title": "Local Spotlight",
