@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Building2, Target } from "lucide-react";
 import { api } from "@/lib/api";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { BranchTrends } from "@/components/BranchTrends";
 import { BranchTargetTrends } from "@/components/BranchTargetTrends";
@@ -22,8 +22,8 @@ import {
   DashboardCommandBar,
   DashboardQuickLink,
   DashboardKpiStrip,
+  DashboardBranchPerformance,
   DashboardOverviewPanel,
-  EnterpriseTableShell,
   LabeledProgressBar,
 } from "@/components/enterprise-ui";
 
@@ -187,26 +187,64 @@ export default function AdminDashboardPage() {
         />
 
         {selectedBranches.length === 0 ? null : isLoading || !dashboard ? (
-          <DashboardKpiStrip
-            loading
-            headerLabel={t("keyMetricsLabel")}
-            items={[
-              { label: t("totalRevenue"), value: "…" },
-              { label: t("visits"), value: "…" },
-              { label: t("avgTicket"), value: "…" },
-              { label: t("discounts"), value: "…" },
-            ]}
-          />
+          <>
+            <DashboardKpiStrip
+              loading
+              headerLabel={t("keyMetricsLabel")}
+              items={[
+                { label: t("totalRevenue"), value: "…" },
+                { label: t("visits"), value: "…" },
+                { label: t("avgTicket"), value: "…" },
+                { label: t("discounts"), value: "…" },
+              ]}
+            />
+            <DashboardBranchPerformance
+              loading
+              headerLabel={t("branchPerformance")}
+              branches={[]}
+              labels={{
+                branch: tCommon("branch"),
+                revenue: t("revenue"),
+                visits: t("visits"),
+                avgTicket: t("avgTicket"),
+                discounts: t("discounts"),
+              }}
+              formatValue={formatCurrency}
+            />
+          </>
         ) : (
-          <DashboardKpiStrip
-            headerLabel={t("keyMetricsLabel")}
-            items={[
-              { label: t("totalRevenue"), value: formatCurrency(dashboard.totalRevenue) },
-              { label: t("visits"), value: dashboard.totalVisits },
-              { label: t("avgTicket"), value: formatCurrency(dashboard.avgTicketSize) },
-              { label: t("discounts"), value: formatCurrency(dashboard.totalDiscounts) },
-            ]}
-          />
+          <>
+            <DashboardKpiStrip
+              headerLabel={t("keyMetricsLabel")}
+              items={[
+                { label: t("totalRevenue"), value: formatCurrency(dashboard.totalRevenue) },
+                { label: t("visits"), value: dashboard.totalVisits },
+                { label: t("avgTicket"), value: formatCurrency(dashboard.avgTicketSize) },
+                { label: t("discounts"), value: formatCurrency(dashboard.totalDiscounts) },
+              ]}
+            />
+            {dashboard.branchStats.length > 0 && (
+              <DashboardBranchPerformance
+                headerLabel={t("branchPerformance")}
+                branches={dashboard.branchStats.map((b) => ({
+                  branchId: b.branchId,
+                  branchName: b.branchName,
+                  revenue: b.revenue,
+                  visits: b.visits,
+                  avgTicket: b.avgTicket,
+                  discountAmount: b.discountAmount ?? 0,
+                }))}
+                labels={{
+                  branch: tCommon("branch"),
+                  revenue: t("revenue"),
+                  visits: t("visits"),
+                  avgTicket: t("avgTicket"),
+                  discounts: t("discounts"),
+                }}
+                formatValue={formatCurrency}
+              />
+            )}
+          </>
         )}
       </DashboardOverviewPanel>
 
@@ -243,47 +281,7 @@ export default function AdminDashboardPage() {
             />
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 min-w-0">
-            <EnterpriseTableShell title={t("branchComparison")} accent="brand">
-              <div className="hidden md:block responsive-table-wrap">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] bg-[var(--surface-muted)]/40">
-                      <th className="px-4 py-2.5 text-left text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{tCommon("branch")}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-emerald-600">{t("revenue")}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">{t("visits")}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] uppercase tracking-wider font-bold text-[var(--brand-text)]">{t("avgTicket")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.branchStats.map((b, i) => (
-                      <tr key={b.branchId} className={cn("border-t border-[var(--border)]", i % 2 === 1 && "bg-[var(--surface-muted)]/30")}>
-                        <td className="px-4 py-2.5 font-semibold">{b.branchName}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">{formatCurrency(b.revenue)}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums">{b.visits}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-[var(--brand-text)]">{formatCurrency(b.avgTicket)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="md:hidden divide-y divide-[var(--border)]">
-                {dashboard.branchStats.map((b) => (
-                  <ListRow
-                    key={b.branchId}
-                    title={b.branchName}
-                    subtitle={tAdmin("visits", { count: b.visits })}
-                    trailing={
-                      <div className="text-right min-w-0">
-                        <p className="text-xs sm:text-sm font-bold tabular-nums truncate">{formatCurrency(b.revenue)}</p>
-                        <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] truncate">{tAdmin("avg", { amount: formatCurrency(b.avgTicket) })}</p>
-                      </div>
-                    }
-                  />
-                ))}
-              </div>
-            </EnterpriseTableShell>
-
+          <div className="grid gap-4 md:grid-cols-2 min-w-0">
             <Card padding={false}>
               <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-violet-50/80 to-indigo-50/50 dark:from-violet-950/30 dark:to-indigo-950/20">
                 <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>

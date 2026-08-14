@@ -209,6 +209,116 @@ export function DashboardKpiStrip({
   );
 }
 
+export type BranchPerformanceRow = {
+  branchId: string;
+  branchName: string;
+  revenue: number;
+  visits: number;
+  avgTicket: number;
+  discountAmount: number;
+};
+
+export function DashboardBranchPerformance({
+  branches,
+  loading,
+  headerLabel,
+  labels,
+  formatValue,
+  className,
+}: {
+  branches: BranchPerformanceRow[];
+  loading?: boolean;
+  headerLabel: string;
+  labels: {
+    branch: string;
+    revenue: string;
+    visits: string;
+    avgTicket: string;
+    discounts: string;
+  };
+  formatValue: (amount: number) => string;
+  className?: string;
+}) {
+  const placeholderRows = loading ? [0, 1] : branches;
+
+  return (
+    <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
+      <div className="dashboard-branch-performance-header px-4 py-3">
+        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      </div>
+
+      <div className="hidden md:block responsive-table-wrap">
+        <table className="dashboard-branch-performance-table w-full text-sm">
+          <thead>
+            <tr>
+              <th className="dashboard-branch-performance-th text-left">{labels.branch}</th>
+              <th className="dashboard-branch-performance-th text-right">{labels.revenue}</th>
+              <th className="dashboard-branch-performance-th text-right">{labels.visits}</th>
+              <th className="dashboard-branch-performance-th text-right">{labels.avgTicket}</th>
+              <th className="dashboard-branch-performance-th text-right">{labels.discounts}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {placeholderRows.map((row, i) => {
+              const branch = loading ? null : (row as BranchPerformanceRow);
+              return (
+                <tr
+                  key={branch?.branchId ?? `loading-${i}`}
+                  className={cn("dashboard-branch-performance-row", i % 2 === 1 && "dashboard-branch-performance-row-alt")}
+                >
+                  <td className="dashboard-branch-performance-td font-semibold">
+                    {loading ? "…" : branch!.branchName}
+                  </td>
+                  <td className="dashboard-branch-performance-td text-right tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
+                    {loading ? "…" : formatValue(branch!.revenue)}
+                  </td>
+                  <td className="dashboard-branch-performance-td text-right tabular-nums">
+                    {loading ? "…" : branch!.visits}
+                  </td>
+                  <td className="dashboard-branch-performance-td text-right tabular-nums text-[var(--brand-text)]">
+                    {loading ? "…" : formatValue(branch!.avgTicket)}
+                  </td>
+                  <td className="dashboard-branch-performance-td text-right tabular-nums text-amber-700 dark:text-amber-400">
+                    {loading ? "…" : formatValue(branch!.discountAmount)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="md:hidden divide-y divide-[var(--border)]">
+        {placeholderRows.map((row, i) => {
+          const branch = loading ? null : (row as BranchPerformanceRow);
+          return (
+            <div key={branch?.branchId ?? `loading-${i}`} className="dashboard-branch-performance-mobile px-4 py-3.5">
+              <p className="font-semibold text-sm text-[var(--text-primary)] truncate">
+                {loading ? "…" : branch!.branchName}
+              </p>
+              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                {[
+                  { label: labels.revenue, value: loading ? "…" : formatValue(branch!.revenue), accent: "text-emerald-700 dark:text-emerald-400 font-bold" },
+                  { label: labels.visits, value: loading ? "…" : branch!.visits, accent: "font-semibold" },
+                  { label: labels.avgTicket, value: loading ? "…" : formatValue(branch!.avgTicket), accent: "text-[var(--brand-text)] font-semibold" },
+                  { label: labels.discounts, value: loading ? "…" : formatValue(branch!.discountAmount), accent: "text-amber-700 dark:text-amber-400 font-semibold" },
+                ].map((metric) => (
+                  <div key={metric.label} className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/40 px-2.5 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] truncate">
+                      {metric.label}
+                    </p>
+                    <p className={cn("mt-0.5 text-sm tabular-nums truncate", metric.accent)}>{metric.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardHero({
   eyebrow,
   title,

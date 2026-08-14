@@ -1816,7 +1816,14 @@ export interface Dashboard {
   totalVisits: number;
   avgTicketSize: number;
   totalDiscounts: number;
-  branchStats: { branchId: string; branchName: string; revenue: number; visits: number; avgTicket: number }[];
+  branchStats: {
+    branchId: string;
+    branchName: string;
+    revenue: number;
+    visits: number;
+    avgTicket: number;
+    discountAmount: number;
+  }[];
   branchTrends: BranchTrend[];
   topServices: { serviceName: string; revenue: number; count: number }[];
   topStaff: { staffId: string; staffName: string; branchName: string; revenue: number }[];

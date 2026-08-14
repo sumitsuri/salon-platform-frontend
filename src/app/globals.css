@@ -351,9 +351,58 @@ body {
   z-index: 1;
   overflow: hidden;
   border: none;
-  border-radius: 0 0 0.875rem 0.875rem;
+  border-radius: 0;
   background: var(--surface);
   box-shadow: none;
+}
+
+.dashboard-kpi-strip:last-child,
+.dashboard-overview-panel > .dashboard-kpi-strip:last-child {
+  border-radius: 0 0 0.875rem 0.875rem;
+}
+
+.dashboard-kpi-strip:has(+ .dashboard-branch-performance) {
+  border-radius: 0;
+}
+
+.dashboard-branch-performance {
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 0.875rem 0.875rem;
+  background: var(--surface);
+}
+
+.dashboard-branch-performance-header {
+  border-bottom: 1px solid var(--dashboard-toolbar-border);
+  background: var(--dashboard-toolbar-bg);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--brand) 45%, var(--dashboard-header-from));
+}
+
+.dashboard-branch-performance-table {
+  border-collapse: collapse;
+}
+
+.dashboard-branch-performance-th {
+  padding: 0.625rem 1rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: color-mix(in srgb, var(--surface-muted) 55%, var(--surface));
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard-branch-performance-row {
+  border-top: 1px solid var(--border);
+}
+
+.dashboard-branch-performance-row-alt {
+  background: color-mix(in srgb, var(--surface-muted) 35%, transparent);
+}
+
+.dashboard-branch-performance-td {
+  padding: 0.75rem 1rem;
 }
 
 .dashboard-kpi-strip-header {
