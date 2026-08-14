@@ -14,9 +14,10 @@ import {
   ClipboardList,
   CalendarClock,
   CreditCard,
-  ChevronRight,
   Receipt,
   BarChart3,
+  Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -32,8 +33,7 @@ import {
   formatDateRangeLabel,
   type ProductDateRange,
 } from "@/lib/date-range";
-import { Card, StatusBadge, ListRow, btnPrimary, StatCard } from "@/components/ui";
-import { DashboardHero } from "@/components/enterprise-ui";
+import { Card, StatusBadge, ListRow, btnPrimary } from "@/components/ui";
 
 function useGreeting() {
   const t = useTranslations("manager.home");
@@ -86,59 +86,86 @@ function PeriodMetricCell({
   );
 }
 
-function NavTile({
+function ManagerTodayMetric({
+  icon: Icon,
+  label,
+  value,
+  accent,
+  loading,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  accent: "emerald" | "brand" | "amber";
+  loading?: boolean;
+}) {
+  const styles = {
+    emerald: {
+      panel: "bg-emerald-50/80 dark:bg-emerald-950/35",
+      top: "border-emerald-500",
+      icon: "bg-emerald-600 text-white",
+      label: "text-emerald-900/80 dark:text-emerald-300",
+      value: "text-emerald-950 dark:text-emerald-50",
+    },
+    brand: {
+      panel: "bg-[var(--brand-light)]/50 dark:bg-[color-mix(in_srgb,var(--brand)_14%,transparent)]",
+      top: "border-[var(--brand)]",
+      icon: "bg-[var(--brand)] text-[var(--brand-on-brand)]",
+      label: "text-[var(--brand-text)]",
+      value: "text-[var(--text-primary)]",
+    },
+    amber: {
+      panel: "bg-amber-50/90 dark:bg-amber-950/35",
+      top: "border-amber-500",
+      icon: "bg-amber-600 text-white",
+      label: "text-amber-950/80 dark:text-amber-300",
+      value: "text-amber-950 dark:text-amber-50",
+    },
+  } as const;
+  const s = styles[accent];
+
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col items-center justify-center border-t-[3px] px-1 py-2 text-center sm:px-2 sm:py-2.5",
+        s.panel,
+        s.top,
+      )}
+    >
+      <div className={cn("mb-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md shadow-sm", s.icon)}>
+        <Icon className="h-3 w-3" aria-hidden />
+      </div>
+      <p
+        className={cn(
+          "w-full truncate text-base font-extrabold tabular-nums leading-none tracking-tight sm:text-xl",
+          s.value,
+          loading && "animate-pulse opacity-70",
+        )}
+        title={loading ? undefined : String(value)}
+      >
+        {loading ? "…" : value}
+      </p>
+      <p className={cn("mt-1 w-full truncate text-[10px] font-semibold leading-none", s.label)}>{label}</p>
+    </div>
+  );
+}
+
+function QuickNavChip({
   href,
   icon: Icon,
   label,
-  hint,
-  accent,
 }: {
   href: string;
   icon: typeof CalendarClock;
   label: string;
-  hint: string;
-  accent: "emerald" | "brand" | "violet" | "amber";
 }) {
-  const styles = {
-    emerald: {
-      cell: "border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50 hover:border-emerald-200 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:hover:bg-emerald-950/40",
-      icon: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
-    },
-    brand: {
-      cell: "border-[var(--brand-muted)] bg-[var(--brand-light)]/40 hover:bg-[var(--brand-light)] hover:border-[var(--brand)]/30",
-      icon: "bg-[var(--brand)] text-[var(--brand-on-brand)]",
-    },
-    violet: {
-      cell: "border-violet-100 bg-violet-50/40 hover:bg-violet-50 hover:border-violet-200 dark:border-violet-900/50 dark:bg-violet-950/20 dark:hover:bg-violet-950/40",
-      icon: "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300",
-    },
-    amber: {
-      cell: "border-amber-100 bg-amber-50/40 hover:bg-amber-50 hover:border-amber-200 dark:border-amber-900/50 dark:bg-amber-950/20 dark:hover:bg-amber-950/40",
-      icon: "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300",
-    },
-  };
-  const s = styles[accent];
   return (
     <Link
       href={href}
-      aria-label={`${label} — ${hint}`}
-      className={cn(
-        "group flex items-center gap-2 rounded-xl border p-2.5 sm:p-3 min-h-[4rem] w-full min-w-0",
-        "shadow-sm hover:shadow-md active:scale-[0.98] transition touch-manipulation",
-        s.cell
-      )}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-xs font-semibold text-[var(--text-primary)] shadow-sm transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-light)]/30 active:scale-[0.98] touch-manipulation min-h-9"
     >
-      <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm", s.icon)}>
-        <Icon className="w-4 h-4" aria-hidden />
-      </div>
-      <div className="min-w-0 flex-1 text-left">
-        <p className="text-xs sm:text-sm font-semibold text-[var(--text-primary)] leading-tight truncate">{label}</p>
-        <p className="text-[10px] sm:text-[11px] text-[var(--text-secondary)] leading-snug truncate mt-0.5">{hint}</p>
-      </div>
-      <ChevronRight
-        className="w-4 h-4 shrink-0 text-[var(--text-tertiary)] group-hover:text-[var(--brand-text)] group-hover:translate-x-0.5 transition-all"
-        aria-hidden
-      />
+      <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--brand-text)]" aria-hidden />
+      {label}
     </Link>
   );
 }
@@ -219,60 +246,87 @@ export default function ManagerHomePage() {
   const periodSummaryLoading = (periodLoading || periodFetching) && !periodDashboard;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto min-w-0 w-full">
-      <DashboardHero
-        eyebrow={`${greeting} · ${todayLabel}`}
-        title={firstName}
-        subtitle={user?.branchName}
-        badge={
-          inProgress.length > 0 ? (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/25">
-              {t("openVisitsBadge", { count: inProgress.length })}
-            </span>
-          ) : undefined
-        }
-        action={
-          <Link href="/manager/walk-in?new=1" className="hero-cta w-full sm:w-auto">
-            <UserPlus className="w-4 h-4" />
-            {t("newWalkIn")}
-          </Link>
-        }
+    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-3">
+      <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-md ring-1 ring-[var(--border)]">
+        <div className="hero-banner relative rounded-none px-3 py-3 shadow-none sm:px-4 sm:py-3.5">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="min-w-0 flex-1">
+              <p className="hero-muted truncate text-[11px] font-semibold sm:text-xs">
+                {greeting} · {todayLabel}
+              </p>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                <h1 className="truncate text-base font-bold tracking-tight text-white sm:text-lg">{firstName}</h1>
+                {inProgress.length > 0 && (
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200/40 bg-amber-400/90 px-2 py-0.5 text-[10px] font-bold text-amber-950 shadow-sm">
+                    {t("openVisitsBadge", { count: inProgress.length })}
+                  </span>
+                )}
+              </div>
+              {user?.branchName && (
+                <p className="hero-subtitle mt-0.5 truncate text-[11px] font-medium sm:text-xs">{user.branchName}</p>
+              )}
+            </div>
+            <Link
+              href="/manager/walk-in?new=1"
+              className="hero-cta inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-semibold min-h-9 shadow-sm sm:text-sm"
+            >
+              <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
+              {t("newWalkIn")}
+            </Link>
+          </div>
+        </div>
+        <div
+          className="grid grid-cols-3 divide-x divide-[var(--border)] border-t border-[var(--border)]"
+          aria-label={t("todaySection")}
+        >
+          <ManagerTodayMetric
+            accent="emerald"
+            icon={TrendingUp}
+            label={t("todayRevenueShort")}
+            value={formatCurrency(todayRevenue)}
+            loading={todayLoading}
+          />
+          <ManagerTodayMetric
+            accent="brand"
+            icon={Users}
+            label={t("completedShort")}
+            value={completed.length}
+            loading={todayLoading}
+          />
+          <ManagerTodayMetric
+            accent="amber"
+            icon={Clock}
+            label={t("inProgressShort")}
+            value={inProgress.length}
+            loading={todayLoading}
+          />
+        </div>
+      </section>
+
+      <InsightsTeaser
+        data={recommendations}
+        loading={recommendationsLoading}
+        href="/manager/insights"
+        previewCount={3}
       />
 
-      <div className="mobile-stat-grid mobile-stat-grid--sm-3 gap-3">
-        <StatCard
-          label={t("todayRevenue")}
-          value={todayLoading ? "…" : formatCurrency(todayRevenue)}
-          icon={TrendingUp}
-          accent="emerald"
-        />
-        <StatCard label={t("completed")} value={todayLoading ? "…" : completed.length} icon={Users} accent="brand" />
-        <StatCard
-          label={t("inProgress")}
-          value={todayLoading ? "…" : inProgress.length}
-          icon={Clock}
-          accent="amber"
-          className="col-span-2 sm:col-span-1"
-        />
+      <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <QuickNavChip href="/manager/schedule" icon={CalendarClock} label={tNav("floor")} />
+        <QuickNavChip href="/manager/walk-in?tab=history" icon={ClipboardList} label={tNav("visitsShort")} />
+        <QuickNavChip href="/manager/memberships" icon={CreditCard} label={tNav("member")} />
+        <QuickNavChip href="/manager/attendance" icon={Fingerprint} label={tNav("staff")} />
+        <QuickNavChip href="/manager/insights" icon={Sparkles} label={tNav("tips")} />
       </div>
 
       <Card padding={false} className="min-w-0 shadow-sm ring-1 ring-[var(--border)]">
-        <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-indigo-50/80 to-violet-50/50 dark:from-indigo-950/30 dark:to-violet-950/20">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("recentVisits")}</h2>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("recentVisitsHint")}</p>
-            </div>
-            <Link href="/manager/walk-in?tab=history" className="link-brand text-xs font-semibold shrink-0 pt-0.5">
-              {tCommon("viewAll")}
-            </Link>
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-3 py-2.5">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-[var(--text-primary)]">{t("recentVisits")}</h2>
+            <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">{t("recentVisitsHint")}</p>
           </div>
-          <div className="nav-tile-grid mt-3 pt-3 border-t border-[var(--border)]/80">
-            <NavTile href="/manager/schedule" icon={CalendarClock} label={t("schedule")} hint={t("scheduleDesc")} accent="emerald" />
-            <NavTile href="/manager/walk-in?tab=history" icon={ClipboardList} label={tNav("visits")} hint={t("bookingsDesc")} accent="brand" />
-            <NavTile href="/manager/memberships" icon={CreditCard} label={tNav("memberships")} hint={t("membershipsDesc")} accent="violet" />
-            <NavTile href="/manager/attendance" icon={Fingerprint} label={t("attendance")} hint={t("attendanceDesc")} accent="amber" />
-          </div>
+          <Link href="/manager/walk-in?tab=history" className="link-brand shrink-0 pt-0.5 text-xs font-semibold">
+            {tCommon("viewAll")}
+          </Link>
         </div>
         {todayLoading ? (
           <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
@@ -315,7 +369,7 @@ export default function ManagerHomePage() {
 
       <section aria-labelledby="analysis-section">
         <Card padding={false} className="overflow-hidden shadow-sm ring-1 ring-[var(--border)]">
-          <div className="px-4 py-4 border-b border-[var(--border)] bg-gradient-to-br from-[var(--brand-light)]/60 via-[var(--surface)] to-violet-50/30 dark:from-indigo-950/30 dark:via-[var(--surface)] dark:to-violet-950/15 space-y-3">
+          <div className="space-y-2.5 border-b border-[var(--border)] bg-gradient-to-br from-[var(--brand-light)]/60 via-[var(--surface)] to-violet-50/30 px-3 py-3 dark:from-indigo-950/30 dark:via-[var(--surface)] dark:to-violet-950/15 sm:px-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-[var(--brand)] text-white flex items-center justify-center shadow-md shrink-0">
@@ -373,8 +427,7 @@ export default function ManagerHomePage() {
             ) : null}
           </div>
 
-          <div className="p-4 grid gap-4 md:grid-cols-2 min-w-0 bg-[var(--surface-muted)]/15">
-            <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/manager/insights" previewCount={3} />
+          <div className="p-4 grid gap-3 md:grid-cols-1 min-w-0 bg-[var(--surface-muted)]/15">
             <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/manager/services" />
           </div>
         </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Star, Plus, ChevronLeft, LayoutGrid } from "lucide-react";
+import { Search, Star, Plus, Minus, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BranchServiceItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
@@ -22,8 +22,9 @@ interface WalkInServiceCatalogProps {
   subCategoryGroups: WalkInSubCategoryGroup[];
   subCategories: WalkInSubCategory[];
   filteredServices: BranchServiceItem[];
+  cartServiceIds: string[];
   localeKit: TenantLocaleKit;
-  onAddService: (s: BranchServiceItem) => void;
+  onToggleService: (s: BranchServiceItem) => void;
   onToggleFavorite: (id: string) => void;
 }
 
@@ -41,8 +42,9 @@ export function WalkInServiceCatalog({
   subCategoryGroups,
   subCategories,
   filteredServices,
+  cartServiceIds,
   localeKit,
-  onAddService,
+  onToggleService,
   onToggleFavorite,
 }: WalkInServiceCatalogProps) {
   const t = useTranslations("manager.walkIn");
@@ -50,6 +52,35 @@ export function WalkInServiceCatalog({
   const inSearchMode = serviceQuery.trim().length > 0;
   const inServiceList = !inSearchMode && !!catalogSub;
   const inBrowseMode = !inSearchMode && !catalogSub;
+  const cartServiceIdSet = new Set(cartServiceIds);
+
+  function serviceActionLabel(s: BranchServiceItem, inCart: boolean) {
+    return inCart ? t("removeServiceFromCart", { name: s.serviceName }) : s.serviceName;
+  }
+
+  function serviceActionIcon(inCart: boolean, className?: string) {
+    if (inCart) {
+      return <Minus className={cn("w-4 h-4 text-emerald-700 dark:text-emerald-400", className)} aria-hidden />;
+    }
+    return <Plus className={cn("w-4 h-4 text-[var(--brand-text)]", className)} aria-hidden />;
+  }
+  function serviceChipClass(inCart: boolean) {
+    return cn(
+      "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition touch-manipulation",
+      inCart
+        ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+        : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] text-[var(--text-primary)]"
+    );
+  }
+
+  function serviceCardClass(inCart: boolean) {
+    return cn(
+      "flex items-center justify-between gap-2 p-3 min-h-[3.25rem] rounded-xl border transition text-left touch-manipulation min-w-0",
+      inCart
+        ? "border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/30"
+        : "border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] active:scale-[0.98]"
+    );
+  }
 
   const activeSub = subCategories.find((s) => s.id === catalogSub);
 
@@ -60,65 +91,63 @@ export function WalkInServiceCatalog({
 
   return (
     <Card padding={false} className="flex flex-col min-h-0 flex-1 overflow-hidden">
-      <div className="px-3 sm:px-4 py-3 border-b border-[var(--border)] space-y-3 shrink-0">
+      <div className="px-2.5 sm:px-3 py-2 border-b border-[var(--border)] space-y-2 shrink-0">
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
           <input
             type="search"
             value={serviceQuery}
             onChange={(e) => onServiceQueryChange(e.target.value)}
             placeholder={t("searchServices")}
-            className={`${inputClass} pl-10 py-3 text-sm`}
+            className={`${inputClass} pl-9 py-2.5 text-sm`}
           />
         </div>
 
         {!inSearchMode && recentServices.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {t("recentServices")}
-            </p>
-            <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {recentServices.map((s) => (
+          <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {recentServices.map((s) => {
+                const inCart = cartServiceIdSet.has(s.id);
+                return (
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => onAddService(s)}
-                  className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] transition touch-manipulation"
+                  onClick={() => onToggleService(s)}
+                  className={cn(serviceChipClass(inCart), "inline-flex items-center gap-1")}
+                  aria-pressed={inCart}
+                  aria-label={serviceActionLabel(s, inCart)}
                 >
+                  {inCart ? serviceActionIcon(true, "w-3 h-3") : null}
                   {s.serviceName}
                 </button>
-              ))}
+              );
+              })}
             </div>
-          </div>
         )}
 
         {!inSearchMode && favoriteServices.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {t("favorites")}
-            </p>
-            <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {favoriteServices.map((s) => (
+          <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {favoriteServices.map((s) => {
+                const inCart = cartServiceIdSet.has(s.id);
+                return (
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => onAddService(s)}
-                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--brand)] transition touch-manipulation"
+                  onClick={() => onToggleService(s)}
+                  className={cn(serviceChipClass(inCart), "flex items-center gap-1")}
+                  aria-pressed={inCart}
+                  aria-label={serviceActionLabel(s, inCart)}
                 >
-                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  <Star className={cn("w-3 h-3", inCart ? "fill-emerald-600 text-emerald-600" : "fill-amber-500 text-amber-500")} />
+                  {inCart ? serviceActionIcon(true, "w-3 h-3") : null}
                   {s.serviceName}
                 </button>
-              ))}
+              );
+              })}
             </div>
-          </div>
         )}
 
         {!inSearchMode && topCategories.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
-              {t("audienceFilter")}
-            </p>
-            <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-1 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => handleTopChange("")}
@@ -147,11 +176,10 @@ export function WalkInServiceCatalog({
                 </button>
               ))}
             </div>
-          </div>
         )}
 
         {inServiceList && subCategories.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-1 overflow-x-auto overscroll-x-contain max-w-full min-w-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {subCategories.map((sub) => (
               <button
                 key={sub.id}
@@ -172,29 +200,24 @@ export function WalkInServiceCatalog({
       </div>
 
       {inServiceList && activeSub && (
-        <div className="px-3 sm:px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-muted)]/40 shrink-0 flex items-center gap-2 min-w-0">
+        <div className="px-2.5 sm:px-3 py-1.5 border-b border-[var(--border)] bg-[var(--surface-muted)]/40 shrink-0 flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => onCatalogSubChange("")}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--brand-text)] touch-manipulation shrink-0 min-h-10"
+            className="inline-flex items-center gap-0.5 text-xs font-semibold text-[var(--brand-text)] touch-manipulation shrink-0 min-h-8"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
             {t("backToCategories")}
           </button>
-          <span className="text-sm text-[var(--text-secondary)] truncate">
+          <span className="text-xs text-[var(--text-secondary)] truncate">
             {activeSub.parentName} · {activeSub.name}
           </span>
         </div>
       )}
 
-      <div className="p-2 sm:p-3 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-scroll-y" data-touch-scroll>
+      <div className="p-2 sm:p-2.5 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-scroll-y" data-touch-scroll>
         {inBrowseMode ? (
-          <div className="space-y-4">
-            <div className="flex items-start gap-2 rounded-xl border border-[var(--brand-muted)] bg-[var(--brand-light)]/40 px-3 py-2.5">
-              <LayoutGrid className="w-4 h-4 shrink-0 text-[var(--brand-text)] mt-0.5" aria-hidden />
-              <p className="text-sm text-[var(--text-secondary)] leading-snug">{t("pickCategoryHint")}</p>
-            </div>
-
+          <div className="space-y-3">
             {subCategoryGroups.length === 0 ? (
               <p className="text-sm text-[var(--text-secondary)] text-center py-8">{t("noServicesMatch")}</p>
             ) : (
@@ -237,13 +260,16 @@ export function WalkInServiceCatalog({
             ) : (
               filteredServices.map((s) => {
                 const isFav = favoriteServiceIds.includes(s.id);
+                const inCart = cartServiceIdSet.has(s.id);
                 return (
                   <button
                     key={s.id}
                     type="button"
                     data-testid="walk-in-service-card"
-                    onClick={() => onAddService(s)}
-                    className="flex items-center justify-between gap-2 p-3 min-h-[3.25rem] rounded-xl border border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] transition text-left active:scale-[0.98] touch-manipulation min-w-0"
+                    onClick={() => onToggleService(s)}
+                    className={serviceCardClass(inCart)}
+                    aria-pressed={inCart}
+                    aria-label={serviceActionLabel(s, inCart)}
                   >
                     <div className="min-w-0 flex items-start gap-1.5">
                       <span
@@ -284,7 +310,7 @@ export function WalkInServiceCatalog({
                           ? t("priceFrom", { price: formatCurrency(s.price, localeKit) })
                           : formatCurrency(s.price, localeKit)}
                       </span>
-                      <Plus className="w-4 h-4 text-[var(--brand-text)]" />
+                      {serviceActionIcon(inCart)}
                     </div>
                   </button>
                 );

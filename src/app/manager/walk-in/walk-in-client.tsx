@@ -7,11 +7,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   CreditCard,
-  Clock,
-  Receipt,
+  ChevronRight,
   UserPlus,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
+  Pencil,
   ShoppingBag,
   X,
   CheckCircle2,
@@ -219,6 +220,7 @@ export default function WalkInPage() {
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
   const [addedToast, setAddedToast] = useState<string | null>(null);
+  const [removedToast, setRemovedToast] = useState<string | null>(null);
   const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
 
   const lookupPhoneRef = useRef<string>("");
@@ -232,6 +234,12 @@ export default function WalkInPage() {
     const id = setTimeout(() => setAddedToast(null), 2200);
     return () => clearTimeout(id);
   }, [addedToast]);
+
+  useEffect(() => {
+    if (!removedToast) return;
+    const id = setTimeout(() => setRemovedToast(null), 2200);
+    return () => clearTimeout(id);
+  }, [removedToast]);
 
   useEffect(() => {
     if (step !== 2) setCartSheetOpen(false);
@@ -819,6 +827,7 @@ export default function WalkInPage() {
     }
     setCartSheetOpen(false);
     setAddedToast(null);
+    setRemovedToast(null);
     setStep(target as Step);
     if (bookingId && target < 3) {
       router.replace(`/manager/walk-in?bookingId=${bookingId}&edit=1`);
@@ -1235,21 +1244,28 @@ export default function WalkInPage() {
     return "";
   }
 
-  function addService(s: BranchServiceItem) {
-    setCart((prev) => [
-      ...prev,
-      {
-        branchServiceId: s.id,
-        serviceName: s.serviceName,
-        basePrice: s.price,
-        priceExtra: 0,
-        variablePricing: !!s.variablePricing,
-        staffId: defaultStaffId(prev),
-      },
-    ]);
-    pushRecentService(branchId, s.id);
-    setRecentServiceIds(getRecentServiceIds(branchId));
-    setAddedToast(s.serviceName);
+  function toggleService(s: BranchServiceItem) {
+    setCart((prev) => {
+      const existingIdx = prev.findIndex((c) => c.branchServiceId === s.id);
+      if (existingIdx >= 0) {
+        setRemovedToast(s.serviceName);
+        return prev.filter((_, i) => i !== existingIdx);
+      }
+      pushRecentService(branchId, s.id);
+      setRecentServiceIds(getRecentServiceIds(branchId));
+      setAddedToast(s.serviceName);
+      return [
+        ...prev,
+        {
+          branchServiceId: s.id,
+          serviceName: s.serviceName,
+          basePrice: s.price,
+          priceExtra: 0,
+          variablePricing: !!s.variablePricing,
+          staffId: defaultStaffId(prev),
+        },
+      ];
+    });
   }
 
   function applyStylistToAll(staffId: string) {
@@ -1667,50 +1683,55 @@ export default function WalkInPage() {
             )}
 
             {!openVisitsLoading && openVisits.length > 0 && (
-              <div className="space-y-2">
-                {openVisits.map((v) => (
-                  <div
-                    key={v.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-[var(--text-primary)] truncate">{v.customerName}</p>
-                        <StatusBadge status={v.status} />
+              <div className="space-y-1.5">
+                {openVisits.map((v) => {
+                  const readyForBilling = v.status === "READY_FOR_BILLING";
+                  const servicesLabel = v.lines?.map((l) => l.serviceName).join(", ") || "—";
+                  const amountLabel = v.billPreview ? formatCurrency(v.billPreview.grandTotal, localeKit) : "—";
+                  const actionLabel = readyForBilling ? t("billNow") : t("continueVisit");
+
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => void openVisit(v.id, readyForBilling ? { preferBill: true } : undefined)}
+                      className="group flex w-full items-start gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5 text-left touch-manipulation transition hover:border-[var(--brand)]/35 active:bg-[var(--surface-muted)]/60 min-h-[3.25rem]"
+                      aria-label={`${actionLabel}: ${v.customerName}, ${amountLabel}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                            {v.customerName}
+                          </p>
+                          <StatusBadge status={v.status} />
+                        </div>
+                        <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">
+                          {v.customerPhone} · {formatTenantDateTime(v.createdAt, localeKit)}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-[var(--text-tertiary)]">{servicesLabel}</p>
                       </div>
-                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                        {v.customerPhone} · {formatTenantDateTime(v.createdAt, localeKit)}
-                      </p>
-                      <p className="text-xs text-[var(--text-tertiary)] mt-1 truncate">
-                        {v.lines?.map((l) => l.serviceName).join(", ") || "—"}
-                      </p>
-                    </div>
-                    <div className="flex items-stretch sm:items-center gap-2 shrink-0 w-full sm:w-auto">
-                      <p className="font-bold text-[var(--brand-text)] sm:mr-2 self-center">
-                        {v.billPreview ? formatCurrency(v.billPreview.grandTotal, localeKit) : "—"}
-                      </p>
-                      {v.status === "READY_FOR_BILLING" ? (
-                        <button
-                          type="button"
-                          onClick={() => void openVisit(v.id, { preferBill: true })}
-                          className={`${btnPrimary} py-2 px-3 text-sm min-h-11 flex-1 sm:flex-none justify-center`}
+                      <div className="flex shrink-0 flex-col items-end gap-0.5 self-center pl-1">
+                        <p className="text-sm font-bold tabular-nums leading-none text-[var(--brand-text)]">
+                          {amountLabel}
+                        </p>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-0.5 text-[11px] font-semibold leading-none",
+                            readyForBilling
+                              ? "text-[var(--brand-text)]"
+                              : "text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]",
+                          )}
                         >
-                          <Receipt className="w-4 h-4" />
-                          {t("billNow")}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => void openVisit(v.id)}
-                          className={`${btnSecondary} py-2 px-3 text-sm min-h-11 flex-1 sm:flex-none justify-center`}
-                        >
-                          <Clock className="w-4 h-4" />
-                          {t("continueVisit")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                          {actionLabel}
+                          <ChevronRight
+                            className="h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -1719,41 +1740,137 @@ export default function WalkInPage() {
     );
   }
 
+  const flowTitle = bookingId
+    ? customerName
+      ? visitPassId
+        ? `${customerName} · ${visitPassId}`
+        : customerName
+      : steps[Math.max(0, step - 1)]
+    : t("title");
+
+  const flowBackButton =
+    !billingLocked ? (
+      <button
+        type="button"
+        onClick={returnFromFlow}
+        className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--brand-text)] hover:opacity-90 touch-manipulation min-h-9 min-w-9"
+        aria-label={urlCustomerId ? tCustomers("backToCustomers") : t("backToOpenVisits")}
+      >
+        <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+      </button>
+    ) : null;
+
+  const stepSelectHandler = billingLocked ? undefined : goToStep;
+  const showFlowChrome = step === 2 || step === 3;
+
   return (
-    <div className="space-y-4 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
-      <PageHeader
-        title={bookingId ? t("editVisit") : t("title")}
-        subtitle={
-          visitPassId && customerName
-            ? `${customerName} · ${visitPassId}`
-            : customerName || user?.branchName
-        }
-        action={
-          !billingLocked ? (
-            <button
-              type="button"
-              onClick={returnFromFlow}
-              className={`${btnSecondary} w-full sm:w-auto justify-center py-2 px-3 text-sm min-h-11 touch-manipulation`}
-            >
-              {urlCustomerId ? tCustomers("backToCustomers") : t("backToOpenVisits")}
-            </button>
-          ) : undefined
-        }
-      />
+    <div className="space-y-2 w-full max-w-6xl mx-auto pb-[max(0.5rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
+      {showFlowChrome ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 px-2 py-2 min-w-0">
+            {flowBackButton}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 min-w-0">
+                <p className="min-w-0 truncate text-sm font-bold leading-tight text-[var(--text-primary)]">
+                  {customerName || t("namePlaceholder")}
+                </p>
+                {step === 2 && !billingLocked && (
+                  <button
+                    type="button"
+                    onClick={() => goToStep(1)}
+                    className="inline-flex shrink-0 rounded-md p-1 text-[var(--brand-text)] hover:bg-[var(--surface-muted)] touch-manipulation"
+                    aria-label={t("editCustomer")}
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                )}
+              </div>
+              {(visitPassId || membership) && (
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {visitPassId && (
+                    <span className="text-[10px] font-mono text-[var(--text-tertiary)]">{visitPassId}</span>
+                  )}
+                  {membership && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                      {t("memberPercentChip", { percent: membership.benefitPercent ?? 10 })}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 border-l border-[var(--border)] pl-2.5 text-right">
+              {step === 3 ? (
+                billPreview ? (
+                  <>
+                    <p className="text-base font-bold tabular-nums leading-none text-[var(--brand-text)] sm:text-lg">
+                      {formatMoney(displayGrandTotal, localeKit)}
+                    </p>
+                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      {tCommon("grandTotal")}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-base font-bold tabular-nums leading-none text-[var(--text-tertiary)] sm:text-lg animate-pulse">
+                      …
+                    </p>
+                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                      {tCommon("loading")}
+                    </p>
+                  </>
+                )
+              ) : cart.length > 0 ? (
+                <>
+                  <p className="text-base font-bold tabular-nums leading-none text-[var(--brand-text)]">
+                    {cartTotalDisplay}
+                  </p>
+                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    {t("cart", { count: cart.length })}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="mx-auto h-4 w-4 text-[var(--text-tertiary)]" aria-hidden />
+                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    {t("addServices")}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="border-t border-[var(--border)] bg-[var(--surface-muted)]/30 px-1 py-0.5 md:hidden">
+            <WalkInCompactSteps embedded steps={steps} current={step} onStepSelect={stepSelectHandler} />
+          </div>
+          <div className="hidden md:block border-t border-[var(--border)]">
+            <WizardSteps
+              steps={steps}
+              current={step}
+              onStepSelect={stepSelectHandler}
+              className="!rounded-none !border-0 !shadow-none !p-2 !bg-transparent"
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 min-w-0">
+            {flowBackButton}
+            <h1 className="min-w-0 flex-1 text-lg sm:text-xl font-bold text-[var(--text-primary)] tracking-tight truncate pt-0.5">
+              {flowTitle}
+            </h1>
+          </div>
+          <WalkInCompactSteps steps={steps} current={step} onStepSelect={stepSelectHandler} />
+          <div className="hidden md:block">
+            <WizardSteps steps={steps} current={step} onStepSelect={stepSelectHandler} className="!p-2.5" />
+          </div>
+        </>
+      )}
 
-      <div className="hidden md:block">
-        <WizardSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
-      </div>
-      <WalkInCompactSteps steps={steps} current={step} onStepSelect={billingLocked ? undefined : goToStep} />
-
-      {visitPassId && customerName && (
+      {visitPassId && customerName && step === 1 && (
         <WalkInVisitPassBanner
           visitPassId={visitPassId}
           customerName={customerName}
           card={registrationCard}
           step={step}
-          onEdit={step > 1 && !billingLocked ? () => goToStep(1) : undefined}
-          highlightScreenshot={step === 3}
         />
       )}
 
@@ -1761,7 +1878,7 @@ export default function WalkInPage() {
       {draftRestoredNotice && step === 1 && (
         <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
       )}
-      {bookingId && !billingLocked && (
+      {bookingId && !billingLocked && step !== 3 && (
         <p className="text-xs text-[var(--text-secondary)]">
           {t("visitStatus", { status: bookingStatus || "IN_PROGRESS" })}
         </p>
@@ -2017,7 +2134,7 @@ export default function WalkInPage() {
       )}
 
       {step === 2 && (
-        <div className="space-y-3 min-w-0">
+        <div className="min-w-0 space-y-2">
           {addedToast && (
             <div
               role="status"
@@ -2026,9 +2143,18 @@ export default function WalkInPage() {
               {t("serviceAdded", { name: addedToast })}
             </div>
           )}
+          {removedToast && (
+            <div
+              role="status"
+              className="fixed left-1/2 top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.75rem)] z-50 -translate-x-1/2 max-w-[min(100vw-2rem,20rem)] rounded-xl bg-[var(--text-primary)] px-4 py-2.5 text-sm font-medium text-[var(--surface)] shadow-lg animate-in fade-in"
+            >
+              {t("serviceRemoved", { name: removedToast })}
+            </div>
+          )}
 
           {!membership && customerId && (
             <WalkInMembershipSavingsBanner
+              compact
               customerName={customerName}
               cart={cart}
               servicesById={servicesById}
@@ -2036,16 +2162,12 @@ export default function WalkInPage() {
             />
           )}
 
-          {membership && (
-            <Callout variant="success" title={t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })} />
-          )}
-
           {staff.length === 0 && (
             <Callout variant="warning" title={t("noStaffConfigured")} />
           )}
 
-          <div className="flex flex-col md:flex-row md:gap-4 md:items-start min-w-0">
-            <div className="flex-1 min-w-0 flex flex-col min-h-[calc(100dvh-17rem)] md:min-h-[calc(100dvh-12rem)] max-h-[calc(100dvh-17rem)] md:max-h-[calc(100dvh-10rem)]">
+          <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0">
+            <div className="flex min-h-[calc(100dvh-26rem-env(safe-area-inset-bottom,0px))] max-h-[calc(100dvh-26rem-env(safe-area-inset-bottom,0px))] flex-1 flex-col min-w-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
               <WalkInServiceCatalog
                 serviceQuery={serviceQuery}
                 onServiceQueryChange={setServiceQuery}
@@ -2060,13 +2182,14 @@ export default function WalkInPage() {
                 subCategoryGroups={subCategoryGroups}
                 subCategories={subCategories}
                 filteredServices={filteredServices}
+                cartServiceIds={cart.map((c) => c.branchServiceId)}
                 localeKit={localeKit}
-                onAddService={addService}
+                onToggleService={toggleService}
                 onToggleFavorite={toggleFavorite}
               />
             </div>
 
-            <div className="hidden md:block w-full md:w-[min(22rem,36%)] shrink-0 self-start">
+            <div className="hidden lg:block w-full lg:w-[min(22rem,36%)] shrink-0 self-start">
               <WalkInCartPanel
                 variant="panel"
                 cart={cart}
@@ -2092,7 +2215,7 @@ export default function WalkInPage() {
             </div>
           </div>
 
-          <div className="md:hidden">
+          <div className="lg:hidden">
             {cartSheetOpen && (
               <>
                 <button
@@ -2201,26 +2324,10 @@ export default function WalkInPage() {
       )}
 
       {step === 3 && billPreview && (
-        <div className="space-y-4 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 md:pb-6">
-          <div className="hero-banner rounded-2xl p-4 sm:p-5 shadow-lg">
-            <p className="hero-muted text-xs font-semibold uppercase tracking-wider">{customerName || t("namePlaceholder")}</p>
-            {visitPassId && (
-              <p className="text-sm font-mono font-semibold mt-1 opacity-90">{visitPassId}</p>
-            )}
-            <p className="text-3xl sm:text-4xl font-bold tabular-nums mt-1">{formatMoney(displayGrandTotal, localeKit)}</p>
-            <p className="hero-subtitle text-sm mt-1">{tCommon("grandTotal")}</p>
-          </div>
-
-          {branch?.gstin && (
-            <p className="text-xs text-[var(--text-tertiary)]">{t("gstinLabel", { gstin: branch.gstin })}</p>
-          )}
-
-          {!billingLocked && membership && (
-            <Callout variant="success" title={t("memberAutoApply", { percent: membership.benefitPercent ?? 10 })} />
-          )}
+        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
 
           {!billingLocked && !membership && customerId && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
               <WalkInMembershipPicker
                 value={pendingMembershipPlanId}
                 onChange={setPendingMembershipPlanId}
@@ -2229,51 +2336,8 @@ export default function WalkInPage() {
             </div>
           )}
 
-          {!billingLocked && (
-            <Card className="p-0 overflow-hidden">
-              <details className="group" open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 font-semibold text-sm touch-manipulation">
-                  <div className="min-w-0 flex-1">
-                    <span>{t("adjustments")}</span>
-                    {adjustmentSummary && (
-                      <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
-                        {adjustmentSummary}
-                      </p>
-                    )}
-                  </div>
-                  <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
-                </summary>
-                <div className="border-t border-[var(--border)] px-4 py-4">
-                  <WalkInPromoAdjustments
-                    coupons={coupons}
-                    offers={offers}
-                    localeKit={localeKit}
-                    selectedCouponId={selectedCouponId}
-                    selectedOfferId={selectedOfferId}
-                    billDiscountType={billDiscountType}
-                    billDiscountValue={billDiscountValue}
-                    promoLocked={promoLocked}
-                    manualDiscountApplied={manualDiscountApplied}
-                    manualDiscountAmount={billPreview?.manualDiscountAmount}
-                    manualDiscountLabel={billPreview?.manualDiscountLabel}
-                    onCouponChange={onCouponChange}
-                    onOfferChange={onOfferChange}
-                    onBillDiscountTypeChange={setBillDiscountType}
-                    onBillDiscountValueChange={setBillDiscountValue}
-                    onClearManualDiscount={clearManualDiscount}
-                    applyPending={applyBillDiscount.isPending}
-                  />
-                </div>
-              </details>
-            </Card>
-          )}
-
-          <Card className="space-y-5">
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                {t("servicesReview")}
-              </p>
-              <ul className="space-y-2">
+          <Card className="p-3 sm:p-4 space-y-3">
+            <ul className="space-y-1.5">
                 {(billPreview.lines && billPreview.lines.length > 0
                   ? billPreview.lines.map((line, idx) => {
                       const stylist = cart[idx]?.staffId
@@ -2284,7 +2348,7 @@ export default function WalkInPage() {
                       return (
                         <li
                           key={line.lineItemId || `${line.serviceName}-${idx}`}
-                          className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0"
+                          className="flex justify-between gap-2 items-start py-1 border-b border-[var(--border)]/50 last:border-0"
                         >
                           <div className="min-w-0">
                             <p className="font-medium text-[var(--text-primary)] truncate">
@@ -2292,7 +2356,7 @@ export default function WalkInPage() {
                               {qty > 1 ? ` × ${qty}` : ""}
                             </p>
                             {stylist && (
-                              <p className="text-xs text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
+                              <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
                             )}
                           </div>
                           <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
@@ -2311,12 +2375,12 @@ export default function WalkInPage() {
                             return (
                               <li
                                 key={`${item.branchServiceId}-${idx}`}
-                                className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0"
+                                className="flex justify-between gap-2 items-start py-1 border-b border-[var(--border)]/50 last:border-0"
                               >
                                 <div className="min-w-0">
                                   <p className="font-medium text-[var(--text-primary)] truncate">{item.serviceName}</p>
                                   {stylist && (
-                                    <p className="text-xs text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
+                                    <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
                                   )}
                                 </div>
                                 <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
@@ -2337,16 +2401,15 @@ export default function WalkInPage() {
                       );
                     })())}
               </ul>
-            </div>
 
-            <div className="pt-1 border-t border-[var(--border)]">
+            <div className="pt-2 border-t border-[var(--border)]">
               <BillBreakdownRows
                 preview={billPreview}
                 localeKit={localeKit}
                 cgstDisplay={taxOverridden ? (Number.isFinite(cgstNum) ? cgstNum : 0) : undefined}
                 sgstDisplay={taxOverridden ? (Number.isFinite(sgstNum) ? sgstNum : 0) : undefined}
                 hideGrandTotal
-                className="space-y-2"
+                className="space-y-1.5 text-sm"
               />
 
               {!billingLocked && gstEffective && (
@@ -2416,19 +2479,63 @@ export default function WalkInPage() {
                 </details>
               )}
 
-              <div className="flex justify-between font-bold text-lg pt-2 border-t border-[var(--border)]">
+              <div className="hidden lg:flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
                 <span>{tCommon("grandTotal")}</span>
-                <span className="text-[var(--brand-text)]">{formatMoney(displayGrandTotal, localeKit)}</span>
+                <span className="text-[var(--brand-text)] tabular-nums">{formatMoney(displayGrandTotal, localeKit)}</span>
               </div>
+              {branch?.gstin && (
+                <p className="text-[10px] text-[var(--text-tertiary)] pt-1">{t("gstinLabel", { gstin: branch.gstin })}</p>
+              )}
             </div>
+
+            {!billingLocked && (
+              <details className="group rounded-lg border border-[var(--border)]" open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 font-semibold text-sm touch-manipulation">
+                  <div className="min-w-0 flex-1">
+                    <span>{t("adjustments")}</span>
+                    {adjustmentSummary && (
+                      <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
+                        {adjustmentSummary}
+                      </p>
+                    )}
+                  </div>
+                  <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-[var(--border)] px-3 py-3">
+                  <WalkInPromoAdjustments
+                    coupons={coupons}
+                    offers={offers}
+                    localeKit={localeKit}
+                    selectedCouponId={selectedCouponId}
+                    selectedOfferId={selectedOfferId}
+                    billDiscountType={billDiscountType}
+                    billDiscountValue={billDiscountValue}
+                    promoLocked={promoLocked}
+                    manualDiscountApplied={manualDiscountApplied}
+                    manualDiscountAmount={billPreview?.manualDiscountAmount}
+                    manualDiscountLabel={billPreview?.manualDiscountLabel}
+                    onCouponChange={onCouponChange}
+                    onOfferChange={onOfferChange}
+                    onBillDiscountTypeChange={setBillDiscountType}
+                    onBillDiscountValueChange={setBillDiscountValue}
+                    onClearManualDiscount={clearManualDiscount}
+                    applyPending={applyBillDiscount.isPending}
+                  />
+                </div>
+              </details>
+            )}
 
           {!billingLocked && (
             <>
-              <button type="button" onClick={() => goToStep(2)} className={`${btnSecondary} w-full min-h-11`}>
+              <button
+                type="button"
+                onClick={() => goToStep(2)}
+                className="text-sm font-semibold text-[var(--brand-text)] hover:underline touch-manipulation"
+              >
                 {t("addMoreServices")}
               </button>
               <div>
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
+                <p className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wide mb-1.5">
                   {t("paymentMode")}
                 </p>
                 <SegmentedControl<PaymentMode>
@@ -2500,6 +2607,21 @@ export default function WalkInPage() {
               )}
             </>
           )}
+
+            {visitPassId && registrationCard && !paymentSuccess && (
+              <details className="group rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/30">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold touch-manipulation">
+                  <span>
+                    {t("visitPassLabel")} · <span className="font-mono font-normal">{visitPassId}</span>
+                  </span>
+                  <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
+                </summary>
+                <div className="border-t border-[var(--border)] px-3 py-3 space-y-2">
+                  <RegistrationCardPanel card={registrationCard} />
+                  <p className="text-[11px] text-[var(--text-tertiary)]">{t("visitPassScreenshotHint")}</p>
+                </div>
+              </details>
+            )}
 
           {paymentSuccess && (
             <Callout
@@ -2575,7 +2697,7 @@ export default function WalkInPage() {
             </div>
           ) : (
             <>
-              <div className="hidden md:block">
+              <div className="hidden lg:block">
                 <button
                   type="button"
                   onClick={submitPayment}
@@ -2596,7 +2718,7 @@ export default function WalkInPage() {
         </Card>
 
           {!billingLocked && (
-            <div className="md:hidden">
+            <div className="lg:hidden">
               <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
                 <button
                   type="button"
