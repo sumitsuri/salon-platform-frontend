@@ -587,8 +587,20 @@ export function AttendanceDashboardSection({
                       const target = hoursTargetLabel(r.hoursWorked);
                       return (
                         <div key={r.id} className="px-4 py-3 space-y-2.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div className="shrink-0">
+                              {r.hasEntryPhoto ? (
+                                <AttendancePhotoThumb recordId={r.id} type="entry" className="w-10 h-10" />
+                              ) : (
+                                <div
+                                  className="w-10 h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] flex items-center justify-center text-[10px] text-[var(--text-tertiary)]"
+                                  aria-hidden
+                                >
+                                  —
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
                               <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{r.staffName}</p>
                               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                                 {formatDate(r.workDate)} · {r.branchName}
@@ -596,7 +608,7 @@ export function AttendanceDashboardSection({
                             </div>
                             <StatusBadge status={r.status} />
                           </div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="grid grid-cols-2 gap-2 text-xs pl-[3.25rem]">
                             <div className="rounded-lg bg-[var(--surface-muted)]/60 px-2.5 py-2">
                               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">{t("entry")}</p>
                               <p className="font-medium mt-0.5">{formatTime(r.entryTime)}</p>
@@ -622,7 +634,7 @@ export function AttendanceDashboardSection({
                             </div>
                           </div>
                           {(r.late || r.earlyExit) && (
-                            <p className="text-xs text-amber-700">
+                            <p className="text-xs text-amber-700 pl-[3.25rem]">
                               {[
                                 r.late && t("lateByShort", { duration: formatDuration(r.lateMinutes) }),
                                 r.earlyExit && t("earlyByShort", { duration: formatDuration(r.earlyExitMinutes) }),
