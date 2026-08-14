@@ -378,31 +378,43 @@ body {
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--brand) 45%, var(--dashboard-header-from));
 }
 
-.dashboard-branch-performance-table {
-  border-collapse: collapse;
+.dashboard-branch-performance-scroll-wrap {
+  position: relative;
 }
 
-.dashboard-branch-performance-th {
-  padding: 0.625rem 1rem;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-  background: color-mix(in srgb, var(--surface-muted) 55%, var(--surface));
-  border-bottom: 1px solid var(--border);
+.dashboard-branch-performance-scroll-wrap--more::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  height: 1.25rem;
+  background: linear-gradient(to bottom, transparent, var(--surface));
 }
 
-.dashboard-branch-performance-row {
-  border-top: 1px solid var(--border);
+.dashboard-branch-performance-scroll {
+  --branch-performance-visible-rows: 5;
+  --branch-performance-row-height: 4rem;
+  max-height: calc(var(--branch-performance-row-height) * var(--branch-performance-visible-rows));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-tertiary) 35%, transparent) transparent;
 }
 
-.dashboard-branch-performance-row-alt {
-  background: color-mix(in srgb, var(--surface-muted) 35%, transparent);
+.dashboard-branch-performance-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
-.dashboard-branch-performance-td {
-  padding: 0.75rem 1rem;
+.dashboard-branch-performance-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-tertiary) 35%, transparent);
+}
+
+.dashboard-branch-performance-row-item {
+  min-height: var(--branch-performance-row-height);
 }
 
 .dashboard-kpi-strip-header {

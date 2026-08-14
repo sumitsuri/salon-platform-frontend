@@ -209,6 +209,8 @@ export function DashboardKpiStrip({
   );
 }
 
+const BRANCH_PERFORMANCE_VISIBLE_ROWS = 5;
+
 export type BranchPerformanceRow = {
   branchId: string;
   branchName: string;
@@ -239,7 +241,21 @@ export function DashboardBranchPerformance({
   formatValue: (amount: number) => string;
   className?: string;
 }) {
-  const placeholderRows = loading ? [0, 1] : branches;
+  const sortedBranches = [...branches].sort(
+    (a, b) => b.revenue - a.revenue || a.branchName.localeCompare(b.branchName),
+  );
+  const placeholderRows = loading
+    ? Array.from({ length: BRANCH_PERFORMANCE_VISIBLE_ROWS }, (_, i) => i)
+    : sortedBranches;
+  const totalBranchRevenue = loading
+    ? 0
+    : sortedBranches.reduce((sum, b) => sum + b.revenue, 0);
+  const hasMoreBranches = !loading && sortedBranches.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
+
+  function branchRevenueShare(revenue: number) {
+    if (totalBranchRevenue <= 0 || revenue <= 0) return null;
+    return Math.round((revenue / totalBranchRevenue) * 100);
+  }
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
@@ -247,73 +263,69 @@ export function DashboardBranchPerformance({
         <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
       </div>
 
-      <div className="hidden md:block responsive-table-wrap">
-        <table className="dashboard-branch-performance-table w-full text-sm">
-          <thead>
-            <tr>
-              <th className="dashboard-branch-performance-th text-left">{labels.branch}</th>
-              <th className="dashboard-branch-performance-th text-right">{labels.revenue}</th>
-              <th className="dashboard-branch-performance-th text-right">{labels.visits}</th>
-              <th className="dashboard-branch-performance-th text-right">{labels.avgTicket}</th>
-              <th className="dashboard-branch-performance-th text-right">{labels.discounts}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {placeholderRows.map((row, i) => {
-              const branch = loading ? null : (row as BranchPerformanceRow);
-              return (
-                <tr
-                  key={branch?.branchId ?? `loading-${i}`}
-                  className={cn("dashboard-branch-performance-row", i % 2 === 1 && "dashboard-branch-performance-row-alt")}
-                >
-                  <td className="dashboard-branch-performance-td font-semibold">
+      <div
+        className={cn(
+          "dashboard-branch-performance-scroll-wrap",
+          hasMoreBranches && "dashboard-branch-performance-scroll-wrap--more",
+        )}
+      >
+        <div
+          className="dashboard-branch-performance-scroll divide-y divide-[var(--border)]"
+          role="region"
+          aria-label={headerLabel}
+          tabIndex={hasMoreBranches ? 0 : undefined}
+        >
+          {placeholderRows.map((row, i) => {
+            const branch = loading ? null : (row as BranchPerformanceRow);
+            const sharePct = branch ? branchRevenueShare(branch.revenue) : null;
+            return (
+              <div
+                key={branch?.branchId ?? `loading-${i}`}
+                className="dashboard-branch-performance-row-item px-3 py-2.5 sm:px-4"
+              >
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
                     {loading ? "…" : branch!.branchName}
-                  </td>
-                  <td className="dashboard-branch-performance-td text-right tabular-nums font-bold text-emerald-700 dark:text-emerald-400">
-                    {loading ? "…" : formatValue(branch!.revenue)}
-                  </td>
-                  <td className="dashboard-branch-performance-td text-right tabular-nums">
-                    {loading ? "…" : branch!.visits}
-                  </td>
-                  <td className="dashboard-branch-performance-td text-right tabular-nums text-[var(--brand-text)]">
-                    {loading ? "…" : formatValue(branch!.avgTicket)}
-                  </td>
-                  <td className="dashboard-branch-performance-td text-right tabular-nums text-amber-700 dark:text-amber-400">
-                    {loading ? "…" : formatValue(branch!.discountAmount)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="md:hidden divide-y divide-[var(--border)]">
-        {placeholderRows.map((row, i) => {
-          const branch = loading ? null : (row as BranchPerformanceRow);
-          return (
-            <div key={branch?.branchId ?? `loading-${i}`} className="dashboard-branch-performance-mobile px-4 py-3.5">
-              <p className="font-semibold text-sm text-[var(--text-primary)] truncate">
-                {loading ? "…" : branch!.branchName}
-              </p>
-              <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-                {[
-                  { label: labels.revenue, value: loading ? "…" : formatValue(branch!.revenue), accent: "text-emerald-700 dark:text-emerald-400 font-bold" },
-                  { label: labels.visits, value: loading ? "…" : branch!.visits, accent: "font-semibold" },
-                  { label: labels.avgTicket, value: loading ? "…" : formatValue(branch!.avgTicket), accent: "text-[var(--brand-text)] font-semibold" },
-                  { label: labels.discounts, value: loading ? "…" : formatValue(branch!.discountAmount), accent: "text-amber-700 dark:text-amber-400 font-semibold" },
-                ].map((metric) => (
-                  <div key={metric.label} className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/40 px-2.5 py-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] truncate">
-                      {metric.label}
+                  </p>
+                  <div className="shrink-0 text-right leading-tight">
+                    <p className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {loading ? "…" : formatValue(branch!.revenue)}
                     </p>
-                    <p className={cn("mt-0.5 text-sm tabular-nums truncate", metric.accent)}>{metric.value}</p>
+                    {sharePct != null && sharePct > 0 && (
+                      <p className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{sharePct}%</p>
+                    )}
                   </div>
-                ))}
+                </div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11px] leading-snug text-[var(--text-secondary)] sm:text-xs">
+                  <span className="tabular-nums">
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {loading ? "…" : branch!.visits}
+                    </span>{" "}
+                    {labels.visits}
+                  </span>
+                  <span className="text-[var(--text-tertiary)]" aria-hidden>
+                    ·
+                  </span>
+                  <span className="tabular-nums">
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {loading ? "…" : formatValue(branch!.avgTicket)}
+                    </span>{" "}
+                    {labels.avgTicket}
+                  </span>
+                  <span className="text-[var(--text-tertiary)]" aria-hidden>
+                    ·
+                  </span>
+                  <span className="tabular-nums text-amber-700 dark:text-amber-400">
+                    <span className="font-semibold">
+                      {loading ? "…" : formatValue(branch!.discountAmount)}
+                    </span>{" "}
+                    {labels.discounts}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
