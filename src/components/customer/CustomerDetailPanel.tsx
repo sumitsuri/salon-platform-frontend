@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Clock, FileText, Receipt } from "lucide-react";
+import { Clock, FileText, Pencil, Receipt } from "lucide-react";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency } from "@/lib/utils";
@@ -25,6 +25,7 @@ import {
   btnPrimary,
   btnSecondary,
   btnSecondarySm,
+  inputClass,
   StatusBadge,
   InfiniteScrollFooter,
   AvatarInitial,
@@ -65,6 +66,7 @@ function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBr
 
 export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; customerId: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const t = useTranslations("customers");
   const tBookings = useTranslations("manager.bookings");
   const tAdmin = useTranslations("admin.layout");
@@ -147,6 +149,46 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [nameSaveError, setNameSaveError] = useState("");
+
+  const updateNameMutation = useMutation({
+    mutationFn: (name: string) => api.updateCustomer(customerId, { name }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["customer", customerId], updated);
+      void queryClient.invalidateQueries({ queryKey: ["customer-registration-card", customerId] });
+      void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setEditingName(false);
+      setNameSaveError("");
+    },
+    onError: (e: Error) => setNameSaveError(e.message || t("nameRequired")),
+  });
+
+  function startNameEdit() {
+    if (!customer) return;
+    setNameDraft(customer.name);
+    setNameSaveError("");
+    setEditingName(true);
+  }
+
+  function cancelNameEdit() {
+    setEditingName(false);
+    setNameSaveError("");
+  }
+
+  function saveNameEdit() {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      setNameSaveError(t("nameRequired"));
+      return;
+    }
+    if (trimmed === customer?.name) {
+      setEditingName(false);
+      return;
+    }
+    updateNameMutation.mutate(trimmed);
+  }
 
   useEffect(() => {
     if (!selected || selected.status !== "COMPLETED") {
@@ -232,7 +274,54 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
       <Card className="space-y-4">
         <div className="flex items-start gap-4">
           <AvatarInitial name={customer.name} className="h-14 w-14 text-lg" />
-          <div className="min-w-0 flex-1 grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-tertiary)]">{tCommon("name")}</p>
+              {editingName ? (
+                <div className="mt-1 space-y-2">
+                  <input
+                    className={inputClass}
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    autoComplete="name"
+                    aria-label={tCommon("name")}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={saveNameEdit}
+                      disabled={updateNameMutation.isPending}
+                      className={`${btnPrimary} min-h-10 px-4 text-sm`}
+                    >
+                      {updateNameMutation.isPending ? tCommon("processing") : t("saveName")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelNameEdit}
+                      disabled={updateNameMutation.isPending}
+                      className={`${btnSecondary} min-h-10 px-4 text-sm`}
+                    >
+                      {t("cancelEdit")}
+                    </button>
+                  </div>
+                  {nameSaveError && <p className="text-xs text-red-600 dark:text-red-400">{nameSaveError}</p>}
+                </div>
+              ) : (
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-base font-semibold text-[var(--text-primary)]">{customer.name}</p>
+                  <button
+                    type="button"
+                    onClick={startNameEdit}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-text)] hover:opacity-80 touch-manipulation"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    {t("editName")}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
             <div>
               <p className="text-xs font-semibold text-[var(--text-tertiary)]">{tCommon("phone")}</p>
               <p className="font-medium">{formatPhone(customer.phone)}</p>
@@ -262,6 +351,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
               <p className="font-medium">
                 {customer.lastVisitAt ? formatTenantDateTime(customer.lastVisitAt, localeKit) : "—"}
               </p>
+            </div>
             </div>
           </div>
         </div>

@@ -270,6 +270,9 @@ export const api = {
   createCustomer: (data: CreateCustomerRequest) =>
     request<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(data) }),
 
+  updateCustomer: (id: string, data: UpdateCustomerRequest) =>
+    request<Customer>(`/api/v1/customers/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
   getCustomerRegistrationCard: (customerId: string, branchId?: string) => {
     const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
     return request<CustomerRegistrationCard>(`/api/v1/customers/${customerId}/registration-card${q}`);
@@ -1060,6 +1063,10 @@ export interface CreateCustomerRequest {
   branchId?: string;
   society?: string;
   flatUnit?: string;
+}
+
+export interface UpdateCustomerRequest {
+  name: string;
 }
 
 export interface CustomerRegistrationCard {

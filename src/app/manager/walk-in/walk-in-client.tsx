@@ -222,6 +222,8 @@ export default function WalkInPage() {
   const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
 
   const lookupPhoneRef = useRef<string>("");
+  const lastAppliedManualRef = useRef<{ type: DiscountKind; value: string } | null>(null);
+  const savedCustomerNameRef = useRef<string>("");
   const steps = [t("stepCustomer"), t("stepServices"), t("stepPayment")];
   const billingLocked = !!paidInvoiceId;
 
@@ -408,15 +410,21 @@ export default function WalkInPage() {
     setBookingStatus(b.status);
     setCustomerId(b.customerId);
     setCustomerName(b.customerName);
+    savedCustomerNameRef.current = b.customerName?.trim() ?? "";
     setPhone(b.customerPhone || "");
     setSelectedCouponId(b.couponId || "");
     setSelectedOfferId(b.offerId || "");
     if (b.billDiscountType) {
       setBillDiscountType(b.billDiscountType);
       setBillDiscountValue(String(b.billDiscountValue ?? ""));
+      lastAppliedManualRef.current = {
+        type: b.billDiscountType,
+        value: String(b.billDiscountValue ?? ""),
+      };
     } else {
       setBillDiscountType("");
       setBillDiscountValue("");
+      lastAppliedManualRef.current = null;
     }
     setBillPreview(b.billPreview ?? null);
     if (b.billPreview) {
@@ -677,9 +685,14 @@ export default function WalkInPage() {
       if (b.billDiscountType) {
         setBillDiscountType(b.billDiscountType);
         setBillDiscountValue(String(b.billDiscountValue ?? ""));
+        lastAppliedManualRef.current = {
+          type: b.billDiscountType,
+          value: String(b.billDiscountValue ?? ""),
+        };
       } else {
         setBillDiscountType("");
         setBillDiscountValue("");
+        lastAppliedManualRef.current = null;
       }
       setError("");
     },
@@ -700,9 +713,14 @@ export default function WalkInPage() {
       if (b.billDiscountType) {
         setBillDiscountType(b.billDiscountType);
         setBillDiscountValue(String(b.billDiscountValue ?? ""));
+        lastAppliedManualRef.current = {
+          type: b.billDiscountType,
+          value: String(b.billDiscountValue ?? ""),
+        };
       } else {
         setBillDiscountType("");
         setBillDiscountValue("");
+        lastAppliedManualRef.current = null;
       }
       setError("");
     },
@@ -821,6 +839,7 @@ export default function WalkInPage() {
   function clearExistingLookupResult() {
     setCustomerId("");
     setCustomerName("");
+    savedCustomerNameRef.current = "";
     setVisitPassId("");
     setMembership(null);
     setRegistrationCard(null);
@@ -855,6 +874,7 @@ export default function WalkInPage() {
   ) {
     setCustomerId(c.id);
     setCustomerName(c.name);
+    savedCustomerNameRef.current = c.name;
     setVisitPassId(c.visitPassId || "");
     const passWasEmpty = !normalizeVisitPassInput(passRaw);
     const phoneWasEmpty = digitsOnly(phoneRaw).length === 0;
@@ -1017,6 +1037,7 @@ export default function WalkInPage() {
       if (lookupPhoneRef.current !== normalized) return;
       setCustomerId(c.id);
       setCustomerName(c.name);
+      savedCustomerNameRef.current = c.name;
       newPhoneAutoFilledRef.current = {
         name: true,
         visitPass: Boolean(c.visitPassId),
@@ -1058,6 +1079,26 @@ export default function WalkInPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced lookup when phone or pass changes
   }, [visitPassInput, phone, customerLookupMode, bookingId]);
 
+  async function persistCustomerNameIfChanged() {
+    if (!customerId || billingLocked) return;
+    const trimmed = customerName.trim();
+    if (!trimmed) {
+      setError(t("nameRequired"));
+      setCustomerName(savedCustomerNameRef.current);
+      return;
+    }
+    if (trimmed === savedCustomerNameRef.current) return;
+    try {
+      const updated = await api.updateCustomer(customerId, { name: trimmed });
+      savedCustomerNameRef.current = updated.name;
+      setCustomerName(updated.name);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("nameRequired"));
+      setCustomerName(savedCustomerNameRef.current);
+    }
+  }
+
   function applyRecentCustomer(rc: RecentCustomer) {
     setPendingMembershipPlanId("");
     setError("");
@@ -1074,6 +1115,7 @@ export default function WalkInPage() {
     setExistingLookupStatus("idle");
     existingLookupRef.current = "";
     setCustomerName(rc.name);
+    savedCustomerNameRef.current = rc.name;
     setCustomerId(rc.customerId || "");
     setVisitPassId(rc.visitPassId || "");
     setSociety(rc.society || society);
@@ -1102,6 +1144,7 @@ export default function WalkInPage() {
         if (existingLookupStatus === "loading") return;
         return;
       }
+      await persistCustomerNameIfChanged();
       pushRecentCustomer(branchId, {
         visitPassId: visitPassId || visitPassInput,
         name: customerName,
@@ -1165,6 +1208,7 @@ export default function WalkInPage() {
           setVisitPassId(createdVisitPassId);
         }
       }
+      savedCustomerNameRef.current = customerName.trim();
       pushRecentCustomer(branchId, {
         phone: normalized || undefined,
         visitPassId: createdVisitPassId || undefined,
@@ -1421,24 +1465,26 @@ export default function WalkInPage() {
     }
   }
 
-  function applyManualDiscount() {
+  function applyManualDiscount(silent = false) {
     const value = Number(billDiscountValue);
     if (!billDiscountType || !Number.isFinite(value) || value <= 0) {
-      setError(t("manualDiscountInvalid"));
-      return;
+      if (!silent) setError(t("manualDiscountInvalid"));
+      return false;
     }
     setSelectedCouponId("");
     setSelectedOfferId("");
-    if (!bookingId) return;
+    if (!bookingId) return false;
     applyBillDiscount.mutate({
       billDiscountType: billDiscountType as "FLAT" | "PERCENT",
       billDiscountValue: value,
     });
+    return true;
   }
 
   function clearManualDiscount() {
     setBillDiscountType("");
     setBillDiscountValue("");
+    lastAppliedManualRef.current = null;
     if (bookingId) applyBillDiscount.mutate({ clearDiscount: true });
   }
 
@@ -1462,7 +1508,55 @@ export default function WalkInPage() {
   const cartHasFreshBill = !!billPreview && (billPreview.lines?.length ?? 0) === cart.length;
 
   const promoLocked = !!selectedCouponId || !!selectedOfferId;
-  const manualDiscountActive = !!billDiscountType && Number(billDiscountValue) > 0;
+  const manualDiscountApplied = (billPreview?.manualDiscountAmount ?? 0) > 0;
+
+  useEffect(() => {
+    if (!bookingId || billingLocked || promoLocked || applyBillDiscount.isPending) return;
+
+    const trimmed = billDiscountValue.trim();
+    const value = Number(trimmed);
+    const hasDraft = !!billDiscountType && Number.isFinite(value) && value > 0;
+
+    if (!hasDraft) {
+      if (manualDiscountApplied && !trimmed) {
+        const timer = window.setTimeout(() => clearManualDiscount(), 500);
+        return () => window.clearTimeout(timer);
+      }
+      return;
+    }
+
+    const draft = { type: billDiscountType, value: trimmed };
+    if (
+      lastAppliedManualRef.current?.type === draft.type &&
+      lastAppliedManualRef.current?.value === draft.value
+    ) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      applyManualDiscount(true);
+    }, 650);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced apply from discount draft
+  }, [billDiscountType, billDiscountValue, bookingId, billingLocked, promoLocked, manualDiscountApplied]);
+
+  const adjustmentSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (selectedCouponId) {
+      const coupon = coupons.find((c) => c.id === selectedCouponId);
+      if (coupon) parts.push(coupon.code ?? coupon.name);
+    }
+    if (selectedOfferId) {
+      const offer = offers.find((o) => o.id === selectedOfferId);
+      if (offer) parts.push(offer.name);
+    }
+    if (manualDiscountApplied && billPreview?.manualDiscountLabel) {
+      parts.push(billPreview.manualDiscountLabel);
+    } else if (manualDiscountApplied) {
+      parts.push(t("manualDiscount"));
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [selectedCouponId, selectedOfferId, coupons, offers, manualDiscountApplied, billPreview?.manualDiscountLabel, t]);
   const stylistsRequired = staff.length > 0;
   const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
   const cartTotalDisplay = formatMoney(
@@ -1789,17 +1883,21 @@ export default function WalkInPage() {
                 <input
                   placeholder={t("namePlaceholder")}
                   value={customerName}
-                  readOnly
-                  disabled={existingLookupStatus !== "found" || !customerName || !!bookingId}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  onBlur={() => void persistCustomerNameIfChanged()}
+                  disabled={existingLookupStatus !== "found" || !customerId || billingLocked}
                   autoComplete="name"
                   className={cn(
                     inputClass,
                     existingLookupStatus === "found" &&
                       customerName &&
-                      "border-emerald-500 ring-2 ring-emerald-500/20 bg-[var(--surface-muted)]/40"
+                      "border-emerald-500 ring-2 ring-emerald-500/20"
                   )}
                   aria-label={tCommon("name")}
                 />
+                {existingLookupStatus === "found" && customerId && (
+                  <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{tCustomers("editName")}</p>
+                )}
               </div>
             </div>
           ) : (
@@ -2133,9 +2231,16 @@ export default function WalkInPage() {
 
           {!billingLocked && (
             <Card className="p-0 overflow-hidden">
-              <details className="group" open={!!selectedCouponId || !!selectedOfferId || manualDiscountActive}>
+              <details className="group" open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3.5 font-semibold text-sm touch-manipulation">
-                  <span>{t("adjustments")}</span>
+                  <div className="min-w-0 flex-1">
+                    <span>{t("adjustments")}</span>
+                    {adjustmentSummary && (
+                      <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
+                        {adjustmentSummary}
+                      </p>
+                    )}
+                  </div>
                   <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
                 </summary>
                 <div className="border-t border-[var(--border)] px-4 py-4">
@@ -2148,12 +2253,13 @@ export default function WalkInPage() {
                     billDiscountType={billDiscountType}
                     billDiscountValue={billDiscountValue}
                     promoLocked={promoLocked}
-                    manualDiscountActive={manualDiscountActive}
+                    manualDiscountApplied={manualDiscountApplied}
+                    manualDiscountAmount={billPreview?.manualDiscountAmount}
+                    manualDiscountLabel={billPreview?.manualDiscountLabel}
                     onCouponChange={onCouponChange}
                     onOfferChange={onOfferChange}
                     onBillDiscountTypeChange={setBillDiscountType}
                     onBillDiscountValueChange={setBillDiscountValue}
-                    onApplyManualDiscount={applyManualDiscount}
                     onClearManualDiscount={clearManualDiscount}
                     applyPending={applyBillDiscount.isPending}
                   />
