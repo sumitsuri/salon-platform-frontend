@@ -58,14 +58,13 @@ jobs:
         run: |
           BUCKET="${{ steps.ssm.outputs.bucket }}"
           aws s3api head-object --bucket "$BUCKET" --key "__app/login/index.html"
-          CHUNK_KEY=$(aws s3 ls "s3://${BUCKET}/__app/_next/static/chunks/" | awk '/1863-/{print $4; exit}')
-          test -n "$CHUNK_KEY"
-          aws s3 cp "s3://${BUCKET}/__app/_next/static/chunks/${CHUNK_KEY}" /tmp/app-chunk.js
-          if grep -q 'let e="http://localhost:8080"' /tmp/app-chunk.js; then
+          mkdir -p /tmp/app-chunks
+          aws s3 sync "s3://${BUCKET}/__app/_next/static/chunks/" /tmp/app-chunks/
+          if grep -rq 'let e="http://localhost:8080"' /tmp/app-chunks/; then
             echo "::error::Deployed app bundle still references localhost:8080"
             exit 1
           fi
-          if ! grep -q "api.antrahq.com" /tmp/app-chunk.js; then
+          if ! grep -rq "api.antrahq.com" /tmp/app-chunks/; then
             echo "::error::Deployed app bundle missing api.antrahq.com"
             exit 1
           fi
