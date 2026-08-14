@@ -15,6 +15,7 @@ type Props = {
   secondaryClassName?: string;
   downloadTestId?: string;
   onError?: (message: string) => void;
+  compact?: boolean;
 };
 
 export function InvoicePdfButtons({
@@ -28,6 +29,7 @@ export function InvoicePdfButtons({
   secondaryClassName = "",
   downloadTestId,
   onError,
+  compact = false,
 }: Props) {
   const [busy, setBusy] = useState<"download" | "share" | null>(null);
 
@@ -50,7 +52,7 @@ export function InvoicePdfButtons({
   const disabled = busy != null;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2 w-full">
+    <div className={compact ? "grid grid-cols-2 gap-2 w-full" : "flex flex-col sm:flex-row gap-2 w-full"}>
       <button
         type="button"
         onClick={() => void run("share")}

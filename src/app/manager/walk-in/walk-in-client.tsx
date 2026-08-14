@@ -16,6 +16,9 @@ import {
   ShoppingBag,
   X,
   CheckCircle2,
+  Scissors,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import {
   api,
@@ -74,7 +77,7 @@ import {
 import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
-import { ReviewInvitationPanel } from "@/components/reviews/ReviewInvitationPanel";
+import { WalkInPaymentSuccess } from "./WalkInPaymentSuccess";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
 import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
@@ -82,9 +85,9 @@ import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInCartPanel } from "./WalkInCartPanel";
-import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
+import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 import {
   buildWalkInSubCategories,
@@ -1584,6 +1587,7 @@ export default function WalkInPage() {
     }
     return parts.length > 0 ? parts.join(" · ") : null;
   }, [selectedCouponId, selectedOfferId, coupons, offers, manualDiscountApplied, billPreview?.manualDiscountLabel, t]);
+
   const stylistsRequired = staff.length > 0;
   const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
   const cartTotalDisplay = formatMoney(
@@ -1777,101 +1781,192 @@ export default function WalkInPage() {
   return (
     <div
       className={cn(
-        "space-y-2 w-full max-w-6xl mx-auto min-w-0 max-w-full",
+        "space-y-2 w-full min-w-0 mx-auto",
         step === 2
-          ? "max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0"
-          : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          ? "max-w-6xl max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0"
+          : step === 3
+            ? "max-w-3xl xl:max-w-4xl pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            : "max-w-6xl pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       )}
     >
       {showFlowChrome ? (
         <div
           className={cn(
-            "rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm",
-            step === 2 && "max-lg:shrink-0"
+            "rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm w-full min-w-0",
+            step === 2 && "max-lg:shrink-0",
+            step === 3 && "max-w-3xl xl:max-w-4xl mx-auto"
           )}
         >
-          <div className="flex items-center gap-2 px-2 py-2 min-w-0">
-            {flowBackButton}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 min-w-0">
-                <p className="min-w-0 truncate text-sm font-bold leading-tight text-[var(--text-primary)]">
-                  {customerName || t("namePlaceholder")}
-                </p>
-                {step === 2 && !billingLocked && (
-                  <button
-                    type="button"
-                    onClick={() => goToStep(1)}
-                    className="inline-flex shrink-0 rounded-md p-1 text-[var(--brand-text)] hover:bg-[var(--surface-muted)] touch-manipulation"
-                    aria-label={t("editCustomer")}
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                )}
+          {step === 3 ? (
+            <>
+              <div className="flex items-center gap-2 min-w-0 px-3 py-2 md:hidden">
+                {flowBackButton}
+                <div className="min-w-0 flex-1">
+                  <p className="min-w-0 truncate text-sm font-bold leading-tight text-[var(--text-primary)]">
+                    {customerName || t("namePlaceholder")}
+                  </p>
+                  {(visitPassId || membership) && (
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                      {visitPassId && (
+                        <span className="text-[10px] font-mono text-[var(--text-tertiary)]">{visitPassId}</span>
+                      )}
+                      {membership && (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                          {t("memberPercentChip", { percent: membership.benefitPercent ?? 10 })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 border-l border-[var(--border)] pl-2.5 text-right">
+                  {billPreview ? (
+                    <>
+                      <p className="text-base font-bold tabular-nums leading-none text-[var(--brand-text)]">
+                        {formatMoney(displayGrandTotal, localeKit)}
+                      </p>
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        {tCommon("grandTotal")}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-base font-bold tabular-nums leading-none text-[var(--text-tertiary)] animate-pulse">
+                        …
+                      </p>
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        {tCommon("loading")}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
-              {(visitPassId || membership) && (
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+              <div className="border-t border-[var(--border)] bg-[var(--surface-muted)]/30 px-1 py-0.5 md:hidden">
+                <WalkInCompactSteps embedded steps={steps} current={step} onStepSelect={stepSelectHandler} />
+              </div>
+              <div className="hidden md:block px-3 py-3 sm:px-4">
+                <div className="flex items-start gap-3 min-w-0">
+                  {flowBackButton}
+                  <div className="min-w-0 flex-1">
+                    <WizardSteps
+                      steps={steps}
+                      current={step}
+                      onStepSelect={stepSelectHandler}
+                      className="!rounded-none !border-0 !shadow-none !p-0 !bg-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2 min-w-0 border-t border-[var(--border)]/70 pt-2.5">
+                  <p className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">
+                    {customerName || t("namePlaceholder")}
+                  </p>
                   {visitPassId && (
-                    <span className="text-[10px] font-mono text-[var(--text-tertiary)]">{visitPassId}</span>
+                    <span className="hidden lg:inline font-mono text-[10px] text-[var(--text-tertiary)] shrink-0">
+                      {visitPassId}
+                    </span>
                   )}
                   {membership && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
                       {t("memberPercentChip", { percent: membership.benefitPercent ?? 10 })}
                     </span>
                   )}
+                  <div className="ml-auto shrink-0 pl-2 text-right">
+                    {billPreview ? (
+                      <>
+                        <p className="text-sm font-bold tabular-nums leading-none text-[var(--brand-text)] lg:text-base">
+                          {formatMoney(displayGrandTotal, localeKit)}
+                        </p>
+                        <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                          {tCommon("grandTotal")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-bold tabular-nums leading-none text-[var(--text-tertiary)] animate-pulse lg:text-base">
+                          …
+                        </p>
+                        <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                          {tCommon("loading")}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="shrink-0 border-l border-[var(--border)] pl-2.5 text-right">
-              {step === 3 ? (
-                billPreview ? (
-                  <>
-                    <p className="text-base font-bold tabular-nums leading-none text-[var(--brand-text)] sm:text-lg">
-                      {formatMoney(displayGrandTotal, localeKit)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 min-w-0 px-3 py-2 sm:px-4">
+                {flowBackButton}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <p className="min-w-0 truncate text-sm font-bold leading-tight text-[var(--text-primary)]">
+                      {customerName || t("namePlaceholder")}
                     </p>
-                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                      {tCommon("grandTotal")}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-base font-bold tabular-nums leading-none text-[var(--text-tertiary)] sm:text-lg animate-pulse">
-                      …
-                    </p>
-                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                      {tCommon("loading")}
-                    </p>
-                  </>
-                )
-              ) : cart.length > 0 ? (
-                <>
-                  <p className="text-base font-bold tabular-nums leading-none text-[var(--brand-text)]">
-                    {cartTotalDisplay}
-                  </p>
-                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                    {t("cart", { count: cart.length })}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="mx-auto h-4 w-4 text-[var(--text-tertiary)]" aria-hidden />
-                  <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                    {t("addServices")}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="border-t border-[var(--border)] bg-[var(--surface-muted)]/30 px-1 py-0.5 md:hidden">
-            <WalkInCompactSteps embedded steps={steps} current={step} onStepSelect={stepSelectHandler} />
-          </div>
-          <div className="hidden md:block border-t border-[var(--border)]">
-            <WizardSteps
-              steps={steps}
-              current={step}
-              onStepSelect={stepSelectHandler}
-              className="!rounded-none !border-0 !shadow-none !p-2 !bg-transparent"
-            />
-          </div>
+                    {!billingLocked && (
+                      <button
+                        type="button"
+                        onClick={() => goToStep(1)}
+                        className="inline-flex shrink-0 rounded-md p-1 text-[var(--brand-text)] hover:bg-[var(--surface-muted)] touch-manipulation"
+                        aria-label={t("editCustomer")}
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                  {(visitPassId || membership) && (
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1 max-lg:hidden">
+                      {visitPassId && (
+                        <span className="text-[10px] font-mono text-[var(--text-tertiary)]">{visitPassId}</span>
+                      )}
+                      {membership && (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-px text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
+                          {t("memberPercentChip", { percent: membership.benefitPercent ?? 10 })}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 border-l border-[var(--border)] pl-2.5 text-right">
+                  {cart.length > 0 ? (
+                    <>
+                      <p className="text-sm font-bold tabular-nums leading-none text-[var(--brand-text)] max-lg:text-[0.9375rem]">
+                        {cartTotalDisplay}
+                      </p>
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        {t("mobileCartCount", { count: cart.length })}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingBag className="mx-auto h-4 w-4 text-[var(--text-tertiary)]" aria-hidden />
+                      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                        {t("addServices")}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div
+                className="border-t border-[var(--border)] bg-[var(--surface-muted)]/20 px-2 py-1 md:hidden"
+                aria-hidden
+              >
+                <div className="h-0.5 overflow-hidden rounded-full bg-[var(--border)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--brand)] transition-all duration-300"
+                    style={{ width: `${steps.length > 1 ? ((step - 1) / (steps.length - 1)) * 100 : 100}%` }}
+                  />
+                </div>
+              </div>
+              <div className="hidden md:block border-t border-[var(--border)] px-2 sm:px-3">
+                <WizardSteps
+                  steps={steps}
+                  current={step}
+                  onStepSelect={stepSelectHandler}
+                  className="!rounded-none !border-0 !shadow-none !p-2 sm:!p-3 !bg-transparent"
+                />
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -2161,8 +2256,8 @@ export default function WalkInPage() {
           className={cn(
             "min-w-0 space-y-2 max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0",
             cart.length === 0
-              ? "max-lg:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]"
-              : "max-lg:pb-[calc(11rem+env(safe-area-inset-bottom,0px))]"
+              ? "max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
+              : "max-lg:pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))]"
           )}
         >
           {addedToast && (
@@ -2257,8 +2352,10 @@ export default function WalkInPage() {
                   onClick={() => setCartSheetOpen(false)}
                 />
                 <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3 shrink-0">
-                    <p className="font-bold text-[var(--text-primary)]">{t("viewCart")}</p>
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 shrink-0">
+                    <p className="font-bold text-sm text-[var(--text-primary)]">
+                      {t("cartSheetTitle", { count: cart.length })}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setCartSheetOpen(false)}
@@ -2296,57 +2393,57 @@ export default function WalkInPage() {
               </>
             )}
 
-            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(15,23,42,0.1)]">
               {cart.length === 0 ? (
-                <p className="text-center text-sm text-[var(--text-tertiary)] py-2">{t("cartEmpty")}</p>
+                <p className="text-center text-xs text-[var(--text-tertiary)] py-1">{t("cartEmpty")}</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <button
                     type="button"
                     onClick={() => setCartSheetOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/60 px-3 py-2.5 touch-manipulation"
+                    className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/50 px-2.5 py-1.5 touch-manipulation"
+                    aria-label={t("viewCart")}
                   >
-                    <ShoppingBag className="w-5 h-5 shrink-0 text-[var(--brand-text)]" />
+                    <ShoppingBag className="w-4 h-4 shrink-0 text-[var(--brand-text)]" aria-hidden />
                     <div className="min-w-0 flex-1 text-left">
-                      <p className="text-xs font-semibold text-[var(--text-secondary)]">
-                        {t("viewCart")} · {t("cart", { count: cart.length })}
+                      <p className="text-xs font-semibold text-[var(--text-primary)] tabular-nums truncate">
+                        {t("mobileCartSummary", { count: cart.length, total: cartTotalDisplay })}
                       </p>
-                      <p className="text-base font-bold text-[var(--text-primary)] tabular-nums truncate">
-                        {cartTotalDisplay}
-                      </p>
-                      {gstEffective && cartTotals.estimatedTax > 0 && !cartHasFreshBill && (
-                        <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
-                          {t("cartServicesSubtotal")} {formatMoney(cartTotals.subtotal, localeKit)} + {t("cartGstEstimated")}{" "}
-                          {formatMoney(cartTotals.estimatedTax, localeKit)}
-                        </p>
-                      )}
-                      {stylistsRequired && !stylistsComplete && (
-                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-0.5">
+                      {stylistsRequired && !stylistsComplete ? (
+                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 truncate">
                           {t("assignStylistsHint")}
                         </p>
+                      ) : (
+                        <p className="text-[10px] text-[var(--text-tertiary)] truncate">{t("viewCart")}</p>
                       )}
                     </div>
-                    <ChevronUp className="w-5 h-5 shrink-0 text-[var(--text-tertiary)]" />
+                    <ChevronUp className="w-4 h-4 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
                   </button>
-                  {!stylistsComplete && stylistsRequired && (
-                    <p className="text-xs text-amber-700 dark:text-amber-400 px-1">{t("assignStylistError")}</p>
+
+                  {stylistsRequired && !stylistsComplete && (
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 px-0.5 leading-tight">
+                      {t("assignStylistError")}
+                    </p>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => void proceedToBill()}
-                    disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
-                    className={`${btnPrimary} w-full min-h-12`}
-                  >
-                    {saving ? tCommon("processing") : t("continueBill")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void saveOpenVisit()}
-                    disabled={cart.length === 0 || saving || staff.length === 0}
-                    className={`${btnSecondary} w-full min-h-11`}
-                  >
-                    {saving ? tCommon("processing") : t("saveOpenVisit")}
-                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void proceedToBill()}
+                      disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                      className={`${btnPrimary} min-h-10 px-2 text-xs sm:text-sm leading-tight`}
+                    >
+                      {saving ? tCommon("processing") : t("continueBill")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void saveOpenVisit()}
+                      disabled={cart.length === 0 || saving || staff.length === 0}
+                      className={`${btnSecondary} min-h-10 px-2 text-xs sm:text-sm leading-tight`}
+                    >
+                      {saving ? tCommon("processing") : t("saveOpenVisit")}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -2356,9 +2453,23 @@ export default function WalkInPage() {
 
       {step === 3 && billPreview && (
         <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
+          {membership && (
+            <div className="flex items-center gap-2 rounded-lg border border-violet-200/90 bg-violet-50/50 px-3 py-2 text-xs dark:border-violet-900/50 dark:bg-violet-950/25">
+              <Sparkles className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+              <span className="font-semibold text-violet-900 dark:text-violet-200">
+                {t("memberCardActiveTitle")} · {membership.planName || "Member"} ({membership.benefitPercent ?? 10}% off)
+              </span>
+            </div>
+          )}
 
           {!billingLocked && !membership && customerId && (
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+            <div className="rounded-lg border border-violet-200/90 bg-violet-50/40 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/20">
+              <div className="mb-2 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+                <span className="text-[11px] font-bold uppercase tracking-wide text-violet-800 dark:text-violet-300">
+                  {t("membershipBillRowLabel")}
+                </span>
+              </div>
               <WalkInMembershipPicker
                 value={pendingMembershipPlanId}
                 onChange={setPendingMembershipPlanId}
@@ -2368,29 +2479,52 @@ export default function WalkInPage() {
           )}
 
           <Card className="p-3 sm:p-4 space-y-3">
-            <ul className="space-y-1.5">
+            <div className="rounded-lg border border-[var(--border)]/80 bg-[var(--surface-muted)]/25 p-2">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <Scissors className="h-3.5 w-3.5 shrink-0 text-[var(--brand-text)]" aria-hidden />
+                <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                  {t("servicesReview")}
+                </span>
+              </div>
+              <ul className="space-y-0 divide-y divide-[var(--border)]/50">
                 {(billPreview.lines && billPreview.lines.length > 0
                   ? billPreview.lines.map((line, idx) => {
-                      const stylist = cart[idx]?.staffId
-                        ? staff.find((s) => s.id === cart[idx].staffId)?.name
-                        : undefined;
+                      const membershipFee = membershipFeeServiceLine(billPreview);
+                      const isMembershipRow =
+                        !!membershipFee &&
+                        (idx >= cart.length ||
+                          line.serviceName === membershipFee.name ||
+                          /membership/i.test(line.serviceName));
+                      const stylist =
+                        !isMembershipRow && cart[idx]?.staffId
+                          ? staff.find((s) => s.id === cart[idx].staffId)?.name
+                          : undefined;
                       const qty = line.quantity || 1;
                       const linePrice = line.unitPrice * qty;
                       return (
                         <li
                           key={line.lineItemId || `${line.serviceName}-${idx}`}
-                          className="flex justify-between gap-2 items-start py-1 border-b border-[var(--border)]/50 last:border-0"
+                          className={cn(
+                            "flex justify-between gap-2 items-start py-1.5 first:pt-0 last:pb-0",
+                            isMembershipRow &&
+                              "rounded-md border-l-2 border-violet-400 bg-violet-50/50 pl-2 dark:border-violet-600 dark:bg-violet-950/20"
+                          )}
                         >
-                          <div className="min-w-0">
-                            <p className="font-medium text-[var(--text-primary)] truncate">
-                              {line.serviceName}
-                              {qty > 1 ? ` × ${qty}` : ""}
-                            </p>
-                            {stylist && (
-                              <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
-                            )}
+                          <div className="min-w-0 flex items-start gap-1.5">
+                            {isMembershipRow ? (
+                              <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+                            ) : null}
+                            <div className="min-w-0">
+                              <p className="font-medium text-[var(--text-primary)] truncate text-sm">
+                                {line.serviceName}
+                                {qty > 1 ? ` × ${qty}` : ""}
+                              </p>
+                              {stylist && (
+                                <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
+                              )}
+                            </div>
                           </div>
-                          <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
+                          <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums text-sm">
                             {formatMoney(linePrice, localeKit)}
                           </span>
                         </li>
@@ -2406,24 +2540,27 @@ export default function WalkInPage() {
                             return (
                               <li
                                 key={`${item.branchServiceId}-${idx}`}
-                                className="flex justify-between gap-2 items-start py-1 border-b border-[var(--border)]/50 last:border-0"
+                                className="flex justify-between gap-2 items-start py-1.5 first:pt-0"
                               >
                                 <div className="min-w-0">
-                                  <p className="font-medium text-[var(--text-primary)] truncate">{item.serviceName}</p>
+                                  <p className="font-medium text-sm text-[var(--text-primary)] truncate">{item.serviceName}</p>
                                   {stylist && (
                                     <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
                                   )}
                                 </div>
-                                <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
+                                <span className="font-semibold text-sm text-[var(--text-primary)] shrink-0 tabular-nums">
                                   {formatMoney(cartLinePrice(item), localeKit)}
                                 </span>
                               </li>
                             );
                           })}
                           {fee && (
-                            <li className="flex justify-between gap-3 items-start border-b border-[var(--border)]/60 pb-2 last:border-0 last:pb-0">
-                              <p className="font-medium text-[var(--text-primary)] truncate">{fee.name}</p>
-                              <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums">
+                            <li className="flex justify-between gap-3 items-start rounded-md border-l-2 border-violet-400 bg-violet-50/50 py-1.5 pl-2 dark:border-violet-600 dark:bg-violet-950/20">
+                              <div className="min-w-0 flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+                                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{fee.name}</p>
+                              </div>
+                              <span className="font-semibold text-sm text-[var(--text-primary)] shrink-0 tabular-nums">
                                 {formatMoney(fee.amount, localeKit)}
                               </span>
                             </li>
@@ -2432,6 +2569,7 @@ export default function WalkInPage() {
                       );
                     })())}
               </ul>
+            </div>
 
             <div className="pt-2 border-t border-[var(--border)]">
               <BillBreakdownRows
@@ -2520,19 +2658,25 @@ export default function WalkInPage() {
             </div>
 
             {!billingLocked && (
-              <details className="group rounded-lg border border-[var(--border)]" open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}>
+              <details
+                className="group rounded-lg border border-amber-200/80 bg-amber-50/25 dark:border-amber-900/40 dark:bg-amber-950/15"
+                open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}
+              >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 font-semibold text-sm touch-manipulation">
-                  <div className="min-w-0 flex-1">
-                    <span>{t("adjustments")}</span>
-                    {adjustmentSummary && (
-                      <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
-                        {adjustmentSummary}
-                      </p>
-                    )}
+                  <div className="min-w-0 flex flex-1 items-start gap-2">
+                    <Tag className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
+                    <div className="min-w-0">
+                      <span>{t("adjustments")}</span>
+                      {adjustmentSummary && (
+                        <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
+                          {adjustmentSummary}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
                 </summary>
-                <div className="border-t border-[var(--border)] px-3 py-3">
+                <div className="border-t border-amber-200/60 bg-[var(--surface)]/80 px-3 py-2.5 dark:border-amber-900/40">
                   <WalkInPromoAdjustments
                     coupons={coupons}
                     offers={offers}
@@ -2654,38 +2798,34 @@ export default function WalkInPage() {
               </details>
             )}
 
-          {paymentSuccess && (
-            <Callout
-              variant="success"
-              icon={<CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" aria-hidden />}
-              title={paymentSuccess}
-              className="space-y-3"
-            >
-              <p>{t("receiptShareHint")}</p>
-              {receiptQueued && (
-                <p className="text-xs text-[var(--text-tertiary)]">{t("receiptQueuedHint")}</p>
-              )}
-              {reviewInvitationUrl && (
-                <ReviewInvitationPanel
-                  reviewUrl={reviewInvitationUrl}
-                  title={t("reviewInviteTitle")}
-                  subtitle={t("reviewInviteSubtitle")}
-                  copyLabel={t("reviewCopyLink")}
-                  copiedLabel={t("reviewCopiedLink")}
-                  shareLabel={t("reviewShareLink")}
-                  submittedRating={reviewSubmittedRating}
-                />
-              )}
-              {registrationCard && (
-                <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
-                  <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">{t("visitPassSaveReminder")}</p>
-                  <RegistrationCardPanel card={registrationCard} />
-                </div>
-              )}
-            </Callout>
+          {paymentSuccess && paidInvoiceId && (
+            <WalkInPaymentSuccess
+              invoiceId={paidInvoiceId}
+              shareBillMessage={t("shareBillMessage", { name: customerName || "Customer" })}
+              customerName={customerName}
+              reviewUrl={reviewInvitationUrl || undefined}
+              reviewSubmittedRating={reviewSubmittedRating}
+              registrationCard={registrationCard}
+              processingLabel={tCommon("processing")}
+              onError={setError}
+              onDone={() => {
+                setScreen("hub");
+                setPaidInvoiceId("");
+                setPaymentSuccess("");
+                setReviewInvitationUrl("");
+                setReviewSubmittedRating(null);
+                setBookingId("");
+                returnFromFlow();
+              }}
+              onViewHistory={() =>
+                router.push(
+                  urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl({ tab: "history" })
+                )
+              }
+            />
           )}
 
-          {billingLocked ? (
+          {billingLocked && !paymentSuccess ? (
             <div className="space-y-2">
               {paidInvoiceId && (
                 <InvoicePdfButtons
@@ -2726,7 +2866,7 @@ export default function WalkInPage() {
                 {t("done")}
               </button>
             </div>
-          ) : (
+          ) : !paymentSuccess ? (
             <>
               <div className="hidden lg:block">
                 <button
@@ -2745,7 +2885,7 @@ export default function WalkInPage() {
                 </button>
               </div>
             </>
-          )}
+          ) : null}
         </Card>
 
           {!billingLocked && (

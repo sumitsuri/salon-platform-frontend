@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, Copy, QrCode, Share2 } from "lucide-react";
 import QRCode from "react-qr-code";
 import { btnSecondary } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 type Props = {
   reviewUrl: string;
@@ -13,6 +14,7 @@ type Props = {
   copiedLabel: string;
   shareLabel: string;
   submittedRating?: number | null;
+  compact?: boolean;
 };
 
 export function ReviewInvitationPanel({
@@ -23,6 +25,7 @@ export function ReviewInvitationPanel({
   copiedLabel,
   shareLabel,
   submittedRating,
+  compact = false,
 }: Props) {
   const [copied, setCopied] = useState(false);
 
@@ -46,6 +49,42 @@ export function ReviewInvitationPanel({
       }
     }
     void copyLink();
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+        <div className="shrink-0 rounded-md bg-white p-1 ring-1 ring-[var(--border)]">
+          <QRCode value={reviewUrl} size={72} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug">{title}</p>
+          {submittedRating != null ? (
+            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">Rated {submittedRating}/5</p>
+          ) : (
+            <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 line-clamp-2">{subtitle}</p>
+          )}
+          <div className="mt-1.5 flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => void copyLink()}
+              className={cn(btnSecondary, "min-h-9 flex-1 px-2 py-1.5 text-[11px] justify-center gap-1")}
+            >
+              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copied ? copiedLabel : copyLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => void shareLink()}
+              className={cn(btnSecondary, "min-h-9 flex-1 px-2 py-1.5 text-[11px] justify-center gap-1")}
+            >
+              <Share2 className="w-3 h-3" />
+              {shareLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

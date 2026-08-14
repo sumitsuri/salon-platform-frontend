@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { ApplicablePromo } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
@@ -46,7 +46,7 @@ function DiscountTypeToggle({
   return (
     <div
       className={cn(
-        "inline-flex shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-0.5",
+        "inline-flex shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface-muted)] p-0.5",
         disabled && "opacity-50 pointer-events-none"
       )}
       role="group"
@@ -58,7 +58,7 @@ function DiscountTypeToggle({
           type="button"
           onClick={() => onChange(kind)}
           className={cn(
-            "min-h-10 min-w-[2.75rem] rounded-md px-2.5 text-xs font-bold transition touch-manipulation",
+            "min-h-9 min-w-9 rounded px-2 text-xs font-bold transition touch-manipulation",
             effective === kind
               ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm"
               : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -82,7 +82,6 @@ export function WalkInPromoAdjustments({
   promoLocked,
   manualDiscountApplied,
   manualDiscountAmount,
-  manualDiscountLabel,
   disabled,
   onCouponChange,
   onOfferChange,
@@ -106,12 +105,73 @@ export function WalkInPromoAdjustments({
     onBillDiscountValueChange(raw);
   }
 
-  const appliedSummary =
-    manualDiscountLabel ||
-    billPreviewLabel(billDiscountType, billDiscountValue, currencySymbol);
-
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
+      <label className="block min-w-0 space-y-1">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">{t("manualDiscount")}</span>
+          <span className="flex items-center gap-1.5 shrink-0">
+            {applyPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--text-tertiary)]" aria-hidden />
+            ) : null}
+            {manualDiscountApplied && (manualDiscountAmount ?? 0) > 0 ? (
+              <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                -{formatCurrency(manualDiscountAmount ?? 0, localeKit)}
+              </span>
+            ) : null}
+          </span>
+        </div>
+
+        {promoLocked ? (
+          <p className="text-[11px] text-[var(--text-tertiary)] leading-snug rounded-md border border-[var(--border)] bg-[var(--surface-muted)]/40 px-2.5 py-2">
+            {t("promoBlocksManual")}
+          </p>
+        ) : (
+          <div
+            className={cn(
+              "flex items-center gap-1.5 min-w-0 rounded-lg border bg-[var(--surface)] transition-colors",
+              manualDiscountApplied
+                ? "border-emerald-300 dark:border-emerald-800"
+                : "border-[var(--border)]"
+            )}
+          >
+            <DiscountTypeToggle
+              value={billDiscountType}
+              currencySymbol={currencySymbol}
+              disabled={disabled}
+              onChange={onTypeChange}
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0.01"
+              step="0.01"
+              placeholder={effectiveType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
+              value={billDiscountValue}
+              onChange={(e) => onValueChange(e.target.value)}
+              className={cn(
+                inputClass,
+                "flex-1 min-w-0 border-0 bg-transparent py-2 px-1 shadow-none focus:ring-0 rounded-none",
+                manualDiscountApplied && "font-semibold text-emerald-900 dark:text-emerald-100"
+              )}
+              disabled={disabled}
+              aria-label={t("manualDiscount")}
+            />
+            {manualDiscountApplied ? (
+              <button
+                type="button"
+                onClick={onClearManualDiscount}
+                disabled={disabled || applyPending}
+                className="inline-flex shrink-0 min-h-9 min-w-9 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--surface-muted)] hover:text-emerald-700 touch-manipulation mr-0.5"
+                aria-label={t("clearDiscount")}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            ) : null}
+          </div>
+        )}
+      </label>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label className="block min-w-0 space-y-1">
           <span className="text-[11px] font-semibold text-[var(--text-secondary)]">{t("couponLabel")}</span>
@@ -150,117 +210,6 @@ export function WalkInPromoAdjustments({
       </div>
 
       <p className="text-[11px] text-[var(--text-tertiary)] leading-snug">{t("xorHint")}</p>
-
-      <div
-        className={cn(
-          "rounded-xl border p-3 space-y-2.5 transition-colors",
-          manualDiscountApplied
-            ? "border-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50/80 shadow-sm ring-2 ring-emerald-200/70 dark:border-emerald-800 dark:from-emerald-950/40 dark:to-teal-950/20 dark:ring-emerald-900/50"
-            : "border-[var(--border)] bg-[var(--surface-muted)]/30"
-        )}
-      >
-        <div className="flex items-start justify-between gap-2 min-w-0">
-          <div className="flex items-start gap-2 min-w-0">
-            {manualDiscountApplied ? (
-              <CheckCircle2
-                className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5"
-                aria-hidden
-              />
-            ) : null}
-            <div className="min-w-0">
-              <p
-                className={cn(
-                  "text-sm font-bold",
-                  manualDiscountApplied
-                    ? "text-emerald-900 dark:text-emerald-100"
-                    : "text-[var(--text-primary)]"
-                )}
-              >
-                {t("manualDiscount")}
-              </p>
-              {!manualDiscountApplied && (
-                <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 leading-snug">
-                  {t("manualDiscountHint")}
-                </p>
-              )}
-              {manualDiscountApplied && appliedSummary && (
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200 mt-0.5">
-                  {appliedSummary}
-                  {(manualDiscountAmount ?? 0) > 0 && (
-                    <span className="font-bold tabular-nums">
-                      {" "}
-                      · -{formatCurrency(manualDiscountAmount ?? 0, localeKit)}
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
-          </div>
-          {manualDiscountApplied && appliedSummary && (
-            <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-              {t("manualDiscountAppliedBadge")}
-            </span>
-          )}
-        </div>
-
-        {promoLocked ? (
-          <p className="text-xs text-[var(--text-tertiary)] rounded-lg bg-[var(--surface)]/80 px-2.5 py-2 border border-[var(--border)]">
-            {t("promoBlocksManual")}
-          </p>
-        ) : (
-          <div
-            className={cn(
-              "flex items-center gap-2 min-w-0 rounded-lg p-2",
-              manualDiscountApplied && "bg-white/70 dark:bg-black/20 border border-emerald-200/80 dark:border-emerald-800/60"
-            )}
-          >
-            <DiscountTypeToggle
-              value={billDiscountType}
-              currencySymbol={currencySymbol}
-              disabled={disabled}
-              onChange={onTypeChange}
-            />
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0.01"
-              step="0.01"
-              placeholder={effectiveType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
-              value={billDiscountValue}
-              onChange={(e) => onValueChange(e.target.value)}
-              className={cn(
-                inputClass,
-                "flex-1 min-w-0 py-2.5",
-                manualDiscountApplied &&
-                  "border-emerald-300 bg-white font-semibold text-emerald-900 focus:ring-emerald-300 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-100"
-              )}
-              disabled={disabled}
-              aria-label={t("manualDiscount")}
-            />
-            {manualDiscountApplied && (
-              <button
-                type="button"
-                onClick={onClearManualDiscount}
-                disabled={disabled || applyPending}
-                className="inline-flex shrink-0 min-h-10 min-w-10 items-center justify-center rounded-lg border border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/60 touch-manipulation"
-                aria-label={t("clearDiscount")}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        )}
-
-        {applyPending && (
-          <p className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">{t("discountUpdating")}</p>
-        )}
-      </div>
     </div>
   );
-}
-
-function billPreviewLabel(type: DiscountKind, value: string, currencySymbol: string): string | null {
-  const num = Number(value);
-  if (!type || !Number.isFinite(num) || num <= 0) return null;
-  return type === "PERCENT" ? `${num}% off` : `${currencySymbol}${num} off`;
 }
