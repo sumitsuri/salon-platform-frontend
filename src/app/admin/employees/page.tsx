@@ -81,7 +81,7 @@ export default function AdminEmployeesPage() {
   const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [branchFilter, setBranchFilter] = useState("");
-  const [sectionTab, setSectionTab] = useState<SectionTab>("targets");
+  const [sectionTab, setSectionTab] = useState<SectionTab>("attendance");
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");
 
@@ -206,8 +206,8 @@ export default function AdminEmployeesPage() {
 
       <SegmentedControl
         options={[
-          { id: "targets" as const, label: t("tabs.targets"), icon: Target },
           { id: "attendance" as const, label: t("tabs.attendance"), icon: CalendarDays },
+          { id: "targets" as const, label: t("tabs.targets"), icon: Target },
         ]}
         value={sectionTab}
         onChange={setSectionTab}
@@ -310,6 +310,7 @@ export default function AdminEmployeesPage() {
             loading={attendanceLoading}
             startDate={attendanceRange.start}
             endDate={attendanceRange.end}
+            branchFilter={branchFilter}
             showPageHeader={false}
           />
         </>

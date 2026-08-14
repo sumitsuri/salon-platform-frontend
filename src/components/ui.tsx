@@ -719,6 +719,83 @@ export type ColumnFilter =
   | { type: "select"; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }
   | { type: "date"; value: string; onChange: (v: string) => void };
 
+type FilterableColumn = { label: string; filterLabel?: string; filter?: ColumnFilter };
+
+function renderColumnFilter(
+  filter: ColumnFilter,
+  t: ReturnType<typeof useTranslations>,
+  size: "sm" | "md" = "sm"
+) {
+  const compact = size === "sm";
+  const inputCls = compact ? `${inputClass} py-1.5 text-xs w-full min-w-0` : `${inputClass} py-2.5 text-sm w-full min-w-0`;
+  const selectCls = compact ? `${selectClass} py-1.5 text-xs w-full min-w-0` : `${selectClass} py-2.5 text-sm w-full min-w-0`;
+
+  if (filter.type === "text") {
+    return (
+      <input
+        value={filter.value}
+        onChange={(e) => filter.onChange(e.target.value)}
+        placeholder={filter.placeholder ?? t("filter")}
+        className={inputCls}
+      />
+    );
+  }
+  if (filter.type === "select") {
+    return (
+      <select value={filter.value} onChange={(e) => filter.onChange(e.target.value)} className={selectCls}>
+        {filter.options.map((o) => (
+          <option key={o.value || "all"} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (filter.type === "date") {
+    return (
+      <input
+        type="date"
+        value={filter.value}
+        onChange={(e) => filter.onChange(e.target.value)}
+        className={inputCls}
+      />
+    );
+  }
+  return null;
+}
+
+/** Toolbar filters for wide tables — keeps header columns aligned with body rows. */
+export function TableFilterToolbar({
+  columns,
+  className,
+}: {
+  columns: FilterableColumn[];
+  className?: string;
+}) {
+  const t = useTranslations("components.ui");
+  const active = columns.filter((c) => c.filter && c.filter.type !== "none");
+  if (active.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "px-4 py-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 border-b border-[var(--border)] bg-[var(--surface)]",
+        className
+      )}
+      data-testid="table-filter-toolbar"
+    >
+      {active.map((col) => (
+        <label key={col.label} className="block min-w-0 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+            {col.filterLabel ?? col.label}
+          </span>
+          {renderColumnFilter(col.filter!, t, "md")}
+        </label>
+      ))}
+    </div>
+  );
+}
+
 /** Mobile filter stack — pairs with desktop FilterableTable. */
 export function MobileFilterPanel({
   columns,
@@ -786,65 +863,53 @@ export function FilterableTable({
   columns,
   children,
   className,
+  filterPlacement = "header",
 }: {
-  columns: { label: string; filter?: ColumnFilter }[];
+  columns: FilterableColumn[];
   children: React.ReactNode;
   className?: string;
+  /** Use "toolbar" for wide tables so filters do not stretch column widths in thead. */
+  filterPlacement?: "header" | "toolbar";
 }) {
   const t = useTranslations("components.ui");
   const hasFilters = columns.some((c) => c.filter && c.filter.type !== "none");
+  const useToolbarFilters = filterPlacement === "toolbar" && hasFilters;
 
-  return (
+  const table = (
     <table className={cn("w-full text-sm", className)}>
-        <thead>
-          <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
-            {columns.map((col) => (
-              <th key={col.label} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
-                {col.label}
-              </th>
-            ))}
-          </tr>
-          {hasFilters && (
-            <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
-              {columns.map((col) => {
-                const filter = col.filter;
-                return (
-                <th key={`${col.label}-filter`} className="px-2 py-2 font-normal">
-                  {filter?.type === "text" && (
-                    <input
-                      value={filter.value}
-                      onChange={(e) => filter.onChange(e.target.value)}
-                      placeholder={filter.placeholder ?? t("filter")}
-                      className={`${inputClass} py-1.5 text-xs w-full min-w-0`}
-                    />
-                  )}
-                  {filter?.type === "select" && (
-                    <select
-                      value={filter.value}
-                      onChange={(e) => filter.onChange(e.target.value)}
-                      className={`${selectClass} py-1.5 text-xs w-full min-w-0`}
-                    >
-                      {filter.options.map((o) => (
-                        <option key={o.value || "all"} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {filter?.type === "date" && (
-                    <input
-                      type="date"
-                      value={filter.value}
-                      onChange={(e) => filter.onChange(e.target.value)}
-                      className={`${inputClass} py-1.5 text-xs w-full min-w-0`}
-                    />
-                  )}
+      <thead>
+        <tr className="text-left border-b border-[var(--border)] bg-[var(--brand-muted)]">
+          {columns.map((col) => (
+            <th key={col.label} className={cn("px-4 py-3 whitespace-nowrap", enterpriseTableHead)}>
+              {col.label}
+            </th>
+          ))}
+        </tr>
+        {hasFilters && !useToolbarFilters && (
+          <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
+            {columns.map((col) => {
+              const filter = col.filter;
+              return (
+                <th key={`${col.label}-filter`} className="px-2 py-2 font-normal align-top">
+                  {filter && filter.type !== "none" ? renderColumnFilter(filter, t, "sm") : null}
                 </th>
-              );})}
-            </tr>
-          )}
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
+              );
+            })}
+          </tr>
+        )}
+      </thead>
+      <tbody>{children}</tbody>
+    </table>
   );
+
+  if (useToolbarFilters) {
+    return (
+      <>
+        <TableFilterToolbar columns={columns} />
+        {table}
+      </>
+    );
+  }
+
+  return table;
 }

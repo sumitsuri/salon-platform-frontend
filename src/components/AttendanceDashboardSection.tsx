@@ -7,6 +7,7 @@ import { Users, UserCheck, CalendarOff, UserX, Clock, ChevronRight } from "lucid
 import { MetricChart } from "@/components/LineChart";
 import { api, AttendanceDashboard as AttendanceData, AttendanceRecord } from "@/lib/api";
 import { formatCoords, formatPunchGeo } from "@/lib/attendance-geo";
+import { cn } from "@/lib/utils";
 import { ATTENDANCE_CHART_COLORS } from "@/lib/chart-colors";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import {
@@ -18,7 +19,7 @@ import {
   PageHeader,
   FilterableTable,
   InfiniteScrollFooter,
-  DEFAULT_PAGE_SIZE,
+  TableFilterToolbar,
   SideSheet,
   inputClass,
   selectClass,
@@ -28,11 +29,16 @@ import {
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 
+const ATTENDANCE_TABLE_PAGE_SIZE = 10;
+const DAILY_HOURS_TARGET = 10;
+const LOG_TABLE_COLUMN_COUNT = 14;
+
 interface Props {
   data?: AttendanceData;
   loading?: boolean;
   startDate?: string;
   endDate?: string;
+  branchFilter?: string;
   showPageHeader?: boolean;
   showLeaveAndLogs?: boolean;
 }
@@ -42,6 +48,7 @@ export function AttendanceDashboardSection({
   loading,
   startDate,
   endDate,
+  branchFilter = "",
   showPageHeader = true,
   showLeaveAndLogs = true,
 }: Props) {
@@ -49,10 +56,22 @@ export function AttendanceDashboardSection({
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const locale = useLocale();
-  const [logFilters, setLogFilters] = useState({ date: "", staffId: "", branchId: "", status: "", compliance: "" });
+  const [logFilters, setLogFilters] = useState({
+    date: "",
+    staffId: "",
+    branchId: branchFilter,
+    status: "",
+    compliance: "",
+  });
   const [logDebounced, setLogDebounced] = useState(logFilters);
-  const [leaveFilters, setLeaveFilters] = useState({ staffId: "", branchId: "", status: "" });
+  const [leaveFilters, setLeaveFilters] = useState({
+    date: "",
+    staffId: "",
+    branchId: branchFilter,
+    status: "",
+  });
   const [leaveDebounced, setLeaveDebounced] = useState(leaveFilters);
+  const [staffPerfFilters, setStaffPerfFilters] = useState({ staffId: "", branchId: branchFilter });
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [incidentType, setIncidentType] = useState<"NOTE" | "PENALTY" | "IMPROVEMENT">("NOTE");
   const [incidentNote, setIncidentNote] = useState("");
@@ -76,6 +95,25 @@ export function AttendanceDashboardSection({
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   }
 
+  function formatHoursDelta(hours: number) {
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    const whole = Math.floor(hours);
+    const minutes = Math.round((hours - whole) * 60);
+    return minutes > 0 ? `${whole}h ${minutes}m` : `${whole}h`;
+  }
+
+  function hoursTargetLabel(hoursWorked?: number | null) {
+    if (hoursWorked == null) return null;
+    const delta = hoursWorked - DAILY_HOURS_TARGET;
+    if (Math.abs(delta) < 0.05) {
+      return { label: t("hoursTargetMet"), tone: "ok" as const };
+    }
+    if (delta > 0) {
+      return { label: t("hoursTargetOver", { delta: formatHoursDelta(delta) }), tone: "ok" as const };
+    }
+    return { label: t("hoursTargetShort", { delta: formatHoursDelta(Math.abs(delta)) }), tone: "warn" as const };
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => setLogDebounced(logFilters), 300);
     return () => clearTimeout(timer);
@@ -85,6 +123,12 @@ export function AttendanceDashboardSection({
     const timer = setTimeout(() => setLeaveDebounced(leaveFilters), 300);
     return () => clearTimeout(timer);
   }, [leaveFilters]);
+
+  useEffect(() => {
+    setLogFilters((f) => ({ ...f, branchId: branchFilter }));
+    setLeaveFilters((f) => ({ ...f, branchId: branchFilter }));
+    setStaffPerfFilters((f) => ({ ...f, branchId: branchFilter }));
+  }, [branchFilter]);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -125,7 +169,7 @@ export function AttendanceDashboardSection({
         branchId: logDebounced.branchId || undefined,
         status: logDebounced.status || undefined,
         page,
-        size: DEFAULT_PAGE_SIZE,
+        size: ATTENDANCE_TABLE_PAGE_SIZE,
       }),
     enabled: showLeaveAndLogs && !!startDate && !!endDate,
   });
@@ -147,13 +191,13 @@ export function AttendanceDashboardSection({
         ? branches.find((b) => b.id === leaveDebounced.branchId)?.name
         : undefined;
       return api.getLeaves({
-        startDate,
-        endDate,
+        startDate: leaveDebounced.date || startDate,
+        endDate: leaveDebounced.date || endDate,
         staff,
         branch,
         status: leaveDebounced.status || undefined,
         page,
-        size: DEFAULT_PAGE_SIZE,
+        size: ATTENDANCE_TABLE_PAGE_SIZE,
       });
     },
     enabled: showLeaveAndLogs && !!startDate && !!endDate,
@@ -180,14 +224,30 @@ export function AttendanceDashboardSection({
     [data, t]
   );
 
+  const logRecords = useMemo(() => {
+    if (logFilters.compliance === "late") return logRowsRaw.filter((r) => r.late);
+    if (logFilters.compliance === "early") return logRowsRaw.filter((r) => r.earlyExit);
+    return logRowsRaw;
+  }, [logRowsRaw, logFilters.compliance]);
+
   const staffSummaries = data?.staffSummaries ?? [];
+  const filteredStaffSummaries = useMemo(() => {
+    return staffSummaries.filter((s) => {
+      if (staffPerfFilters.staffId && s.staffId !== staffPerfFilters.staffId) return false;
+      if (staffPerfFilters.branchId) {
+        const branch = branches.find((b) => b.id === staffPerfFilters.branchId);
+        if (branch && s.branchName !== branch.name) return false;
+      }
+      return true;
+    });
+  }, [staffSummaries, staffPerfFilters, branches]);
   const {
     visible: staffSlice,
     totalElements: staffTotalElements,
     loadedCount: staffLoadedCount,
     hasMore: staffHasMore,
     loadMore: loadMoreStaff,
-  } = useClientInfiniteList(staffSummaries);
+  } = useClientInfiniteList(filteredStaffSummaries, ATTENDANCE_TABLE_PAGE_SIZE);
   const selectedStaff = staffSummaries.find((s) => s.staffId === selectedStaffId);
 
   const { data: incidentData, isLoading: incidentsLoading } = useQuery({
@@ -216,11 +276,169 @@ export function AttendanceDashboardSection({
     return data.recentRecords.filter((r) => r.staffId === selectedStaffId);
   }, [selectedStaffId, data?.recentRecords]);
 
-  const logRecords = useMemo(() => {
-    if (logFilters.compliance === "late") return logRowsRaw.filter((r) => r.late);
-    if (logFilters.compliance === "early") return logRowsRaw.filter((r) => r.earlyExit);
-    return logRowsRaw;
-  }, [logRowsRaw, logFilters.compliance]);
+  const logFilterColumns = useMemo(
+    () => [
+      {
+        label: t("date"),
+        filter: {
+          type: "date" as const,
+          value: logFilters.date,
+          onChange: (v: string) => setLogFilters((f) => ({ ...f, date: v })),
+        },
+      },
+      {
+        label: t("staff"),
+        filter: {
+          type: "select" as const,
+          value: logFilters.staffId,
+          onChange: (v: string) => setLogFilters((f) => ({ ...f, staffId: v })),
+          options: [{ value: "", label: t("allStaff") }, ...staffOptions],
+        },
+      },
+      {
+        label: tCommon("branch"),
+        filter: {
+          type: "select" as const,
+          value: logFilters.branchId,
+          onChange: (v: string) => setLogFilters((f) => ({ ...f, branchId: v })),
+          options: [{ value: "", label: t("allBranches") }, ...branchOptions],
+        },
+      },
+      {
+        label: t("lateBy"),
+        filterLabel: t("recordFilter"),
+        filter: {
+          type: "select" as const,
+          value: logFilters.compliance,
+          onChange: (v: string) => setLogFilters((f) => ({ ...f, compliance: v })),
+          options: [
+            { value: "", label: t("allRecords") },
+            { value: "late", label: t("lateOnly") },
+            { value: "early", label: t("earlyExitOnly") },
+          ],
+        },
+      },
+      {
+        label: tCommon("status"),
+        filter: {
+          type: "select" as const,
+          value: logFilters.status,
+          onChange: (v: string) => setLogFilters((f) => ({ ...f, status: v })),
+          options: [
+            { value: "", label: tCommon("all") },
+            { value: "COMPLETED", label: tStatus("COMPLETED") },
+            { value: "PRESENT", label: tStatus("PRESENT") },
+            { value: "ABSENT", label: tStatus("ABSENT") },
+          ],
+        },
+      },
+    ],
+    [t, tCommon, tStatus, logFilters, staffOptions, branchOptions]
+  );
+
+  const leaveFilterColumns = useMemo(
+    () => [
+      {
+        label: t("date"),
+        filter: {
+          type: "date" as const,
+          value: leaveFilters.date,
+          onChange: (v: string) => setLeaveFilters((f) => ({ ...f, date: v })),
+        },
+      },
+      {
+        label: t("staff"),
+        filter: {
+          type: "select" as const,
+          value: leaveFilters.staffId,
+          onChange: (v: string) => setLeaveFilters((f) => ({ ...f, staffId: v })),
+          options: [{ value: "", label: t("allStaff") }, ...staffOptions],
+        },
+      },
+      {
+        label: tCommon("branch"),
+        filter: {
+          type: "select" as const,
+          value: leaveFilters.branchId,
+          onChange: (v: string) => setLeaveFilters((f) => ({ ...f, branchId: v })),
+          options: [{ value: "", label: t("allBranches") }, ...branchOptions],
+        },
+      },
+      {
+        label: tCommon("status"),
+        filter: {
+          type: "select" as const,
+          value: leaveFilters.status,
+          onChange: (v: string) => setLeaveFilters((f) => ({ ...f, status: v })),
+          options: [
+            { value: "", label: t("allStatuses") },
+            { value: "APPROVED", label: tStatus("APPROVED") },
+            { value: "PENDING", label: tStatus("PENDING") },
+            { value: "REJECTED", label: tStatus("REJECTED") },
+          ],
+        },
+      },
+    ],
+    [t, tCommon, tStatus, leaveFilters, staffOptions, branchOptions]
+  );
+
+  const logHeaderColumns = useMemo(
+    () => [
+      { label: t("date"), filter: { type: "none" as const } },
+      { label: t("staff"), filter: { type: "none" as const } },
+      { label: tCommon("branch"), filter: { type: "none" as const } },
+      { label: t("entry"), filter: { type: "none" as const } },
+      { label: t("exit"), filter: { type: "none" as const } },
+      { label: t("expectedLocation"), filter: { type: "none" as const } },
+      { label: t("punchLocation"), filter: { type: "none" as const } },
+      { label: t("geofenceCheck"), filter: { type: "none" as const } },
+      { label: t("lateBy"), filter: { type: "none" as const } },
+      { label: t("earlyBy"), filter: { type: "none" as const } },
+      { label: t("hours"), filter: { type: "none" as const } },
+      { label: t("hoursTarget"), filter: { type: "none" as const } },
+      { label: t("photo"), filter: { type: "none" as const } },
+      { label: tCommon("status"), filter: { type: "none" as const } },
+    ],
+    [t, tCommon]
+  );
+
+  const staffPerfFilterColumns = useMemo(
+    () => [
+      {
+        label: t("staff"),
+        filter: {
+          type: "select" as const,
+          value: staffPerfFilters.staffId,
+          onChange: (v: string) => setStaffPerfFilters((f) => ({ ...f, staffId: v })),
+          options: [{ value: "", label: t("allStaff") }, ...staffOptions],
+        },
+      },
+      {
+        label: tCommon("branch"),
+        filter: {
+          type: "select" as const,
+          value: staffPerfFilters.branchId,
+          onChange: (v: string) => setStaffPerfFilters((f) => ({ ...f, branchId: v })),
+          options: [{ value: "", label: t("allBranches") }, ...branchOptions],
+        },
+      },
+    ],
+    [t, tCommon, staffPerfFilters, staffOptions, branchOptions]
+  );
+
+  const staffPerfHeaderColumns = useMemo(
+    () => [
+      { label: t("staff"), filter: { type: "none" as const } },
+      { label: t("days"), filter: { type: "none" as const } },
+      { label: t("leave"), filter: { type: "none" as const } },
+      { label: t("hours"), filter: { type: "none" as const } },
+      { label: t("late"), filter: { type: "none" as const } },
+      { label: t("geoFlags"), filter: { type: "none" as const } },
+      { label: t("compliance"), filter: { type: "none" as const } },
+      { label: t("score"), filter: { type: "none" as const } },
+    ],
+    [t]
+  );
 
   if (loading) {
     return (
@@ -236,7 +454,7 @@ export function AttendanceDashboardSection({
     <section className="space-y-4">
       {showPageHeader && <PageHeader title={t("title")} subtitle={t("subtitle")} />}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label={t("totalStaff")} value={data.totalStaff} icon={Users} accent="brand" />
         <StatCard label={t("presentToday")} value={data.presentToday} icon={UserCheck} accent="emerald" />
         <StatCard label={t("onLeave")} value={data.onLeaveToday} icon={CalendarOff} accent="amber" />
@@ -246,12 +464,12 @@ export function AttendanceDashboardSection({
           value={`${data.avgHoursPerStaff}h`}
           icon={Clock}
           accent="brand"
-          className="col-span-2 lg:col-span-1"
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 
       {data.dailyTrends.length > 0 && (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <MetricChart title={t("dailyPresentCount")} labels={trendLabels} series={presentSeries} />
           </Card>
@@ -266,118 +484,181 @@ export function AttendanceDashboardSection({
         </div>
       )}
 
-      <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffPerformance")}</h3>
-        </div>
-        <div className="hidden md:block responsive-table-wrap">
-          <FilterableTable
-            columns={[
-              { label: t("staff"), filter: { type: "none" } },
-              { label: t("days"), filter: { type: "none" } },
-              { label: t("leave"), filter: { type: "none" } },
-              { label: t("hours"), filter: { type: "none" } },
-              { label: t("late"), filter: { type: "none" } },
-              { label: t("geoFlags"), filter: { type: "none" } },
-              { label: t("compliance"), filter: { type: "none" } },
-              { label: t("score"), filter: { type: "none" } },
-            ]}
-          >
-            {staffSlice.map((s) => (
-              <tr
-                key={s.staffId}
-                className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--surface-muted)]/60"
-                onClick={() => setSelectedStaffId(s.staffId)}
-              >
-                <td className="px-4 py-2.5">
-                  <p className="font-medium">{s.staffName}</p>
-                  <p className="text-xs text-[var(--text-tertiary)]">{s.branchName}</p>
-                </td>
-                <td className="px-4 py-2.5">{s.daysPresent}</td>
-                <td className="px-4 py-2.5">{s.daysLeave}</td>
-                <td className="px-4 py-2.5">{s.totalHours}h</td>
-                <td className="px-4 py-2.5">{s.lateArrivals}</td>
-                <td className="px-4 py-2.5">{s.geoFlags}</td>
-                <td className="px-4 py-2.5 font-semibold text-[var(--brand-text)]">{s.complianceScore}</td>
-                <td className="px-4 py-2.5 font-semibold">{s.performanceScore}</td>
-              </tr>
-            ))}
-          </FilterableTable>
-        </div>
-        <div className="md:hidden divide-y divide-[var(--border)]">
-          {staffSlice.map((s) => (
-            <button
-              key={s.staffId}
-              type="button"
-              className="w-full text-left"
-              onClick={() => setSelectedStaffId(s.staffId)}
-            >
-              <ListRow
-                title={s.staffName}
-                subtitle={`${s.branchName} · ${t("complianceScore", { score: s.complianceScore })}`}
-                trailing={
-                  <div className="flex items-center gap-1 text-sm font-bold text-[var(--brand-text)]">
-                    {s.performanceScore}
-                    <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                  </div>
-                }
-              />
-            </button>
-          ))}
-        </div>
-        <InfiniteScrollFooter
-          totalElements={staffTotalElements}
-          loadedCount={staffLoadedCount}
-          hasMore={staffHasMore}
-          isFetchingNextPage={false}
-          onLoadMore={loadMoreStaff}
-        />
-      </Card>
-
       {showLeaveAndLogs && (
         <>
-          <Card padding={false}>
+          <Card padding={false} className="min-w-0 overflow-hidden">
+            <div className="px-4 py-3.5 border-b border-[var(--border)]">
+              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("entryExitLog")}</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("entryExitLogHint")}</p>
+            </div>
+            <TableFilterToolbar columns={logFilterColumns} />
+            {logLoading ? (
+              <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+            ) : (
+              <>
+                <div className="hidden md:block responsive-table-wrap">
+                  <FilterableTable columns={logHeaderColumns} className="min-w-[72rem]">
+                    {logRecords.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={LOG_TABLE_COLUMN_COUNT}
+                          className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]"
+                        >
+                          {t("noAttendanceRecords")} · {t("adjustFilters")}
+                        </td>
+                      </tr>
+                    ) : (
+                      logRecords.map((r) => {
+                        const target = hoursTargetLabel(r.hoursWorked);
+                        return (
+                          <tr key={r.id} className="border-t border-[var(--border)]">
+                            <td className="px-4 py-2.5 whitespace-nowrap">{formatDate(r.workDate)}</td>
+                            <td className="px-4 py-2.5 font-medium">{r.staffName}</td>
+                            <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.branchName}</td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">{formatTime(r.entryTime)}</td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">{formatTime(r.exitTime)}</td>
+                            <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
+                              {formatCoords(r.branchLatitude, r.branchLongitude)}
+                            </td>
+                            <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
+                              <div>{t("checkInShort")}: {formatCoords(r.entryLatitude, r.entryLongitude)}</div>
+                              <div>{t("checkOutShort")}: {formatCoords(r.exitLatitude, r.exitLongitude)}</div>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs">
+                              <div className={r.entryGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
+                                {t("checkInShort")}: {formatPunchGeo(r, "entry")}
+                              </div>
+                              <div className={r.exitGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
+                                {t("checkOutShort")}: {formatPunchGeo(r, "exit")}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {r.late ? (
+                                <span className="text-amber-700 font-medium">{formatDuration(r.lateMinutes)}</span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {r.earlyExit ? (
+                                <span className="text-red-700 font-medium">{formatDuration(r.earlyExitMinutes)}</span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</td>
+                            <td className="px-4 py-2.5 whitespace-nowrap">
+                              {target ? (
+                                <span
+                                  className={cn(
+                                    "font-semibold text-sm",
+                                    target.tone === "ok" ? "text-emerald-700" : "text-amber-700"
+                                  )}
+                                >
+                                  {target.label}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              {r.hasEntryPhoto ? (
+                                <AttendancePhotoThumb recordId={r.id} type="entry" className="w-10 h-10" />
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <StatusBadge status={r.status} />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </FilterableTable>
+                </div>
+                <div className="md:hidden divide-y divide-[var(--border)]">
+                  {logRecords.length === 0 ? (
+                    <p className="px-4 py-8 text-sm text-center text-[var(--text-secondary)]">
+                      {t("noAttendanceRecords")} · {t("adjustFilters")}
+                    </p>
+                  ) : (
+                    logRecords.map((r) => {
+                      const target = hoursTargetLabel(r.hoursWorked);
+                      return (
+                        <div key={r.id} className="px-4 py-3 space-y-2.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{r.staffName}</p>
+                              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                                {formatDate(r.workDate)} · {r.branchName}
+                              </p>
+                            </div>
+                            <StatusBadge status={r.status} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded-lg bg-[var(--surface-muted)]/60 px-2.5 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">{t("entry")}</p>
+                              <p className="font-medium mt-0.5">{formatTime(r.entryTime)}</p>
+                            </div>
+                            <div className="rounded-lg bg-[var(--surface-muted)]/60 px-2.5 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">{t("exit")}</p>
+                              <p className="font-medium mt-0.5">{formatTime(r.exitTime)}</p>
+                            </div>
+                            <div className="rounded-lg bg-[var(--surface-muted)]/60 px-2.5 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">{t("hours")}</p>
+                              <p className="font-medium mt-0.5">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</p>
+                            </div>
+                            <div className="rounded-lg bg-[var(--surface-muted)]/60 px-2.5 py-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">{t("hoursTarget")}</p>
+                              <p
+                                className={cn(
+                                  "font-semibold mt-0.5",
+                                  target?.tone === "ok" ? "text-emerald-700" : target ? "text-amber-700" : "text-[var(--text-primary)]"
+                                )}
+                              >
+                                {target?.label ?? "—"}
+                              </p>
+                            </div>
+                          </div>
+                          {(r.late || r.earlyExit) && (
+                            <p className="text-xs text-amber-700">
+                              {[
+                                r.late && t("lateByShort", { duration: formatDuration(r.lateMinutes) }),
+                                r.earlyExit && t("earlyByShort", { duration: formatDuration(r.earlyExitMinutes) }),
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+            <InfiniteScrollFooter
+              totalElements={logTotalElements}
+              loadedCount={logRecords.length}
+              hasMore={logHasMore}
+              isFetchingNextPage={logFetchingNext}
+              isLoading={logLoading}
+              onLoadMore={() => void fetchNextLogPage()}
+            />
+          </Card>
+
+          <Card padding={false} className="min-w-0 overflow-hidden">
             <div className="px-4 py-3.5 border-b border-[var(--border)]">
               <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("leaveRecords")}</h3>
             </div>
-            <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-2 border-b border-[var(--border)]">
-              <select
-                value={leaveFilters.staffId}
-                onChange={(e) => setLeaveFilters((f) => ({ ...f, staffId: e.target.value }))}
-                className={selectClass}
-                data-testid="leave-staff-filter"
-              >
-                <option value="">{t("allStaff")}</option>
-                {staffOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <select
-                value={leaveFilters.branchId}
-                onChange={(e) => setLeaveFilters((f) => ({ ...f, branchId: e.target.value }))}
-                className={selectClass}
-                data-testid="leave-branch-filter"
-              >
-                <option value="">{t("allBranches")}</option>
-                {branchOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <select
-                value={leaveFilters.status}
-                onChange={(e) => setLeaveFilters((f) => ({ ...f, status: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-              >
-                <option value="">{t("allStatuses")}</option>
-                <option value="APPROVED">{tStatus("APPROVED")}</option>
-                <option value="PENDING">{tStatus("PENDING")}</option>
-                <option value="REJECTED">{tStatus("REJECTED")}</option>
-              </select>
-            </div>
+            <TableFilterToolbar columns={leaveFilterColumns} className="lg:grid-cols-4" />
             {leaveLoading ? (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
             ) : leaveRecords.length === 0 ? (
-              <EmptyState title={t("noLeaveRecords")} description={t("inThisPeriod")} />
+              <p className="px-4 py-8 text-sm text-center text-[var(--text-secondary)]">
+                {t("noLeaveRecords")} · {t("adjustFilters")}
+              </p>
             ) : (
               <div className="divide-y divide-[var(--border)]">
                 {leaveRecords.map((l) => (
@@ -399,171 +680,90 @@ export function AttendanceDashboardSection({
               onLoadMore={() => void fetchNextLeavePage()}
             />
           </Card>
-
-          <Card padding={false}>
-            <div className="px-4 py-3.5 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("entryExitLog")}</h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("entryExitLogHint")}</p>
-            </div>
-            <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 border-b border-[var(--border)]">
-              <select
-                value={logFilters.compliance}
-                onChange={(e) => setLogFilters((f) => ({ ...f, compliance: e.target.value }))}
-                className="px-3 py-2 rounded-lg border border-[var(--border)] text-sm bg-[var(--surface)]"
-                data-testid="attendance-compliance-filter"
-              >
-                <option value="">{t("allRecords")}</option>
-                <option value="late">{t("lateOnly")}</option>
-                <option value="early">{t("earlyExitOnly")}</option>
-              </select>
-            </div>
-            {logLoading ? (
-              <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-            ) : logRecords.length === 0 ? (
-              <EmptyState title={t("noAttendanceRecords")} description={t("adjustFilters")} />
-            ) : (
-              <>
-                <div className="hidden md:block responsive-table-wrap">
-                  <FilterableTable
-                    columns={[
-                      {
-                        label: t("date"),
-                        filter: {
-                          type: "date",
-                          value: logFilters.date,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, date: v })),
-                        },
-                      },
-                      {
-                        label: t("staff"),
-                        filter: {
-                          type: "select",
-                          value: logFilters.staffId,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, staffId: v })),
-                          options: [{ value: "", label: t("allStaff") }, ...staffOptions],
-                        },
-                      },
-                      {
-                        label: tCommon("branch"),
-                        filter: {
-                          type: "select",
-                          value: logFilters.branchId,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, branchId: v })),
-                          options: [{ value: "", label: t("allBranches") }, ...branchOptions],
-                        },
-                      },
-                      { label: t("entry"), filter: { type: "none" } },
-                      { label: t("exit"), filter: { type: "none" } },
-                      { label: t("expectedLocation"), filter: { type: "none" } },
-                      { label: t("punchLocation"), filter: { type: "none" } },
-                      { label: t("geofenceCheck"), filter: { type: "none" } },
-                      { label: t("lateBy"), filter: { type: "none" } },
-                      { label: t("earlyBy"), filter: { type: "none" } },
-                      { label: t("hours"), filter: { type: "none" } },
-                      { label: t("photo"), filter: { type: "none" } },
-                      {
-                        label: tCommon("status"),
-                        filter: {
-                          type: "select",
-                          value: logFilters.status,
-                          onChange: (v) => setLogFilters((f) => ({ ...f, status: v })),
-                          options: [
-                            { value: "", label: tCommon("all") },
-                            { value: "COMPLETED", label: tStatus("COMPLETED") },
-                            { value: "PRESENT", label: tStatus("PRESENT") },
-                            { value: "ABSENT", label: tStatus("ABSENT") },
-                          ],
-                        },
-                      },
-                    ]}
-                  >
-                    {logRecords.map((r) => (
-                      <tr key={r.id} className="border-t border-[var(--border)]">
-                        <td className="px-4 py-2.5">{formatDate(r.workDate)}</td>
-                        <td className="px-4 py-2.5 font-medium">{r.staffName}</td>
-                        <td className="px-4 py-2.5 text-[var(--text-secondary)]">{r.branchName}</td>
-                        <td className="px-4 py-2.5">{formatTime(r.entryTime)}</td>
-                        <td className="px-4 py-2.5">{formatTime(r.exitTime)}</td>
-                        <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
-                          {formatCoords(r.branchLatitude, r.branchLongitude)}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs font-mono text-[var(--text-secondary)]">
-                          <div>{t("checkInShort")}: {formatCoords(r.entryLatitude, r.entryLongitude)}</div>
-                          <div>{t("checkOutShort")}: {formatCoords(r.exitLatitude, r.exitLongitude)}</div>
-                        </td>
-                        <td className="px-4 py-2.5 text-xs">
-                          <div className={r.entryGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
-                            {t("checkInShort")}: {formatPunchGeo(r, "entry")}
-                          </div>
-                          <div className={r.exitGeoStatus === "OUT_OF_GEOFENCE" ? "text-amber-700 font-medium" : ""}>
-                            {t("checkOutShort")}: {formatPunchGeo(r, "exit")}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {r.late ? (
-                            <span className="text-amber-700 font-medium">{formatDuration(r.lateMinutes)}</span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {r.earlyExit ? (
-                            <span className="text-red-700 font-medium">{formatDuration(r.earlyExitMinutes)}</span>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">{r.hoursWorked != null ? `${r.hoursWorked.toFixed(1)}h` : "—"}</td>
-                        <td className="px-4 py-2.5">
-                          {r.hasEntryPhoto ? (
-                            <AttendancePhotoThumb recordId={r.id} type="entry" className="w-10 h-10" />
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <StatusBadge status={r.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </FilterableTable>
-                </div>
-                <div className="md:hidden divide-y divide-[var(--border)]">
-                  {logRecords.map((r) => (
-                    <ListRow
-                      key={r.id}
-                      title={r.staffName}
-                      subtitle={`${formatDate(r.workDate)} · ${r.branchName}${r.late ? ` · ${t("lateByShort", { duration: formatDuration(r.lateMinutes) })}` : ""}${r.earlyExit ? ` · ${t("earlyByShort", { duration: formatDuration(r.earlyExitMinutes) })}` : ""}`}
-                      trailing={
-                        <div className="text-right">
-                          <p className="text-xs text-[var(--text-secondary)]">
-                            {formatTime(r.entryTime)} – {formatTime(r.exitTime)}
-                          </p>
-                          <StatusBadge status={r.status} />
-                        </div>
-                      }
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-            <InfiniteScrollFooter
-              totalElements={logTotalElements}
-              loadedCount={logRecords.length}
-              hasMore={logHasMore}
-              isFetchingNextPage={logFetchingNext}
-              isLoading={logLoading}
-              onLoadMore={() => void fetchNextLogPage()}
-            />
-          </Card>
         </>
       )}
+
+      <Card padding={false} className="min-w-0 overflow-hidden">
+        <div className="px-4 py-3.5 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffPerformance")}</h3>
+        </div>
+        <TableFilterToolbar columns={staffPerfFilterColumns} className="lg:grid-cols-2" />
+        <div className="hidden md:block responsive-table-wrap">
+          <FilterableTable columns={staffPerfHeaderColumns}>
+            {staffSlice.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
+                  {t("noAttendanceRecords")} · {t("adjustFilters")}
+                </td>
+              </tr>
+            ) : (
+              staffSlice.map((s) => (
+                <tr
+                  key={s.staffId}
+                  className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--surface-muted)]/60"
+                  onClick={() => setSelectedStaffId(s.staffId)}
+                >
+                  <td className="px-4 py-2.5">
+                    <p className="font-medium">{s.staffName}</p>
+                    <p className="text-xs text-[var(--text-tertiary)]">{s.branchName}</p>
+                  </td>
+                  <td className="px-4 py-2.5">{s.daysPresent}</td>
+                  <td className="px-4 py-2.5">{s.daysLeave}</td>
+                  <td className="px-4 py-2.5">{s.totalHours}h</td>
+                  <td className="px-4 py-2.5">{s.lateArrivals}</td>
+                  <td className="px-4 py-2.5">{s.geoFlags}</td>
+                  <td className="px-4 py-2.5 font-semibold text-[var(--brand-text)]">{s.complianceScore}</td>
+                  <td className="px-4 py-2.5 font-semibold">{s.performanceScore}</td>
+                </tr>
+              ))
+            )}
+          </FilterableTable>
+        </div>
+        <div className="md:hidden divide-y divide-[var(--border)]">
+          {staffSlice.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-center text-[var(--text-secondary)]">
+              {t("noAttendanceRecords")} · {t("adjustFilters")}
+            </p>
+          ) : (
+            staffSlice.map((s) => (
+              <button
+                key={s.staffId}
+                type="button"
+                className="w-full text-left"
+                onClick={() => setSelectedStaffId(s.staffId)}
+              >
+                <ListRow
+                  title={s.staffName}
+                  subtitle={`${s.branchName} · ${t("complianceScore", { score: s.complianceScore })}`}
+                  trailing={
+                    <div className="flex items-center gap-1 text-sm font-bold text-[var(--brand-text)]">
+                      {s.performanceScore}
+                      <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                    </div>
+                  }
+                />
+              </button>
+            ))
+          )}
+        </div>
+        <InfiniteScrollFooter
+          totalElements={staffTotalElements}
+          loadedCount={staffLoadedCount}
+          hasMore={staffHasMore}
+          isFetchingNextPage={false}
+          onLoadMore={loadMoreStaff}
+        />
+      </Card>
 
       <SideSheet
         open={!!selectedStaff}
         onClose={() => setSelectedStaffId(null)}
         title={selectedStaff?.staffName ?? ""}
-        subtitle={selectedStaff ? `${selectedStaff.branchName} · ${t("complianceScore", { score: selectedStaff.complianceScore })}` : undefined}
+        subtitle={
+          selectedStaff
+            ? `${selectedStaff.branchName} · ${t("complianceScore", { score: selectedStaff.complianceScore })}`
+            : undefined
+        }
         wide
       >
         {selectedStaff && (

@@ -257,6 +257,9 @@ export function DashboardBranchPerformance({
     return Math.round((revenue / totalBranchRevenue) * 100);
   }
 
+  const desktopGrid =
+    "hidden lg:grid lg:grid-cols-[minmax(0,1.4fr)_4.5rem_5.5rem_5.5rem_6.5rem_2.75rem] lg:items-center lg:gap-3";
+
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
       <div className="dashboard-branch-performance-header px-4 py-3">
@@ -270,6 +273,21 @@ export function DashboardBranchPerformance({
         )}
       >
         <div
+          className={cn(
+            desktopGrid,
+            "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]",
+          )}
+          aria-hidden
+        >
+          <span>{labels.branch}</span>
+          <span className="text-right">{labels.visits}</span>
+          <span className="text-right">{labels.avgTicket}</span>
+          <span className="text-right">{labels.discounts}</span>
+          <span className="text-right">{labels.revenue}</span>
+          <span className="text-right">%</span>
+        </div>
+
+        <div
           className="dashboard-branch-performance-scroll divide-y divide-[var(--border)]"
           role="region"
           aria-label={headerLabel}
@@ -281,46 +299,69 @@ export function DashboardBranchPerformance({
             return (
               <div
                 key={branch?.branchId ?? `loading-${i}`}
-                className="dashboard-branch-performance-row-item px-3 py-2.5 sm:px-4"
+                className="dashboard-branch-performance-row-item px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4 lg:py-0 lg:px-4"
               >
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
-                    {loading ? "…" : branch!.branchName}
-                  </p>
-                  <div className="shrink-0 text-right leading-tight">
-                    <p className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {loading ? "…" : formatValue(branch!.revenue)}
+                <div className="lg:hidden">
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
+                      {loading ? "…" : branch!.branchName}
                     </p>
-                    {sharePct != null && sharePct > 0 && (
-                      <p className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{sharePct}%</p>
-                    )}
+                    <div className="shrink-0 text-right leading-tight">
+                      <p className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        {loading ? "…" : formatValue(branch!.revenue)}
+                      </p>
+                      {sharePct != null && sharePct > 0 && (
+                        <p className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{sharePct}%</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11px] leading-snug text-[var(--text-secondary)] sm:text-xs">
+                    <span className="tabular-nums">
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {loading ? "…" : branch!.visits}
+                      </span>{" "}
+                      {labels.visits}
+                    </span>
+                    <span className="text-[var(--text-tertiary)]" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums">
+                      <span className="font-semibold text-[var(--text-primary)]">
+                        {loading ? "…" : formatValue(branch!.avgTicket)}
+                      </span>{" "}
+                      {labels.avgTicket}
+                    </span>
+                    <span className="text-[var(--text-tertiary)]" aria-hidden>
+                      ·
+                    </span>
+                    <span className="tabular-nums text-amber-700 dark:text-amber-400">
+                      <span className="font-semibold">
+                        {loading ? "…" : formatValue(branch!.discountAmount)}
+                      </span>{" "}
+                      {labels.discounts}
+                    </span>
                   </div>
                 </div>
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11px] leading-snug text-[var(--text-secondary)] sm:text-xs">
-                  <span className="tabular-nums">
-                    <span className="font-semibold text-[var(--text-primary)]">
-                      {loading ? "…" : branch!.visits}
-                    </span>{" "}
-                    {labels.visits}
-                  </span>
-                  <span className="text-[var(--text-tertiary)]" aria-hidden>
-                    ·
-                  </span>
-                  <span className="tabular-nums">
-                    <span className="font-semibold text-[var(--text-primary)]">
-                      {loading ? "…" : formatValue(branch!.avgTicket)}
-                    </span>{" "}
-                    {labels.avgTicket}
-                  </span>
-                  <span className="text-[var(--text-tertiary)]" aria-hidden>
-                    ·
-                  </span>
-                  <span className="tabular-nums text-amber-700 dark:text-amber-400">
-                    <span className="font-semibold">
-                      {loading ? "…" : formatValue(branch!.discountAmount)}
-                    </span>{" "}
-                    {labels.discounts}
-                  </span>
+
+                <div className={cn(desktopGrid, "min-h-[2.75rem] py-2")}>
+                  <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                    {loading ? "…" : branch!.branchName}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : branch!.visits}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : formatValue(branch!.avgTicket)}
+                  </p>
+                  <p className="text-right text-sm tabular-nums font-medium text-amber-700 dark:text-amber-400">
+                    {loading ? "…" : formatValue(branch!.discountAmount)}
+                  </p>
+                  <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {loading ? "…" : formatValue(branch!.revenue)}
+                  </p>
+                  <p className="text-right text-xs tabular-nums text-[var(--text-tertiary)]">
+                    {loading ? "…" : sharePct != null && sharePct > 0 ? `${sharePct}%` : "—"}
+                  </p>
                 </div>
               </div>
             );

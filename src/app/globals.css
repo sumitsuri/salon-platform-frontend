@@ -417,6 +417,12 @@ body {
   min-height: var(--branch-performance-row-height);
 }
 
+@media (min-width: 1024px) {
+  .dashboard-branch-performance-scroll {
+    --branch-performance-row-height: 2.75rem;
+  }
+}
+
 .dashboard-kpi-strip-header {
   border-bottom: 1px solid var(--dashboard-toolbar-border);
   background: var(--dashboard-toolbar-bg);
