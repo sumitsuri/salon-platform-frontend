@@ -7,26 +7,13 @@ import {
   syncAuthStore,
 } from "./auth-session";
 import { deliverInvoicePdf } from "./invoice-pdf-client";
+import { resolveClientApiBase, resolveServerApiBase } from "./client-api-base";
 
 function resolveApiBase(): string {
   if (typeof window !== "undefined") {
-    const configured = process.env.NEXT_PUBLIC_API_URL || "";
-    // Production is served behind nginx on the same host — never call localhost from a remote origin.
-    if (
-      configured &&
-      (configured.includes("localhost") || configured.includes("127.0.0.1")) &&
-      window.location.hostname !== "localhost" &&
-      window.location.hostname !== "127.0.0.1"
-    ) {
-      return "";
-    }
-    return configured;
+    return resolveClientApiBase();
   }
-  return (
-    process.env.INTERNAL_API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8080"
-  );
+  return resolveServerApiBase();
 }
 
 function apiBase(): string {

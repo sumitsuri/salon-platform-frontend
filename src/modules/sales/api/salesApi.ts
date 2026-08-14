@@ -1,10 +1,11 @@
 import { getStoredUser, redirectToLogin } from "@/lib/auth-session";
+import { resolveClientApiBase, resolveServerApiBase } from "@/lib/client-api-base";
 
 function apiBase(): string {
   if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL || "";
+    return resolveClientApiBase();
   }
-  return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  return resolveServerApiBase();
 }
 
 interface ApiWrapper<T> {
