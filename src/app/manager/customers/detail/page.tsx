@@ -1,13 +1,15 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CustomerDetailPanel } from "@/components/customer/CustomerDetailPanel";
 import { customersPath } from "@/lib/navigation-scope";
 import { btnPrimary } from "@/components/ui";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
-export default function ManagerCustomerDetailPage() {
+function ManagerCustomerDetailContent() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get("id") ?? "";
   const t = useTranslations("customers");
@@ -25,4 +27,12 @@ export default function ManagerCustomerDetailPage() {
   }
 
   return <CustomerDetailPanel scope="manager" customerId={customerId} />;
+}
+
+export default function ManagerCustomerDetailPage() {
+  return (
+    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
+      <ManagerCustomerDetailContent />
+    </Suspense>
+  );
 }

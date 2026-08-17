@@ -5,19 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Clock, FileText, Pencil, Receipt } from "lucide-react";
-import { api, Booking, InvoiceDetail } from "@/lib/api";
+import { Clock, Pencil, Receipt } from "lucide-react";
+import { api, Booking } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { useSetPageBreadcrumbs } from "@/lib/breadcrumb-context";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
-import { AppScope, buildWalkInUrl, customersPath } from "@/lib/navigation-scope";
+import { AppScope, buildWalkInUrl, customerDetailPathWithBooking, customersPath } from "@/lib/navigation-scope";
+import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
+import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
-import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
-import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
-import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import {
   PageHeader,
   Card,
@@ -29,7 +29,6 @@ import {
   StatusBadge,
   InfiniteScrollFooter,
   AvatarInitial,
-  SideSheet,
   AlertBanner,
   PageLoader,
   DEFAULT_PAGE_SIZE,
@@ -44,24 +43,6 @@ function formatPhone(phone?: string | null) {
 
 function isOpenStatus(status: string) {
   return status === "IN_PROGRESS" || status === "READY_FOR_BILLING" || status === "DRAFT";
-}
-
-function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBreakdownPreview | null {
-  if (inv) {
-    return {
-      subtotal: inv.subtotal,
-      membershipDiscountAmount: inv.membershipDiscountAmount,
-      promoDiscountAmount: inv.promoDiscountAmount,
-      membershipLabel: inv.membershipLabel,
-      promoLabel: inv.promoLabel,
-      membershipFeeAmount: inv.membershipFeeAmount,
-      membershipFeeLabel: inv.membershipFeeLabel,
-      cgstAmount: inv.cgstAmount,
-      sgstAmount: inv.sgstAmount,
-      grandTotal: inv.grandTotal,
-    };
-  }
-  return booking.billPreview ?? null;
 }
 
 export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; customerId: string }) {
@@ -145,10 +126,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
     staleTime: 30_000,
   });
 
-  const [selected, setSelected] = useState<Booking | null>(null);
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceError, setInvoiceError] = useState("");
+  const detailParam = useUrlQueryParam("detailBookingId");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [nameSaveError, setNameSaveError] = useState("");
@@ -190,46 +168,52 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
     updateNameMutation.mutate(trimmed);
   }
 
-  useEffect(() => {
-    if (!selected || selected.status !== "COMPLETED") {
-      setInvoice(null);
-      setInvoiceError("");
-      return;
+  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+
+  const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
+    if (!detailParam.isSet) return null;
+    const crumbs: BreadcrumbItem[] = [
+      { label: homeLabel, href: homeHref },
+      { label: customersLabel, href: customersHref },
+      {
+        label: customer?.name ?? tCommon("loading"),
+        href: customerDetailPathWithBooking(scope, customerId),
+        onClick: () => detailParam.set(null, "replace"),
+      },
+    ];
+    if (detailBooking) {
+      crumbs.push({ label: formatTenantDateTime(detailBooking.createdAt, localeKit) });
+    } else {
+      crumbs.push({ label: tBookings("billingDetails") });
     }
-    let cancelled = false;
-    setInvoiceLoading(true);
-    setInvoiceError("");
-    const load = selected.invoiceId
-      ? api.getInvoice(selected.invoiceId)
-      : api.getInvoiceByBooking(selected.id);
-    load
-      .then((inv) => {
-        if (!cancelled) setInvoice(inv);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) {
-          setInvoice(null);
-          setInvoiceError(e.message || tBookings("invoiceUnavailable"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setInvoiceLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selected, tBookings]);
+    return crumbs;
+  }, [
+    detailParam,
+    detailBooking,
+    homeHref,
+    homeLabel,
+    customersHref,
+    customersLabel,
+    customer?.name,
+    customerId,
+    scope,
+    localeKit,
+    tCommon,
+    tBookings,
+  ]);
+
+  useDetailBreadcrumbs(detailParam.isSet, detailBreadcrumbs);
+
+  function openBookingDetail(booking: Booking) {
+    detailParam.set(booking.id);
+  }
+
+  function closeBookingDetail() {
+    detailParam.set(null, "replace");
+  }
 
   function visitActionHref(b: Booking) {
     return buildWalkInUrl({ bookingId: b.id, customerId });
-  }
-
-  function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
-    const preview = resolveBillPreview(booking, inv);
-    if (!preview) {
-      return <p className="text-sm text-[var(--text-secondary)]">{tBookings("noBillingYet")}</p>;
-    }
-    return <BillBreakdownRows preview={preview} />;
   }
 
   if (customerLoading) {
@@ -416,7 +400,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
                     <tr
                       key={b.id}
                       className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer transition"
-                      onClick={() => setSelected(b)}
+                      onClick={() => openBookingDetail(b)}
                     >
                       {scope === "admin" && (
                         <td className="px-4 py-3 text-[var(--text-primary)]">{b.branchName}</td>
@@ -467,7 +451,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
                 <div key={b.id} className="px-4 py-3 space-y-2">
                   <button
                     type="button"
-                    onClick={() => setSelected(b)}
+                    onClick={() => openBookingDetail(b)}
                     className="w-full text-left space-y-1 touch-manipulation"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -525,100 +509,20 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
         )}
       </Card>
 
-      <SideSheet
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        title={formatTenantDateTime(selected?.createdAt ?? "", localeKit) || tBookings("billingDetails")}
+      <BookingDetailSheet
+        booking={detailBooking}
+        open={detailParam.isSet}
+        onClose={closeBookingDetail}
+        visitActionHref={scope === "manager" ? visitActionHref : undefined}
+        shareCustomerName={customer.name}
+        title={formatTenantDateTime(detailBooking?.createdAt ?? "", localeKit) || tBookings("billingDetails")}
         subtitle={
-          selected
-            ? `${selected.branchName ? `${selected.branchName} · ` : ""}${tStatus(selected.status as "COMPLETED")}`
+          detailBooking
+            ? `${detailBooking.branchName ? `${detailBooking.branchName} · ` : ""}${tStatus(detailBooking.status as "COMPLETED")}`
             : undefined
         }
-        footer={
-          selected?.status === "COMPLETED" && invoice ? (
-            <InvoicePdfButtons
-              invoiceId={invoice.id}
-              filename={`invoice-${invoice.invoiceNumber}.pdf`}
-              shareText={tBookings("shareBillMessage", { name: customer.name })}
-              shareLabel={tBookings("shareBill")}
-              downloadLabel={tBookings("downloadBill")}
-              processingLabel={tCommon("processing")}
-              primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
-              secondaryClassName={`${btnSecondarySm} w-full min-h-11 justify-center touch-manipulation`}
-              onError={setInvoiceError}
-            />
-          ) : selected && scope === "manager" && isOpenStatus(selected.status) ? (
-            <Link
-              href={visitActionHref(selected)}
-              className={`${btnPrimary} w-full min-h-12 justify-center`}
-              onClick={() => setSelected(null)}
-            >
-              {selected.status === "READY_FOR_BILLING" ? tBookings("billVisit") : tBookings("continueVisit")}
-            </Link>
-          ) : undefined
-        }
-      >
-        {selected && (
-          <div className="space-y-4 p-4">
-            {invoiceError && <AlertBanner variant="error">{invoiceError}</AlertBanner>}
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                {tBookings("services")}
-              </p>
-              <ul className="space-y-1 text-sm">
-                {selected.lines?.map((l) => (
-                  <li key={l.id} className="flex justify-between gap-2">
-                    <span>
-                      {l.serviceName}
-                      {l.staffName ? ` · ${l.staffName}` : ""}
-                    </span>
-                    <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
-                  </li>
-                ))}
-                {(() => {
-                  const fee = membershipFeeServiceLine(invoice ?? selected.billPreview);
-                  if (!fee) return null;
-                  return (
-                    <li className="flex justify-between gap-2">
-                      <span>{fee.name}</span>
-                      <span className="font-medium">{formatCurrency(fee.amount)}</span>
-                    </li>
-                  );
-                })()}
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                {tBookings("billingDetails")}
-              </p>
-              {invoiceLoading ? (
-                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-              ) : (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-                  {invoice && (
-                    <p className="text-xs text-[var(--text-secondary)] mb-2">
-                      {tBookings("invoiceNumber", { number: invoice.invoiceNumber })}
-                      {invoice.pdfAvailable ? ` · ${tBookings("pdfStored")}` : ""}
-                    </p>
-                  )}
-                  <BillingRows booking={selected} inv={invoice} />
-                </div>
-              )}
-            </div>
-
-            {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
-              <p className="text-sm text-[var(--text-secondary)]">{tBookings("invoiceUnavailable")}</p>
-            )}
-
-            {selected.status === "COMPLETED" && (
-              <BookingReviewInviteSection visitId={selected.id} enabled={selected.status === "COMPLETED"} />
-            )}
-          </div>
-        )}
-      </SideSheet>
+        useSecondaryButton
+      />
     </div>
   );
 }

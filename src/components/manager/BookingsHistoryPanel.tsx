@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { UserPlus, IndianRupee, Clock, CheckCircle2, FileText, Receipt } from "lucide-react";
-import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
-import { api, Booking, InvoiceDetail } from "@/lib/api";
+import { UserPlus, IndianRupee, Clock, CheckCircle2, Receipt } from "lucide-react";
+import { api, Booking } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
-import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
-import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
+import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { AppScope, buildWalkInUrl } from "@/lib/navigation-scope";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
+import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
+import { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   Card,
   StatusBadge,
@@ -26,7 +27,6 @@ import {
   FilterableTable,
   InfiniteScrollFooter,
   AvatarInitial,
-  SideSheet,
   AlertBanner,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
@@ -89,10 +89,7 @@ export function BookingsHistoryPanel({
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState(initialCustomerId || "");
-  const [selected, setSelected] = useState<Booking | null>(null);
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceError, setInvoiceError] = useState("");
+  const detailParam = useUrlQueryParam("detailBookingId");
   const filtersReady = useRef(false);
 
   useEffect(() => {
@@ -125,36 +122,6 @@ export function BookingsHistoryPanel({
     }, 300);
     return () => clearTimeout(timer);
   }, [filters]);
-
-  useEffect(() => {
-    if (!selected || selected.status !== "COMPLETED") {
-      setInvoice(null);
-      setInvoiceError("");
-      return;
-    }
-    let cancelled = false;
-    setInvoiceLoading(true);
-    setInvoiceError("");
-    const load = selected.invoiceId
-      ? api.getInvoice(selected.invoiceId)
-      : api.getInvoiceByBooking(selected.id);
-    load
-      .then((inv) => {
-        if (!cancelled) setInvoice(inv);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) {
-          setInvoice(null);
-          setInvoiceError(e.message || t("invoiceUnavailable"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setInvoiceLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selected, t]);
 
   const amountFilter = parseAmount(debounced.amount);
 
@@ -191,6 +158,29 @@ export function BookingsHistoryPanel({
   const completed = bookings.filter((b) => b.status === "COMPLETED");
   const active = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
   const totalRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
+
+  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+  const listLabel = embedded ? historyTabLabel : t("title");
+
+  const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
+    if (!detailParam.isSet) return null;
+    const crumbs: BreadcrumbItem[] = [
+      { label: listLabel, href: detailParam.hrefWithout, onClick: () => detailParam.set(null, "replace") },
+    ];
+    if (detailBooking) crumbs.push({ label: detailBooking.customerName });
+    else crumbs.push({ label: t("billingDetails") });
+    return crumbs;
+  }, [detailParam, detailBooking, listLabel, t]);
+
+  useDetailBreadcrumbs(detailParam.isSet, detailBreadcrumbs);
+
+  function openBookingDetail(booking: Booking) {
+    detailParam.set(booking.id);
+  }
+
+  function closeBookingDetail() {
+    detailParam.set(null, "replace");
+  }
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -266,35 +256,6 @@ export function BookingsHistoryPanel({
       },
     },
   ];
-
-  function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBreakdownPreview | null {
-    if (inv) {
-      return {
-        subtotal: inv.subtotal,
-        membershipDiscountAmount: inv.membershipDiscountAmount,
-        promoDiscountAmount: inv.promoDiscountAmount,
-        membershipLabel: inv.membershipLabel,
-        promoLabel: inv.promoLabel,
-        membershipFeeAmount: inv.membershipFeeAmount,
-        membershipFeeLabel: inv.membershipFeeLabel,
-        cgstAmount: inv.cgstAmount,
-        sgstAmount: inv.sgstAmount,
-        grandTotal: inv.grandTotal,
-      };
-    }
-    if (booking.billPreview) {
-      return booking.billPreview;
-    }
-    return null;
-  }
-
-  function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
-    const preview = resolveBillPreview(booking, inv);
-    if (!preview) {
-      return <p className="text-sm text-[var(--text-secondary)]">{t("noBillingYet")}</p>;
-    }
-    return <BillBreakdownRows preview={preview} />;
-  }
 
   function visitActionHref(b: Booking) {
     const params = new URLSearchParams({ bookingId: b.id });
@@ -379,7 +340,7 @@ export function BookingsHistoryPanel({
                   <tr
                     key={b.id}
                     className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
-                    onClick={() => setSelected(b)}
+                    onClick={() => openBookingDetail(b)}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -435,7 +396,7 @@ export function BookingsHistoryPanel({
                 <div key={b.id} className="px-4 py-3 space-y-2">
                   <button
                     type="button"
-                    onClick={() => setSelected(b)}
+                    onClick={() => openBookingDetail(b)}
                     className="w-full text-left flex gap-3 touch-manipulation"
                   >
                     <AvatarInitial name={b.customerName} />
@@ -491,105 +452,12 @@ export function BookingsHistoryPanel({
         />
       </Card>
 
-      <SideSheet
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        title={selected?.customerName || t("billingDetails")}
-        subtitle={selected ? `${selected.customerPhone} · ${selected.status}` : undefined}
-        footer={
-          selected?.status === "COMPLETED" && invoice ? (
-            <InvoicePdfButtons
-              invoiceId={invoice.id}
-              filename={`invoice-${invoice.invoiceNumber}.pdf`}
-              shareText={t("shareBillMessage", { name: selected.customerName || "Customer" })}
-              shareLabel={t("shareBill")}
-              downloadLabel={t("downloadBill")}
-              processingLabel={tCommon("processing")}
-              primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
-              secondaryClassName={`${btnSecondary} w-full min-h-11 justify-center touch-manipulation`}
-              onError={setInvoiceError}
-            />
-          ) : selected && isOpenStatus(selected.status) ? (
-            <Link
-              href={visitActionHref(selected)}
-              className={`${btnPrimary} w-full min-h-12 justify-center`}
-              onClick={() => setSelected(null)}
-            >
-              {selected.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
-            </Link>
-          ) : undefined
-        }
-      >
-        {selected && (
-          <div className="space-y-4 p-4">
-            {invoiceError && <AlertBanner variant="error">{invoiceError}</AlertBanner>}
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                {t("services")}
-              </p>
-              <ul className="space-y-1 text-sm">
-                {selected.lines?.map((l) => (
-                  <li key={l.id} className="flex justify-between gap-2">
-                    <span>
-                      {l.serviceName}
-                      {l.staffName ? ` · ${l.staffName}` : ""}
-                    </span>
-                    <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
-                  </li>
-                ))}
-                {(() => {
-                  const fee = membershipFeeServiceLine(invoice ?? selected.billPreview);
-                  if (!fee) return null;
-                  return (
-                    <li className="flex justify-between gap-2">
-                      <span>{fee.name}</span>
-                      <span className="font-medium">{formatCurrency(fee.amount)}</span>
-                    </li>
-                  );
-                })()}
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                {t("billingDetails")}
-              </p>
-              {invoiceLoading ? (
-                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-              ) : (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-                  {invoice && (
-                    <p className="text-xs text-[var(--text-secondary)] mb-2">
-                      {t("invoiceNumber", { number: invoice.invoiceNumber })}
-                      {invoice.pdfAvailable ? ` · ${t("pdfStored")}` : ""}
-                    </p>
-                  )}
-                  <BillingRows booking={selected} inv={invoice} />
-                </div>
-              )}
-            </div>
-
-            {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
-              <p className="text-sm text-[var(--text-secondary)]">{t("invoiceUnavailable")}</p>
-            )}
-
-            {selected.status === "COMPLETED" && (
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                  {t("reviewInviteSection")}
-                </p>
-                <BookingReviewInviteSection visitId={selected.id} enabled={selected.status === "COMPLETED"} />
-              </div>
-            )}
-
-            {selected.status !== "COMPLETED" && !isOpenStatus(selected.status) && (
-              <p className="text-sm text-[var(--text-secondary)]">{t("completeToDownload")}</p>
-            )}
-          </div>
-        )}
-      </SideSheet>
+      <BookingDetailSheet
+        booking={detailBooking}
+        open={detailParam.isSet}
+        onClose={closeBookingDetail}
+        visitActionHref={visitActionHref}
+      />
     </div>
   );
 }

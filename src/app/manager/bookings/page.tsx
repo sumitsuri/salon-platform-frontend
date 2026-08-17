@@ -12,7 +12,14 @@ export default function ManagerBookingsRedirect() {
 
   useEffect(() => {
     const customerId = searchParams.get("customerId") || undefined;
-    router.replace(buildWalkInUrl({ tab: "history", customerId }));
+    const detailBookingId = searchParams.get("detailBookingId") || undefined;
+    router.replace(
+      buildWalkInUrl({
+        tab: "history",
+        customerId,
+        detailBookingId,
+      })
+    );
   }, [router, searchParams]);
 
   return <AntrahqLoading label="Loading..." />;

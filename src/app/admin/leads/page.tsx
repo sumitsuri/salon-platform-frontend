@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, Lead } from "@/lib/api";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
+import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
+import { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import {
   PageHeader,
   Card,
@@ -39,13 +43,21 @@ const emptyFilters: Filters = {
 };
 
 export default function AdminLeadsPage() {
+  return (
+    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
+      <AdminLeadsPageContent />
+    </Suspense>
+  );
+}
+
+function AdminLeadsPageContent() {
   const t = useTranslations("admin.leads");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
-  const [selected, setSelected] = useState<Lead | null>(null);
+  const leadParam = useUrlQueryParam("leadId");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(filters), 300);
@@ -78,6 +90,29 @@ export default function AdminLeadsPage() {
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const selected = useMemo(
+    () => (leadParam.value ? leads.find((l) => l.id === leadParam.value) ?? null : null),
+    [leadParam.value, leads]
+  );
+
+  const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
+    if (!leadParam.isSet) return null;
+    return [
+      { label: t("title"), href: leadParam.hrefWithout, onClick: () => leadParam.set(null, "replace") },
+      { label: selected?.name ?? t("title") },
+    ];
+  }, [leadParam, selected?.name, t]);
+
+  useDetailBreadcrumbs(leadParam.isSet, detailBreadcrumbs);
+
+  function openLead(lead: Lead) {
+    leadParam.set(lead.id);
+  }
+
+  function closeLead() {
+    leadParam.set(null, "replace");
   }
 
   const hasFilters = Object.values(filters).some((v) => v !== "");
@@ -182,7 +217,7 @@ export default function AdminLeadsPage() {
                   key={lead.id}
                   title={lead.name}
                   subtitle={`${lead.society || "—"} · ${lead.mobile}`}
-                  onClick={() => setSelected(lead)}
+                  onClick={() => openLead(lead)}
                   trailing={
                     <div className="text-right max-w-[140px]">
                       <p className="text-xs text-[var(--text-tertiary)] truncate">{lead.email}</p>
@@ -201,7 +236,7 @@ export default function AdminLeadsPage() {
                   <tr
                     key={lead.id}
                     className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
-                    onClick={() => setSelected(lead)}
+                    onClick={() => openLead(lead)}
                   >
                     <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{lead.name}</td>
                     <td className="px-4 py-3 text-[var(--text-primary)]">{lead.society || "—"}</td>
@@ -231,8 +266,8 @@ export default function AdminLeadsPage() {
       </Card>
 
       <SideSheet
-        open={!!selected}
-        onClose={() => setSelected(null)}
+        open={leadParam.isSet}
+        onClose={closeLead}
         title={selected?.name || t("title")}
         subtitle={selected ? new Date(selected.createdAt).toLocaleString("en-IN") : undefined}
       >

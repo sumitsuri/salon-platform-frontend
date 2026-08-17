@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -29,6 +30,10 @@ import {
   ResponsiveTableShell,
 } from "@/components/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
+import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
+import { managerSchedulePath } from "@/lib/navigation-scope";
 
 type SelectedVisit = {
   block: StaffTimeBlock;
@@ -386,12 +391,22 @@ function VisitDetailsModal({
 }
 
 export default function ManagerSchedulePage() {
+  return (
+    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
+      <ManagerSchedulePageContent />
+    </Suspense>
+  );
+}
+
+function ManagerSchedulePageContent() {
   const t = useTranslations("manager.schedule");
   const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const [date, setDate] = useState(todayIso);
-  const [selected, setSelected] = useState<SelectedVisit | null>(null);
+  const searchParams = useSearchParams();
+  const initialDate = searchParams.get("date") || todayIso();
+  const [date, setDate] = useState(initialDate);
+  const bookingParam = useUrlQueryParam("bookingId");
   const scale = useBoardScale();
 
   const { data, isLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
@@ -434,6 +449,35 @@ export default function ManagerSchedulePage() {
     if (!isToday || !data?.now) return null;
     return minutesFromOpen(data.now, openMin, date);
   }, [isToday, data?.now, openMin, date]);
+
+  const selected = useMemo((): SelectedVisit | null => {
+    if (!bookingParam.value || !data?.staff) return null;
+    for (const col of data.staff) {
+      const block = col.blocks.find((b) => b.bookingId === bookingParam.value);
+      if (block) {
+        return { block, staffId: col.staffId, staffName: col.staffName };
+      }
+    }
+    return null;
+  }, [bookingParam.value, data?.staff]);
+
+  const detailBreadcrumbs = useMemo(() => {
+    if (!bookingParam.isSet) return null;
+    return [
+      { label: t("title"), href: managerSchedulePath(date), onClick: () => bookingParam.set(null, "replace") },
+      { label: selected?.block.customerName ?? t("visitDetails") },
+    ];
+  }, [bookingParam, date, selected?.block.customerName, t]);
+
+  useDetailBreadcrumbs(bookingParam.isSet, detailBreadcrumbs);
+
+  function openVisit(block: StaffTimeBlock, staff: StaffAvailabilityColumn) {
+    bookingParam.set(block.bookingId);
+  }
+
+  function closeVisit() {
+    bookingParam.set(null, "replace");
+  }
 
   return (
     <div className="space-y-4 min-w-0 max-w-full">
@@ -592,13 +636,7 @@ export default function ManagerSchedulePage() {
                       isToday={isToday}
                       scale={scale}
                       t={t}
-                      onSelect={(block, staff) =>
-                        setSelected({
-                          block,
-                          staffId: staff.staffId,
-                          staffName: staff.staffName,
-                        })
-                      }
+                      onSelect={(block, staff) => openVisit(block, staff)}
                     />
                   ))}
                 </div>
@@ -608,7 +646,7 @@ export default function ManagerSchedulePage() {
         </div>
       )}
 
-      {selected && <VisitDetailsModal selected={selected} onClose={() => setSelected(null)} t={t} />}
+      {selected && <VisitDetailsModal selected={selected} onClose={closeVisit} t={t} />}
 
       {data?.metrics?.byStaffService && data.metrics.byStaffService.length > 0 && (
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden min-w-0">

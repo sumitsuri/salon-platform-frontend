@@ -9,17 +9,12 @@ export function customerDetailPath(scope: AppScope, customerId: string): string 
   return `${customersPath(scope)}/detail?${params.toString()}`;
 }
 
-export function adminBookingsPath(customerId?: string): string {
-  const params = new URLSearchParams();
-  if (customerId) params.set("customerId", customerId);
-  const q = params.toString();
-  return `/admin/bookings${q ? `?${q}` : ""}`;
-}
-
 export type WalkInUrlParams = {
   tab?: "history";
   customerId?: string;
   bookingId?: string;
+  /** Read-only billing detail for completed/historical visits (SideSheet). */
+  detailBookingId?: string;
   edit?: boolean;
   staffId?: string;
 };
@@ -30,10 +25,53 @@ export function buildWalkInUrl(params: WalkInUrlParams = {}): string {
   if (params.tab === "history") search.set("tab", "history");
   if (params.customerId) search.set("customerId", params.customerId);
   if (params.bookingId) search.set("bookingId", params.bookingId);
+  if (params.detailBookingId) search.set("detailBookingId", params.detailBookingId);
   if (params.edit) search.set("edit", "1");
   if (params.staffId) search.set("staffId", params.staffId);
   const q = search.toString();
   return `/manager/walk-in${q ? `?${q}` : ""}`;
+}
+
+export function adminBookingsPath(customerId?: string, detailBookingId?: string): string {
+  const params = new URLSearchParams();
+  if (customerId) params.set("customerId", customerId);
+  if (detailBookingId) params.set("detailBookingId", detailBookingId);
+  const q = params.toString();
+  return `/admin/bookings${q ? `?${q}` : ""}`;
+}
+
+export function customerDetailPathWithBooking(
+  scope: AppScope,
+  customerId: string,
+  detailBookingId?: string
+): string {
+  const params = new URLSearchParams({ id: customerId });
+  if (detailBookingId) params.set("detailBookingId", detailBookingId);
+  return `${customersPath(scope)}/detail?${params.toString()}`;
+}
+
+export function managerSchedulePath(date?: string, bookingId?: string): string {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (bookingId) params.set("bookingId", bookingId);
+  const q = params.toString();
+  return `/manager/schedule${q ? `?${q}` : ""}`;
+}
+
+export function appendQueryParam(href: string, key: string, value: string): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set(key, value);
+  const q = params.toString();
+  return q ? `${path}?${q}` : path;
+}
+
+export function removeQueryParams(href: string, keys: string[]): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  keys.forEach((k) => params.delete(k));
+  const q = params.toString();
+  return q ? `${path}?${q}` : path;
 }
 
 export function managerMembershipsPath(customerId?: string, extras?: { phone?: string; name?: string }): string {

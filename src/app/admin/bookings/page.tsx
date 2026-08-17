@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { FileText, Filter } from "lucide-react";
-import { api, Booking, InvoiceDetail } from "@/lib/api";
+import { Filter } from "lucide-react";
+import { api, Booking } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
-import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
-import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
-import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
+import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
+import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
+import { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
   PageHeader,
   Card,
@@ -24,11 +25,11 @@ import {
   MobileFilterPanel,
   InfiniteScrollFooter,
   AvatarInitial,
-  SideSheet,
   AlertBanner,
   PageLoader,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
+import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
 
@@ -60,7 +61,7 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
   return { minAmount: num, maxAmount: num };
 }
 
-export default function AdminBookingsPage() {
+function AdminBookingsPageContent() {
   const router = useRouter();
   const t = useTranslations("admin.bookings");
   const tCustomers = useTranslations("customers");
@@ -73,10 +74,7 @@ export default function AdminBookingsPage() {
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selected, setSelected] = useState<Booking | null>(null);
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceError, setInvoiceError] = useState("");
+  const detailParam = useUrlQueryParam("detailBookingId");
   const filtersReady = useRef(false);
 
   useEffect(() => {
@@ -107,36 +105,6 @@ export default function AdminBookingsPage() {
     return () => clearTimeout(timer);
   }, [filters]);
 
-  useEffect(() => {
-    if (!selected || selected.status !== "COMPLETED") {
-      setInvoice(null);
-      setInvoiceError("");
-      return;
-    }
-    let cancelled = false;
-    setInvoiceLoading(true);
-    setInvoiceError("");
-    const load = selected.invoiceId
-      ? api.getInvoice(selected.invoiceId)
-      : api.getInvoiceByBooking(selected.id);
-    load
-      .then((inv) => {
-        if (!cancelled) setInvoice(inv);
-      })
-      .catch((e: Error) => {
-        if (!cancelled) {
-          setInvoice(null);
-          setInvoiceError(e.message || tMgr("invoiceUnavailable"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setInvoiceLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selected, tMgr]);
-
   const amountFilter = parseAmount(debounced.amount);
 
   const {
@@ -144,14 +112,13 @@ export default function AdminBookingsPage() {
     totalElements,
     hasMore,
     isLoading,
-    isFetching,
-    isFetchingNextPage,
     isError,
     error,
     refetch,
+    isFetchingNextPage,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["all-bookings", debounced, amountFilter, customerIdFilter],
+    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter],
     queryFn: (page) =>
       api.getBookings({
         customerId: customerIdFilter || undefined,
@@ -170,18 +137,38 @@ export default function AdminBookingsPage() {
     staleTime: 30_000,
   });
 
+  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+
+  const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
+    if (!detailParam.isSet) return null;
+    const crumbs: BreadcrumbItem[] = [
+      { label: t("title"), href: detailParam.hrefWithout, onClick: () => detailParam.set(null, "replace") },
+    ];
+    if (detailBooking) crumbs.push({ label: detailBooking.customerName });
+    else crumbs.push({ label: tMgr("billingDetails") });
+    return crumbs;
+  }, [detailParam, detailBooking, t, tMgr]);
+
+  useDetailBreadcrumbs(detailParam.isSet, detailBreadcrumbs);
+
+  function openBookingDetail(booking: Booking) {
+    detailParam.set(booking.id);
+  }
+
+  function closeBookingDetail() {
+    detailParam.set(null, "replace");
+  }
+
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  const hasFilters = Object.values(filters).some((v) => v !== "");
-
   const columns = [
     {
-      label: t("customer"),
+      label: tMgr("columns.customer"),
       filter: {
         type: "text" as const,
-        placeholder: t("nameOrPhone"),
+        placeholder: tMgr("filters.namePhone"),
         value: filters.customer,
         onChange: (v: string) => updateFilter("customer", v),
       },
@@ -190,7 +177,7 @@ export default function AdminBookingsPage() {
       label: tCommon("branch"),
       filter: {
         type: "text" as const,
-        placeholder: tCommon("branch"),
+        placeholder: tAdmin("filterBranch"),
         value: filters.branch,
         onChange: (v: string) => updateFilter("branch", v),
       },
@@ -214,28 +201,28 @@ export default function AdminBookingsPage() {
       },
     },
     {
-      label: tCommon("amount"),
+      label: tMgr("columns.amount"),
       filter: {
         type: "text" as const,
-        placeholder: tCommon("amount"),
+        placeholder: tMgr("filters.amount"),
         value: filters.amount,
         onChange: (v: string) => updateFilter("amount", v),
       },
     },
     {
-      label: tCommon("status"),
+      label: tMgr("columns.status"),
       filter: {
         type: "select" as const,
         value: filters.status,
         onChange: (v: string) => updateFilter("status", v),
         options: STATUSES.map((s) => ({
           value: s,
-          label: s ? tStatus(s as "COMPLETED") : tCommon("all"),
+          label: s ? tStatus(s as "COMPLETED") : tMgr("filters.all"),
         })),
       },
     },
     {
-      label: tCommon("date"),
+      label: tMgr("columns.time"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -244,88 +231,39 @@ export default function AdminBookingsPage() {
     },
   ];
 
-  function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBreakdownPreview | null {
-    if (inv) {
-      return {
-        subtotal: inv.subtotal,
-        membershipDiscountAmount: inv.membershipDiscountAmount,
-        promoDiscountAmount: inv.promoDiscountAmount,
-        membershipLabel: inv.membershipLabel,
-        promoLabel: inv.promoLabel,
-        membershipFeeAmount: inv.membershipFeeAmount,
-        membershipFeeLabel: inv.membershipFeeLabel,
-        cgstAmount: inv.cgstAmount,
-        sgstAmount: inv.sgstAmount,
-        grandTotal: inv.grandTotal,
-      };
-    }
-    if (booking.billPreview) {
-      return booking.billPreview;
-    }
-    return null;
-  }
-
-  function BillingRows({ booking, inv }: { booking: Booking; inv: InvoiceDetail | null }) {
-    const preview = resolveBillPreview(booking, inv);
-    if (!preview) {
-      return <p className="text-sm text-[var(--text-secondary)]">{tMgr("noBillingYet")}</p>;
-    }
-    return <BillBreakdownRows preview={preview} />;
-  }
-
   return (
     <div className="space-y-4">
-      <PageHeader
-        title={t("title")}
-        subtitle={
-          isLoading && bookings.length === 0
-            ? t("loading")
-            : `${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`
-        }
-        action={
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className={`${btnSecondarySm} md:hidden`}
-            aria-pressed={showFilters}
-            aria-label="Filters"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-        }
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle", { count: totalElements })} />
 
       {isScoped && (
         <NavigationScopeBanner
           backHref={customerDetailHref}
           backLabel={customer?.name ? tCommon("backTo", { page: customer.name }) : tCustomers("backToCustomers")}
           title={customer?.name ?? tCommon("loading")}
-          subtitle={
-            customer
-              ? tCommon("showingFor", { name: customer.name })
-              : undefined
-          }
+          subtitle={customer ? tCommon("showingFor", { name: customer.name }) : undefined}
           onClear={clearCustomerScope}
         />
       )}
 
-      <MobileFilterPanel columns={columns} open={showFilters} />
-
-      {hasFilters && (
-        <button
-          type="button"
-          onClick={() => setFilters(emptyFilters)}
-          className="text-sm font-semibold text-[var(--brand-text)]"
-        >
-          {tAdmin("clearFilters")}
-        </button>
-      )}
-
       <Card padding={false}>
-        {isLoading ? (
-          <PageLoader label={t("loading")} />
-        ) : isError ? (
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between gap-2">
+          <p className="text-sm text-[var(--text-secondary)]">
+            {tMgr("subtitle", { count: totalElements, loaded: bookings.length })}
+          </p>
+          <button
+            type="button"
+            className={`${btnSecondarySm} md:hidden min-h-11 touch-manipulation`}
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            <Filter className="w-4 h-4" />
+            {tAdmin("filters")}
+          </button>
+        </div>
+
+        {showFilters && <MobileFilterPanel columns={columns} open={showFilters} />}
+
+        {isLoading && bookings.length === 0 && <PageLoader />}
+        {isError && (
           <div className="p-4 space-y-3">
             <AlertBanner variant="error">
               {error instanceof Error ? error.message : tCommon("failed")}
@@ -334,53 +272,19 @@ export default function AdminBookingsPage() {
               {tSchedule("refresh")}
             </button>
           </div>
-        ) : bookings.length === 0 ? (
-          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
-        ) : (
+        )}
+        {!isLoading && !isError && bookings.length === 0 ? (
+          <EmptyState title={tMgr("noBookingsTitle")} description={tMgr("noBookingsDesc")} />
+        ) : null}
+        {!isError && bookings.length > 0 ? (
           <>
-            <div className="md:hidden divide-y divide-[var(--border)]">
-              {bookings.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  data-testid="admin-booking-row"
-                  onClick={() => setSelected(b)}
-                  className="w-full text-left px-4 py-3 flex gap-3 touch-manipulation min-h-[64px]"
-                >
-                  <AvatarInitial name={b.customerName} />
-                  <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-                    <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{b.customerName}</p>
-                    <p className="font-bold text-sm text-[var(--text-primary)] text-right">
-                      {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
-                    </p>
-                    <p className="text-xs text-[var(--text-secondary)] col-span-2">
-                      {b.branchName} ·{" "}
-                      {new Date(b.createdAt).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                    <p className="text-xs text-[var(--text-tertiary)] col-span-2 truncate">
-                      {b.lines?.map((l) => l.serviceName).join(", ")}
-                    </p>
-                    <div className="col-span-2 flex justify-end">
-                      <StatusBadge status={b.status} />
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
                   <tr
                     key={b.id}
-                    data-testid="admin-booking-row"
-                    className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
-                    onClick={() => setSelected(b)}
+                    className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition cursor-pointer"
+                    onClick={() => openBookingDetail(b)}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -391,7 +295,7 @@ export default function AdminBookingsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-[var(--text-primary)]">{b.branchName}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs">{b.branchName}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {b.lines?.map((l) => (
@@ -407,26 +311,46 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
                       {b.lines?.map((l) => l.staffName).filter(Boolean).join(", ") || "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium">
+                    <td className="px-4 py-3 font-bold text-[var(--text-primary)] whitespace-nowrap">
                       {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
-                      {new Date(b.createdAt).toLocaleString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {b.createdAt ? new Date(b.createdAt).toLocaleString("en-IN") : "—"}
                     </td>
                   </tr>
                 ))}
               </FilterableTable>
             </div>
+
+            <div className="md:hidden divide-y divide-[var(--border)]">
+              {bookings.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => openBookingDetail(b)}
+                  className="w-full text-left px-4 py-3 flex gap-3 touch-manipulation"
+                >
+                  <AvatarInitial name={b.customerName} />
+                  <div className="flex-1 min-w-0 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                    <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{b.customerName}</p>
+                    <p className="font-bold text-sm text-[var(--text-primary)] text-right">
+                      {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] col-span-2">
+                      {b.branchName} · {b.lines?.map((l) => l.serviceName).join(", ")}
+                    </p>
+                    <div className="col-span-2 flex items-center justify-between">
+                      <StatusBadge status={b.status} />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </>
-        )}
+        ) : null}
 
         <InfiniteScrollFooter
           totalElements={totalElements}
@@ -438,102 +362,27 @@ export default function AdminBookingsPage() {
         />
       </Card>
 
-      <SideSheet
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        title={selected?.customerName || tMgr("billingDetails")}
+      <BookingDetailSheet
+        booking={detailBooking}
+        open={detailParam.isSet}
+        onClose={closeBookingDetail}
+        title={detailBooking?.customerName ?? tMgr("billingDetails")}
         subtitle={
-          selected
-            ? `${selected.branchName} · ${selected.customerPhone} · ${selected.status}`
+          detailBooking
+            ? `${detailBooking.branchName} · ${detailBooking.customerPhone} · ${detailBooking.status}`
             : undefined
         }
-        footer={
-          selected?.status === "COMPLETED" && invoice ? (
-            <InvoicePdfButtons
-              invoiceId={invoice.id}
-              filename={`invoice-${invoice.invoiceNumber}.pdf`}
-              shareText={tMgr("shareBillMessage", { name: selected.customerName || "Customer" })}
-              shareLabel={tMgr("shareBill")}
-              downloadLabel={tMgr("downloadBill")}
-              processingLabel={tCommon("processing")}
-              primaryClassName={`${btnPrimary} w-full justify-center touch-manipulation`}
-              secondaryClassName={`${btnSecondarySm} w-full min-h-11 justify-center touch-manipulation`}
-              downloadTestId="admin-download-invoice"
-              onError={setInvoiceError}
-            />
-          ) : undefined
-        }
-      >
-        {selected && (
-          <div className="space-y-4 p-4">
-            {invoiceError && <AlertBanner variant="error">{invoiceError}</AlertBanner>}
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                {tMgr("services")}
-              </p>
-              <ul className="space-y-1 text-sm">
-                {selected.lines?.map((l) => (
-                  <li key={l.id} className="flex justify-between gap-2">
-                    <span>
-                      {l.serviceName}
-                      {l.staffName ? ` · ${l.staffName}` : ""}
-                    </span>
-                    <span className="font-medium">{formatCurrency(l.unitPrice)}</span>
-                  </li>
-                ))}
-                {(() => {
-                  const fee = membershipFeeServiceLine(invoice ?? selected.billPreview);
-                  if (!fee) return null;
-                  return (
-                    <li className="flex justify-between gap-2">
-                      <span>{fee.name}</span>
-                      <span className="font-medium">{formatCurrency(fee.amount)}</span>
-                    </li>
-                  );
-                })()}
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5" />
-                {tMgr("billingDetails")}
-              </p>
-              {invoiceLoading ? (
-                <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-              ) : (
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-3">
-                  {invoice && (
-                    <p className="text-xs text-[var(--text-secondary)] mb-2">
-                      {tMgr("invoiceNumber", { number: invoice.invoiceNumber })}
-                      {invoice.pdfAvailable ? ` · ${tMgr("pdfStored")}` : ""}
-                    </p>
-                  )}
-                  <BillingRows booking={selected} inv={invoice} />
-                </div>
-              )}
-            </div>
-
-            {selected.status === "COMPLETED" && !invoice && !invoiceLoading && (
-              <p className="text-sm text-[var(--text-secondary)]">{tMgr("invoiceUnavailable")}</p>
-            )}
-
-            {selected.status === "COMPLETED" && (
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">
-                  {tMgr("reviewInviteSection")}
-                </p>
-                <BookingReviewInviteSection visitId={selected.id} enabled />
-              </div>
-            )}
-
-            {selected.status !== "COMPLETED" && (
-              <p className="text-sm text-[var(--text-secondary)]">{t("completeToDownload")}</p>
-            )}
-          </div>
-        )}
-      </SideSheet>
+        useSecondaryButton
+        downloadTestId="admin-download-invoice"
+      />
     </div>
+  );
+}
+
+export default function AdminBookingsPage() {
+  return (
+    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
+      <AdminBookingsPageContent />
+    </Suspense>
   );
 }
