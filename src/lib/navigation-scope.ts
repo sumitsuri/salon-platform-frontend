@@ -32,10 +32,17 @@ export function buildWalkInUrl(params: WalkInUrlParams = {}): string {
   return `/manager/walk-in${q ? `?${q}` : ""}`;
 }
 
-export function adminBookingsPath(customerId?: string, detailBookingId?: string): string {
+export type AdminBookingsQuery = {
+  customerId?: string;
+  branchId?: string;
+  detailBookingId?: string;
+};
+
+export function adminBookingsPath(query: AdminBookingsQuery = {}): string {
   const params = new URLSearchParams();
-  if (customerId) params.set("customerId", customerId);
-  if (detailBookingId) params.set("detailBookingId", detailBookingId);
+  if (query.customerId) params.set("customerId", query.customerId);
+  if (query.branchId) params.set("branchId", query.branchId);
+  if (query.detailBookingId) params.set("detailBookingId", query.detailBookingId);
   const q = params.toString();
   return `/admin/bookings${q ? `?${q}` : ""}`;
 }

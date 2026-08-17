@@ -18,6 +18,7 @@ import { Card, ListRow, EmptyState, PageLoader } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, dashboardSecondaryRange, getTodayRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
+import { adminBookingsPath } from "@/lib/navigation-scope";
 import {
   DashboardCommandBar,
   DashboardQuickLink,
@@ -245,6 +246,7 @@ export default function AdminDashboardPage() {
                   discounts: t("discounts"),
                 }}
                 formatValue={formatCurrency}
+                branchHref={(b) => adminBookingsPath({ branchId: b.branchId })}
               />
             )}
           </>

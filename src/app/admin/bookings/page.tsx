@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, Booking } from "@/lib/api";
@@ -62,12 +62,12 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 }
 
 function AdminBookingsPageContent() {
-  const router = useRouter();
   const t = useTranslations("admin.bookings");
   const tCustomers = useTranslations("customers");
   const tMgr = useTranslations("manager.bookings");
   const tSchedule = useTranslations("manager.schedule");
   const tAdmin = useTranslations("admin.common");
+  const tAdminLayout = useTranslations("admin.layout");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -75,12 +75,25 @@ function AdminBookingsPageContent() {
   const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const detailParam = useUrlQueryParam("detailBookingId");
+  const branchParam = useUrlQueryParam("branchId");
   const filtersReady = useRef(false);
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("customerId");
-    if (id) setCustomerIdFilter(id);
+    const params = new URLSearchParams(window.location.search);
+    const customerId = params.get("customerId");
+    if (customerId) setCustomerIdFilter(customerId);
   }, []);
+
+  const branchIdFilter = branchParam.value ?? "";
+
+  const { data: branch, isLoading: branchLoading } = useQuery({
+    queryKey: ["branch", branchIdFilter],
+    queryFn: () => api.getBranch(branchIdFilter),
+    enabled: !!branchIdFilter,
+    staleTime: 60_000,
+  });
+
+  const isBranchScoped = !!branchIdFilter;
 
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
@@ -90,7 +103,15 @@ function AdminBookingsPageContent() {
 
   function clearCustomerScope() {
     setCustomerIdFilter("");
-    router.replace(adminBookingsPath());
+    window.history.replaceState(
+      window.history.state,
+      "",
+      adminBookingsPath({ branchId: branchIdFilter || undefined }),
+    );
+  }
+
+  function clearBranchScope() {
+    branchParam.set(null, "replace");
   }
 
   useEffect(() => {
@@ -118,12 +139,13 @@ function AdminBookingsPageContent() {
     isFetchingNextPage,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter],
+    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter, branchIdFilter],
     queryFn: (page) =>
       api.getBookings({
         customerId: customerIdFilter || undefined,
         customer: customerIdFilter ? undefined : debounced.customer || undefined,
-        branch: debounced.branch || undefined,
+        branchId: branchIdFilter || undefined,
+        branch: branchIdFilter ? undefined : debounced.branch || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
@@ -233,7 +255,24 @@ function AdminBookingsPageContent() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={t("title")} subtitle={t("subtitle", { count: totalElements })} />
+      <PageHeader
+        title={isBranchScoped && branch?.name ? branch.name : t("title")}
+        subtitle={
+          isBranchScoped
+            ? t("branchBookingsSubtitle")
+            : tMgr("subtitle", { count: totalElements, loaded: bookings.length })
+        }
+      />
+
+      {isBranchScoped && (
+        <NavigationScopeBanner
+          backHref="/admin"
+          backLabel={tCommon("backTo", { page: tAdminLayout("nav.overview") })}
+          title={branch?.name ?? (branchLoading ? tCommon("loading") : tCommon("branch"))}
+          subtitle={t("branchBookingsSubtitle")}
+          onClear={clearBranchScope}
+        />
+      )}
 
       {isScoped && (
         <NavigationScopeBanner

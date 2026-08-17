@@ -226,6 +226,7 @@ export function DashboardBranchPerformance({
   headerLabel,
   labels,
   formatValue,
+  branchHref,
   className,
 }: {
   branches: BranchPerformanceRow[];
@@ -239,6 +240,8 @@ export function DashboardBranchPerformance({
     discounts: string;
   };
   formatValue: (amount: number) => string;
+  /** When set, each branch row links to a branch-scoped detail page (e.g. bookings). */
+  branchHref?: (branch: BranchPerformanceRow) => string;
   className?: string;
 }) {
   const sortedBranches = [...branches].sort(
@@ -296,11 +299,13 @@ export function DashboardBranchPerformance({
           {placeholderRows.map((row, i) => {
             const branch = loading ? null : (row as BranchPerformanceRow);
             const sharePct = branch ? branchRevenueShare(branch.revenue) : null;
-            return (
-              <div
-                key={branch?.branchId ?? `loading-${i}`}
-                className="dashboard-branch-performance-row-item px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4 lg:py-0 lg:px-4"
-              >
+            const href = branch && branchHref ? branchHref(branch) : undefined;
+            const rowClassName = cn(
+              "dashboard-branch-performance-row-item block px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4 lg:py-0 lg:px-4",
+              href && "cursor-pointer touch-manipulation",
+            );
+            const rowInner = (
+              <>
                 <div className="lg:hidden">
                   <div className="flex items-start justify-between gap-2 min-w-0">
                     <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
@@ -363,6 +368,21 @@ export function DashboardBranchPerformance({
                     {loading ? "…" : sharePct != null && sharePct > 0 ? `${sharePct}%` : "—"}
                   </p>
                 </div>
+              </>
+            );
+
+            const key = branch?.branchId ?? `loading-${i}`;
+            if (href) {
+              return (
+                <Link key={key} href={href} className={rowClassName}>
+                  {rowInner}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={key} className={rowClassName}>
+                {rowInner}
               </div>
             );
           })}
