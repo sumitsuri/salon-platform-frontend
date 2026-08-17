@@ -37,7 +37,7 @@ const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLE
 
 type Filters = {
   customer: string;
-  branch: string;
+  branchId: string;
   service: string;
   stylist: string;
   amount: string;
@@ -48,7 +48,7 @@ type Filters = {
 
 const emptyFilters: Filters = {
   customer: "",
-  branch: "",
+  branchId: "",
   service: "",
   stylist: "",
   amount: "",
@@ -77,13 +77,12 @@ function readUrlDateFilters(): Pick<Filters, "dateFrom" | "dateTo"> | null {
 }
 
 function buildFiltersFromLocation(): Filters {
-  const params = readLocationSearchParams();
   const dateFilters = readUrlDateFilters();
   const branchScope = readUrlBranchScope();
   return {
     ...emptyFilters,
     ...(dateFilters ?? {}),
-    ...(branchScope?.branchName ? { branch: branchScope.branchName } : {}),
+    ...(branchScope?.branchId ? { branchId: branchScope.branchId } : {}),
   };
 }
 
@@ -155,14 +154,60 @@ function AdminBookingsPageContent() {
     staleTime: 60_000,
   });
 
-  const branchDisplayName = branch?.name || branchNameFromUrl;
+  const { data: branches = [] } = useQuery({
+    queryKey: ["branches"],
+    queryFn: () => api.getBranches(),
+    staleTime: 300_000,
+  });
+
+  const { data: catalogServices = [] } = useQuery({
+    queryKey: ["catalog-services", false],
+    queryFn: () => api.getCatalogServices(false),
+    staleTime: 300_000,
+  });
+
+  const { data: allStaff = [] } = useQuery({
+    queryKey: ["all-staff"],
+    queryFn: () => api.getAllStaff(),
+    staleTime: 300_000,
+  });
+
+  const branchDisplayName =
+    branch?.name ||
+    branchNameFromUrl ||
+    branches.find((b) => b.id === branchScopeId)?.name ||
+    "";
   const isBranchScoped = !!branchScopeId;
 
-  useEffect(() => {
-    if (!branch?.name || !branchScopeId) return;
-    setFilters((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
-    setDebounced((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
-  }, [branch?.name, branchScopeId]);
+  const effectiveBranchId = branchScopeId || debounced.branchId;
+
+  const branchOptions = useMemo(
+    () =>
+      branches
+        .filter((b) => b.status !== "INACTIVE")
+        .map((b) => ({ value: b.id, label: b.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [branches],
+  );
+
+  const serviceOptions = useMemo(
+    () =>
+      catalogServices
+        .filter((s) => s.active)
+        .map((s) => ({ value: s.name, label: s.name }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [catalogServices],
+  );
+
+  const stylistOptions = useMemo(() => {
+    const filterBranchId = branchScopeId || filters.branchId;
+    let list = allStaff.filter((s) => s.active);
+    if (filterBranchId) {
+      list = list.filter((s) => s.branchId === filterBranchId);
+    }
+    const names = [...new Set(list.map((s) => s.name))].sort((a, b) => a.localeCompare(b));
+    return names.map((name) => ({ value: name, label: name }));
+  }, [allStaff, branchScopeId, filters.branchId]);
 
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
@@ -194,7 +239,7 @@ function AdminBookingsPageContent() {
     setBranchScopeId("");
     setBranchNameFromUrl("");
     branchParam.set(null, "replace");
-    setFilters((prev) => ({ ...prev, branch: "" }));
+    setFilters((prev) => ({ ...prev, branchId: "" }));
   }
 
   function updateDateFrom(value: string) {
@@ -236,13 +281,12 @@ function AdminBookingsPageContent() {
     isFetchingNextPage,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter, branchScopeId],
+    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter, branchScopeId, effectiveBranchId],
     queryFn: (page) =>
       api.getBookings({
         customerId: customerIdFilter || undefined,
         customer: customerIdFilter ? undefined : debounced.customer || undefined,
-        branchId: branchScopeId || undefined,
-        branch: branchScopeId ? undefined : debounced.branch || undefined,
+        branchId: effectiveBranchId || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
@@ -296,28 +340,35 @@ function AdminBookingsPageContent() {
     {
       label: tCommon("branch"),
       filter: {
-        type: "text" as const,
+        type: "searchable-select" as const,
+        value: branchScopeId || filters.branchId,
+        onChange: (v: string) => updateFilter("branchId", v),
+        options: branchOptions,
         placeholder: tAdmin("filterBranch"),
-        value: filters.branch,
-        onChange: (v: string) => updateFilter("branch", v),
+        allLabel: tCommon("all"),
+        disabled: !!branchScopeId,
       },
     },
     {
       label: tMgr("columns.services"),
       filter: {
-        type: "text" as const,
-        placeholder: tMgr("filters.service"),
+        type: "searchable-select" as const,
         value: filters.service,
         onChange: (v: string) => updateFilter("service", v),
+        options: serviceOptions,
+        placeholder: tMgr("filters.service"),
+        allLabel: tCommon("all"),
       },
     },
     {
       label: tMgr("columns.stylist"),
       filter: {
-        type: "text" as const,
-        placeholder: tMgr("filters.stylist"),
+        type: "searchable-select" as const,
         value: filters.stylist,
         onChange: (v: string) => updateFilter("stylist", v),
+        options: stylistOptions,
+        placeholder: tMgr("filters.stylist"),
+        allLabel: tCommon("all"),
       },
     },
     {

@@ -698,6 +698,9 @@
       "loadingMore": "Loading more…",
       "endOfList": "All rows loaded",
       "filter": "Filter",
+      "searchPlaceholder": "Search…",
+      "allOptions": "All",
+      "noMatches": "No matches",
       "closePanel": "Close panel",
       "close": "Close"
     },

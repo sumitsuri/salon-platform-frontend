@@ -1,13 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LucideIcon, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { LucideIcon, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useInfiniteScrollTrigger } from "@/lib/use-infinite-scroll-trigger";
 import { useScrollLock } from "@/lib/use-scroll-lock";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -36,6 +36,131 @@ export const btnSecondarySm =
 
 export const btnDangerSm =
   "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm";
+
+/** Searchable single-select — type to filter options, click to pick. */
+export function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  allLabel,
+  disabled,
+  className,
+  inputClassName,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  allLabel?: string;
+  disabled?: boolean;
+  className?: string;
+  inputClassName?: string;
+}) {
+  const t = useTranslations("components.ui");
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = options.find((o) => o.value === value);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  function pick(next: string) {
+    onChange(next);
+    setOpen(false);
+    setQuery("");
+  }
+
+  function openList() {
+    if (disabled) return;
+    setOpen(true);
+    setQuery("");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  return (
+    <div ref={containerRef} className={cn("relative min-w-0", className)}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={open ? query : selected?.label ?? ""}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!open) setOpen(true);
+          }}
+          onFocus={openList}
+          onClick={openList}
+          placeholder={placeholder ?? t("searchPlaceholder")}
+          disabled={disabled}
+          className={cn(inputClassName ?? inputClass, "pr-9")}
+          autoComplete="off"
+        />
+        <ChevronDown
+          className={cn(
+            "pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]",
+            disabled && "opacity-40",
+          )}
+          aria-hidden
+        />
+      </div>
+      {open && !disabled && (
+        <ul
+          className="absolute z-[120] mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg"
+          role="listbox"
+        >
+          <li>
+            <button
+              type="button"
+              className={cn(
+                "w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]",
+                !value && "bg-[var(--surface-muted)] font-semibold text-[var(--brand-text)]",
+              )}
+              onClick={() => pick("")}
+            >
+              {allLabel ?? t("allOptions")}
+            </button>
+          </li>
+          {filtered.length === 0 ? (
+            <li className="px-3 py-2 text-sm text-[var(--text-tertiary)]">{t("noMatches")}</li>
+          ) : (
+            filtered.map((o) => (
+              <li key={o.value}>
+                <button
+                  type="button"
+                  className={cn(
+                    "w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)] truncate",
+                    o.value === value && "bg-[var(--surface-muted)] font-semibold text-[var(--brand-text)]",
+                  )}
+                  onClick={() => pick(o.value)}
+                >
+                  {o.label}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function PageHeader({
   title,
@@ -717,6 +842,15 @@ export type ColumnFilter =
   | { type: "none" }
   | { type: "text"; placeholder?: string; value: string; onChange: (v: string) => void }
   | { type: "select"; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }
+  | {
+      type: "searchable-select";
+      value: string;
+      onChange: (v: string) => void;
+      options: { value: string; label: string }[];
+      placeholder?: string;
+      allLabel?: string;
+      disabled?: boolean;
+    }
   | { type: "date"; value: string; onChange: (v: string) => void };
 
 type FilterableColumn = { label: string; filterLabel?: string; filter?: ColumnFilter };
@@ -749,6 +883,19 @@ function renderColumnFilter(
           </option>
         ))}
       </select>
+    );
+  }
+  if (filter.type === "searchable-select") {
+    return (
+      <SearchableSelect
+        value={filter.value}
+        onChange={filter.onChange}
+        options={filter.options}
+        placeholder={filter.placeholder}
+        allLabel={filter.allLabel}
+        disabled={filter.disabled}
+        inputClassName={inputCls}
+      />
     );
   }
   if (filter.type === "date") {
@@ -842,6 +989,17 @@ export function MobileFilterPanel({
                     </option>
                   ))}
                 </select>
+              )}
+              {filter.type === "searchable-select" && (
+                <SearchableSelect
+                  value={filter.value}
+                  onChange={filter.onChange}
+                  options={filter.options}
+                  placeholder={filter.placeholder}
+                  allLabel={filter.allLabel}
+                  disabled={filter.disabled}
+                  inputClassName={`${inputClass} py-2.5 text-sm`}
+                />
               )}
               {filter.type === "date" && (
                 <input
