@@ -1045,6 +1045,8 @@
     "common": {
       "updating": "Updating...",
       "clearFilters": "Clear filters",
+      "filters": "Filters",
+      "filterBranch": "Branch name",
       "selectBranch": "Select at least one branch",
       "chooseBranches": "Choose branches above to view analytics",
       "chooseBranchesInsights": "Choose branches to view insights",
