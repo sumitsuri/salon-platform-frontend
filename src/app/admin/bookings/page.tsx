@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -57,20 +57,34 @@ const emptyFilters: Filters = {
   dateTo: "",
 };
 
+function readLocationSearchParams(): URLSearchParams {
+  if (typeof window === "undefined") return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
+}
+
 function readUrlBranchScope(): { branchId: string; branchName: string } | null {
-  if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
+  const params = readLocationSearchParams();
   const branchId = params.get("branchId");
   if (!branchId) return null;
   return { branchId, branchName: params.get("branchName") ?? "" };
 }
 
 function readUrlDateFilters(): Pick<Filters, "dateFrom" | "dateTo"> | null {
-  if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
+  const params = readLocationSearchParams();
   if (!params.has("range") && !params.has("from")) return null;
   const range = parseDateRangeFromSearchParams(params);
   return { dateFrom: range.from, dateTo: range.to };
+}
+
+function buildFiltersFromLocation(): Filters {
+  const params = readLocationSearchParams();
+  const dateFilters = readUrlDateFilters();
+  const branchScope = readUrlBranchScope();
+  return {
+    ...emptyFilters,
+    ...(dateFilters ?? {}),
+    ...(branchScope?.branchName ? { branch: branchScope.branchName } : {}),
+  };
 }
 
 function parseAmount(value: string): { minAmount?: number; maxAmount?: number } {
@@ -95,18 +109,49 @@ function AdminBookingsPageContent() {
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [branchScopeId, setBranchScopeId] = useState("");
+  const [branchNameFromUrl, setBranchNameFromUrl] = useState("");
+  const [urlReady, setUrlReady] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const detailParam = useUrlQueryParam("detailBookingId");
   const branchParam = useUrlQueryParam("branchId");
   const filtersReady = useRef(false);
   const urlFiltersApplied = useRef(false);
 
-  const branchNameFromUrl = searchParams.get("branchName") ?? "";
+  function syncFromLocation() {
+    const params = readLocationSearchParams();
+    const branchId = params.get("branchId") ?? "";
+    const branchName = params.get("branchName") ?? "";
+    setBranchScopeId(branchId);
+    setBranchNameFromUrl(branchName);
+
+    const customerId = params.get("customerId");
+    if (customerId) setCustomerIdFilter(customerId);
+
+    const next = buildFiltersFromLocation();
+    const hasScopedFilters =
+      !!readUrlDateFilters() || !!branchName || !!branchId;
+
+    if (hasScopedFilters) {
+      setFilters(next);
+      setDebounced(next);
+    }
+    urlFiltersApplied.current = true;
+    setUrlReady(true);
+  }
+
+  useLayoutEffect(() => {
+    syncFromLocation();
+  }, []);
+
+  // Static export: useSearchParams() is often empty even when the address bar has query params.
+  useEffect(() => {
+    syncFromLocation();
+  }, [searchParams, branchParam.value]);
 
   const { data: branch, isLoading: branchLoading } = useQuery({
     queryKey: ["branch", branchScopeId],
     queryFn: () => api.getBranch(branchScopeId),
-    enabled: !!branchScopeId,
+    enabled: urlReady && !!branchScopeId,
     staleTime: 60_000,
   });
 
@@ -114,28 +159,10 @@ function AdminBookingsPageContent() {
   const isBranchScoped = !!branchScopeId;
 
   useEffect(() => {
-    const branchId = searchParams.get("branchId") ?? "";
-    setBranchScopeId(branchId);
-
-    const params = new URLSearchParams(window.location.search);
-    const customerId = params.get("customerId");
-    if (customerId) setCustomerIdFilter(customerId);
-
-    const branchScope = readUrlBranchScope();
-    const dateFilters = readUrlDateFilters();
-    const branchLabel = params.get("branchName") ?? branchScope?.branchName ?? "";
-    const next: Filters = {
-      ...emptyFilters,
-      ...(dateFilters ?? {}),
-      ...(branchLabel ? { branch: branchLabel } : {}),
-    };
-
-    if (dateFilters || branchLabel) {
-      setFilters(next);
-      setDebounced(next);
-    }
-    urlFiltersApplied.current = true;
-  }, [searchParams]);
+    if (!branch?.name || !branchScopeId) return;
+    setFilters((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
+    setDebounced((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
+  }, [branch?.name, branchScopeId]);
 
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
@@ -165,6 +192,7 @@ function AdminBookingsPageContent() {
       window.dispatchEvent(new PopStateEvent("popstate"));
     }
     setBranchScopeId("");
+    setBranchNameFromUrl("");
     branchParam.set(null, "replace");
     setFilters((prev) => ({ ...prev, branch: "" }));
   }
@@ -185,7 +213,7 @@ function AdminBookingsPageContent() {
     if (!urlFiltersApplied.current) return;
     if (!filtersReady.current) {
       filtersReady.current = true;
-      const hasUrlFilters = readUrlDateFilters() || readUrlBranchScope()?.branchName;
+      const hasUrlFilters = readUrlDateFilters() || readUrlBranchScope()?.branchId;
       if (!hasUrlFilters) setDebounced(filters);
       return;
     }
@@ -225,6 +253,7 @@ function AdminBookingsPageContent() {
         page,
         size: DEFAULT_PAGE_SIZE,
       }),
+    enabled: urlReady,
     staleTime: 30_000,
   });
 
