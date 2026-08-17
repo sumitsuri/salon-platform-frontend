@@ -1,34 +1,69 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
-/** Read/write a single query param while preserving others. Enables deep links + browser back. */
+/** Static export + trailingSlash: build href consistent with the address bar. */
+function buildPathWithSearch(pathname: string, params: URLSearchParams): string {
+  const q = params.toString();
+  const base = pathname.endsWith("/") ? pathname : `${pathname}/`;
+  return q ? `${base}?${q}` : base;
+}
+
+function readSearchParams(): URLSearchParams {
+  if (typeof window === "undefined") return new URLSearchParams();
+  return new URLSearchParams(window.location.search);
+}
+
+/**
+ * Read/write a query param while preserving others.
+ * Uses the History API for same-page query changes — Next.js 16.2.x static
+ * export restores stale searchParams from router cache on router.replace().
+ */
 export function useUrlQueryParam(name: string) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [revision, setRevision] = useState(0);
 
-  const value = searchParams.get(name);
+  useEffect(() => {
+    const sync = () => setRevision((r) => r + 1);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const value = useMemo(() => {
+    void revision;
+    if (typeof window !== "undefined") {
+      return readSearchParams().get(name);
+    }
+    return searchParams.get(name);
+  }, [name, searchParams, revision]);
 
   const hrefWithout = useMemo(() => {
-    const params = new URLSearchParams(searchParams.toString());
+    void revision;
+    const params =
+      typeof window !== "undefined" ? readSearchParams() : new URLSearchParams(searchParams.toString());
     params.delete(name);
-    const q = params.toString();
-    return q ? `${pathname}?${q}` : pathname;
-  }, [name, pathname, searchParams]);
+    return buildPathWithSearch(pathname, params);
+  }, [name, pathname, searchParams, revision]);
 
   const set = useCallback(
     (next: string | null, mode: "push" | "replace" = "push") => {
-      const params = new URLSearchParams(searchParams.toString());
+      if (typeof window === "undefined") return;
+
+      const params = readSearchParams();
       if (next) params.set(name, next);
       else params.delete(name);
-      const q = params.toString();
-      const href = q ? `${pathname}?${q}` : pathname;
-      if (mode === "replace") router.replace(href);
-      else router.push(href);
+      const href = buildPathWithSearch(pathname, params);
+
+      if (mode === "replace") {
+        window.history.replaceState(window.history.state, "", href);
+      } else {
+        window.history.pushState(window.history.state, "", href);
+      }
+      setRevision((r) => r + 1);
     },
-    [name, pathname, router, searchParams]
+    [name, pathname]
   );
 
   return { value, set, hrefWithout, isSet: !!value };
@@ -36,32 +71,54 @@ export function useUrlQueryParam(name: string) {
 
 /** Pair of query params, e.g. drawer type + entity id. */
 export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [revision, setRevision] = useState(0);
 
-  const drawerType = searchParams.get(typeParam);
-  const drawerId = searchParams.get(idParam);
+  useEffect(() => {
+    const sync = () => setRevision((r) => r + 1);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const params = useMemo(() => {
+    void revision;
+    return typeof window !== "undefined" ? readSearchParams() : new URLSearchParams(searchParams.toString());
+  }, [searchParams, revision]);
+
+  const drawerType = params.get(typeParam);
+  const drawerId = params.get(idParam);
+
+  const applyParams = useCallback(
+    (next: URLSearchParams, mode: "push" | "replace") => {
+      if (typeof window === "undefined") return;
+      const href = buildPathWithSearch(pathname, next);
+      if (mode === "replace") {
+        window.history.replaceState(window.history.state, "", href);
+      } else {
+        window.history.pushState(window.history.state, "", href);
+      }
+      setRevision((r) => r + 1);
+    },
+    [pathname]
+  );
 
   const open = useCallback(
     (type: string, id: string, mode: "push" | "replace" = "push") => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set(typeParam, type);
-      params.set(idParam, id);
-      const href = `${pathname}?${params.toString()}`;
-      if (mode === "replace") router.replace(href);
-      else router.push(href);
+      const next = readSearchParams();
+      next.set(typeParam, type);
+      next.set(idParam, id);
+      applyParams(next, mode);
     },
-    [idParam, pathname, router, searchParams, typeParam]
+    [applyParams, idParam, typeParam]
   );
 
   const close = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete(typeParam);
-    params.delete(idParam);
-    const q = params.toString();
-    router.replace(q ? `${pathname}?${q}` : pathname);
-  }, [idParam, pathname, router, searchParams, typeParam]);
+    const next = readSearchParams();
+    next.delete(typeParam);
+    next.delete(idParam);
+    applyParams(next, "replace");
+  }, [applyParams, idParam, typeParam]);
 
   return {
     drawerType,
