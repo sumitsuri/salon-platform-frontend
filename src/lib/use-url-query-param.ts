@@ -31,6 +31,11 @@ export function useUrlQueryParam(name: string) {
     return () => window.removeEventListener("popstate", sync);
   }, []);
 
+  // Next.js client navigations update searchParams but not popstate.
+  useEffect(() => {
+    setRevision((r) => r + 1);
+  }, [searchParams]);
+
   const value = useMemo(() => {
     void revision;
     if (typeof window !== "undefined") {
@@ -80,6 +85,10 @@ export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
   }, []);
+
+  useEffect(() => {
+    setRevision((r) => r + 1);
+  }, [searchParams]);
 
   const params = useMemo(() => {
     void revision;

@@ -249,6 +249,7 @@ export default function AdminDashboardPage() {
                 branchHref={(b) =>
                   adminBookingsPath({
                     branchId: b.branchId,
+                    branchName: b.branchName,
                     dateRange: resolveProductDateRange(dateRange),
                   })
                 }

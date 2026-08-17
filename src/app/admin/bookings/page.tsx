@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
@@ -56,6 +57,14 @@ const emptyFilters: Filters = {
   dateTo: "",
 };
 
+function readUrlBranchScope(): { branchId: string; branchName: string } | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const branchId = params.get("branchId");
+  if (!branchId) return null;
+  return { branchId, branchName: params.get("branchName") ?? "" };
+}
+
 function readUrlDateFilters(): Pick<Filters, "dateFrom" | "dateTo"> | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
@@ -81,44 +90,52 @@ function AdminBookingsPageContent() {
   const tAdminLayout = useTranslations("admin.layout");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
+  const [branchScopeId, setBranchScopeId] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const detailParam = useUrlQueryParam("detailBookingId");
   const branchParam = useUrlQueryParam("branchId");
   const filtersReady = useRef(false);
   const urlFiltersApplied = useRef(false);
 
-  const branchIdFilter = branchParam.value ?? "";
+  const branchNameFromUrl = searchParams.get("branchName") ?? "";
 
   const { data: branch, isLoading: branchLoading } = useQuery({
-    queryKey: ["branch", branchIdFilter],
-    queryFn: () => api.getBranch(branchIdFilter),
-    enabled: !!branchIdFilter,
+    queryKey: ["branch", branchScopeId],
+    queryFn: () => api.getBranch(branchScopeId),
+    enabled: !!branchScopeId,
     staleTime: 60_000,
   });
 
-  const isBranchScoped = !!branchIdFilter;
+  const branchDisplayName = branch?.name || branchNameFromUrl;
+  const isBranchScoped = !!branchScopeId;
 
   useEffect(() => {
+    const branchId = searchParams.get("branchId") ?? "";
+    setBranchScopeId(branchId);
+
     const params = new URLSearchParams(window.location.search);
     const customerId = params.get("customerId");
     if (customerId) setCustomerIdFilter(customerId);
 
+    const branchScope = readUrlBranchScope();
     const dateFilters = readUrlDateFilters();
-    if (dateFilters) {
-      const next = { ...emptyFilters, ...dateFilters };
+    const branchLabel = params.get("branchName") ?? branchScope?.branchName ?? "";
+    const next: Filters = {
+      ...emptyFilters,
+      ...(dateFilters ?? {}),
+      ...(branchLabel ? { branch: branchLabel } : {}),
+    };
+
+    if (dateFilters || branchLabel) {
       setFilters(next);
       setDebounced(next);
     }
     urlFiltersApplied.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!branch?.name || !branchIdFilter) return;
-    setFilters((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
-  }, [branch?.name, branchIdFilter]);
+  }, [searchParams]);
 
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
@@ -134,11 +151,20 @@ function AdminBookingsPageContent() {
     window.history.replaceState(
       window.history.state,
       "",
-      adminBookingsPath({ branchId: branchIdFilter || undefined, dateRange }),
+      adminBookingsPath({ branchId: branchScopeId || undefined, dateRange }),
     );
   }
 
   function clearBranchScope() {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      params.delete("branchId");
+      params.delete("branchName");
+      const q = params.toString();
+      window.history.replaceState(window.history.state, "", q ? `/admin/bookings/?${q}` : "/admin/bookings/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+    setBranchScopeId("");
     branchParam.set(null, "replace");
     setFilters((prev) => ({ ...prev, branch: "" }));
   }
@@ -159,7 +185,8 @@ function AdminBookingsPageContent() {
     if (!urlFiltersApplied.current) return;
     if (!filtersReady.current) {
       filtersReady.current = true;
-      if (!readUrlDateFilters()) setDebounced(filters);
+      const hasUrlFilters = readUrlDateFilters() || readUrlBranchScope()?.branchName;
+      if (!hasUrlFilters) setDebounced(filters);
       return;
     }
     const timer = setTimeout(() => {
@@ -181,13 +208,13 @@ function AdminBookingsPageContent() {
     isFetchingNextPage,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter, branchIdFilter],
+    queryKey: ["admin-bookings", debounced, amountFilter, customerIdFilter, branchScopeId],
     queryFn: (page) =>
       api.getBookings({
         customerId: customerIdFilter || undefined,
         customer: customerIdFilter ? undefined : debounced.customer || undefined,
-        branchId: branchIdFilter || undefined,
-        branch: branchIdFilter ? undefined : debounced.branch || undefined,
+        branchId: branchScopeId || undefined,
+        branch: branchScopeId ? undefined : debounced.branch || undefined,
         service: debounced.service || undefined,
         stylist: debounced.stylist || undefined,
         status: debounced.status || undefined,
@@ -310,7 +337,7 @@ function AdminBookingsPageContent() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={isBranchScoped && branch?.name ? branch.name : t("title")}
+        title={isBranchScoped && branchDisplayName ? branchDisplayName : t("title")}
         subtitle={
           isBranchScoped
             ? t("branchBookingsSubtitle")
@@ -322,7 +349,7 @@ function AdminBookingsPageContent() {
         <NavigationScopeBanner
           backHref="/admin"
           backLabel={tCommon("backTo", { page: tAdminLayout("nav.overview") })}
-          title={branch?.name ?? (branchLoading ? tCommon("loading") : tCommon("branch"))}
+          title={branchDisplayName || (branchLoading ? tCommon("loading") : tCommon("branch"))}
           subtitle={t("branchBookingsSubtitle")}
           onClear={clearBranchScope}
         />

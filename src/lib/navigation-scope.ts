@@ -38,6 +38,7 @@ export function buildWalkInUrl(params: WalkInUrlParams = {}): string {
 export type AdminBookingsQuery = {
   customerId?: string;
   branchId?: string;
+  branchName?: string;
   detailBookingId?: string;
   dateRange?: ProductDateRange;
 };
@@ -46,6 +47,7 @@ export function adminBookingsPath(query: AdminBookingsQuery = {}): string {
   const params = new URLSearchParams();
   if (query.customerId) params.set("customerId", query.customerId);
   if (query.branchId) params.set("branchId", query.branchId);
+  if (query.branchName) params.set("branchName", query.branchName);
   if (query.detailBookingId) params.set("detailBookingId", query.detailBookingId);
   if (query.dateRange) {
     dateRangeToSearchParams(query.dateRange).forEach((value, key) => {
@@ -53,7 +55,7 @@ export function adminBookingsPath(query: AdminBookingsQuery = {}): string {
     });
   }
   const q = params.toString();
-  return `/admin/bookings${q ? `?${q}` : ""}`;
+  return q ? `/admin/bookings/?${q}` : "/admin/bookings/";
 }
 
 export function customerDetailPathWithBooking(
