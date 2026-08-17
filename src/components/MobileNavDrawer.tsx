@@ -30,7 +30,7 @@ export function MobileNavDrawer({ open, onClose, ...panelProps }: MobileNavDrawe
     <>
       <div
         className={cn(
-          "md:hidden fixed inset-0 z-[60] bg-black/40 transition-opacity duration-200",
+          "md:hidden fixed inset-0 z-[120] bg-black/40 transition-opacity duration-200",
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         )}
         aria-hidden={!open}
@@ -38,7 +38,7 @@ export function MobileNavDrawer({ open, onClose, ...panelProps }: MobileNavDrawe
       />
       <aside
         className={cn(
-          "md:hidden enterprise-sidebar fixed inset-y-0 left-0 z-[70] flex flex-col w-[min(var(--sidebar-width),88vw)] shadow-xl transition-transform duration-200 ease-out",
+          "md:hidden enterprise-sidebar fixed inset-y-0 left-0 z-[130] flex flex-col w-[min(var(--sidebar-width),88vw)] shadow-xl transition-transform duration-200 ease-out",
           open ? "translate-x-0" : "-translate-x-full pointer-events-none"
         )}
         aria-label={tCommon("navigationMenu")}

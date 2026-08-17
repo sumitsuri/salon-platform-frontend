@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useInfiniteScrollTrigger } from "@/lib/use-infinite-scroll-trigger";
 import { useScrollLock } from "@/lib/use-scroll-lock";
+import { repairOrphanedScrollLock } from "@/lib/scroll-lock";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
@@ -636,6 +637,11 @@ export function SideSheet({
   const t = useTranslations("components.ui");
 
   useScrollLock(open);
+
+  useEffect(() => {
+    if (open) return;
+    repairOrphanedScrollLock();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

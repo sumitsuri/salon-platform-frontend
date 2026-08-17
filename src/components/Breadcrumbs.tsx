@@ -48,14 +48,16 @@ export function Breadcrumbs({
                 <span className="min-w-0" aria-current={isLast ? "page" : undefined}>
                   {content}
                 </span>
+              ) : item.onClick ? (
+                <button type="button" onClick={item.onClick} className="min-w-0 text-left touch-manipulation">
+                  {content}
+                </button>
               ) : item.href ? (
                 <Link href={item.href} className="min-w-0 touch-manipulation">
                   {content}
                 </Link>
               ) : (
-                <button type="button" onClick={item.onClick} className="min-w-0 text-left touch-manipulation">
-                  {content}
-                </button>
+                <span className="min-w-0">{content}</span>
               )}
             </li>
           );

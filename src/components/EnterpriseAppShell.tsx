@@ -85,7 +85,7 @@ function MobileTopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-30 bg-[var(--header-bg)] border-b border-[var(--border)] shadow-sm md:hidden"
+      className="fixed top-0 left-0 right-0 z-[110] bg-[var(--header-bg)] border-b border-[var(--border)] shadow-sm md:hidden"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="flex items-center justify-between h-14 px-3 w-full gap-2">

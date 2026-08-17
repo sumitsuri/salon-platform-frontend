@@ -1,9 +1,16 @@
 import { useEffect } from "react";
-import { lockBodyScroll } from "@/lib/scroll-lock";
+import { lockBodyScroll, repairOrphanedScrollLock } from "@/lib/scroll-lock";
 
 export function useScrollLock(active: boolean) {
   useEffect(() => {
-    if (!active) return;
-    return lockBodyScroll();
+    if (!active) {
+      repairOrphanedScrollLock();
+      return;
+    }
+    const release = lockBodyScroll();
+    return () => {
+      release();
+      repairOrphanedScrollLock();
+    };
   }, [active]);
 }
