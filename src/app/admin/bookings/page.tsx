@@ -10,6 +10,7 @@ import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { adminBookingsPath } from "@/lib/navigation-scope";
+import { parseDateRangeFromSearchParams } from "@/lib/date-range";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
@@ -40,7 +41,8 @@ type Filters = {
   stylist: string;
   amount: string;
   status: string;
-  date: string;
+  dateFrom: string;
+  dateTo: string;
 };
 
 const emptyFilters: Filters = {
@@ -50,8 +52,17 @@ const emptyFilters: Filters = {
   stylist: "",
   amount: "",
   status: "",
-  date: "",
+  dateFrom: "",
+  dateTo: "",
 };
+
+function readUrlDateFilters(): Pick<Filters, "dateFrom" | "dateTo"> | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("range") && !params.has("from")) return null;
+  const range = parseDateRangeFromSearchParams(params);
+  return { dateFrom: range.from, dateTo: range.to };
+}
 
 function parseAmount(value: string): { minAmount?: number; maxAmount?: number } {
   const trimmed = value.trim();
@@ -77,12 +88,7 @@ function AdminBookingsPageContent() {
   const detailParam = useUrlQueryParam("detailBookingId");
   const branchParam = useUrlQueryParam("branchId");
   const filtersReady = useRef(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const customerId = params.get("customerId");
-    if (customerId) setCustomerIdFilter(customerId);
-  }, []);
+  const urlFiltersApplied = useRef(false);
 
   const branchIdFilter = branchParam.value ?? "";
 
@@ -95,6 +101,25 @@ function AdminBookingsPageContent() {
 
   const isBranchScoped = !!branchIdFilter;
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const customerId = params.get("customerId");
+    if (customerId) setCustomerIdFilter(customerId);
+
+    const dateFilters = readUrlDateFilters();
+    if (dateFilters) {
+      const next = { ...emptyFilters, ...dateFilters };
+      setFilters(next);
+      setDebounced(next);
+    }
+    urlFiltersApplied.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!branch?.name || !branchIdFilter) return;
+    setFilters((prev) => (prev.branch === branch.name ? prev : { ...prev, branch: branch.name }));
+  }, [branch?.name, branchIdFilter]);
+
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
     scope: "admin",
@@ -103,21 +128,38 @@ function AdminBookingsPageContent() {
 
   function clearCustomerScope() {
     setCustomerIdFilter("");
+    const params = new URLSearchParams(window.location.search);
+    const hasRange = params.has("range") || params.has("from");
+    const dateRange = hasRange ? parseDateRangeFromSearchParams(params) : undefined;
     window.history.replaceState(
       window.history.state,
       "",
-      adminBookingsPath({ branchId: branchIdFilter || undefined }),
+      adminBookingsPath({ branchId: branchIdFilter || undefined, dateRange }),
     );
   }
 
   function clearBranchScope() {
     branchParam.set(null, "replace");
+    setFilters((prev) => ({ ...prev, branch: "" }));
+  }
+
+  function updateDateFrom(value: string) {
+    setFilters((prev) => ({
+      ...prev,
+      dateFrom: value,
+      dateTo: prev.dateFrom === prev.dateTo ? value : prev.dateTo,
+    }));
+  }
+
+  function updateDateTo(value: string) {
+    setFilters((prev) => ({ ...prev, dateTo: value }));
   }
 
   useEffect(() => {
+    if (!urlFiltersApplied.current) return;
     if (!filtersReady.current) {
       filtersReady.current = true;
-      setDebounced(filters);
+      if (!readUrlDateFilters()) setDebounced(filters);
       return;
     }
     const timer = setTimeout(() => {
@@ -151,8 +193,8 @@ function AdminBookingsPageContent() {
         status: debounced.status || undefined,
         minAmount: amountFilter.minAmount,
         maxAmount: amountFilter.maxAmount,
-        dateFrom: debounced.date || undefined,
-        dateTo: debounced.date || undefined,
+        dateFrom: debounced.dateFrom || undefined,
+        dateTo: debounced.dateTo || debounced.dateFrom || undefined,
         page,
         size: DEFAULT_PAGE_SIZE,
       }),
@@ -247,10 +289,22 @@ function AdminBookingsPageContent() {
       label: tMgr("columns.time"),
       filter: {
         type: "date" as const,
-        value: filters.date,
-        onChange: (v: string) => updateFilter("date", v),
+        value: filters.dateFrom,
+        onChange: updateDateFrom,
       },
     },
+    ...(filters.dateFrom && filters.dateTo && filters.dateFrom !== filters.dateTo
+      ? [
+          {
+            label: t("dateTo"),
+            filter: {
+              type: "date" as const,
+              value: filters.dateTo,
+              onChange: updateDateTo,
+            },
+          },
+        ]
+      : []),
   ];
 
   return (

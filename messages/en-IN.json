@@ -1180,6 +1180,7 @@
       "emptyTitle": "No bookings match",
       "emptyDesc": "Try adjusting your filters",
       "branchBookingsSubtitle": "All visits at this branch",
+      "dateTo": "To",
       "completeToDownload": "Invoice PDF is available after the visit is completed and paid."
     },
     "inventory": {

@@ -1,3 +1,6 @@
+import type { ProductDateRange } from "./date-range";
+import { dateRangeToSearchParams } from "./date-range";
+
 export type AppScope = "admin" | "manager";
 
 export function customersPath(scope: AppScope): string {
@@ -36,6 +39,7 @@ export type AdminBookingsQuery = {
   customerId?: string;
   branchId?: string;
   detailBookingId?: string;
+  dateRange?: ProductDateRange;
 };
 
 export function adminBookingsPath(query: AdminBookingsQuery = {}): string {
@@ -43,6 +47,11 @@ export function adminBookingsPath(query: AdminBookingsQuery = {}): string {
   if (query.customerId) params.set("customerId", query.customerId);
   if (query.branchId) params.set("branchId", query.branchId);
   if (query.detailBookingId) params.set("detailBookingId", query.detailBookingId);
+  if (query.dateRange) {
+    dateRangeToSearchParams(query.dateRange).forEach((value, key) => {
+      params.set(key, value);
+    });
+  }
   const q = params.toString();
   return `/admin/bookings${q ? `?${q}` : ""}`;
 }
