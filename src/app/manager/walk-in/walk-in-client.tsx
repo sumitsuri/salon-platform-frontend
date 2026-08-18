@@ -85,7 +85,10 @@ import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInCartPanel } from "./WalkInCartPanel";
-import { WalkInPromoAdjustments } from "./WalkInPromoAdjustments";
+import { WalkInServicePriceSheet } from "./WalkInServicePriceSheet";
+import { WalkInDiscountSheet } from "./WalkInDiscountSheet";
+import { WalkInAppliedAdjustmentsBanner } from "./WalkInAppliedAdjustmentsBanner";
+import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
 import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
@@ -222,9 +225,30 @@ export default function WalkInPage() {
   const [draftHandled, setDraftHandled] = useState(false);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
+  const [priceEditIdx, setPriceEditIdx] = useState<number | null>(null);
+  const [discountSheetOpen, setDiscountSheetOpen] = useState(false);
+  const [discountApplySuccess, setDiscountApplySuccess] = useState(false);
+  const [savingPrice, setSavingPrice] = useState(false);
+  const discountSheetOpenRef = useRef(false);
   const [addedToast, setAddedToast] = useState<string | null>(null);
   const [removedToast, setRemovedToast] = useState<string | null>(null);
   const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
+
+  useEffect(() => {
+    discountSheetOpenRef.current = discountSheetOpen;
+    if (!discountSheetOpen) setDiscountApplySuccess(false);
+  }, [discountSheetOpen]);
+
+  function closeDiscountSheet() {
+    setDiscountSheetOpen(false);
+    setDiscountApplySuccess(false);
+  }
+
+  function showDiscountAppliedSuccess(preview: BillPreview | null | undefined) {
+    if (!discountSheetOpenRef.current) return;
+    setDiscountApplySuccess(true);
+    void preview;
+  }
 
   const lookupPhoneRef = useRef<string>("");
   const lastAppliedManualRef = useRef<{ type: DiscountKind; value: string } | null>(null);
@@ -717,6 +741,10 @@ export default function WalkInPage() {
         lastAppliedManualRef.current = null;
       }
       setError("");
+      const promoApplied = (b.billPreview?.promoDiscountAmount ?? 0) > 0;
+      if (promoApplied && (b.couponId || b.offerId)) {
+        showDiscountAppliedSuccess(b.billPreview);
+      }
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -745,6 +773,10 @@ export default function WalkInPage() {
         lastAppliedManualRef.current = null;
       }
       setError("");
+      const manualApplied = (b.billPreview?.manualDiscountAmount ?? 0) > 0;
+      if (manualApplied && b.billDiscountType) {
+        showDiscountAppliedSuccess(b.billPreview);
+      }
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -1301,13 +1333,26 @@ export default function WalkInPage() {
     setCart(next);
   }
 
-  function updatePriceExtra(idx: number, raw: string) {
-    const extra = Math.max(0, Number(raw) || 0);
-    setCart((prev) => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], priceExtra: extra };
-      return next;
-    });
+  async function applyLinePrice(idx: number, finalPrice: number) {
+    const item = cart[idx];
+    if (!item) return;
+    const extra = Math.max(0, finalPrice - item.basePrice);
+    const nextCart = cart.map((c, i) => (i === idx ? { ...c, priceExtra: extra } : c));
+    setCart(nextCart);
+    setPriceEditIdx(null);
+
+    if (step === 3 && bookingId && !billingLocked) {
+      setSavingPrice(true);
+      setError("");
+      try {
+        const b = await api.updateBookingLines(bookingId, toLinePayload(nextCart));
+        hydrateFromBooking(b);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : tCommon("failed"));
+      } finally {
+        setSavingPrice(false);
+      }
+    }
   }
 
   function toLinePayload(items: CartItem[]) {
@@ -1318,7 +1363,7 @@ export default function WalkInPage() {
         staffId: c.staffId,
         quantity: 1,
       };
-      if (c.variablePricing && total > c.basePrice) {
+      if (total > c.basePrice) {
         payload.unitPrice = total;
       }
       return payload;
@@ -2335,7 +2380,7 @@ export default function WalkInPage() {
                 onRemove={removeFromCart}
                 onUpdateStaff={updateStaff}
                 onApplyStylistToAll={applyStylistToAll}
-                onUpdatePriceExtra={updatePriceExtra}
+                onEditPrice={setPriceEditIdx}
                 onSaveOpen={() => void saveOpenVisit()}
                 onProceedToBill={() => void proceedToBill()}
               />
@@ -2384,7 +2429,7 @@ export default function WalkInPage() {
                       onRemove={removeFromCart}
                       onUpdateStaff={updateStaff}
                       onApplyStylistToAll={applyStylistToAll}
-                      onUpdatePriceExtra={updatePriceExtra}
+                      onEditPrice={setPriceEditIdx}
                       onSaveOpen={() => void saveOpenVisit()}
                       onProceedToBill={() => void proceedToBill()}
                     />
@@ -2452,7 +2497,7 @@ export default function WalkInPage() {
       )}
 
       {step === 3 && billPreview && (
-        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6">
+        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-6">
           {membership && (
             <div className="flex items-center gap-2 rounded-lg border border-violet-200/90 bg-violet-50/50 px-3 py-2 text-xs dark:border-violet-900/50 dark:bg-violet-950/25">
               <Sparkles className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
@@ -2524,9 +2569,18 @@ export default function WalkInPage() {
                               )}
                             </div>
                           </div>
-                          <span className="font-semibold text-[var(--text-primary)] shrink-0 tabular-nums text-sm">
-                            {formatMoney(linePrice, localeKit)}
-                          </span>
+                          {!isMembershipRow && !billingLocked ? (
+                            <WalkInEditablePriceButton
+                              amount={linePrice}
+                              localeKit={localeKit}
+                              size="md"
+                              onEdit={() => setPriceEditIdx(idx)}
+                            />
+                          ) : (
+                            <span className="font-semibold text-[var(--text-primary)] tabular-nums text-sm shrink-0">
+                              {formatMoney(linePrice, localeKit)}
+                            </span>
+                          )}
                         </li>
                       );
                     })
@@ -2548,9 +2602,18 @@ export default function WalkInPage() {
                                     <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylist", { name: stylist })}</p>
                                   )}
                                 </div>
-                                <span className="font-semibold text-sm text-[var(--text-primary)] shrink-0 tabular-nums">
-                                  {formatMoney(cartLinePrice(item), localeKit)}
-                                </span>
+                                {!billingLocked ? (
+                                  <WalkInEditablePriceButton
+                                    amount={cartLinePrice(item)}
+                                    localeKit={localeKit}
+                                    size="md"
+                                    onEdit={() => setPriceEditIdx(idx)}
+                                  />
+                                ) : (
+                                  <span className="font-semibold text-sm text-[var(--text-primary)] tabular-nums shrink-0">
+                                    {formatMoney(cartLinePrice(item), localeKit)}
+                                  </span>
+                                )}
                               </li>
                             );
                           })}
@@ -2570,6 +2633,31 @@ export default function WalkInPage() {
                     })())}
               </ul>
             </div>
+
+            {!billingLocked && (
+              <WalkInAppliedAdjustmentsBanner
+                billPreview={billPreview}
+                localeKit={localeKit}
+                manualDiscountApplied={manualDiscountApplied}
+                promoLocked={promoLocked}
+              />
+            )}
+
+            {!billingLocked && (
+              <button
+                type="button"
+                onClick={() => setDiscountSheetOpen(true)}
+                className={cn(
+                  btnSecondary,
+                  "hidden lg:flex w-full min-h-11 items-center justify-center gap-2",
+                  (manualDiscountApplied || promoLocked) &&
+                    "border-emerald-300 bg-emerald-50/80 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+                )}
+              >
+                <Tag className="h-4 w-4 shrink-0" aria-hidden />
+                {manualDiscountApplied || promoLocked ? t("editDiscount") : t("applyManualDiscount")}
+              </button>
+            )}
 
             <div className="pt-2 border-t border-[var(--border)]">
               <BillBreakdownRows
@@ -2656,49 +2744,6 @@ export default function WalkInPage() {
                 <p className="text-[10px] text-[var(--text-tertiary)] pt-1">{t("gstinLabel", { gstin: branch.gstin })}</p>
               )}
             </div>
-
-            {!billingLocked && (
-              <details
-                className="group rounded-lg border border-amber-200/80 bg-amber-50/25 dark:border-amber-900/40 dark:bg-amber-950/15"
-                open={!!selectedCouponId || !!selectedOfferId || manualDiscountApplied}
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 font-semibold text-sm touch-manipulation">
-                  <div className="min-w-0 flex flex-1 items-start gap-2">
-                    <Tag className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-                    <div className="min-w-0">
-                      <span>{t("adjustments")}</span>
-                      {adjustmentSummary && (
-                        <p className="mt-0.5 text-xs font-normal text-[var(--text-secondary)] truncate">
-                          {adjustmentSummary}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronDown className="w-4 h-4 shrink-0 transition group-open:rotate-180" />
-                </summary>
-                <div className="border-t border-amber-200/60 bg-[var(--surface)]/80 px-3 py-2.5 dark:border-amber-900/40">
-                  <WalkInPromoAdjustments
-                    coupons={coupons}
-                    offers={offers}
-                    localeKit={localeKit}
-                    selectedCouponId={selectedCouponId}
-                    selectedOfferId={selectedOfferId}
-                    billDiscountType={billDiscountType}
-                    billDiscountValue={billDiscountValue}
-                    promoLocked={promoLocked}
-                    manualDiscountApplied={manualDiscountApplied}
-                    manualDiscountAmount={billPreview?.manualDiscountAmount}
-                    manualDiscountLabel={billPreview?.manualDiscountLabel}
-                    onCouponChange={onCouponChange}
-                    onOfferChange={onOfferChange}
-                    onBillDiscountTypeChange={setBillDiscountType}
-                    onBillDiscountValueChange={setBillDiscountValue}
-                    onClearManualDiscount={clearManualDiscount}
-                    applyPending={applyBillDiscount.isPending}
-                  />
-                </div>
-              </details>
-            )}
 
           {!billingLocked && (
             <>
@@ -2890,7 +2935,22 @@ export default function WalkInPage() {
 
           {!billingLocked && (
             <div className="lg:hidden">
-              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)]">
+              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)] space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setDiscountSheetOpen(true)}
+                  className={cn(
+                    btnSecondary,
+                    "w-full min-h-10 flex items-center justify-center gap-2 text-sm",
+                    (manualDiscountApplied || promoLocked) &&
+                      "border-emerald-300 bg-emerald-50/80 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
+                  )}
+                >
+                  <Tag className="h-4 w-4 shrink-0" aria-hidden />
+                  {(manualDiscountApplied || promoLocked || adjustmentSummary)
+                    ? t("editDiscount")
+                    : t("applyManualDiscount")}
+                </button>
                 <button
                   type="button"
                   onClick={submitPayment}
@@ -2906,7 +2966,7 @@ export default function WalkInPage() {
                   {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
                 </button>
               </div>
-              <div className="h-[calc(5.5rem+env(safe-area-inset-bottom))]" aria-hidden />
+              <div className="h-[calc(7.5rem+env(safe-area-inset-bottom))]" aria-hidden />
             </div>
           )}
         </div>
@@ -2920,6 +2980,42 @@ export default function WalkInPage() {
           </button>
         </Card>
       )}
+
+      <WalkInServicePriceSheet
+        open={priceEditIdx != null}
+        item={priceEditIdx != null ? cart[priceEditIdx] ?? null : null}
+        saving={savingPrice}
+        onClose={() => setPriceEditIdx(null)}
+        onSave={(finalPrice) => {
+          if (priceEditIdx == null) return;
+          void applyLinePrice(priceEditIdx, finalPrice);
+        }}
+      />
+
+      <WalkInDiscountSheet
+        open={discountSheetOpen}
+        onClose={closeDiscountSheet}
+        applySuccess={discountApplySuccess}
+        successAmount={(billPreview?.manualDiscountAmount ?? 0) + (billPreview?.promoDiscountAmount ?? 0)}
+        coupons={coupons}
+        offers={offers}
+        localeKit={localeKit}
+        selectedCouponId={selectedCouponId}
+        selectedOfferId={selectedOfferId}
+        billDiscountType={billDiscountType}
+        billDiscountValue={billDiscountValue}
+        promoLocked={promoLocked}
+        manualDiscountApplied={manualDiscountApplied}
+        manualDiscountAmount={billPreview?.manualDiscountAmount}
+        manualDiscountLabel={billPreview?.manualDiscountLabel}
+        disabled={billingLocked}
+        applyPending={applyBillDiscount.isPending}
+        onCouponChange={onCouponChange}
+        onOfferChange={onOfferChange}
+        onBillDiscountTypeChange={setBillDiscountType}
+        onBillDiscountValueChange={setBillDiscountValue}
+        onClearManualDiscount={clearManualDiscount}
+      />
     </div>
   );
 }

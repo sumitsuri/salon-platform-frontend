@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AlertBanner, btnPrimary, inputClass } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ export function LoginFormCard({
     <div
       className={cn(
         "pravaah-form-card bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-lg",
-        compact ? "p-5 border-0 shadow-none bg-transparent" : "p-5 sm:p-8",
+        compact ? "p-5 border-0 shadow-none bg-[var(--surface)]" : "p-5 sm:p-8",
         className
       )}
     >
@@ -57,7 +58,15 @@ export function LoginFormCard({
           />
         </div>
         <div>
-          <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1.5">{t("password")}</label>
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <label className="block text-sm font-semibold text-[var(--text-primary)]">{t("password")}</label>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-semibold text-[var(--brand-text)] hover:underline"
+            >
+              {t("forgotPassword")}
+            </Link>
+          </div>
           <input
             type="password"
             value={password}

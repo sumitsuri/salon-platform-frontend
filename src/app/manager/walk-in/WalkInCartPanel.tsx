@@ -4,9 +4,10 @@ import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BillPreview, StaffItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
-import { formatCurrency, formatMoney, cn } from "@/lib/utils";
+import { formatMoney, cn } from "@/lib/utils";
 import { Card, inputClass, selectClass, btnPrimary, btnSecondary } from "@/components/ui";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
+import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 
 interface WalkInCartPanelProps {
   cart: WalkInCartItem[];
@@ -25,7 +26,7 @@ interface WalkInCartPanelProps {
   onRemove: (idx: number) => void;
   onUpdateStaff: (idx: number, staffId: string) => void;
   onApplyStylistToAll: (staffId: string) => void;
-  onUpdatePriceExtra: (idx: number, raw: string) => void;
+  onEditPrice: (idx: number) => void;
   onSaveOpen: () => void;
   onProceedToBill: () => void;
   variant: "panel" | "sheet" | "dock-summary";
@@ -49,7 +50,7 @@ export function WalkInCartPanel({
   onRemove,
   onUpdateStaff,
   onApplyStylistToAll,
-  onUpdatePriceExtra,
+  onEditPrice,
   onSaveOpen,
   onProceedToBill,
   variant,
@@ -125,10 +126,12 @@ export function WalkInCartPanel({
               <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
                 <div className="flex justify-between items-start gap-2">
                   <p className="font-medium text-sm min-w-0 truncate">{item.serviceName}</p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-semibold text-[var(--brand-text)] tabular-nums">
-                      {formatCurrency(walkInCartLinePrice(item), localeKit)}
-                    </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <WalkInEditablePriceButton
+                      amount={walkInCartLinePrice(item)}
+                      localeKit={localeKit}
+                      onEdit={() => onEditPrice(idx)}
+                    />
                     <button
                       type="button"
                       onClick={() => onRemove(idx)}
@@ -139,20 +142,6 @@ export function WalkInCartPanel({
                     </button>
                   </div>
                 </div>
-                {item.variablePricing && (
-                  <label className="mt-2 block text-xs text-[var(--text-secondary)]">
-                    {t("priceExtra")}
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={item.priceExtra || ""}
-                      onChange={(e) => onUpdatePriceExtra(idx, e.target.value)}
-                      className={`${inputClass} mt-1 py-2 min-h-10`}
-                      placeholder="0"
-                    />
-                  </label>
-                )}
                 {staff.length > 0 && (
                   <label className="mt-2 block text-xs">
                     <span className="font-semibold text-[var(--text-secondary)]">{t("stylistPerService")}</span>

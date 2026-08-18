@@ -235,6 +235,18 @@ export const api = {
   login: (email: string, password: string) =>
     request<AuthUser>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
 
+  forgotPassword: (email: string) =>
+    publicRequest<{ message: string }>("/api/v1/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    publicRequest<{ message: string }>("/api/v1/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    }),
+
   me: () => request<AuthUser>("/api/v1/auth/me"),
 
   getLocales: () => request<LocaleInfo[]>("/api/v1/meta/locales"),
