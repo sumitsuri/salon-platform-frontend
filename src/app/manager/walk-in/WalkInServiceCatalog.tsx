@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Search, Star, Plus, Minus, ChevronDown, ChevronLeft, Check } from "lucide-react";
+import { Search, Star, Plus, Minus, ChevronDown, ChevronLeft, X, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BranchServiceItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card, inputClass } from "@/components/ui";
-import { WalkInBottomSheet } from "./WalkInBottomSheet";
 import type { WalkInSubCategory, WalkInSubCategoryGroup } from "./walk-in-catalog";
 
 interface WalkInServiceCatalogProps {
@@ -28,6 +27,49 @@ interface WalkInServiceCatalogProps {
   localeKit: TenantLocaleKit;
   onToggleService: (s: BranchServiceItem) => void;
   onToggleFavorite: (id: string) => void;
+}
+
+function CatalogPickerSheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  const tCommon = useTranslations("common");
+
+  if (!open) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+        aria-label={tCommon("close")}
+        onClick={onClose}
+      />
+      <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(72dvh,520px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)] lg:hidden">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 shrink-0">
+          <p className="font-bold text-sm text-[var(--text-primary)]">{title}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-[var(--surface-muted)] touch-manipulation"
+            aria-label={tCommon("close")}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto overscroll-contain touch-scroll-y min-h-0 flex-1 p-2" data-touch-scroll>
+          {children}
+        </div>
+      </div>
+    </>
+  );
 }
 
 function HorizontalScrollFade({ children, className }: { children: ReactNode; className?: string }) {
@@ -134,7 +176,7 @@ export function WalkInServiceCatalog({
   }
 
   return (
-    <Card padding={false} className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden !animate-none opacity-100">
+    <Card padding={false} className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
       <div className="px-2.5 sm:px-3 py-1.5 lg:py-2 border-b border-[var(--border)] space-y-1.5 lg:space-y-2 shrink-0">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
@@ -400,11 +442,10 @@ export function WalkInServiceCatalog({
         )}
       </div>
 
-      <WalkInBottomSheet
+      <CatalogPickerSheet
         open={categorySheetOpen}
         onClose={() => setCategorySheetOpen(false)}
         title={t("categorySheetTitle")}
-        className="max-h-[min(72dvh,520px)]"
       >
         <div className="space-y-1">
           <button
@@ -437,13 +478,12 @@ export function WalkInServiceCatalog({
             </button>
           ))}
         </div>
-      </WalkInBottomSheet>
+      </CatalogPickerSheet>
 
-      <WalkInBottomSheet
+      <CatalogPickerSheet
         open={subCategorySheetOpen}
         onClose={() => setSubCategorySheetOpen(false)}
         title={t("subcategorySheetTitle")}
-        className="max-h-[min(72dvh,520px)]"
       >
         <div className="space-y-1">
           {inServiceList && (
@@ -477,7 +517,7 @@ export function WalkInServiceCatalog({
             </button>
           ))}
         </div>
-      </WalkInBottomSheet>
+      </CatalogPickerSheet>
     </Card>
   );
 }

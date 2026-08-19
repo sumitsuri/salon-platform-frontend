@@ -1,7 +1,5 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -16,14 +14,6 @@ interface WalkInBottomSheetProps {
   className?: string;
 }
 
-function useIsMounted() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
-}
-
 export function WalkInBottomSheet({
   open,
   title,
@@ -33,13 +23,12 @@ export function WalkInBottomSheet({
   className,
 }: WalkInBottomSheetProps) {
   const tCommon = useTranslations("common");
-  const mounted = useIsMounted();
 
   useScrollLock(open);
 
-  if (!open || !mounted) return null;
+  if (!open) return null;
 
-  return createPortal(
+  return (
     <>
       <button
         type="button"
@@ -76,7 +65,6 @@ export function WalkInBottomSheet({
           </div>
         ) : null}
       </div>
-    </>,
-    document.body
+    </>
   );
 }
