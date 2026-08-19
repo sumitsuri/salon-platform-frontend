@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Search, Star, Plus, Minus, ChevronDown, ChevronLeft, X, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BranchServiceItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
 import { formatCurrency, cn } from "@/lib/utils";
+import { useScrollLock } from "@/lib/use-scroll-lock";
 import { Card, inputClass } from "@/components/ui";
 import type { WalkInSubCategory, WalkInSubCategoryGroup } from "./walk-in-catalog";
 
@@ -29,6 +31,14 @@ interface WalkInServiceCatalogProps {
   onToggleFavorite: (id: string) => void;
 }
 
+function useIsMounted() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+}
+
 function CatalogPickerSheet({
   open,
   onClose,
@@ -41,18 +51,26 @@ function CatalogPickerSheet({
   children: ReactNode;
 }) {
   const tCommon = useTranslations("common");
+  const mounted = useIsMounted();
 
-  if (!open) return null;
+  useScrollLock(open);
 
-  return (
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <>
       <button
         type="button"
-        className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+        className="fixed inset-0 z-[140] bg-black/45 lg:hidden"
         aria-label={tCommon("close")}
         onClick={onClose}
       />
-      <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(72dvh,520px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)] lg:hidden">
+      <div
+        className="fixed inset-x-0 bottom-0 z-[150] flex max-h-[min(72dvh,520px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)] lg:hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 shrink-0">
           <p className="font-bold text-sm text-[var(--text-primary)]">{title}</p>
           <button
@@ -68,7 +86,8 @@ function CatalogPickerSheet({
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
 
