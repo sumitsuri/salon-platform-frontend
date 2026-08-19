@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Search, Star, Plus, Minus, ChevronDown, X, Check } from "lucide-react";
+import { Search, Star, Plus, Minus, ChevronDown, ChevronLeft, X, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { BranchServiceItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
@@ -176,7 +176,7 @@ export function WalkInServiceCatalog({
   }
 
   return (
-    <Card padding={false} className="flex flex-col min-h-0 flex-1 overflow-hidden">
+    <Card padding={false} className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
       <div className="px-2.5 sm:px-3 py-1.5 lg:py-2 border-b border-[var(--border)] space-y-1.5 lg:space-y-2 shrink-0">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
@@ -221,6 +221,18 @@ export function WalkInServiceCatalog({
               </button>
             ))}
           </HorizontalScrollFade>
+        )}
+
+        {/* Mobile: quick step back within the catalog (header back does the same) */}
+        {inServiceList && activeSub && (
+          <button
+            type="button"
+            onClick={() => onCatalogSubChange("")}
+            className="inline-flex items-center gap-1 rounded-lg px-1 py-1 text-xs font-semibold text-[var(--brand-text)] hover:bg-[var(--surface-muted)] touch-manipulation lg:hidden"
+          >
+            <ChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {t("backToServiceTypes")}
+          </button>
         )}
 
         {/* Mobile: category pickers instead of horizontal chip rows (P0) */}
@@ -320,7 +332,10 @@ export function WalkInServiceCatalog({
         )}
       </div>
 
-      <div className="p-1.5 sm:p-2 lg:p-2.5 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-scroll-y" data-touch-scroll>
+      <div
+        className="p-1.5 sm:p-2 lg:p-2.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:touch-scroll-y"
+        data-touch-scroll
+      >
         {inBrowseMode ? (
           <div className="space-y-2 lg:space-y-3">
             {subCategoryGroups.length === 0 ? (

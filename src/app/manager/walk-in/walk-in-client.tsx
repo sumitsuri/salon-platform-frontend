@@ -84,6 +84,7 @@ import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
 import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
+import { WalkInCatalogTrail, type WalkInCatalogTrailSegment } from "./WalkInCatalogTrail";
 import { WalkInCartPanel } from "./WalkInCartPanel";
 import { WalkInServicePriceSheet } from "./WalkInServicePriceSheet";
 import { WalkInDiscountSheet } from "./WalkInDiscountSheet";
@@ -98,6 +99,7 @@ import {
   groupWalkInSubCategories,
   shouldAutoSelectSubCategory,
 } from "./walk-in-catalog";
+import { repairOrphanedScrollLock } from "@/lib/scroll-lock";
 
 type Screen = "hub" | "flow";
 type HubTab = "open" | "history";
@@ -273,14 +275,8 @@ export default function WalkInPage() {
   }, [step]);
 
   useEffect(() => {
-    const scrollRoot = document.getElementById("app-mobile-scroll");
-    if (!scrollRoot) return;
-    if (step === 2) {
-      scrollRoot.classList.add("walk-in-step-2-scroll");
-    } else {
-      scrollRoot.classList.remove("walk-in-step-2-scroll");
-    }
-    return () => scrollRoot.classList.remove("walk-in-step-2-scroll");
+    if (step !== 2) return;
+    repairOrphanedScrollLock();
   }, [step]);
 
   useEffect(() => {
@@ -344,6 +340,110 @@ export default function WalkInPage() {
     const auto = shouldAutoSelectSubCategory(subs, id);
     setCatalogSub(auto ?? "");
   }
+
+  function resetCatalogBrowse() {
+    setServiceQuery("");
+    setCatalogTop("");
+    setCatalogSub("");
+  }
+
+  function catalogCanGoBack() {
+    return Boolean(serviceQuery.trim() || catalogSub || catalogTop);
+  }
+
+  function goBackInCatalog() {
+    setCartSheetOpen(false);
+    if (serviceQuery.trim()) {
+      setServiceQuery("");
+      return;
+    }
+    if (catalogSub) {
+      setCatalogSub("");
+      return;
+    }
+    if (catalogTop) {
+      setCatalogTop("");
+      setCatalogSub("");
+    }
+  }
+
+  function navigateCatalogTo(top: string, sub: string) {
+    setCartSheetOpen(false);
+    setServiceQuery("");
+    if (!top && !sub) {
+      resetCatalogBrowse();
+      return;
+    }
+    if (sub) {
+      setCatalogTop(top);
+      setCatalogSub(sub);
+      return;
+    }
+    handleCatalogTopChange(top);
+  }
+
+  const activeCatalogTop = useMemo(
+    () => topCategories.find((category) => category.id === catalogTop),
+    [topCategories, catalogTop]
+  );
+  const activeCatalogSub = useMemo(
+    () => subCategories.find((sub) => sub.id === catalogSub),
+    [subCategories, catalogSub]
+  );
+
+  const catalogTrailSegments = useMemo((): WalkInCatalogTrailSegment[] => {
+    const query = serviceQuery.trim();
+    if (query) {
+      const shortQuery = query.length > 14 ? `${query.slice(0, 14)}…` : query;
+      return [
+        {
+          id: "all",
+          label: t("allCategories"),
+          onSelect: resetCatalogBrowse,
+        },
+        {
+          id: "search",
+          label: `${t("searchTrail")}: ${shortQuery}`,
+          active: true,
+        },
+      ];
+    }
+
+    const segments: WalkInCatalogTrailSegment[] = [
+      {
+        id: "all",
+        label: t("allCategories"),
+        active: !catalogTop && !catalogSub,
+        onSelect: catalogTop || catalogSub ? () => navigateCatalogTo("", "") : undefined,
+      },
+    ];
+
+    if (catalogTop && activeCatalogTop) {
+      segments.push({
+        id: `top-${catalogTop}`,
+        label: activeCatalogTop.name,
+        active: !catalogSub,
+        onSelect: catalogSub ? () => setCatalogSub("") : undefined,
+      });
+    }
+
+    if (catalogSub && activeCatalogSub) {
+      segments.push({
+        id: `sub-${catalogSub}`,
+        label: activeCatalogSub.name,
+        active: true,
+      });
+    }
+
+    return segments;
+  }, [
+    activeCatalogSub,
+    activeCatalogTop,
+    catalogSub,
+    catalogTop,
+    serviceQuery,
+    t,
+  ]);
 
   const recentServices = useMemo(
     () => recentServiceIds.map((id) => servicesById.get(id)).filter((s): s is BranchServiceItem => !!s),
@@ -532,6 +632,32 @@ export default function WalkInPage() {
     setScreen("hub");
     router.replace(urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl());
     void refetchOpenVisits();
+  }
+
+  function hasFlowProgress() {
+    return (
+      cart.length > 0 ||
+      Boolean(customerName.trim() || phone.trim() || visitPassInput.trim() || customerId || bookingId)
+    );
+  }
+
+  function confirmLeaveFlow() {
+    if (!hasFlowProgress()) return true;
+    return window.confirm(t("leaveFlowConfirm"));
+  }
+
+  async function goBackInFlow() {
+    if (billingLocked) return;
+    if (step === 3) {
+      await goToStep(2);
+      return;
+    }
+    if (step === 2) {
+      if (catalogCanGoBack()) goBackInCatalog();
+      return;
+    }
+    if (!confirmLeaveFlow()) return;
+    returnFromFlow();
   }
 
   function setVisitsTab(next: HubTab) {
@@ -1808,17 +1934,33 @@ export default function WalkInPage() {
       : steps[Math.max(0, step - 1)]
     : t("title");
 
-  const flowBackButton =
-    !billingLocked ? (
-      <button
-        type="button"
-        onClick={returnFromFlow}
-        className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--brand-text)] hover:opacity-90 touch-manipulation min-h-9 min-w-9"
-        aria-label={urlCustomerId ? tCustomers("backToCustomers") : t("backToOpenVisits")}
-      >
-        <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-      </button>
-    ) : null;
+  const flowBackLabel =
+    step === 3
+      ? tCommon("backTo", { page: t("stepServices") })
+      : step === 2
+        ? serviceQuery.trim()
+          ? t("clearSearch")
+          : catalogSub
+            ? t("backToServiceTypes")
+            : catalogTop
+              ? t("backToAllCategories")
+              : t("backToCategories")
+        : urlCustomerId
+          ? tCustomers("backToCustomers")
+          : t("backToOpenVisits");
+
+  const showFlowBackButton = !billingLocked && (step !== 2 || catalogCanGoBack());
+
+  const flowBackButton = showFlowBackButton ? (
+    <button
+      type="button"
+      onClick={() => void goBackInFlow()}
+      className="inline-flex shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--brand-text)] hover:opacity-90 touch-manipulation min-h-9 min-w-9"
+      aria-label={flowBackLabel}
+    >
+      <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+    </button>
+  ) : null;
 
   const stepSelectHandler = billingLocked ? undefined : goToStep;
   const showFlowChrome = step === 2 || step === 3;
@@ -1828,7 +1970,7 @@ export default function WalkInPage() {
       className={cn(
         "space-y-2 w-full min-w-0 mx-auto",
         step === 2
-          ? "max-w-6xl max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0"
+          ? "max-w-6xl"
           : step === 3
             ? "max-w-3xl xl:max-w-4xl pb-[max(0.5rem,env(safe-area-inset-bottom))]"
             : "max-w-6xl pb-[max(0.5rem,env(safe-area-inset-bottom))]"
@@ -1838,7 +1980,7 @@ export default function WalkInPage() {
         <div
           className={cn(
             "rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm w-full min-w-0",
-            step === 2 && "max-lg:shrink-0",
+            step === 2 && "max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:shadow-sm",
             step === 3 && "max-w-3xl xl:max-w-4xl mx-auto"
           )}
         >
@@ -1940,8 +2082,8 @@ export default function WalkInPage() {
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2 min-w-0 px-3 py-2 sm:px-4">
-                {flowBackButton}
+              <div className="flex items-start gap-2 min-w-0 px-3 py-2 sm:px-4">
+                {flowBackButton ? <div className="pt-0.5">{flowBackButton}</div> : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1 min-w-0">
                     <p className="min-w-0 truncate text-sm font-bold leading-tight text-[var(--text-primary)]">
@@ -1958,6 +2100,7 @@ export default function WalkInPage() {
                       </button>
                     )}
                   </div>
+                  <WalkInCatalogTrail segments={catalogTrailSegments} className="mt-0.5" />
                   {(visitPassId || membership) && (
                     <div className="mt-0.5 flex flex-wrap items-center gap-1 max-lg:hidden">
                       {visitPassId && (
@@ -2299,7 +2442,7 @@ export default function WalkInPage() {
       {step === 2 && (
         <div
           className={cn(
-            "min-w-0 space-y-2 max-lg:flex max-lg:flex-col max-lg:flex-1 max-lg:min-h-0",
+            "min-w-0 space-y-2",
             cart.length === 0
               ? "max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
               : "max-lg:pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))]"
@@ -2338,8 +2481,8 @@ export default function WalkInPage() {
             <Callout variant="warning" title={t("noStaffConfigured")} className="shrink-0" />
           )}
 
-          <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0 max-lg:flex-1 max-lg:min-h-0">
-            <div className="flex flex-1 flex-col min-w-0 min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
+          <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0">
+            <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
               <WalkInServiceCatalog
                 serviceQuery={serviceQuery}
                 onServiceQueryChange={setServiceQuery}
