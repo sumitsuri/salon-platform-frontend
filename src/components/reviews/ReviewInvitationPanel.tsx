@@ -54,8 +54,8 @@ export function ReviewInvitationPanel({
   if (compact) {
     return (
       <div className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
-        <div className="shrink-0 rounded-md bg-white p-1 ring-1 ring-[var(--border)]">
-          <QRCode value={reviewUrl} size={72} />
+        <div className="shrink-0 rounded-md bg-white p-1.5 ring-1 ring-[var(--border)]">
+          <QRCode value={reviewUrl} size={88} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug">{title}</p>
@@ -106,7 +106,7 @@ export function ReviewInvitationPanel({
 
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
         <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-[var(--border)]">
-          <QRCode value={reviewUrl} size={120} />
+          <QRCode value={reviewUrl} size={136} />
         </div>
         <div className="w-full min-w-0 space-y-2">
           <p className="hidden sm:block text-[11px] break-all text-[var(--text-tertiary)]">{reviewUrl}</p>

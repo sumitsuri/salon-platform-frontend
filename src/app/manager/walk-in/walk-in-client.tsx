@@ -85,6 +85,8 @@ import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInCatalogTrail, type WalkInCatalogTrailSegment } from "./WalkInCatalogTrail";
+import { WalkInMobileCartActions } from "./WalkInMobileCartActions";
+import { WalkInMobilePaymentActions } from "./WalkInMobilePaymentActions";
 import { WalkInCartPanel } from "./WalkInCartPanel";
 import { WalkInServicePriceSheet } from "./WalkInServicePriceSheet";
 import { WalkInDiscountSheet } from "./WalkInDiscountSheet";
@@ -1759,6 +1761,10 @@ export default function WalkInPage() {
     return parts.length > 0 ? parts.join(" · ") : null;
   }, [selectedCouponId, selectedOfferId, coupons, offers, manualDiscountApplied, billPreview?.manualDiscountLabel, t]);
 
+  const discountSavings =
+    (billPreview?.manualDiscountAmount ?? 0) + (billPreview?.promoDiscountAmount ?? 0);
+  const hasBillDiscount = discountSavings > 0 || manualDiscountApplied || promoLocked;
+
   const stylistsRequired = staff.length > 0;
   const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
   const cartTotalDisplay = formatMoney(
@@ -2445,7 +2451,7 @@ export default function WalkInPage() {
             "min-w-0 space-y-2",
             cart.length === 0
               ? "max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
-              : "max-lg:pb-[calc(6.25rem+env(safe-area-inset-bottom,0px))]"
+              : "max-lg:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
           )}
         >
           {addedToast && (
@@ -2581,15 +2587,15 @@ export default function WalkInPage() {
               </>
             )}
 
-            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-4px_24px_rgba(15,23,42,0.1)]">
+            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)]">
               {cart.length === 0 ? (
-                <p className="text-center text-xs text-[var(--text-tertiary)] py-1">{t("cartEmpty")}</p>
+                <p className="text-center text-xs text-[var(--text-tertiary)] py-0.5">{t("cartEmpty")}</p>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <button
                     type="button"
                     onClick={() => setCartSheetOpen(true)}
-                    className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-muted)]/50 px-2.5 py-1.5 touch-manipulation"
+                    className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)]/80 bg-[var(--surface-muted)]/40 px-2.5 py-1 touch-manipulation"
                     aria-label={t("viewCart")}
                   >
                     <ShoppingBag className="w-4 h-4 shrink-0 text-[var(--brand-text)]" aria-hidden />
@@ -2614,24 +2620,13 @@ export default function WalkInPage() {
                     </p>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void proceedToBill()}
-                      disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
-                      className={`${btnPrimary} min-h-10 px-2 text-xs sm:text-sm leading-tight`}
-                    >
-                      {saving ? tCommon("processing") : t("continueBill")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void saveOpenVisit()}
-                      disabled={cart.length === 0 || saving || staff.length === 0}
-                      className={`${btnSecondary} min-h-10 px-2 text-xs sm:text-sm leading-tight`}
-                    >
-                      {saving ? tCommon("processing") : t("saveOpenVisit")}
-                    </button>
-                  </div>
+                  <WalkInMobileCartActions
+                    saving={saving}
+                    proceedDisabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                    saveDisabled={cart.length === 0 || saving || staff.length === 0}
+                    onProceed={() => void proceedToBill()}
+                    onSave={() => void saveOpenVisit()}
+                  />
                 </div>
               )}
             </div>
@@ -2640,7 +2635,7 @@ export default function WalkInPage() {
       )}
 
       {step === 3 && billPreview && (
-        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
           {membership && (
             <div className="flex items-center gap-2 rounded-lg border border-violet-200/90 bg-violet-50/50 px-3 py-2 text-xs dark:border-violet-900/50 dark:bg-violet-950/25">
               <Sparkles className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
@@ -2783,22 +2778,18 @@ export default function WalkInPage() {
                 localeKit={localeKit}
                 manualDiscountApplied={manualDiscountApplied}
                 promoLocked={promoLocked}
+                onEdit={() => setDiscountSheetOpen(true)}
               />
             )}
 
-            {!billingLocked && (
+            {!billingLocked && !hasBillDiscount && (
               <button
                 type="button"
                 onClick={() => setDiscountSheetOpen(true)}
-                className={cn(
-                  btnSecondary,
-                  "hidden lg:flex w-full min-h-11 items-center justify-center gap-2",
-                  (manualDiscountApplied || promoLocked) &&
-                    "border-emerald-300 bg-emerald-50/80 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
-                )}
+                className={cn(btnSecondary, "hidden lg:flex w-full min-h-11 items-center justify-center gap-2")}
               >
                 <Tag className="h-4 w-4 shrink-0" aria-hidden />
-                {manualDiscountApplied || promoLocked ? t("editDiscount") : t("applyManualDiscount")}
+                {t("applyManualDiscount")}
               </button>
             )}
 
@@ -3078,38 +3069,25 @@ export default function WalkInPage() {
 
           {!billingLocked && (
             <div className="lg:hidden">
-              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-3 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_32px_rgba(15,23,42,0.12)] space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setDiscountSheetOpen(true)}
-                  className={cn(
-                    btnSecondary,
-                    "w-full min-h-10 flex items-center justify-center gap-2 text-sm",
-                    (manualDiscountApplied || promoLocked) &&
-                      "border-emerald-300 bg-emerald-50/80 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"
-                  )}
-                >
-                  <Tag className="h-4 w-4 shrink-0" aria-hidden />
-                  {(manualDiscountApplied || promoLocked || adjustmentSummary)
-                    ? t("editDiscount")
-                    : t("applyManualDiscount")}
-                </button>
-                <button
-                  type="button"
-                  onClick={submitPayment}
-                  disabled={
+              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)]">
+                <WalkInMobilePaymentActions
+                  saving={payBooking.isPending}
+                  payDisabled={
                     !taxValid ||
                     payBooking.isPending ||
                     applyPromo.isPending ||
                     applyBillDiscount.isPending ||
                     (paymentMode === "SPLIT" && !splitValid)
                   }
-                  className={`${btnPrimary} w-full py-3.5 min-h-12 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/20`}
-                >
-                  {payBooking.isPending ? tCommon("processing") : t("collectAmount", { amount: formatMoney(displayGrandTotal, localeKit) })}
-                </button>
+                  discountSavings={discountSavings}
+                  hasBillDiscount={hasBillDiscount}
+                  grandTotalDisplay={formatMoney(displayGrandTotal, localeKit)}
+                  discountDisplay={`−${formatMoney(discountSavings, localeKit)}`}
+                  onDiscount={() => setDiscountSheetOpen(true)}
+                  onPay={submitPayment}
+                />
               </div>
-              <div className="h-[calc(7.5rem+env(safe-area-inset-bottom))]" aria-hidden />
+              <div className="h-[calc(4.25rem+env(safe-area-inset-bottom))]" aria-hidden />
             </div>
           )}
         </div>

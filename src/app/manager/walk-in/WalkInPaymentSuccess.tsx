@@ -114,12 +114,12 @@ export function WalkInPaymentSuccess({
             <button
               type="button"
               onClick={() => void copyReviewLink()}
-              className="mt-2 flex w-full items-center gap-2.5 text-left touch-manipulation"
+              className="mt-2 flex w-full flex-col items-center gap-2.5 text-center touch-manipulation sm:flex-row sm:items-center sm:gap-3 sm:text-left"
             >
-              <div className="shrink-0 rounded-md bg-white p-1 ring-1 ring-[var(--border)]">
-                <QRCode value={reviewUrl} size={64} />
+              <div className="shrink-0 rounded-lg bg-white p-2 ring-1 ring-[var(--border)]">
+                <QRCode value={reviewUrl} size={96} />
               </div>
-              <span className="min-w-0 text-[11px] leading-snug text-[var(--text-secondary)]">
+              <span className="min-w-0 text-xs leading-snug text-[var(--text-secondary)] sm:flex-1">
                 {reviewCopied ? (
                   <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
                     <Check className="h-3.5 w-3.5" aria-hidden />

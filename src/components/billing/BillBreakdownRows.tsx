@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { formatMoney } from "@/lib/utils";
+import { cleanBillLabel } from "@/lib/bill-labels";
 import type { TenantLocaleKit } from "@/lib/tenant-locale";
 
 export type BillBreakdownPreview = {
@@ -64,7 +65,7 @@ export function BillBreakdownRows({
       )}
       {(preview.promoDiscountAmount ?? 0) > 0 && (
         <div className="flex justify-between gap-2">
-          <span className="min-w-0 truncate text-[var(--text-secondary)]">{preview.promoLabel || tCommon("discount")}</span>
+          <span className="min-w-0 truncate text-[var(--text-secondary)]">{cleanBillLabel(preview.promoLabel) || tCommon("discount")}</span>
           <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
             -{fmt(preview.promoDiscountAmount ?? 0)}
           </span>
@@ -73,7 +74,7 @@ export function BillBreakdownRows({
       {(preview.manualDiscountAmount ?? 0) > 0 && (
         <div className="flex justify-between gap-2">
           <span className="min-w-0 truncate text-[var(--text-secondary)]">
-            {preview.manualDiscountLabel || tWalkIn("manualDiscount")}
+            {cleanBillLabel(preview.manualDiscountLabel) || tWalkIn("manualDiscount")}
           </span>
           <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
             -{fmt(preview.manualDiscountAmount ?? 0)}

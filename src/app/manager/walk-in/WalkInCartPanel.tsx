@@ -8,6 +8,7 @@ import { formatMoney, cn } from "@/lib/utils";
 import { Card, inputClass, selectClass, btnPrimary, btnSecondary } from "@/components/ui";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
+import { WalkInMobileCartActions } from "./WalkInMobileCartActions";
 
 interface WalkInCartPanelProps {
   cart: WalkInCartItem[];
@@ -194,25 +195,40 @@ export function WalkInCartPanel({
           {stylistsRequired && !stylistsComplete && cart.length > 0 && (
             <p className="text-xs text-amber-700 dark:text-amber-400">{t("assignStylistError")}</p>
           )}
-          <div className="flex flex-col gap-2 pt-1">
-            <button
-              type="button"
-              onClick={onProceedToBill}
-              disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
-              className={`${btnPrimary} w-full min-h-12`}
-            >
-              {saving ? tCommon("processing") : t("continueBill")}
-            </button>
-            <button
-              type="button"
-              onClick={onSaveOpen}
-              disabled={cart.length === 0 || saving}
-              className={`${btnSecondary} w-full min-h-11`}
-            >
-              {saving ? tCommon("processing") : t("saveOpenVisit")}
-            </button>
-          </div>
-          <p className="text-[11px] text-[var(--text-tertiary)] text-center">{t("saveOpenVisitHint")}</p>
+          {variant === "sheet" ? (
+            <div className="pt-1">
+              <WalkInMobileCartActions
+                saving={saving}
+                proceedDisabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                saveDisabled={cart.length === 0 || saving}
+                onProceed={onProceedToBill}
+                onSave={onSaveOpen}
+              />
+              <p className="mt-1.5 text-center text-[10px] text-[var(--text-tertiary)] leading-snug">
+                {t("mobileSaveVisitHint")}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={onProceedToBill}
+                disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                className={`${btnPrimary} w-full min-h-12`}
+              >
+                {saving ? tCommon("processing") : t("continueBill")}
+              </button>
+              <button
+                type="button"
+                onClick={onSaveOpen}
+                disabled={cart.length === 0 || saving}
+                className={`${btnSecondary} w-full min-h-11`}
+              >
+                {saving ? tCommon("processing") : t("saveOpenVisit")}
+              </button>
+              <p className="text-[11px] text-[var(--text-tertiary)] text-center">{t("saveOpenVisitHint")}</p>
+            </div>
+          )}
         </>
       )}
     </>

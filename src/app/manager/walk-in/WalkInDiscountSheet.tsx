@@ -46,7 +46,6 @@ function DiscountSuccessView({
   onClose: () => void;
 }) {
   const t = useTranslations("manager.walkIn");
-  const tCommon = useTranslations("common");
 
   return (
     <div className="flex flex-col items-center py-6 text-center">
@@ -61,7 +60,7 @@ function DiscountSuccessView({
       ) : null}
       <p className="mt-2 max-w-xs text-xs text-[var(--text-secondary)] leading-snug">{t("discountAppliedSuccessHint")}</p>
       <button type="button" onClick={onClose} className={`${btnPrimary} mt-6 w-full min-h-11`}>
-        {tCommon("done")}
+        {t("done")}
       </button>
     </div>
   );
