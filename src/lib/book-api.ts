@@ -65,6 +65,8 @@ export type BookContext = {
   maxAdvanceDays: number;
   slotMinutes: number;
   bookBaseUrl: string;
+  phoneNumberRequired: boolean;
+  otpRequired: boolean;
 };
 
 export type BookService = {
@@ -103,6 +105,8 @@ export type BookAppointment = {
   staffName: string;
   branchName: string;
   customerName: string;
+  visitPassId?: string;
+  visitPassUrl?: string;
 };
 
 export type BookOtpResponse = {
@@ -173,8 +177,8 @@ export const bookApi = {
     tenantSlug: string,
     branchCode: string,
     payload: {
-      phone: string;
-      otp: string;
+      phone?: string;
+      otp?: string;
       customerName: string;
       branchServiceIds: string[];
       staffId?: string;

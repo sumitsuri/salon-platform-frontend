@@ -56,6 +56,15 @@ function totalPrice(cart: BookService[]) {
   return cart.reduce((sum, s) => sum + s.price, 0);
 }
 
+function normalizePhoneInput(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+}
+
+function isPhoneValid(raw: string) {
+  return normalizePhoneInput(raw).length === 10;
+}
+
 function BookBranchHero({ context, accent }: { context: BookContext; accent: string }) {
   return (
     <div className="relative overflow-hidden bg-white book-content-pad pb-4 pt-3 md:pb-6 md:pt-5">
@@ -114,6 +123,8 @@ export function OnlineBookFlow({ tenantSlug, branchCode }: { tenantSlug: string;
 
   const dates = useMemo(() => nextDates(context?.maxAdvanceDays ?? 14), [context?.maxAdvanceDays]);
   const accent = context?.primaryColor || "#6366f1";
+  const phoneNumberRequired = context?.phoneNumberRequired !== false;
+  const otpRequired = context?.otpRequired === true;
 
   useEffect(() => {
     let cancelled = false;
@@ -190,13 +201,26 @@ export function OnlineBookFlow({ tenantSlug, branchCode }: { tenantSlug: string;
 
   async function confirmBooking() {
     if (cart.length === 0 || !selectedSlot) return;
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    const normalizedPhone = phone.trim() ? normalizePhoneInput(phone) : "";
+    if (phoneNumberRequired && normalizedPhone.length !== 10) {
+      setError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+    if (phone.trim() && normalizedPhone.length !== 10) {
+      setError("Enter a valid 10-digit mobile number or leave it blank");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       const appt = await bookApi.createAppointment(tenantSlug, branchCode, {
-        phone,
-        otp,
-        customerName: name.trim() || "Guest",
+        ...(normalizedPhone ? { phone: normalizedPhone } : {}),
+        ...(otpRequired && otp ? { otp } : {}),
+        customerName: name.trim(),
         branchServiceIds: cart.map((s) => s.branchServiceId),
         staffId: selectedSlot.staffId,
         startAt: selectedSlot.startAt,
@@ -209,6 +233,11 @@ export function OnlineBookFlow({ tenantSlug, branchCode }: { tenantSlug: string;
       setSubmitting(false);
     }
   }
+
+  const confirmReady =
+    name.trim().length > 0 &&
+    (phoneNumberRequired ? isPhoneValid(phone) : !phone.trim() || isPhoneValid(phone)) &&
+    (!otpRequired || (otpSent && otp.length >= 4));
 
   function startNewBooking() {
     setCart([]);
@@ -422,54 +451,73 @@ export function OnlineBookFlow({ tenantSlug, branchCode }: { tenantSlug: string;
               className="book-input"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="As on your phone"
+              placeholder="Your name"
               autoComplete="name"
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-[#636366]">Mobile number</span>
+            <span className="mb-1.5 block text-sm font-medium text-[#636366]">
+              Mobile number{phoneNumberRequired ? "" : " (optional)"}
+            </span>
             <input
               className="book-input"
               inputMode="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="10-digit mobile"
+              placeholder={phoneNumberRequired ? "10-digit mobile" : "Add if you want WhatsApp updates"}
               autoComplete="tel"
             />
+            {!phoneNumberRequired ? (
+              <p className="mt-1.5 text-xs text-[#8e8e93]">
+                No phone needed — you&apos;ll get a Visit Pass ID to show at the salon.
+              </p>
+            ) : null}
           </label>
-          {!otpSent ? (
-            <button
-              type="button"
-              className="book-cta"
-              style={{ backgroundColor: accent }}
-              disabled={phone.replace(/\D/g, "").length < 10}
-              onClick={() => void sendOtp()}
-            >
-              Send verification code
-            </button>
-          ) : (
-            <>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[#636366]">Verification code</span>
-                <input
-                  className="book-input text-center text-lg tracking-[0.3em]"
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="• • • • • •"
-                />
-              </label>
-              {devOtp ? <p className="text-center text-xs text-amber-700">Dev code: {devOtp}</p> : null}
+          {otpRequired ? (
+            !otpSent ? (
               <button
                 type="button"
                 className="book-cta"
                 style={{ backgroundColor: accent }}
-                disabled={submitting || otp.length < 4}
-                onClick={() => void confirmBooking()}
+                disabled={!isPhoneValid(phone)}
+                onClick={() => void sendOtp()}
               >
-                {submitting ? "Confirming…" : "Confirm booking"}
+                Send verification code
               </button>
-            </>
+            ) : (
+              <>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-[#636366]">Verification code</span>
+                  <input
+                    className="book-input text-center text-lg tracking-[0.3em]"
+                    inputMode="numeric"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="• • • • • •"
+                  />
+                </label>
+                {devOtp ? <p className="text-center text-xs text-amber-700">Dev code: {devOtp}</p> : null}
+                <button
+                  type="button"
+                  className="book-cta"
+                  style={{ backgroundColor: accent }}
+                  disabled={submitting || otp.length < 4}
+                  onClick={() => void confirmBooking()}
+                >
+                  {submitting ? "Confirming…" : "Confirm booking"}
+                </button>
+              </>
+            )
+          ) : (
+            <button
+              type="button"
+              className="book-cta"
+              style={{ backgroundColor: accent }}
+              disabled={submitting || !confirmReady}
+              onClick={() => void confirmBooking()}
+            >
+              {submitting ? "Confirming…" : "Confirm booking"}
+            </button>
           )}
           </div>
           </div>
@@ -485,16 +533,39 @@ export function OnlineBookFlow({ tenantSlug, branchCode }: { tenantSlug: string;
               </div>
               <h2 className="mt-4 text-2xl font-bold text-[#1c1917] md:text-3xl">You&apos;re booked!</h2>
               <p className="mt-1 text-sm text-[#636366]">
-                Code <span className="font-bold text-[#1c1917]">{confirmation.confirmationCode}</span>
+                Reference <span className="font-bold text-[#1c1917]">{confirmation.confirmationCode}</span>
               </p>
             </div>
+            {confirmation.visitPassId ? (
+              <div className="rounded-2xl border-2 border-[#6366f1]/30 bg-white p-5 text-center shadow-sm">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#8e8e93]">Your Visit Pass</p>
+                <p className="mt-2 font-mono text-2xl font-bold tracking-wide text-[#1c1917] md:text-3xl">
+                  {confirmation.visitPassId}
+                </p>
+                <p className="mt-2 text-sm text-[#636366]">
+                  Show this ID at the salon when you arrive — same as walk-in guests at this branch.
+                </p>
+                {confirmation.visitPassUrl ? (
+                  <a
+                    href={confirmation.visitPassUrl}
+                    className="mt-4 inline-block text-sm font-semibold text-[#6366f1] underline-offset-2 hover:underline"
+                  >
+                    Open Visit Pass card
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             <dl className="space-y-3 rounded-2xl bg-[#f2f2f7] p-4 text-sm md:p-6">
               <Row label="When" value={`${formatSlotDate(confirmation.scheduledStartAt)} · ${formatSlotTime(confirmation.scheduledStartAt)}`} />
               <Row label="Professional" value={confirmation.staffName} />
               <Row label="Services" value={(confirmation.serviceNames ?? [confirmation.serviceName]).join(", ")} />
               <Row label="Location" value={confirmation.branchName} />
             </dl>
-            <p className="text-center text-xs text-[#8e8e93]">Details will be sent on WhatsApp when available.</p>
+            <p className="text-center text-xs text-[#8e8e93]">
+              {confirmation.visitPassId
+                ? "Screenshot your Visit Pass before you leave this page."
+                : "Appointment details may be sent on WhatsApp when available."}
+            </p>
             <div className="space-y-2 sm:flex sm:gap-3 sm:space-y-0">
               <button type="button" className="book-cta flex-1" style={{ backgroundColor: accent }} onClick={startNewBooking}>
                 <Plus className="mr-2 inline h-4 w-4" aria-hidden />
