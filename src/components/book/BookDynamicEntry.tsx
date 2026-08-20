@@ -5,9 +5,17 @@ import { BookTenantPicker } from "@/components/book/BookTenantPicker";
 import { OnlineBookFlow } from "@/components/book/OnlineBookFlow";
 import { parseBookPathname } from "@/lib/book-routes";
 
+function resolveBookPathname(routerPathname: string): string {
+  if (typeof window === "undefined") return routerPathname;
+  const browserPath = window.location.pathname;
+  if (parseBookPathname(browserPath)) return browserPath;
+  return routerPathname;
+}
+
 /** Client router for /book/* — used by the static-export shell on prod (any branch URL). */
 export function BookDynamicEntry() {
-  const pathname = usePathname();
+  const routerPathname = usePathname();
+  const pathname = resolveBookPathname(routerPathname);
   const parsed = parseBookPathname(pathname);
 
   if (!parsed) {
