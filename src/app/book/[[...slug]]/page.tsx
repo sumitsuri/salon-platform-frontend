@@ -1,8 +1,5 @@
-import { BOOK_STATIC_PATHS } from "@/lib/book-routes";
+import { BOOK_SHELL_SLUG, BOOK_STATIC_PATHS } from "@/lib/book-routes";
 import { BookDynamicEntry } from "@/components/book/BookDynamicEntry";
-
-/** CloudFront serves this shell for every /book/* URL on app.antrahq.com. */
-export const BOOK_SHELL_SLUG = "__dynamic__";
 
 export function generateStaticParams() {
   const paths: { slug?: string[] }[] = [{ slug: [BOOK_SHELL_SLUG] }];

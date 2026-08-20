@@ -1,3 +1,6 @@
+/** CloudFront serves this shell for every /book/* URL on app.antrahq.com. */
+export const BOOK_SHELL_SLUG = "__dynamic__";
+
 /** Pre-rendered booking entry paths for static export (extend as tenants onboard). */
 export const BOOK_STATIC_PATHS: { tenantSlug: string; branchCode: string }[] = [
   { tenantSlug: "demo-brand", branchCode: "lit" },
@@ -19,7 +22,7 @@ export function parseBookPathname(pathname: string): { tenantSlug: string; branc
   const match = pathname.match(/^\/book\/?([^/]*)\/?([^/]*)\/?$/);
   if (!match) return null;
   const tenantSlug = match[1]?.trim().toLowerCase();
-  if (!tenantSlug || tenantSlug === "__dynamic__") return null;
+  if (!tenantSlug || tenantSlug === BOOK_SHELL_SLUG) return null;
   const branchRaw = match[2]?.trim().toLowerCase();
   if (!branchRaw) return { tenantSlug };
   return { tenantSlug, branchCode: branchRaw };
