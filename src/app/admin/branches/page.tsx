@@ -37,6 +37,8 @@ import {
   btnPrimary,
   btnSecondary,
 } from "@/components/ui";
+import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
+import { BrandOnlineBookingSettings } from "@/components/book/BrandOnlineBookingSettings";
 
 type Tab = "brand" | "branches" | "managers";
 
@@ -211,10 +213,11 @@ export default function AdminBranchesPage() {
       />
 
       {tab === "brand" && (
-        <BrandSummaryCard
+        <BrandOnlineBookingSettings
           tenant={tenant}
+          branches={branches}
           loading={tenantLoading}
-          onView={() => setBrandDrawer({ mode: "view" })}
+          onEditBrand={() => setBrandDrawer({ mode: "view" })}
         />
       )}
 
@@ -311,6 +314,17 @@ export default function AdminBranchesPage() {
                       onClick={() => setBranchDrawer({ mode: "view", branch: b })}
                       trailing={
                         <div className="flex items-center gap-2">
+                          {b.status !== "INACTIVE" ? (
+                            <span
+                              className={`hidden sm:inline rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase ${
+                                b.onlineBookingEffective === true
+                                  ? "bg-emerald-500/15 text-emerald-800"
+                                  : "bg-stone-500/15 text-stone-600"
+                              }`}
+                            >
+                              {b.onlineBookingEffective === true ? t("onlineBookingStatusLive") : t("onlineBookingStatusOff")}
+                            </span>
+                          ) : null}
                           <StatusBadge status={b.status || "ACTIVE"} />
                           <ChevronRight className={cn("w-4 h-4", isSelected ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
                         </div>
@@ -427,7 +441,7 @@ function BrandSummaryCard({
   loading,
   onView,
 }: {
-  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean };
+  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean; onlineBookingEnabled?: boolean };
   loading: boolean;
   onView: () => void;
 }) {
@@ -616,6 +630,7 @@ function BranchDetailView({
       </div>
 
       <BranchGeofencePanel branch={branch} />
+      <OnlineBookingPanel branch={branch} tenant={tenant} />
       <BranchDigitalPresencePanel branch={branch} />
     </div>
   );
@@ -859,6 +874,10 @@ function BranchForm({
   const [gstPolicy, setGstPolicy] = useState<"INHERIT" | "ENABLED" | "DISABLED">(
     initial?.gstEnabled === true ? "ENABLED" : initial?.gstEnabled === false ? "DISABLED" : "INHERIT"
   );
+  const [onlineBookingEnabled, setOnlineBookingEnabled] = useState(initial?.onlineBookingEnabled === true);
+  const [minLeadMinutes, setMinLeadMinutes] = useState(String(initial?.onlineBookingMinLeadMinutes ?? 60));
+  const [maxAdvanceDays, setMaxAdvanceDays] = useState(String(initial?.onlineBookingMaxAdvanceDays ?? 30));
+  const [slotMinutes, setSlotMinutes] = useState(String(initial?.onlineBookingSlotMinutes ?? 15));
 
   return (
     <form
@@ -877,6 +896,14 @@ function BranchForm({
           businessType,
           phoneNumberRequired,
           gstPolicy: initial ? gstPolicy : undefined,
+          ...(initial
+            ? {
+                onlineBookingEnabled,
+                onlineBookingMinLeadMinutes: Number(minLeadMinutes) || 60,
+                onlineBookingMaxAdvanceDays: Number(maxAdvanceDays) || 30,
+                onlineBookingSlotMinutes: Number(slotMinutes) || 15,
+              }
+            : {}),
         });
       }}
       className="space-y-4 pb-2"
@@ -967,6 +994,31 @@ function BranchForm({
             <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("gstEnabledHint")}</p>
           </Field>
         )}
+        {initial ? (
+          <>
+            <SectionTitle>{t("onlineBookingTitle")}</SectionTitle>
+            <Field label={t("onlineBookingEnabled")} className="sm:col-span-2">
+              <label className="flex items-start gap-3 rounded-xl border border-[var(--border)] px-3 py-3 cursor-pointer touch-manipulation">
+                <input
+                  type="checkbox"
+                  checked={onlineBookingEnabled}
+                  onChange={(e) => setOnlineBookingEnabled(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-[var(--text-secondary)]">{t("onlineBookingEnabledHint")}</span>
+              </label>
+            </Field>
+            <Field label={t("minLeadMinutes")}>
+              <input type="number" min={15} value={minLeadMinutes} onChange={(e) => setMinLeadMinutes(e.target.value)} className={inputClass} />
+            </Field>
+            <Field label={t("maxAdvanceDays")}>
+              <input type="number" min={1} max={90} value={maxAdvanceDays} onChange={(e) => setMaxAdvanceDays(e.target.value)} className={inputClass} />
+            </Field>
+            <Field label={t("slotMinutes")}>
+              <input type="number" min={5} step={5} value={slotMinutes} onChange={(e) => setSlotMinutes(e.target.value)} className={inputClass} />
+            </Field>
+          </>
+        ) : null}
       </div>
       <div className="flex gap-2 pt-4 border-t border-[var(--border)] sticky bottom-0 bg-[var(--surface)]">
         <button type="button" onClick={onCancel} className={`${btnSecondary} flex-1`}>{cancelLabel}</button>
@@ -1198,7 +1250,7 @@ function BrandDrawer({
   onSave,
 }: {
   drawer: BrandDrawerState | null;
-  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean };
+  tenant?: { name: string; slug: string; primaryColor?: string; status: string; gstEnabled?: boolean; onlineBookingEnabled?: boolean };
   loading: boolean;
   saving: boolean;
   onClose: () => void;
@@ -1258,6 +1310,10 @@ function BrandDrawer({
             <DetailField
               label={t("gstBilling")}
               value={tenant.gstEnabled ? t("gstPolicyEnabled") : t("gstPolicyDisabled")}
+            />
+            <DetailField
+              label={t("onlineBookingTitle")}
+              value={tenant.onlineBookingEnabled === true ? t("onlineBookingStatusLive") : t("onlineBookingStatusOff")}
             />
           </div>
         </div>

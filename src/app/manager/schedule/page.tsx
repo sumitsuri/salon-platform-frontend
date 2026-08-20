@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   CalendarDays,
@@ -30,6 +30,8 @@ import {
   ResponsiveTableShell,
 } from "@/components/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
+import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
+import { OnlineAppointmentsList, collectOnlineAppointments } from "@/components/book/OnlineAppointmentsList";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
@@ -111,6 +113,9 @@ function occupancyTone(occ: string) {
 }
 
 function blockTone(block: StaffTimeBlock) {
+  if (block.status === "CONFIRMED") {
+    return "bg-sky-600/90 text-white border-sky-800";
+  }
   if (block.overdue || block.status === "IN_PROGRESS") {
     return block.overdue
       ? "bg-rose-500/90 text-white border-rose-700"
@@ -239,14 +244,28 @@ function StaffRow({
 function VisitDetailsModal({
   selected,
   onClose,
+  onCheckedIn,
   t,
 }: {
   selected: SelectedVisit;
   onClose: () => void;
+  onCheckedIn: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
   const { block, staffName } = selected;
   const open = block.status === "IN_PROGRESS" || block.status === "READY_FOR_BILLING";
+  const isConfirmed = block.status === "CONFIRMED";
+  const [checkInError, setCheckInError] = useState("");
+
+  const checkInMutation = useMutation({
+    mutationFn: () => api.checkInBooking(block.bookingId),
+    onSuccess: () => {
+      setCheckInError("");
+      onCheckedIn();
+      onClose();
+    },
+    onError: (e: Error) => setCheckInError(e.message),
+  });
 
   useEffect(() => {
     return lockBodyScroll();
@@ -343,6 +362,17 @@ function VisitDetailsModal({
         </div>
 
         <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-[var(--border)] flex flex-col sm:flex-row gap-2 shrink-0">
+          {checkInError ? <p className="text-xs text-red-600 w-full">{checkInError}</p> : null}
+          {isConfirmed ? (
+            <button
+              type="button"
+              className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
+              disabled={checkInMutation.isPending}
+              onClick={() => checkInMutation.mutate()}
+            >
+              {checkInMutation.isPending ? t("checkingIn") : t("checkIn")}
+            </button>
+          ) : null}
           {block.status === "READY_FOR_BILLING" ? (
             <>
               <Link
@@ -415,6 +445,14 @@ function ManagerSchedulePageContent() {
     enabled: !!branchId,
     refetchInterval: date === todayIso() ? 30_000 : false,
   });
+
+  const { data: branch } = useQuery({
+    queryKey: ["branch", branchId],
+    queryFn: () => api.getBranch(branchId),
+    enabled: !!branchId,
+  });
+
+  const onlineAppointments = useMemo(() => collectOnlineAppointments(data?.staff), [data?.staff]);
 
   const openMin = parseHm(data?.openTime || "09:00");
   const closeMin = parseHm(data?.closeTime || "21:00");
@@ -494,6 +532,8 @@ function ManagerSchedulePageContent() {
 
       <MissionStrip variant="accent" />
 
+      {branch ? <OnlineBookingPanel branch={branch} compact /> : null}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <button
@@ -571,6 +611,13 @@ function ManagerSchedulePageContent() {
         />
       </div>
 
+      {!isLoading && data ? (
+        <OnlineAppointmentsList
+          appointments={onlineAppointments}
+          onSelect={(row) => bookingParam.set(row.bookingId)}
+        />
+      ) : null}
+
       {isLoading ? (
         <p className="text-sm text-[var(--text-secondary)] py-10 text-center">{tCommon("loading")}</p>
       ) : !data || data.staff.length === 0 ? (
@@ -646,7 +693,9 @@ function ManagerSchedulePageContent() {
         </div>
       )}
 
-      {selected && <VisitDetailsModal selected={selected} onClose={closeVisit} t={t} />}
+      {selected && (
+        <VisitDetailsModal selected={selected} onClose={closeVisit} onCheckedIn={() => void refetch()} t={t} />
+      )}
 
       {data?.metrics?.byStaffService && data.metrics.byStaffService.length > 0 && (
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden min-w-0">

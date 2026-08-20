@@ -31,7 +31,7 @@ import {
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 
-const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
+const STATUSES = ["", "COMPLETED", "CONFIRMED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
 
 type Filters = {
   customer: string;

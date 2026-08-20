@@ -676,6 +676,9 @@ export const api = {
   updateBranch: (branchId: string, data: UpdateBranchRequest) =>
     request<Branch>(`/api/v1/branches/${branchId}`, { method: "PUT", body: JSON.stringify(data) }),
 
+  bulkUpdateBranchOnlineBooking: (data: { enabled: boolean; branchIds?: string[] }) =>
+    request<Branch[]>("/api/v1/branches/online-booking/bulk", { method: "PATCH", body: JSON.stringify(data) }),
+
   deactivateBranch: (branchId: string) =>
     request<void>(`/api/v1/branches/${branchId}`, { method: "DELETE" }),
 
@@ -989,6 +992,9 @@ export const api = {
   cancelBooking: (id: string) =>
     request<void>(`/api/v1/bookings/${id}/cancel`, { method: "POST" }),
 
+  checkInBooking: (id: string) =>
+    request<void>(`/api/v1/bookings/${id}/check-in`, { method: "POST" }),
+
   getTenants: () => request<Tenant[]>("/api/v1/platform/tenants"),
 
   createTenant: (data: CreateTenantRequest) =>
@@ -1148,6 +1154,7 @@ export interface StaffTimeBlock {
   actualMinutes?: number;
   overdue: boolean;
   services: string[];
+  source?: string;
 }
 
 export interface StaffAvailabilityColumn {
@@ -1693,6 +1700,13 @@ export interface Branch {
   gbpServicesListedCount?: number;
   estimatedSearchRank?: number;
   digitalPresenceUpdatedAt?: string;
+  tenantSlug?: string;
+  onlineBookingEnabled?: boolean;
+  onlineBookingBrandEnabled?: boolean;
+  onlineBookingEffective?: boolean;
+  onlineBookingMinLeadMinutes?: number;
+  onlineBookingMaxAdvanceDays?: number;
+  onlineBookingSlotMinutes?: number;
 }
 
 export type BranchBusinessType = "SALON" | "SPA" | "SALON_AND_SPA";
@@ -1743,6 +1757,12 @@ export interface UpdateBranchRequest {
   businessType?: BranchBusinessType;
   phoneNumberRequired?: boolean;
   gstPolicy?: "INHERIT" | "ENABLED" | "DISABLED";
+  onlineBookingEnabled?: boolean;
+  onlineBookingBrandEnabled?: boolean;
+  onlineBookingEffective?: boolean;
+  onlineBookingMinLeadMinutes?: number;
+  onlineBookingMaxAdvanceDays?: number;
+  onlineBookingSlotMinutes?: number;
 }
 
 export interface BranchTargetPerformanceItem {
@@ -1788,6 +1808,7 @@ export interface UpdateTenantRequest {
   logoUrl?: string;
   primaryColor?: string;
   gstEnabled?: boolean;
+  onlineBookingEnabled?: boolean;
 }
 
 export interface UpdatePlatformUserRequest {
@@ -2085,6 +2106,7 @@ export interface Tenant {
   status: string;
   primaryColor?: string;
   gstEnabled?: boolean;
+  onlineBookingEnabled?: boolean;
 }
 
 export interface CreateTenantRequest {

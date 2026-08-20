@@ -29,6 +29,8 @@ interface WalkInServiceCatalogProps {
   localeKit: TenantLocaleKit;
   onToggleService: (s: BranchServiceItem) => void;
   onToggleFavorite: (id: string) => void;
+  /** Customer online booking — full service names, no favorites. */
+  variant?: "walk-in" | "online";
 }
 
 function useIsMounted() {
@@ -119,7 +121,9 @@ export function WalkInServiceCatalog({
   localeKit,
   onToggleService,
   onToggleFavorite,
+  variant = "walk-in",
 }: WalkInServiceCatalogProps) {
+  const isOnline = variant === "online";
   const t = useTranslations("manager.walkIn");
   const [categorySheetOpen, setCategorySheetOpen] = useState(false);
   const [subCategorySheetOpen, setSubCategorySheetOpen] = useState(false);
@@ -194,8 +198,23 @@ export function WalkInServiceCatalog({
     );
   }
 
+  function onlineServiceCardClass(inCart: boolean) {
+    return cn(
+      "w-full rounded-2xl border p-3.5 text-left touch-manipulation transition",
+      inCart
+        ? "border-emerald-400/60 bg-emerald-50/90 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/40"
+        : "border-[#e8dcc8] bg-white/90 hover:border-[var(--book-accent,#b8956b)] hover:shadow-md active:scale-[0.99]"
+    );
+  }
+
   return (
-    <Card padding={false} className="flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+    <Card
+      padding={false}
+      className={cn(
+        "flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden",
+        isOnline && "border-[#e8dcc8]/80 bg-white/75 shadow-[0_12px_40px_rgba(26,22,18,0.08)] backdrop-blur-sm"
+      )}
+    >
       <div className="px-2.5 sm:px-3 py-1.5 lg:py-2 border-b border-[var(--border)] space-y-1.5 lg:space-y-2 shrink-0">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
@@ -367,16 +386,21 @@ export function WalkInServiceCatalog({
                       {group.parentName}
                     </h3>
                   )}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 lg:gap-2">
+                  <div className={cn("grid gap-1.5 lg:gap-2", isOnline ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2 sm:grid-cols-3")}>
                     {group.items.map((sub) => (
                       <button
                         key={sub.id}
                         type="button"
                         data-testid="walk-in-subcategory-tile"
                         onClick={() => onCatalogSubChange(sub.id)}
-                        className="flex flex-col items-start gap-0.5 p-2.5 min-h-[4.5rem] lg:min-h-[5rem] rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)]/50 transition text-left active:scale-[0.98] touch-manipulation min-w-0 shadow-sm"
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 p-2.5 min-h-[4.5rem] lg:min-h-[5rem] rounded-xl border transition text-left active:scale-[0.98] touch-manipulation min-w-0 shadow-sm",
+                          isOnline
+                            ? "border-[#e8dcc8] bg-white/90 hover:border-[var(--book-accent,#b8956b)] hover:shadow-md"
+                            : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)]/50"
+                        )}
                       >
-                        <p className="font-semibold text-sm text-[var(--text-primary)] leading-snug line-clamp-2">
+                        <p className={cn("font-semibold text-sm leading-snug line-clamp-2", isOnline ? "text-[#1c1917]" : "text-[var(--text-primary)]")}>
                           {sub.name}
                         </p>
                         <p className="text-[11px] text-[var(--text-tertiary)]">
@@ -393,7 +417,7 @@ export function WalkInServiceCatalog({
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-1.5 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2">
+          <div className={cn(isOnline ? "flex flex-col gap-2.5" : "flex flex-col gap-1.5 lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:gap-2")}>
             {filteredServices.length === 0 ? (
               <p className="col-span-full text-sm text-[var(--text-secondary)] text-center py-6">{t("noServicesMatch")}</p>
             ) : (
@@ -401,6 +425,34 @@ export function WalkInServiceCatalog({
                 const isFav = favoriteServiceIds.includes(s.id);
                 const inCart = cartServiceIdSet.has(s.id);
                 const meta = serviceSubtitle(s);
+                if (isOnline) {
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      data-testid="online-book-service-card"
+                      onClick={() => onToggleService(s)}
+                      className={onlineServiceCardClass(inCart)}
+                      aria-pressed={inCart}
+                      aria-label={serviceActionLabel(s, inCart)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-semibold text-[15px] leading-snug text-[#1c1917] text-left break-words">
+                          {s.serviceName}
+                        </p>
+                        <span className="shrink-0 mt-0.5">{serviceActionIcon(inCart, "w-5 h-5")}</span>
+                      </div>
+                      {meta ? (
+                        <p className="mt-1 text-xs text-[#78716c]">{meta}</p>
+                      ) : null}
+                      <p className="mt-2 text-sm font-bold tabular-nums text-[var(--book-accent,#92673a)]">
+                        {s.variablePricing
+                          ? t("priceFrom", { price: formatCurrency(s.price, localeKit) })
+                          : formatCurrency(s.price, localeKit)}
+                      </p>
+                    </button>
+                  );
+                }
                 return (
                   <button
                     key={s.id}

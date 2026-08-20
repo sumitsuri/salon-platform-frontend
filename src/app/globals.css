@@ -1091,3 +1091,182 @@ html[lang="pa-IN"] body {
   pointer-events: none;
   z-index: -1;
 }
+
+/* Customer online booking — mobile-first, expands naturally on tablet/desktop */
+.book-flow-page {
+  background: #e5e5ea;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .book-flow-page {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .book-flow-page {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .book-flow-page {
+    padding: 0;
+    background: #ffffff;
+  }
+}
+
+.book-app-shell {
+  background: #ffffff;
+  color: #1c1917;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .book-app-shell {
+    min-height: calc(100dvh - 1.5rem);
+    border-radius: 0.875rem;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.04),
+      0 8px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 768px) {
+  .book-app-shell {
+    min-height: calc(100dvh - 2rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .book-app-shell {
+    min-height: 100dvh;
+    max-width: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+}
+
+.book-content-pad {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .book-content-pad {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .book-content-pad {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .book-content-pad {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+.book-flow-cta {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  margin-top: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255,  255, 0.95);
+  backdrop-filter: blur(12px);
+  padding: 0.75rem 1rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .book-flow-cta {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .book-flow-cta {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.book-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #e5e5ea;
+  background: #f2f2f7;
+  padding: 14px 16px;
+  font-size: 16px;
+  color: #1c1917;
+  outline: none;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.book-input:focus {
+  border-color: var(--book-accent, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--book-accent, #6366f1) 20%, transparent);
+  background: #fff;
+}
+
+.book-cta {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 14px;
+  padding: 0 20px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  touch-action: manipulation;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.book-cta:disabled {
+  opacity: 0.45;
+}
+
+.book-cta:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.book-cta-secondary {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 14px;
+  border: 1px solid #e5e5ea;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1c1917;
+  touch-action: manipulation;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
