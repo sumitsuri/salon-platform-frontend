@@ -1203,6 +1203,7 @@
       "sending": "Sending...",
       "createAndSend": "Create & send",
       "messagingReady": "WhatsApp connected · Bill: {billTemplate} · Promo: {promoTemplate}",
+      "billReceiptPilot": "Bill WhatsApp pilot: only {tenant}/{branch} in production. Other branches skip receipt sends.",
       "messagingDisabled": "WhatsApp not connected — add MSG91 auth key in AWS SSM, then redeploy backend.",
       "campaignResult": "{sent} sent · {failed} failed/skipped · {total} total",
       "campaignSending": "Sending…",

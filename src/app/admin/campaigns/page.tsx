@@ -80,12 +80,22 @@ export default function AdminCampaignsPage() {
       {messaging && (
         <Card className="text-sm">
           {messaging.msg91Enabled ? (
-            <p className="text-[var(--text-secondary)]">
-              {t("messagingReady", {
-                billTemplate: messaging.billReceiptTemplate,
-                promoTemplate: messaging.promoTemplate,
-              })}
-            </p>
+            <div className="space-y-1 text-[var(--text-secondary)]">
+              <p>
+                {t("messagingReady", {
+                  billTemplate: messaging.billReceiptTemplate,
+                  promoTemplate: messaging.promoTemplate,
+                })}
+              </p>
+              {messaging.billReceiptPilotEnabled && (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  {t("billReceiptPilot", {
+                    tenant: messaging.billReceiptPilotTenantSlug,
+                    branch: messaging.billReceiptPilotBranchCode,
+                  })}
+                </p>
+              )}
+            </div>
           ) : (
             <p className="text-amber-700 dark:text-amber-300">{t("messagingDisabled")}</p>
           )}

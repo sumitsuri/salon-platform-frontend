@@ -1375,6 +1375,9 @@ export interface MessagingConfig {
   promoTemplate: string;
   appointmentConfirmedTemplate: string;
   apiPublicUrl: string;
+  billReceiptPilotEnabled: boolean;
+  billReceiptPilotTenantSlug: string;
+  billReceiptPilotBranchCode: string;
 }
 
 export interface Lead {
