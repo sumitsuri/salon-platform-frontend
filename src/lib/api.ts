@@ -250,6 +250,7 @@ export const api = {
   me: () => request<AuthUser>("/api/v1/auth/me"),
 
   getLocales: () => request<LocaleInfo[]>("/api/v1/meta/locales"),
+  getMessagingConfig: () => request<MessagingConfig>("/api/v1/meta/messaging"),
 
   updateLocale: (locale: string) =>
     request<AuthUser>("/api/v1/users/me/locale", {
@@ -1367,6 +1368,15 @@ export interface LocaleInfo {
   sortOrder?: number;
 }
 
+export interface MessagingConfig {
+  msg91Enabled: boolean;
+  whatsappNumber: string;
+  billReceiptTemplate: string;
+  promoTemplate: string;
+  appointmentConfirmedTemplate: string;
+  apiPublicUrl: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -1419,6 +1429,7 @@ export interface Campaign {
   recipientCount: number;
   sentCount: number;
   failedCount: number;
+  skippedCount?: number;
   sentAt?: string;
   createdAt: string;
 }
@@ -1485,6 +1496,8 @@ export interface Booking {
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
+  receiptDeliveryStatus?: "SENT" | "SKIPPED" | "FAILED" | "PENDING";
+  receiptDeliveryError?: string;
   reviewInvitationUrl?: string;
   reviewInvitationToken?: string;
   createdAt: string;

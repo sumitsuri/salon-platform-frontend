@@ -211,7 +211,10 @@ export default function WalkInPage() {
   const [billDiscountValue, setBillDiscountValue] = useState("");
   const [paidInvoiceId, setPaidInvoiceId] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
-  const [receiptQueued, setReceiptQueued] = useState(false);
+  const [receiptDeliveryStatus, setReceiptDeliveryStatus] = useState<
+    "SENT" | "SKIPPED" | "FAILED" | "PENDING" | undefined
+  >(undefined);
+  const [receiptDeliveryError, setReceiptDeliveryError] = useState("");
   const [reviewInvitationUrl, setReviewInvitationUrl] = useState("");
   const [reviewSubmittedRating, setReviewSubmittedRating] = useState<number | null>(null);
   const [cgstInput, setCgstInput] = useState("0");
@@ -943,7 +946,8 @@ export default function WalkInPage() {
     onSuccess: (booking) => {
       if (booking.invoiceId) setPaidInvoiceId(booking.invoiceId);
       setBookingStatus("COMPLETED");
-      setReceiptQueued(!!booking.receiptQueued);
+      setReceiptDeliveryStatus(booking.receiptDeliveryStatus);
+      setReceiptDeliveryError(booking.receiptDeliveryError ?? "");
       setReviewInvitationUrl(booking.reviewInvitationUrl ?? "");
       setReviewSubmittedRating(null);
       if (booking.billPreview) {
@@ -2982,6 +2986,9 @@ export default function WalkInPage() {
               invoiceId={paidInvoiceId}
               shareBillMessage={t("shareBillMessage", { name: customerName || "Customer" })}
               customerName={customerName}
+              customerPhone={phone}
+              receiptDeliveryStatus={receiptDeliveryStatus}
+              receiptDeliveryError={receiptDeliveryError || undefined}
               reviewUrl={reviewInvitationUrl || undefined}
               reviewSubmittedRating={reviewSubmittedRating}
               registrationCard={registrationCard}

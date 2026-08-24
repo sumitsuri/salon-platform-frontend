@@ -33,9 +33,18 @@ export default function AdminCampaignsPage() {
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [error, setError] = useState("");
 
+  const { data: messaging } = useQuery({
+    queryKey: ["messaging-config"],
+    queryFn: () => api.getMessagingConfig(),
+  });
+
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => api.getCampaigns(),
+    refetchInterval: (query) => {
+      const rows = query.state.data ?? [];
+      return rows.some((c) => c.status === "SENDING") ? 3000 : false;
+    },
   });
 
   const preview = useMutation({
@@ -51,7 +60,7 @@ export default function AdminCampaignsPage() {
     mutationFn: () => api.createCampaign(buildPayload(form)),
     onSuccess: async (campaign) => {
       await api.sendCampaign(campaign.id);
-      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       setForm(emptyForm);
       setPreviewCount(null);
       setError("");
@@ -67,6 +76,21 @@ export default function AdminCampaignsPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      {messaging && (
+        <Card className="text-sm">
+          {messaging.msg91Enabled ? (
+            <p className="text-[var(--text-secondary)]">
+              {t("messagingReady", {
+                billTemplate: messaging.billReceiptTemplate,
+                promoTemplate: messaging.promoTemplate,
+              })}
+            </p>
+          ) : (
+            <p className="text-amber-700 dark:text-amber-300">{t("messagingDisabled")}</p>
+          )}
+        </Card>
+      )}
 
       <Card className="space-y-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
@@ -133,7 +157,8 @@ export default function AdminCampaignsPage() {
               !form.name ||
               !form.messageText ||
               previewCount == null ||
-              previewCount <= 0
+              previewCount <= 0 ||
+              (form.channel === "WHATSAPP" && messaging && !messaging.msg91Enabled)
             }
             className={`${btnPrimary} ml-auto`}
           >
@@ -157,10 +182,17 @@ export default function AdminCampaignsPage() {
                 subtitle={`${c.channel} · ${c.messageText.slice(0, 60)}${c.messageText.length > 60 ? "…" : ""}`}
                 trailing={
                   <div className="text-right text-xs">
-                    <p className="font-semibold text-[var(--text-primary)]">{c.status}</p>
+                    <p className="font-semibold text-[var(--text-primary)]">
+                      {c.status === "SENDING" ? t("campaignSending") : c.status}
+                    </p>
                     <p className="text-[var(--text-tertiary)] mt-1">
-                      {tAdmin("sentCount", { sent: c.sentCount, total: c.recipientCount })}
-                      {c.failedCount > 0 ? tAdmin("failedCount", { count: c.failedCount }) : ""}
+                      {c.status === "COMPLETED" || c.status === "FAILED"
+                        ? t("campaignResult", {
+                            sent: c.sentCount,
+                            failed: c.failedCount,
+                            total: c.recipientCount,
+                          })
+                        : tAdmin("sentCount", { sent: c.sentCount, total: c.recipientCount })}
                     </p>
                   </div>
                 }

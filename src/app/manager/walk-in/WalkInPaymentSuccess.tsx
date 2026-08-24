@@ -13,6 +13,9 @@ type Props = {
   invoiceId: string;
   shareBillMessage: string;
   customerName: string;
+  customerPhone?: string;
+  receiptDeliveryStatus?: "SENT" | "SKIPPED" | "FAILED" | "PENDING";
+  receiptDeliveryError?: string;
   reviewUrl?: string;
   reviewSubmittedRating?: number | null;
   registrationCard?: CustomerRegistrationCard | null;
@@ -25,6 +28,10 @@ type Props = {
 export function WalkInPaymentSuccess({
   invoiceId,
   shareBillMessage,
+  customerName,
+  customerPhone,
+  receiptDeliveryStatus,
+  receiptDeliveryError,
   reviewUrl,
   reviewSubmittedRating,
   registrationCard,
@@ -74,6 +81,15 @@ export function WalkInPaymentSuccess({
 
   const disabled = busy != null;
 
+  const receiptNote =
+    receiptDeliveryStatus === "SENT"
+      ? t("receiptQueued", { phone: customerPhone || customerName })
+      : receiptDeliveryStatus === "FAILED"
+        ? t("receiptFailed", { reason: receiptDeliveryError || "delivery failed" })
+        : receiptDeliveryStatus === "SKIPPED"
+          ? t("receiptSkipped", { reason: receiptDeliveryError || "not eligible" })
+          : null;
+
   return (
     <div className="space-y-3 pt-1">
       <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/35 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -81,6 +97,10 @@ export function WalkInPaymentSuccess({
           <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
           <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{t("paymentCompleteShort")}</p>
         </div>
+
+        {receiptNote && (
+          <p className="mt-2 text-xs leading-snug text-[var(--text-secondary)]">{receiptNote}</p>
+        )}
 
         <p className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-sm">
           <button
