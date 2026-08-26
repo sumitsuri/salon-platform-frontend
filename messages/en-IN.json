@@ -783,7 +783,11 @@
       "HIGH": "High",
       "MEDIUM": "Medium",
       "LOW": "Low",
-      "INFO": "Info"
+      "INFO": "Info",
+      "SENT": "Sent",
+      "SKIPPED": "Skipped",
+      "FAILED": "Failed",
+      "SENDING": "Sending"
     },
     "insights": {
       "periods": {
@@ -1229,7 +1233,19 @@
       "campaignSending": "Sending…",
       "loading": "Loading campaigns...",
       "emptyTitle": "No campaigns yet",
-      "emptyDesc": "Create your first WhatsApp or SMS promo above"
+      "emptyDesc": "Create your first WhatsApp or SMS promo above",
+      "historyTitle": "Campaign history",
+      "filterChannel": "Channel",
+      "messagePreview": "Message",
+      "recipients": "Recipients",
+      "sentAt": "Sent at",
+      "deliveryStatus": "Delivery status",
+      "deliveryError": "Error",
+      "deliveredAt": "Sent at",
+      "deliveryRecipients": "Recipients & delivery status",
+      "deliveryEmptyTitle": "No delivery records",
+      "deliveryEmptyDesc": "Delivery logs appear here after the campaign is sent.",
+      "deliveryEmptyDraft": "Send the campaign to see per-customer delivery status."
     },
     "promotions": {
       "title": "Promotions",

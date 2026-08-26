@@ -378,6 +378,10 @@ const STATUS_KEYS = new Set([
   "MEDIUM",
   "LOW",
   "INFO",
+  "SENT",
+  "SKIPPED",
+  "FAILED",
+  "SENDING",
 ]);
 
 export function StatusBadge({
@@ -390,13 +394,13 @@ export function StatusBadge({
   const t = useTranslations("components.status");
   const label = STATUS_KEYS.has(status) ? t(status as "COMPLETED") : status.replace(/_/g, " ");
   const style =
-    status === "COMPLETED" || status === "APPROVED" || status === "READY_FOR_BILLING"
+    status === "COMPLETED" || status === "APPROVED" || status === "READY_FOR_BILLING" || status === "SENT"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800"
-      : status === "PRESENT" || status === "IN_PROGRESS" || status === "INFO"
+      : status === "PRESENT" || status === "IN_PROGRESS" || status === "INFO" || status === "SENDING"
         ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800"
-        : status === "PENDING" || status === "MEDIUM" || status === "DRAFT" || status === "CONFIRMED"
+        : status === "PENDING" || status === "MEDIUM" || status === "DRAFT" || status === "CONFIRMED" || status === "SKIPPED"
           ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800"
-          : status === "CANCELLED" || status === "REJECTED" || status === "ABSENT" || status === "HIGH"
+          : status === "CANCELLED" || status === "REJECTED" || status === "ABSENT" || status === "HIGH" || status === "FAILED"
             ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800"
             : status === "LOW"
               ? "bg-[var(--brand-light)] text-[var(--brand-text)] border-[var(--brand-ring)]"

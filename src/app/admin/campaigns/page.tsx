@@ -6,11 +6,10 @@ import { useTranslations } from "next-intl";
 import { Megaphone, Send } from "lucide-react";
 import { api, type CampaignChannel, type CreateCampaignRequest, type Customer } from "@/lib/api";
 import { CampaignAudiencePreview } from "@/components/campaign/CampaignAudiencePreview";
+import { CampaignHistoryPanel } from "@/components/campaign/CampaignHistoryPanel";
 import {
   PageHeader,
   Card,
-  ListRow,
-  EmptyState,
   btnPrimary,
   btnSecondary,
   inputClass,
@@ -74,7 +73,6 @@ async function loadCampaignFilterOptions() {
 export default function AdminCampaignsPage() {
   const t = useTranslations("admin.campaigns");
   const tCommon = useTranslations("common");
-  const tAdmin = useTranslations("admin.common");
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateCampaignRequest>(emptyForm);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
@@ -92,15 +90,6 @@ export default function AdminCampaignsPage() {
     queryKey: ["campaign-filter-options"],
     queryFn: loadCampaignFilterOptions,
     staleTime: 5 * 60_000,
-  });
-
-  const { data: campaigns = [], isLoading } = useQuery({
-    queryKey: ["campaigns"],
-    queryFn: () => api.getCampaigns(),
-    refetchInterval: (query) => {
-      const rows = query.state.data ?? [];
-      return rows.some((c) => c.status === "SENDING") ? 3000 : false;
-    },
   });
 
   const lastVisitOptions = useMemo(
@@ -347,39 +336,7 @@ export default function AdminCampaignsPage() {
         confirmPending={create.isPending}
       />
 
-      <Card padding={false}>
-        {isLoading ? (
-          <PageLoader label={t("loading")} />
-        ) : campaigns.length === 0 ? (
-          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
-        ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {campaigns.map((c) => (
-              <ListRow
-                key={c.id}
-                title={c.name}
-                subtitle={`${c.channel} · ${c.messageText.slice(0, 60)}${c.messageText.length > 60 ? "…" : ""}`}
-                trailing={
-                  <div className="text-right text-xs">
-                    <p className="font-semibold text-[var(--text-primary)]">
-                      {c.status === "SENDING" ? t("campaignSending") : c.status}
-                    </p>
-                    <p className="text-[var(--text-tertiary)] mt-1">
-                      {c.status === "COMPLETED" || c.status === "FAILED"
-                        ? t("campaignResult", {
-                            sent: c.sentCount,
-                            failed: c.failedCount,
-                            total: c.recipientCount,
-                          })
-                        : tAdmin("sentCount", { sent: c.sentCount, total: c.recipientCount })}
-                    </p>
-                  </div>
-                }
-              />
-            ))}
-          </div>
-        )}
-      </Card>
+      <CampaignHistoryPanel />
     </div>
   );
 }

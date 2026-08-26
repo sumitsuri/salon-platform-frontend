@@ -462,7 +462,21 @@ export const api = {
     return request<PageResult<Lead>>(`/api/v1/enquiries?${search.toString()}`);
   },
 
-  getCampaigns: () => request<Campaign[]>("/api/v1/campaigns"),
+  getCampaigns: (params?: {
+    name?: string;
+    channel?: CampaignChannel;
+    status?: CampaignStatus;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.name) search.set("name", params.name);
+    if (params?.channel) search.set("channel", params.channel);
+    if (params?.status) search.set("status", params.status);
+    const q = search.toString();
+    return request<Campaign[]>(`/api/v1/campaigns${q ? `?${q}` : ""}`);
+  },
+
+  getCampaignDeliveries: (id: string) =>
+    request<CampaignDelivery[]>(`/api/v1/campaigns/${id}/deliveries`),
 
   previewCampaign: (data: CreateCampaignRequest) =>
     request<CampaignPreview>("/api/v1/campaigns/preview", { method: "POST", body: JSON.stringify(data) }),
@@ -1439,6 +1453,19 @@ export interface Campaign {
   skippedCount?: number;
   sentAt?: string;
   createdAt: string;
+}
+
+export type MessageDeliveryStatus = "PENDING" | "SENT" | "SKIPPED" | "FAILED";
+
+export interface CampaignDelivery {
+  id: string;
+  customerId?: string;
+  customerName?: string;
+  recipientPhone?: string;
+  status: MessageDeliveryStatus;
+  errorMessage?: string;
+  providerMessageId?: string;
+  createdAt?: string;
 }
 
 export interface BookingLine {
