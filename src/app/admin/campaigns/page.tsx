@@ -72,6 +72,7 @@ async function loadCampaignFilterOptions() {
 export default function AdminCampaignsPage() {
   const t = useTranslations("admin.campaigns");
   const tCommon = useTranslations("common");
+  const tAdmin = useTranslations("admin.common");
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateCampaignRequest>(emptyForm);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
@@ -317,7 +318,7 @@ export default function AdminCampaignsPage() {
                             failed: c.failedCount,
                             total: c.recipientCount,
                           })
-                        : tCommon("sentCount", { sent: c.sentCount, total: c.recipientCount })}
+                        : tAdmin("sentCount", { sent: c.sentCount, total: c.recipientCount })}
                     </p>
                   </div>
                 }

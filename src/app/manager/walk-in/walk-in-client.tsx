@@ -602,7 +602,8 @@ export default function WalkInPage() {
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPendingMembershipPlanId(b.pendingMembershipPlanId || "");
     setPaymentSuccess("");
-    setReceiptQueued(false);
+    setReceiptDeliveryStatus(undefined);
+    setReceiptDeliveryError("");
     setPaymentMode("CASH");
     setReference("");
     setSplitRows([
@@ -791,7 +792,8 @@ export default function WalkInPage() {
     setBillDiscountValue("");
     setPaidInvoiceId("");
     setPaymentSuccess("");
-    setReceiptQueued(false);
+    setReceiptDeliveryStatus(undefined);
+    setReceiptDeliveryError("");
     setCatalogTop("");
     setCatalogSub("");
     setServiceQuery("");
