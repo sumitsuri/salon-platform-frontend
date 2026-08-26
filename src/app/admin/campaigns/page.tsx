@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Megaphone, Send } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   btnSecondary,
   inputClass,
   PageLoader,
+  SearchableSelect,
 } from "@/components/ui";
 
 const emptyForm: CreateCampaignRequest = {
@@ -25,9 +26,52 @@ const emptyForm: CreateCampaignRequest = {
   filterPhone: "",
 };
 
+const VISIT_COUNT_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20];
+
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function isoStartOfYear(): string {
+  const y = new Date().getFullYear();
+  return `${y}-01-01`;
+}
+
+async function loadCampaignFilterOptions() {
+  const names = new Set<string>();
+  const societies = new Set<string>();
+  const phones = new Set<string>();
+  let page = 0;
+  let totalPages = 1;
+
+  while (page < totalPages && page < 30) {
+    const res = await api.listCustomers({ page, size: 100 });
+    totalPages = res.totalPages;
+    for (const c of res.content) {
+      if (c.name?.trim()) names.add(c.name.trim());
+      if (c.society?.trim()) societies.add(c.society.trim());
+      if (c.phone?.trim()) phones.add(c.phone.trim());
+    }
+    page += 1;
+  }
+
+  const sortLabels = (values: Set<string>) =>
+    [...values]
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+      .map((value) => ({ value, label: value }));
+
+  return {
+    names: sortLabels(names),
+    societies: sortLabels(societies),
+    phones: sortLabels(phones),
+  };
+}
+
 export default function AdminCampaignsPage() {
   const t = useTranslations("admin.campaigns");
-  const tAdmin = useTranslations("admin.common");
+  const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateCampaignRequest>(emptyForm);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
@@ -38,6 +82,12 @@ export default function AdminCampaignsPage() {
     queryFn: () => api.getMessagingConfig(),
   });
 
+  const { data: filterOptions, isLoading: filtersLoading } = useQuery({
+    queryKey: ["campaign-filter-options"],
+    queryFn: loadCampaignFilterOptions,
+    staleTime: 5 * 60_000,
+  });
+
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => api.getCampaigns(),
@@ -46,6 +96,26 @@ export default function AdminCampaignsPage() {
       return rows.some((c) => c.status === "SENDING") ? 3000 : false;
     },
   });
+
+  const lastVisitOptions = useMemo(
+    () => [
+      { value: "", label: t("lastVisitAny") },
+      { value: isoDaysAgo(7), label: t("lastVisit7d") },
+      { value: isoDaysAgo(30), label: t("lastVisit30d") },
+      { value: isoDaysAgo(90), label: t("lastVisit90d") },
+      { value: isoDaysAgo(180), label: t("lastVisit180d") },
+      { value: isoStartOfYear(), label: t("lastVisitYtd") },
+    ],
+    [t],
+  );
+
+  const visitCountOptions = useMemo(
+    () => [
+      { value: "", label: t("visitAny") },
+      ...VISIT_COUNT_OPTIONS.map((n) => ({ value: String(n), label: String(n) })),
+    ],
+    [t],
+  );
 
   const preview = useMutation({
     mutationFn: () => api.previewCampaign(buildPayload(form)),
@@ -133,19 +203,64 @@ export default function AdminCampaignsPage() {
         />
 
         <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("customerFilters")}</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <input placeholder={t("nameContains")} value={form.filterName || ""} onChange={(e) => updateField("filterName", e.target.value)} className={inputClass} />
-          <input placeholder={t("societyContains")} value={form.filterSociety || ""} onChange={(e) => updateField("filterSociety", e.target.value)} className={inputClass} />
-          <input placeholder={t("phoneContains")} value={form.filterPhone || ""} onChange={(e) => updateField("filterPhone", e.target.value)} className={inputClass} />
-          <input type="number" min={0} placeholder={t("minVisits")} value={form.filterMinVisitCount ?? ""} onChange={(e) => updateField("filterMinVisitCount", e.target.value ? Number(e.target.value) : undefined)} className={inputClass} />
-          <input type="number" min={0} placeholder={t("maxVisits")} value={form.filterMaxVisitCount ?? ""} onChange={(e) => updateField("filterMaxVisitCount", e.target.value ? Number(e.target.value) : undefined)} className={inputClass} />
-          <input type="date" value={form.filterLastVisitFrom || ""} onChange={(e) => updateField("filterLastVisitFrom", e.target.value || undefined)} className={inputClass} />
-        </div>
+
+        {filtersLoading || !filterOptions ? (
+          <PageLoader label={t("loadingFilters")} />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SearchableSelect
+              value={form.filterName || ""}
+              onChange={(v) => updateField("filterName", v)}
+              options={filterOptions.names}
+              placeholder={t("nameContains")}
+              allLabel={tCommon("all")}
+            />
+            <SearchableSelect
+              value={form.filterSociety || ""}
+              onChange={(v) => updateField("filterSociety", v)}
+              options={filterOptions.societies}
+              placeholder={t("societyContains")}
+              allLabel={tCommon("all")}
+            />
+            <SearchableSelect
+              value={form.filterPhone || ""}
+              onChange={(v) => updateField("filterPhone", v)}
+              options={filterOptions.phones}
+              placeholder={t("phoneContains")}
+              allLabel={tCommon("all")}
+            />
+            <SearchableSelect
+              value={form.filterMinVisitCount != null ? String(form.filterMinVisitCount) : ""}
+              onChange={(v) => updateField("filterMinVisitCount", v ? Number(v) : undefined)}
+              options={visitCountOptions}
+              placeholder={t("minVisits")}
+              allLabel={t("visitAny")}
+            />
+            <SearchableSelect
+              value={form.filterMaxVisitCount != null ? String(form.filterMaxVisitCount) : ""}
+              onChange={(v) => updateField("filterMaxVisitCount", v ? Number(v) : undefined)}
+              options={visitCountOptions}
+              placeholder={t("maxVisits")}
+              allLabel={t("visitAny")}
+            />
+            <SearchableSelect
+              value={form.filterLastVisitFrom || ""}
+              onChange={(v) => updateField("filterLastVisitFrom", v || undefined)}
+              options={lastVisitOptions}
+              placeholder={t("lastVisitFrom")}
+              allLabel={t("lastVisitAny")}
+            />
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => preview.mutate()} disabled={preview.isPending || !form.name || !form.messageText} className={btnSecondary}>
+          <button
+            onClick={() => preview.mutate()}
+            disabled={preview.isPending || !form.name || !form.messageText || filtersLoading}
+            className={btnSecondary}
+          >
             {preview.isPending ? t("counting") : t("previewAudience")}
           </button>
           {previewCount !== null && (
@@ -158,7 +273,7 @@ export default function AdminCampaignsPage() {
             onClick={() => {
               if (previewCount == null || previewCount <= 0) return;
               const ok = window.confirm(
-                `Send this campaign to ${previewCount} customer${previewCount === 1 ? "" : "s"}? This cannot be undone.`
+                `Send this campaign to ${previewCount} customer${previewCount === 1 ? "" : "s"}? This cannot be undone.`,
               );
               if (ok) create.mutate();
             }}
@@ -202,7 +317,7 @@ export default function AdminCampaignsPage() {
                             failed: c.failedCount,
                             total: c.recipientCount,
                           })
-                        : tAdmin("sentCount", { sent: c.sentCount, total: c.recipientCount })}
+                        : tCommon("sentCount", { sent: c.sentCount, total: c.recipientCount })}
                     </p>
                   </div>
                 }
