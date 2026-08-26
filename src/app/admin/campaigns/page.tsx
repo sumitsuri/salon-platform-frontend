@@ -15,16 +15,30 @@ import {
   inputClass,
   PageLoader,
   SearchableSelect,
+  SearchableMultiSelect,
   ConfirmDialog,
 } from "@/components/ui";
 
-const emptyForm: CreateCampaignRequest = {
+type CampaignFormState = {
+  name: string;
+  channel: CampaignChannel;
+  messageText: string;
+  filterNames: string[];
+  filterSociety: string;
+  filterPhones: string[];
+  filterMinVisitCount?: number;
+  filterMaxVisitCount?: number;
+  filterLastVisitFrom?: string;
+  filterLastVisitTo?: string;
+};
+
+const emptyForm: CampaignFormState = {
   name: "",
   channel: "WHATSAPP",
   messageText: "",
-  filterName: "",
+  filterNames: [],
   filterSociety: "",
-  filterPhone: "",
+  filterPhones: [],
 };
 
 const VISIT_COUNT_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20];
@@ -74,7 +88,7 @@ export default function AdminCampaignsPage() {
   const t = useTranslations("admin.campaigns");
   const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<CreateCampaignRequest>(emptyForm);
+  const [form, setForm] = useState<CampaignFormState>(emptyForm);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [previewCustomers, setPreviewCustomers] = useState<Customer[] | null>(null);
   const [previewTruncated, setPreviewTruncated] = useState(false);
@@ -142,7 +156,7 @@ export default function AdminCampaignsPage() {
     setPreviewTruncated(false);
   }
 
-  function updateField<K extends keyof CreateCampaignRequest>(key: K, value: CreateCampaignRequest[K]) {
+  function updateField<K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     clearPreview();
   }
@@ -212,9 +226,9 @@ export default function AdminCampaignsPage() {
           <PageLoader label={t("loadingFilters")} />
         ) : (
           <div className="grid gap-3 sm:grid-cols-3">
-            <SearchableSelect
-              value={form.filterName || ""}
-              onChange={(v) => updateField("filterName", v)}
+            <SearchableMultiSelect
+              value={form.filterNames}
+              onChange={(v) => updateField("filterNames", v)}
               options={filterOptions.names}
               placeholder={t("nameContains")}
               allLabel={tCommon("all")}
@@ -226,9 +240,9 @@ export default function AdminCampaignsPage() {
               placeholder={t("societyContains")}
               allLabel={tCommon("all")}
             />
-            <SearchableSelect
-              value={form.filterPhone || ""}
-              onChange={(v) => updateField("filterPhone", v)}
+            <SearchableMultiSelect
+              value={form.filterPhones}
+              onChange={(v) => updateField("filterPhones", v)}
               options={filterOptions.phones}
               placeholder={t("phoneContains")}
               allLabel={tCommon("all")}
@@ -341,12 +355,16 @@ export default function AdminCampaignsPage() {
   );
 }
 
-function buildPayload(form: CreateCampaignRequest): CreateCampaignRequest {
+function buildPayload(form: CampaignFormState): CreateCampaignRequest {
   return {
-    ...form,
-    filterName: form.filterName || undefined,
+    name: form.name,
+    channel: form.channel,
+    messageText: form.messageText,
+    filterNames: form.filterNames.length ? form.filterNames : undefined,
     filterSociety: form.filterSociety || undefined,
-    filterPhone: form.filterPhone || undefined,
+    filterPhones: form.filterPhones.length ? form.filterPhones : undefined,
+    filterMinVisitCount: form.filterMinVisitCount,
+    filterMaxVisitCount: form.filterMaxVisitCount,
     filterLastVisitFrom: form.filterLastVisitFrom || undefined,
     filterLastVisitTo: form.filterLastVisitTo || undefined,
     filterWhatsappOptInOnly: form.channel === "WHATSAPP" ? true : undefined,

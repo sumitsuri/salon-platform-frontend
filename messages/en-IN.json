@@ -765,6 +765,7 @@
       "searchPlaceholder": "Search…",
       "allOptions": "All",
       "noMatches": "No matches",
+      "selectedCount": "{count} selected",
       "closePanel": "Close panel",
       "close": "Close"
     },

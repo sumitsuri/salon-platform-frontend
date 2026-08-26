@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LucideIcon, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
+import { LucideIcon, ChevronLeft, ChevronRight, ChevronDown, X, Check } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -158,6 +158,176 @@ export function SearchableSelect({
             ))
           )}
         </ul>
+      )}
+    </div>
+  );
+}
+
+/** Searchable multi-select — type to filter, toggle multiple options. */
+export function SearchableMultiSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  allLabel,
+  disabled,
+  className,
+  inputClassName,
+}: {
+  value: string[];
+  onChange: (value: string[]) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  allLabel?: string;
+  disabled?: boolean;
+  className?: string;
+  inputClassName?: string;
+}) {
+  const t = useTranslations("components.ui");
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selectedLabels = useMemo(
+    () =>
+      value
+        .map((v) => options.find((o) => o.value === v)?.label ?? v)
+        .filter(Boolean),
+    [options, value],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, query]);
+
+  const displayValue =
+    selectedLabels.length === 0
+      ? ""
+      : selectedLabels.length === 1
+        ? selectedLabels[0]
+        : t("selectedCount", { count: selectedLabels.length });
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  function toggle(next: string) {
+    if (value.includes(next)) {
+      onChange(value.filter((v) => v !== next));
+    } else {
+      onChange([...value, next]);
+    }
+  }
+
+  function clearAll() {
+    onChange([]);
+    setOpen(false);
+    setQuery("");
+  }
+
+  function openList() {
+    if (disabled) return;
+    setOpen(true);
+    setQuery("");
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
+  return (
+    <div ref={containerRef} className={cn("relative min-w-0", className)}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={open ? query : displayValue}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!open) setOpen(true);
+          }}
+          onFocus={openList}
+          onClick={openList}
+          placeholder={placeholder ?? t("searchPlaceholder")}
+          disabled={disabled}
+          className={cn(inputClassName ?? inputClass, "pr-9")}
+          autoComplete="off"
+        />
+        <ChevronDown
+          className={cn(
+            "pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]",
+            disabled && "opacity-40",
+          )}
+          aria-hidden
+        />
+      </div>
+      {open && !disabled && (
+        <ul
+          className="absolute z-[120] mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg"
+          role="listbox"
+          aria-multiselectable
+        >
+          <li>
+            <button
+              type="button"
+              className={cn(
+                "w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]",
+                value.length === 0 && "bg-[var(--surface-muted)] font-semibold text-[var(--brand-text)]",
+              )}
+              onClick={clearAll}
+            >
+              {allLabel ?? t("allOptions")}
+            </button>
+          </li>
+          {filtered.length === 0 ? (
+            <li className="px-3 py-2 text-sm text-[var(--text-tertiary)]">{t("noMatches")}</li>
+          ) : (
+            filtered.map((o) => {
+              const checked = value.includes(o.value);
+              return (
+                <li key={o.value}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface-muted)]"
+                    onClick={() => toggle(o.value)}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                        checked
+                          ? "border-[var(--brand)] bg-[var(--brand)]"
+                          : "border-[var(--border)] bg-[var(--surface)]",
+                      )}
+                    >
+                      {checked && <Check className="h-3 w-3 text-[var(--brand-on-brand)]" />}
+                    </span>
+                    <span className="truncate">{o.label}</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+      {selectedLabels.length > 1 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {selectedLabels.map((label) => (
+            <span
+              key={label}
+              className="rounded-full bg-[var(--brand-light)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-text)]"
+            >
+              {label}
+            </span>
+          ))}
+        </div>
       )}
     </div>
   );

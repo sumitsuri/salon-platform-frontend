@@ -1414,8 +1414,10 @@ export interface CreateCampaignRequest {
   channel: CampaignChannel;
   messageText: string;
   filterName?: string;
+  filterNames?: string[];
   filterSociety?: string;
   filterPhone?: string;
+  filterPhones?: string[];
   filterMinVisitCount?: number;
   filterMaxVisitCount?: number;
   filterMinLifetimeSpend?: number;
@@ -1439,8 +1441,10 @@ export interface Campaign {
   status: CampaignStatus;
   messageText: string;
   filterName?: string;
+  filterNames?: string[];
   filterSociety?: string;
   filterPhone?: string;
+  filterPhones?: string[];
   filterMinVisitCount?: number;
   filterMaxVisitCount?: number;
   filterMinLifetimeSpend?: number;
