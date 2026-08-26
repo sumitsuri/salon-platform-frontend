@@ -1061,6 +1061,8 @@ export interface Customer {
   visitCount: number;
   lifetimeSpend: number;
   lastVisitAt?: string;
+  whatsappOptIn?: boolean | null;
+  smsOptIn?: boolean | null;
 }
 
 export interface CreateCustomerRequest {
@@ -1412,6 +1414,8 @@ export interface CreateCampaignRequest {
 
 export interface CampaignPreview {
   matchingCustomers: number;
+  customers: Customer[];
+  previewTruncated: boolean;
 }
 
 export interface Campaign {

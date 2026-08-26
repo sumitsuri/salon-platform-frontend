@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Megaphone, Send } from "lucide-react";
-import { api, type CampaignChannel, type CreateCampaignRequest } from "@/lib/api";
+import { api, type CampaignChannel, type CreateCampaignRequest, type Customer } from "@/lib/api";
+import { CampaignAudiencePreview } from "@/components/campaign/CampaignAudiencePreview";
 import {
   PageHeader,
   Card,
@@ -76,6 +77,8 @@ export default function AdminCampaignsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateCampaignRequest>(emptyForm);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [previewCustomers, setPreviewCustomers] = useState<Customer[] | null>(null);
+  const [previewTruncated, setPreviewTruncated] = useState(false);
   const [error, setError] = useState("");
 
   const { data: messaging } = useQuery({
@@ -122,6 +125,8 @@ export default function AdminCampaignsPage() {
     mutationFn: () => api.previewCampaign(buildPayload(form)),
     onSuccess: (res) => {
       setPreviewCount(res.matchingCustomers);
+      setPreviewCustomers(res.customers ?? []);
+      setPreviewTruncated(res.previewTruncated ?? false);
       setError("");
     },
     onError: (e: Error) => setError(e.message),
@@ -134,14 +139,22 @@ export default function AdminCampaignsPage() {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       setForm(emptyForm);
       setPreviewCount(null);
+      setPreviewCustomers(null);
+      setPreviewTruncated(false);
       setError("");
     },
     onError: (e: Error) => setError(e.message),
   });
 
+  function clearPreview() {
+    setPreviewCount(null);
+    setPreviewCustomers(null);
+    setPreviewTruncated(false);
+  }
+
   function updateField<K extends keyof CreateCampaignRequest>(key: K, value: CreateCampaignRequest[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
-    setPreviewCount(null);
+    clearPreview();
   }
 
   return (
@@ -293,6 +306,15 @@ export default function AdminCampaignsPage() {
           </button>
         </div>
       </Card>
+
+      {previewCustomers !== null && (
+        <CampaignAudiencePreview
+          customers={previewCustomers}
+          totalCount={previewCount ?? 0}
+          truncated={previewTruncated}
+          channel={form.channel}
+        />
+      )}
 
       <Card padding={false}>
         {isLoading ? (
