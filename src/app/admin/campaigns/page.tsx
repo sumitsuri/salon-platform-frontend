@@ -16,6 +16,7 @@ import {
   inputClass,
   PageLoader,
   SearchableSelect,
+  ConfirmDialog,
 } from "@/components/ui";
 
 const emptyForm: CreateCampaignRequest = {
@@ -79,6 +80,7 @@ export default function AdminCampaignsPage() {
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [previewCustomers, setPreviewCustomers] = useState<Customer[] | null>(null);
   const [previewTruncated, setPreviewTruncated] = useState(false);
+  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
   const [error, setError] = useState("");
 
   const { data: messaging } = useQuery({
@@ -138,9 +140,8 @@ export default function AdminCampaignsPage() {
       await api.sendCampaign(campaign.id);
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       setForm(emptyForm);
-      setPreviewCount(null);
-      setPreviewCustomers(null);
-      setPreviewTruncated(false);
+      clearPreview();
+      setSendConfirmOpen(false);
       setError("");
     },
     onError: (e: Error) => setError(e.message),
@@ -286,10 +287,7 @@ export default function AdminCampaignsPage() {
             type="button"
             onClick={() => {
               if (previewCount == null || previewCount <= 0) return;
-              const ok = window.confirm(
-                `Send this campaign to ${previewCount} customer${previewCount === 1 ? "" : "s"}? This cannot be undone.`,
-              );
-              if (ok) create.mutate();
+              setSendConfirmOpen(true);
             }}
             disabled={
               create.isPending ||
@@ -315,6 +313,39 @@ export default function AdminCampaignsPage() {
           channel={form.channel}
         />
       )}
+
+      <ConfirmDialog
+        open={sendConfirmOpen}
+        onClose={() => setSendConfirmOpen(false)}
+        onConfirm={() => create.mutate()}
+        title={t("sendConfirmTitle")}
+        description={
+          <>
+            <p>
+              {t("sendConfirmBody", {
+                name: form.name,
+                count: previewCount ?? 0,
+                channel: form.channel === "WHATSAPP" ? t("whatsapp") : t("sms"),
+              })}
+            </p>
+            {previewCustomers && previewCustomers.length > 0 && (
+              <ul className="text-xs text-[var(--text-tertiary)] list-disc pl-4 space-y-0.5">
+                {previewCustomers.slice(0, 5).map((c) => (
+                  <li key={c.id}>
+                    {c.name}
+                    {c.phone ? ` · ${c.phone}` : ""}
+                  </li>
+                ))}
+                {(previewCount ?? 0) > 5 && (
+                  <li>{t("sendConfirmMoreRecipients", { count: (previewCount ?? 0) - 5 })}</li>
+                )}
+              </ul>
+            )}
+          </>
+        }
+        confirmLabel={create.isPending ? t("sending") : t("sendConfirmAction")}
+        confirmPending={create.isPending}
+      />
 
       <Card padding={false}>
         {isLoading ? (

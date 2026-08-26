@@ -697,6 +697,84 @@ export function SideSheet({
   );
 }
 
+/** Centered confirmation modal — replaces native browser confirm for in-app flows. */
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel,
+  confirmPending = false,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel: string;
+  cancelLabel?: string;
+  confirmPending?: boolean;
+}) {
+  const tCommon = useTranslations("common");
+
+  useScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !confirmPending) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose, confirmPending]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      onClick={() => {
+        if (!confirmPending) onClose();
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <h2 id="confirm-dialog-title" className="text-lg font-bold text-[var(--text-primary)]">
+            {title}
+          </h2>
+          <div className="text-sm text-[var(--text-secondary)] mt-2 space-y-2">{description}</div>
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={confirmPending}
+            className={`${btnSecondary} w-full sm:w-auto`}
+          >
+            {cancelLabel ?? tCommon("cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={confirmPending}
+            className={`${btnPrimary} w-full sm:w-auto`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
     <div>
