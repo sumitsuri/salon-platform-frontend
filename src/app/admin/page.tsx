@@ -10,10 +10,11 @@ import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { BranchTrends } from "@/components/BranchTrends";
 import { BranchTargetTrends } from "@/components/BranchTargetTrends";
 import { EmployeeTargetTrends } from "@/components/EmployeeTargetTrends";
+import { ServiceSalesTeaser } from "@/components/ServiceSalesTeaser";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
+import { PaymentMixTeaser } from "@/components/PaymentMixTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
-import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { Card, ListRow, EmptyState, PageLoader } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, dashboardSecondaryRange, getTodayRange, resolveProductDateRange } from "@/lib/date-range";
@@ -24,14 +25,17 @@ import {
   DashboardQuickLink,
   DashboardKpiStrip,
   DashboardBranchPerformance,
+  DashboardEmployeeCheckIn,
+  DashboardEmployeeSales,
+  DashboardWidgetCard,
   DashboardOverviewPanel,
-  LabeledProgressBar,
 } from "@/components/enterprise-ui";
 
 export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
+  const tAtt = useTranslations("components.attendanceDashboard");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
     preset: "today",
@@ -57,42 +61,42 @@ export default function AdminDashboardPage() {
 
   const apiRange = insightPeriodToRange(dateRange);
 
+  const branchIdsFilter =
+    selectedBranches.length > 0 && selectedBranches.length < branches.length
+      ? selectedBranches
+      : undefined;
+
   const { data: dashboard, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getDashboard({
         ...apiRange,
-        branchIds:
-          selectedBranches.length > 0 && selectedBranches.length < branches.length
-            ? selectedBranches
-            : undefined,
+        branchIds: branchIdsFilter,
       }),
     enabled: initialized && selectedBranches.length > 0,
   });
 
-  const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
-    queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
-    queryFn: () =>
-      api.getRecommendations({
-        ...apiRange,
-        branchIds:
-          selectedBranches.length > 0 && selectedBranches.length < branches.length
-            ? selectedBranches
-            : undefined,
-      }),
+  const { data: attendanceDashboard, isLoading: attendanceLoading } = useQuery({
+    queryKey: ["attendance-dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getAttendanceDashboard({ ...apiRange, branchIds: branchIdsFilter }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const { data: staffPerformance, isLoading: staffPerfLoading } = useQuery({
+    queryKey: ["staff-target-performance", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getStaffTargetPerformance({ ...apiRange, branchIds: branchIdsFilter }),
     enabled: initialized && selectedBranches.length > 0,
   });
 
   const { data: serviceContribution, isLoading: servicesLoading } = useQuery({
     queryKey: ["service-contribution", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
-    queryFn: () =>
-      api.getServiceContribution({
-        ...apiRange,
-        branchIds:
-          selectedBranches.length > 0 && selectedBranches.length < branches.length
-            ? selectedBranches
-            : undefined,
-      }),
+    queryFn: () => api.getServiceContribution({ ...apiRange, branchIds: branchIdsFilter }),
+    enabled: initialized && selectedBranches.length > 0,
+  });
+
+  const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
+    queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
+    queryFn: () => api.getRecommendations({ ...apiRange, branchIds: branchIdsFilter }),
     enabled: initialized && selectedBranches.length > 0,
   });
 
@@ -156,6 +160,19 @@ export default function AdminDashboardPage() {
 
   const periodSubtitle = isFetching && !isLoading ? tAdmin("updating") : undefined;
 
+  const employeeCheckInLabels = {
+    staff: tAtt("staff"),
+    checkIn: t("checkInTime"),
+    checkOut: t("checkOutTime"),
+  };
+
+  const employeeSalesLabels = {
+    name: tAtt("staff"),
+    sales: t("sales"),
+    avgTicket: t("avgTicket"),
+    totalSales: t("totalSales"),
+  };
+
   if (!initialized || branchesLoading) {
     return <PageLoader label={tAdmin("loadingDashboard")} />;
   }
@@ -168,6 +185,17 @@ export default function AdminDashboardPage() {
       />
     );
   }
+
+  const branchPerformanceLabels = {
+    branch: tCommon("branch"),
+    revenue: t("revenue"),
+    visits: t("visits"),
+    avgTicket: t("avgTicket"),
+    discounts: t("discounts"),
+  };
+
+  const dashboardLoading = isLoading || !dashboard;
+  const showBranchPerformance = dashboardLoading || (dashboard?.branchStats.length ?? 0) > 0;
 
   return (
     <div className="page-stack space-y-4">
@@ -190,155 +218,174 @@ export default function AdminDashboardPage() {
           }
         />
 
-        {selectedBranches.length === 0 ? null : isLoading || !dashboard ? (
-          <>
-            <DashboardKpiStrip
-              loading
-              headerLabel={t("keyMetricsLabel")}
-              items={[
-                { label: t("totalRevenue"), value: "…" },
-                { label: t("visits"), value: "…" },
-                { label: t("avgTicket"), value: "…" },
-                { label: t("discounts"), value: "…" },
-              ]}
-            />
-            <DashboardBranchPerformance
-              loading
-              headerLabel={t("branchPerformance")}
-              branches={[]}
-              labels={{
-                branch: tCommon("branch"),
-                revenue: t("revenue"),
-                visits: t("visits"),
-                avgTicket: t("avgTicket"),
-                discounts: t("discounts"),
-              }}
-              formatValue={formatCurrency}
-            />
-          </>
-        ) : (
-          <>
-            <DashboardKpiStrip
-              headerLabel={t("keyMetricsLabel")}
-              items={[
-                { label: t("totalRevenue"), value: formatCurrency(dashboard.totalRevenue) },
-                { label: t("visits"), value: dashboard.totalVisits },
-                { label: t("avgTicket"), value: formatCurrency(dashboard.avgTicketSize) },
-                { label: t("discounts"), value: formatCurrency(dashboard.totalDiscounts) },
-              ]}
-            />
-            {dashboard.branchStats.length > 0 && (
-              <DashboardBranchPerformance
-                headerLabel={t("branchPerformance")}
-                branches={dashboard.branchStats.map((b) => ({
-                  branchId: b.branchId,
-                  branchName: b.branchName,
-                  revenue: b.revenue,
-                  visits: b.visits,
-                  avgTicket: b.avgTicket,
-                  discountAmount: b.discountAmount ?? 0,
-                }))}
-                labels={{
-                  branch: tCommon("branch"),
-                  revenue: t("revenue"),
-                  visits: t("visits"),
-                  avgTicket: t("avgTicket"),
-                  discounts: t("discounts"),
-                }}
-                formatValue={formatCurrency}
-                branchHref={(b) =>
-                  adminBookingsPath({
-                    branchId: b.branchId,
-                    branchName: b.branchName,
-                    dateRange: resolveProductDateRange(dateRange),
-                  })
-                }
-              />
-            )}
-          </>
-        )}
+        {selectedBranches.length > 0 ? (
+          <DashboardKpiStrip
+            loading={dashboardLoading}
+            headerLabel={t("keyMetricsLabel")}
+            items={
+              dashboardLoading
+                ? [
+                    { label: t("totalRevenue"), value: "…" },
+                    { label: t("visits"), value: "…" },
+                    { label: t("avgTicket"), value: "…" },
+                    { label: t("discounts"), value: "…" },
+                  ]
+                : [
+                    { label: t("totalRevenue"), value: formatCurrency(dashboard!.totalRevenue) },
+                    { label: t("visits"), value: dashboard!.totalVisits },
+                    { label: t("avgTicket"), value: formatCurrency(dashboard!.avgTicketSize) },
+                    { label: t("discounts"), value: formatCurrency(dashboard!.totalDiscounts) },
+                  ]
+            }
+          />
+        ) : null}
       </DashboardOverviewPanel>
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
-      ) : isLoading || !dashboard ? null : (
+      ) : (
         <>
+          {showBranchPerformance ? (
+            <DashboardWidgetCard>
+              <DashboardBranchPerformance
+                loading={dashboardLoading}
+                headerLabel={t("branchPerformance")}
+                branches={
+                  dashboardLoading
+                    ? []
+                    : dashboard!.branchStats.map((b) => ({
+                        branchId: b.branchId,
+                        branchName: b.branchName,
+                        revenue: b.revenue,
+                        visits: b.visits,
+                        avgTicket: b.avgTicket,
+                        discountAmount: b.discountAmount ?? 0,
+                      }))
+                }
+                labels={branchPerformanceLabels}
+                formatValue={formatCurrency}
+                branchHref={
+                  dashboardLoading
+                    ? undefined
+                    : (b) =>
+                        adminBookingsPath({
+                          branchId: b.branchId,
+                          branchName: b.branchName,
+                          dateRange: resolveProductDateRange(dateRange),
+                        })
+                }
+              />
+            </DashboardWidgetCard>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <DashboardWidgetCard>
+              <DashboardEmployeeCheckIn
+                loading={attendanceLoading}
+                headerLabel={t("employeeCheckIn")}
+                emptyLabel={t("noEmployeeCheckIn")}
+                staff={(attendanceDashboard?.staffSummaries ?? []).map((s) => ({
+                  staffId: s.staffId,
+                  staffName: s.staffName,
+                  attendanceRecordId: s.attendanceRecordId,
+                  entryTime: s.entryTime,
+                  exitTime: s.exitTime,
+                  hasEntryPhoto: s.hasEntryPhoto,
+                }))}
+                labels={employeeCheckInLabels}
+                staffHref={() => "/admin/employees"}
+              />
+            </DashboardWidgetCard>
+            <DashboardWidgetCard>
+              <DashboardEmployeeSales
+                loading={staffPerfLoading}
+                headerLabel={t("employeeSales")}
+                emptyLabel={t("noEmployeeSales")}
+                staff={(staffPerformance?.staff ?? []).map((s) => ({
+                  staffId: s.staffId,
+                  staffName: s.staffName,
+                  salesCount: s.salesCount ?? 0,
+                  avgTicketSize: s.avgTicketSize ?? 0,
+                  totalSales: s.actualSales,
+                }))}
+                labels={employeeSalesLabels}
+                formatValue={formatCurrency}
+                staffHref={() => "/admin/employees"}
+              />
+            </DashboardWidgetCard>
+          </div>
+
           <div className="grid gap-4 xl:grid-cols-2">
-            <InsightsTeaser data={recommendations} loading={recommendationsLoading} href="/admin/insights" />
-            <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />
+            <ServiceSalesTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
+            {dashboardLoading ? (
+              <PlTeaser data={undefined} loading href="/admin/finance" />
+            ) : (
+              <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" />
+            )}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">
             <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" />
-            <ServiceContributionTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
+            <PaymentMixTeaser
+              loading={dashboardLoading}
+              paymentMix={dashboardLoading ? undefined : dashboard!.paymentMix}
+            />
           </div>
 
-          {dashboard.branchTrends && dashboard.branchTrends.length > 0 && (
-            <BranchTrends trends={dashboard.branchTrends} />
-          )}
-
-          {!branchTrendsLoading && branchTargetTrends && branchTargetTrends.branches.length > 0 && (
-            <BranchTargetTrends
-              branches={branchTargetTrends.branches}
-              periodLabel={branchTargetTrends.periodLabel}
-            />
-          )}
-
-          {!staffTrendsLoading && staffTargetTrends && staffTargetTrends.branches.length > 0 && (
-            <EmployeeTargetTrends
-              branches={staffTargetTrends.branches}
-              periodLabel={staffTargetTrends.periodLabel}
-              compact
-            />
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2 min-w-0">
-            <Card padding={false}>
-              <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-violet-50/80 to-indigo-50/50 dark:from-violet-950/30 dark:to-indigo-950/20">
-                <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
-              </div>
-              {dashboard.topStaff.length === 0 ? (
-                <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} />
-              ) : (
-                <div className="divide-y divide-[var(--border)]">
-                  {dashboard.topStaff.map((s, i) => (
-                    <ListRow
-                      key={s.staffId}
-                      title={`${i + 1}. ${s.staffName}`}
-                      subtitle={s.branchName}
-                      trailing={<span className="text-xs sm:text-sm font-bold text-[var(--brand-text)] tabular-nums truncate">{formatCurrency(s.revenue)}</span>}
-                    />
-                  ))}
-                </div>
+          {dashboardLoading ? null : (
+            <>
+              {dashboard!.branchTrends && dashboard!.branchTrends.length > 0 && (
+                <BranchTrends trends={dashboard!.branchTrends} />
               )}
-            </Card>
 
-            <Card padding={false}>
-              <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20">
-                <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("paymentMix")}</h2>
+              {!branchTrendsLoading && branchTargetTrends && branchTargetTrends.branches.length > 0 && (
+                <BranchTargetTrends
+                  branches={branchTargetTrends.branches}
+                  periodLabel={branchTargetTrends.periodLabel}
+                />
+              )}
+
+              {!staffTrendsLoading && staffTargetTrends && staffTargetTrends.branches.length > 0 && (
+                <EmployeeTargetTrends
+                  branches={staffTargetTrends.branches}
+                  periodLabel={staffTargetTrends.periodLabel}
+                  compact
+                />
+              )}
+
+              <div className="grid gap-4 md:grid-cols-2 min-w-0">
+                <Card padding={false}>
+                  <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-violet-50/80 to-indigo-50/50 dark:from-violet-950/30 dark:to-indigo-950/20">
+                    <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
+                  </div>
+                  {dashboard!.topStaff.length === 0 ? (
+                    <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} />
+                  ) : (
+                    <div className="divide-y divide-[var(--border)]">
+                      {dashboard!.topStaff.map((s, i) => (
+                        <ListRow
+                          key={s.staffId}
+                          title={`${i + 1}. ${s.staffName}`}
+                          subtitle={s.branchName}
+                          trailing={
+                            <span className="text-xs sm:text-sm font-bold text-[var(--brand-text)] tabular-nums truncate">
+                              {formatCurrency(s.revenue)}
+                            </span>
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </Card>
+
+                <InsightsTeaser
+                  data={recommendations}
+                  loading={recommendationsLoading}
+                  href="/admin/insights"
+                />
               </div>
-              <div className="p-4 space-y-4">
-                {[
-                  { label: tCommon("cash"), value: dashboard.paymentMix.cash, color: "bg-emerald-500" },
-                  { label: tCommon("upi"), value: dashboard.paymentMix.upi, color: "bg-[var(--brand)]" },
-                  { label: tCommon("card"), value: dashboard.paymentMix.card, color: "bg-[var(--brand)]" },
-                ].map((p) => {
-                  const total =
-                    dashboard.paymentMix.cash + dashboard.paymentMix.upi + dashboard.paymentMix.card || 1;
-                  return (
-                    <LabeledProgressBar
-                      key={p.label}
-                      label={p.label}
-                      value={p.value}
-                      total={total}
-                      color={p.color}
-                      formatValue={formatCurrency}
-                    />
-                  );
-                })}
-              </div>
-            </Card>
-          </div>
+            </>
+          )}
         </>
       )}
     </div>

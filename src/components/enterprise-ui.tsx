@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LucideIcon, Check } from "lucide-react";
+import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import { cn } from "@/lib/utils";
 
 /* ── Loading ── */
@@ -177,6 +178,28 @@ export function DashboardOverviewPanel({
   className?: string;
 }) {
   return <section className={cn("dashboard-overview-panel", className)}>{children}</section>;
+}
+
+/** Standalone dashboard table widget shell (spaced like bottom teasers). */
+export function DashboardWidgetCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("dashboard-widget-card min-w-0 max-w-full", className)}>{children}</div>;
+}
+
+/** Side-by-side employee check-in + sales tables (stacks on mobile). */
+export function DashboardEmployeeTablesRow({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("dashboard-employee-tables-row", className)}>{children}</div>;
 }
 
 export function DashboardKpiStrip({
@@ -386,6 +409,335 @@ export function DashboardBranchPerformance({
               </div>
             );
           })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export type EmployeeCheckInRow = {
+  staffId: string;
+  staffName: string;
+  attendanceRecordId?: string;
+  entryTime?: string;
+  exitTime?: string;
+  hasEntryPhoto?: boolean;
+};
+
+function defaultFormatCheckTime(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function StaffAvatar({
+  name,
+  recordId,
+  hasPhoto,
+  className,
+}: {
+  name: string;
+  recordId?: string;
+  hasPhoto?: boolean;
+  className?: string;
+}) {
+  if (recordId && hasPhoto) {
+    return <AttendancePhotoThumb recordId={recordId} type="entry" className={cn("w-9 h-9", className)} />;
+  }
+  const initial = name.trim().charAt(0).toUpperCase() || "?";
+  return (
+    <div
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] text-xs font-bold text-[var(--text-secondary)]",
+        className,
+      )}
+      aria-hidden
+    >
+      {initial}
+    </div>
+  );
+}
+
+export function DashboardEmployeeCheckIn({
+  staff,
+  loading,
+  headerLabel,
+  emptyLabel,
+  labels,
+  formatTime = defaultFormatCheckTime,
+  staffHref,
+  className,
+}: {
+  staff: EmployeeCheckInRow[];
+  loading?: boolean;
+  headerLabel: string;
+  emptyLabel: string;
+  labels: {
+    staff: string;
+    checkIn: string;
+    checkOut: string;
+  };
+  formatTime?: (iso?: string) => string;
+  staffHref?: (row: EmployeeCheckInRow) => string;
+  className?: string;
+}) {
+  const sortedStaff = [...staff].sort((a, b) => {
+    const aTime = a.entryTime ? new Date(a.entryTime).getTime() : 0;
+    const bTime = b.entryTime ? new Date(b.entryTime).getTime() : 0;
+    if (bTime !== aTime) return bTime - aTime;
+    return a.staffName.localeCompare(b.staffName);
+  });
+  const placeholderRows = loading
+    ? Array.from({ length: BRANCH_PERFORMANCE_VISIBLE_ROWS }, (_, i) => i)
+    : sortedStaff.length > 0
+      ? sortedStaff
+      : [];
+  const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
+  const headerDesktopClass =
+    "employee-panel-desktop employee-panel-desktop--checkin border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:px-4";
+  const rowDesktopClass = "employee-panel-desktop employee-panel-desktop--checkin min-h-[2.75rem] py-2";
+
+  return (
+    <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
+      <div className="dashboard-branch-performance-header px-4 py-3">
+        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      </div>
+
+      <div
+        className={cn(
+          "dashboard-branch-performance-scroll-wrap",
+          hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
+        )}
+      >
+        <div className={headerDesktopClass} aria-hidden>
+          <span>{labels.staff}</span>
+          <span className="text-right">{labels.checkIn}</span>
+          <span className="text-right">{labels.checkOut}</span>
+        </div>
+
+        <div
+          className="dashboard-branch-performance-scroll divide-y divide-[var(--border)]"
+          role="region"
+          aria-label={headerLabel}
+          tabIndex={hasMoreRows ? 0 : undefined}
+        >
+          {!loading && sortedStaff.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">{emptyLabel}</p>
+          ) : (
+            placeholderRows.map((row, i) => {
+              const item = loading ? null : (row as EmployeeCheckInRow);
+              const href = item && staffHref ? staffHref(item) : undefined;
+              const rowClassName = cn(
+                "dashboard-branch-performance-row-item employee-panel-row block px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4",
+                href && "cursor-pointer touch-manipulation",
+              );
+              const rowInner = (
+                <>
+                  <div className="employee-panel-mobile">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {loading ? (
+                        <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+                      ) : (
+                        <StaffAvatar
+                          name={item!.staffName}
+                          recordId={item!.attendanceRecordId}
+                          hasPhoto={item!.hasEntryPhoto}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                          {loading ? "…" : item!.staffName}
+                        </p>
+                        <p className="mt-0.5 text-[11px] tabular-nums text-[var(--text-secondary)] sm:text-xs">
+                          {loading ? "…" : `${labels.checkIn}: ${formatTime(item!.entryTime)} · ${labels.checkOut}: ${formatTime(item!.exitTime)}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={rowDesktopClass}>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {loading ? (
+                        <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+                      ) : (
+                        <StaffAvatar
+                          name={item!.staffName}
+                          recordId={item!.attendanceRecordId}
+                          hasPhoto={item!.hasEntryPhoto}
+                        />
+                      )}
+                      <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {loading ? "…" : item!.staffName}
+                      </p>
+                    </div>
+                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                      {loading ? "…" : formatTime(item!.entryTime)}
+                    </p>
+                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                      {loading ? "…" : formatTime(item!.exitTime)}
+                    </p>
+                  </div>
+                </>
+              );
+
+              const key = item?.staffId ?? `loading-${i}`;
+              if (href) {
+                return (
+                  <Link key={key} href={href} className={rowClassName}>
+                    {rowInner}
+                  </Link>
+                );
+              }
+
+              return (
+                <div key={key} className={rowClassName}>
+                  {rowInner}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export type EmployeeSalesRow = {
+  staffId: string;
+  staffName: string;
+  salesCount: number;
+  avgTicketSize: number;
+  totalSales: number;
+};
+
+export function DashboardEmployeeSales({
+  staff,
+  loading,
+  headerLabel,
+  emptyLabel,
+  labels,
+  formatValue,
+  staffHref,
+  className,
+}: {
+  staff: EmployeeSalesRow[];
+  loading?: boolean;
+  headerLabel: string;
+  emptyLabel: string;
+  labels: {
+    name: string;
+    sales: string;
+    avgTicket: string;
+    totalSales: string;
+  };
+  formatValue: (amount: number) => string;
+  staffHref?: (row: EmployeeSalesRow) => string;
+  className?: string;
+}) {
+  const sortedStaff = [...staff].sort(
+    (a, b) => b.totalSales - a.totalSales || b.salesCount - a.salesCount || a.staffName.localeCompare(b.staffName),
+  );
+  const placeholderRows = loading
+    ? Array.from({ length: BRANCH_PERFORMANCE_VISIBLE_ROWS }, (_, i) => i)
+    : sortedStaff.length > 0
+      ? sortedStaff
+      : [];
+  const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
+  const headerDesktopClass =
+    "employee-panel-desktop employee-panel-desktop--sales border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:px-4";
+  const rowDesktopClass = "employee-panel-desktop employee-panel-desktop--sales min-h-[2.75rem] py-2";
+
+  return (
+    <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
+      <div className="dashboard-branch-performance-header px-4 py-3">
+        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      </div>
+
+      <div
+        className={cn(
+          "dashboard-branch-performance-scroll-wrap",
+          hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
+        )}
+      >
+        <div className={headerDesktopClass} aria-hidden>
+          <span className="truncate">{labels.name}</span>
+          <span className="text-right">{labels.sales}</span>
+          <span className="text-right truncate">{labels.avgTicket}</span>
+          <span className="text-right truncate">{labels.totalSales}</span>
+        </div>
+
+        <div
+          className="dashboard-branch-performance-scroll divide-y divide-[var(--border)]"
+          role="region"
+          aria-label={headerLabel}
+          tabIndex={hasMoreRows ? 0 : undefined}
+        >
+          {!loading && sortedStaff.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">{emptyLabel}</p>
+          ) : (
+            placeholderRows.map((row, i) => {
+              const item = loading ? null : (row as EmployeeSalesRow);
+              const href = item && staffHref ? staffHref(item) : undefined;
+              const rowClassName = cn(
+                "dashboard-branch-performance-row-item employee-panel-row block px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4",
+                href && "cursor-pointer touch-manipulation",
+              );
+              const rowInner = (
+                <>
+                  <div className="employee-panel-mobile">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
+                        {loading ? "…" : item!.staffName}
+                      </p>
+                      <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        {loading ? "…" : formatValue(item!.totalSales)}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11px] leading-snug text-[var(--text-secondary)] sm:text-xs">
+                      <span className="tabular-nums">
+                        {loading ? "…" : item!.salesCount} {labels.sales}
+                      </span>
+                      <span className="text-[var(--text-tertiary)]" aria-hidden>
+                        ·
+                      </span>
+                      <span className="tabular-nums">
+                        {loading ? "…" : formatValue(item!.avgTicketSize)} {labels.avgTicket}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={rowDesktopClass}>
+                    <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                      {loading ? "…" : item!.staffName}
+                    </p>
+                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                      {loading ? "…" : item!.salesCount}
+                    </p>
+                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                      {loading ? "…" : formatValue(item!.avgTicketSize)}
+                    </p>
+                    <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {loading ? "…" : formatValue(item!.totalSales)}
+                    </p>
+                  </div>
+                </>
+              );
+
+              const key = item?.staffId ?? `loading-${i}`;
+              if (href) {
+                return (
+                  <Link key={key} href={href} className={rowClassName}>
+                    {rowInner}
+                  </Link>
+                );
+              }
+
+              return (
+                <div key={key} className={rowClassName}>
+                  {rowInner}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

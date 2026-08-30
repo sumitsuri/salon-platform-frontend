@@ -252,6 +252,26 @@ export const api = {
   getLocales: () => request<LocaleInfo[]>("/api/v1/meta/locales"),
   getMessagingConfig: () => request<MessagingConfig>("/api/v1/meta/messaging"),
 
+  getWhatsAppTemplates: (params?: { category?: WhatsAppTemplateCategory; search?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.category) search.set("category", params.category);
+    if (params?.search) search.set("search", params.search);
+    const q = search.toString();
+    return request<WhatsAppTemplate[]>(`/api/v1/whatsapp-templates${q ? `?${q}` : ""}`);
+  },
+
+  updateWhatsAppTemplate: (code: WhatsAppTemplateCode, data: { active: boolean }) =>
+    request<WhatsAppTemplate>(`/api/v1/whatsapp-templates/${code}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  previewWhatsAppTemplate: (code: WhatsAppTemplateCode, data?: WhatsAppTemplatePreviewRequest) =>
+    request<WhatsAppTemplatePreview>(`/api/v1/whatsapp-templates/${code}/preview`, {
+      method: "POST",
+      body: JSON.stringify(data ?? {}),
+    }),
+
   updateLocale: (locale: string) =>
     request<AuthUser>("/api/v1/users/me/locale", {
       method: "PATCH",
@@ -1279,6 +1299,8 @@ export interface StaffTargetPerformanceItem {
   branchName: string;
   monthlySalesTarget: number;
   actualSales: number;
+  salesCount: number;
+  avgTicketSize: number;
   achievementPercent: number;
   meetingTarget: boolean;
   onTrack: boolean;
@@ -1394,6 +1416,64 @@ export interface MessagingConfig {
   billReceiptPilotEnabled: boolean;
   billReceiptPilotTenantSlug: string;
   billReceiptPilotBranchCode: string;
+}
+
+export type WhatsAppTemplateCategory = "MARKETING" | "UTILITY" | "AUTHENTICATION";
+
+export type WhatsAppTemplateCode =
+  | "BILL_RECEIPT"
+  | "PROMO_CAMPAIGN"
+  | "APPOINTMENT_CONFIRMED"
+  | "APPOINTMENT_REMINDER"
+  | "BILL_WITH_FEEDBACK"
+  | "SIGNUP_OTP"
+  | "ACCOUNT_REGISTERED"
+  | "REWARD_POINTS_EARNED"
+  | "REWARD_POINTS_REDEEMED"
+  | "MEMBERSHIP_EXPIRY_REMINDER"
+  | "PACKAGE_EXPIRY_REMINDER"
+  | "SERVICE_REMINDER"
+  | "COUPON_OFFER"
+  | "CUSTOMER_REFERRAL"
+  | "EMPLOYEE_APPOINTMENT_NOTIFY";
+
+export interface WhatsAppTemplateVariable {
+  key: string;
+  label: string;
+  metaIndex: number;
+  sampleValue: string;
+}
+
+export interface WhatsAppTemplate {
+  code: WhatsAppTemplateCode;
+  displayName: string;
+  msg91TemplateName: string;
+  category: WhatsAppTemplateCategory;
+  triggerDescription: string;
+  displayBody: string;
+  wired: boolean;
+  active: boolean;
+  branchId?: string;
+  branchName?: string;
+  hasDocumentHeader: boolean;
+  variables: WhatsAppTemplateVariable[];
+}
+
+export interface WhatsAppTemplatePreviewRequest {
+  branchId?: string;
+  variableOverrides?: Record<string, string>;
+}
+
+export interface WhatsAppTemplatePreview {
+  code: WhatsAppTemplateCode;
+  displayName: string;
+  msg91TemplateName: string;
+  category: WhatsAppTemplateCategory;
+  hasDocumentHeader: boolean;
+  headerPreview?: string;
+  bodyText: string;
+  variables: WhatsAppTemplateVariable[];
+  metaNote: string;
 }
 
 export interface Lead {
@@ -2114,6 +2194,11 @@ export interface AttendanceDashboard {
     geoFlags: number;
     performanceScore: number;
     complianceScore: number;
+    attendanceRecordId?: string;
+    entryTime?: string;
+    exitTime?: string;
+    hasEntryPhoto?: boolean;
+    hasExitPhoto?: boolean;
   }[];
   recentRecords: AttendanceRecord[];
   leaves: LeaveRecord[];
