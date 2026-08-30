@@ -53,39 +53,65 @@ function getToken(): string | null {
   return getStoredUser()?.accessToken ?? null;
 }
 
-let refreshInFlight: Promise<string | null> | null = null;
+let refreshInFlight: Promise<RefreshResult> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+const REFRESH_RETRY_DELAYS_MS = [0, 1000, 3000] as const;
+
+type RefreshResult =
+  | { status: "ok"; token: string }
+  | { status: "auth_failed" }
+  | { status: "network_failed" };
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function refreshAccessToken(): Promise<RefreshResult> {
   if (refreshInFlight) return refreshInFlight;
 
-  refreshInFlight = (async () => {
+  refreshInFlight = (async (): Promise<RefreshResult> => {
     const user = getStoredUser();
-    if (!user?.refreshToken) return null;
+    if (!user?.refreshToken) return { status: "auth_failed" } as const;
 
-    const res = await fetch(`${apiBase()}/api/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken: user.refreshToken }),
-    });
+    for (let attempt = 0; attempt < REFRESH_RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) await sleep(REFRESH_RETRY_DELAYS_MS[attempt]);
 
-    const text = await res.text();
-    let body: ApiWrapper<AuthUser> = { success: false, data: undefined as unknown as AuthUser };
-    if (text) {
       try {
-        body = JSON.parse(text);
+        const res = await fetch(`${apiBase()}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: user.refreshToken }),
+        });
+
+        const text = await res.text();
+        let body: ApiWrapper<AuthUser> = { success: false, data: undefined as unknown as AuthUser };
+        if (text) {
+          try {
+            body = JSON.parse(text);
+          } catch {
+            if (attempt === REFRESH_RETRY_DELAYS_MS.length - 1) return { status: "network_failed" } as const;
+            continue;
+          }
+        }
+
+        if (res.status === 400 || res.status === 401) return { status: "auth_failed" } as const;
+        if (!res.ok || !body.data?.accessToken) {
+          if (attempt === REFRESH_RETRY_DELAYS_MS.length - 1) return { status: "network_failed" } as const;
+          continue;
+        }
+
+        const updated = patchStoredUser({
+          accessToken: body.data.accessToken,
+          refreshToken: body.data.refreshToken ?? user.refreshToken,
+        });
+        if (updated) await syncAuthStore(updated);
+        return { status: "ok", token: body.data.accessToken } as const;
       } catch {
-        return null;
+        if (attempt === REFRESH_RETRY_DELAYS_MS.length - 1) return { status: "network_failed" } as const;
       }
     }
 
-    if (!res.ok || !body.data?.accessToken) return null;
-
-    const updated = patchStoredUser({
-      accessToken: body.data.accessToken,
-      refreshToken: body.data.refreshToken ?? user.refreshToken,
-    });
-    if (updated) await syncAuthStore(updated);
-    return body.data.accessToken;
+    return { status: "network_failed" } as const;
   })().finally(() => {
     refreshInFlight = null;
   });
@@ -142,8 +168,11 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
 
   if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
     if (!retried) {
-      const newToken = await refreshAccessToken();
-      if (newToken) return request<T>(path, options, true);
+      const refresh = await refreshAccessToken();
+      if (refresh.status === "ok") return request<T>(path, options, true);
+      if (refresh.status === "network_failed") {
+        throw new Error("Could not refresh session. Check your connection and try again.");
+      }
     }
     await handleSessionExpired();
     throw new Error("Session expired. Please sign in again.");
@@ -199,8 +228,11 @@ async function multipartRequest<T>(path: string, formData: FormData, retried = f
 
   if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
     if (!retried) {
-      const newToken = await refreshAccessToken();
-      if (newToken) return multipartRequest<T>(path, formData, true);
+      const refresh = await refreshAccessToken();
+      if (refresh.status === "ok") return multipartRequest<T>(path, formData, true);
+      if (refresh.status === "network_failed") {
+        throw new Error("Could not refresh session. Check your connection and try again.");
+      }
     }
     await handleSessionExpired();
     throw new Error("Session expired. Please sign in again.");
@@ -216,19 +248,43 @@ export async function fetchAttendancePhotoBlob(recordId: string, type: "entry" |
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`${apiBase()}/api/v1/attendance/${recordId}/photo?type=${type}`, { headers });
+
+  async function fetchPhoto(authHeaders: Record<string, string>) {
+    return fetch(`${apiBase()}/api/v1/attendance/${recordId}/photo?type=${type}`, { headers: authHeaders });
+  }
+
+  let res = await fetchPhoto(headers);
+  if (res.status === 401) {
+    const refresh = await refreshAccessToken();
+    if (refresh.status === "ok") {
+      headers.Authorization = `Bearer ${refresh.token}`;
+      res = await fetchPhoto(headers);
+    } else if (refresh.status === "auth_failed") {
+      await handleSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    } else {
+      throw new Error("Photo unavailable");
+    }
+  }
   if (!res.ok) throw new Error("Photo unavailable");
   const blob = await res.blob();
   return URL.createObjectURL(blob);
 }
 
-/** Refresh access token if expired or near expiry. Call on app load. */
+/** Refresh access token if expired or near expiry. Keeps session on transient network errors. */
 export async function ensureValidSession(): Promise<boolean> {
   const user = getStoredUser();
   if (!user?.accessToken || !user.refreshToken) return false;
   if (!isAccessTokenExpired(user.accessToken)) return true;
-  const token = await refreshAccessToken();
-  return token != null;
+  const refresh = await refreshAccessToken();
+  if (refresh.status === "ok") return true;
+  if (refresh.status === "network_failed") return true;
+  return false;
+}
+
+/** Shared authenticated JSON request (401 refresh + retry). Used by module API clients. */
+export async function authRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return request<T>(path, options);
 }
 
 export const api = {
@@ -973,13 +1029,15 @@ export const api = {
 
     let res = await fetchPdf(headers);
     if (res.status === 401) {
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        headers.Authorization = `Bearer ${newToken}`;
+      const refresh = await refreshAccessToken();
+      if (refresh.status === "ok") {
+        headers.Authorization = `Bearer ${refresh.token}`;
         res = await fetchPdf(headers);
-      } else {
+      } else if (refresh.status === "auth_failed") {
         await handleSessionExpired();
         throw new Error("Session expired. Please sign in again.");
+      } else {
+        throw new Error("Download failed (session refresh unavailable)");
       }
     }
     if (!res.ok) throw new Error(`Download failed (${res.status})`);

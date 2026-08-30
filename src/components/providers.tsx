@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ensureValidSession } from "@/lib/api";
 import { getStoredUser, redirectToLogin } from "@/lib/auth-session";
 import { useAuthHydrated, useAuthStore } from "@/lib/auth-store";
@@ -9,21 +9,42 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguagePickerModal, LocaleSync } from "@/components/LanguagePickerModal";
 import { PwaScrollRecovery } from "@/components/PwaScrollRecovery";
 
+const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+
 function SessionKeeper() {
   const hydrated = useAuthHydrated();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
+  const validateSession = useCallback(async () => {
+    if (!getStoredUser()) return;
+    const ok = await ensureValidSession();
+    if (!ok && getStoredUser()) {
+      logout();
+      redirectToLogin(true);
+    }
+  }, [logout]);
+
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    void validateSession();
+  }, [hydrated, user, validateSession]);
+
   useEffect(() => {
     if (!hydrated || !user) return;
 
-    ensureValidSession().then((ok) => {
-      if (!ok && getStoredUser()) {
-        logout();
-        redirectToLogin(true);
-      }
-    });
-  }, [hydrated, user, logout]);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void validateSession();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = window.setInterval(() => void validateSession(), SESSION_REFRESH_INTERVAL_MS);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(interval);
+    };
+  }, [hydrated, user, validateSession]);
 
   return null;
 }

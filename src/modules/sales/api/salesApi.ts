@@ -1,4 +1,4 @@
-import { getStoredUser, redirectToLogin } from "@/lib/auth-session";
+import { authRequest } from "@/lib/api";
 import { resolveClientApiBase, resolveServerApiBase } from "@/lib/client-api-base";
 
 function apiBase(): string {
@@ -15,24 +15,7 @@ interface ApiWrapper<T> {
 }
 
 async function salesRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getStoredUser()?.accessToken;
-  if (!token) {
-    redirectToLogin();
-    throw new Error("Not authenticated");
-  }
-  const res = await fetch(`${apiBase()}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  });
-  const body: ApiWrapper<T> = await res.json();
-  if (!res.ok || !body.success) {
-    throw new Error(body.message || `Request failed: ${res.status}`);
-  }
-  return body.data;
+  return authRequest<T>(path, options);
 }
 
 async function publicSalesRequest<T>(path: string, body: unknown): Promise<T> {
