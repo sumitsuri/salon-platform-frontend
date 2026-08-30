@@ -168,9 +168,9 @@ export default function AdminDashboardPage() {
 
   const employeeSalesLabels = {
     name: tAtt("staff"),
-    sales: t("sales"),
+    count: t("count"),
     avgTicket: t("avgTicket"),
-    totalSales: t("totalSales"),
+    sales: t("sales"),
   };
 
   if (!initialized || branchesLoading) {

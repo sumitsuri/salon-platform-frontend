@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { LucideIcon, Check } from "lucide-react";
+import { LucideIcon, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import { cn } from "@/lib/utils";
 
@@ -429,6 +430,65 @@ function defaultFormatCheckTime(iso?: string) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
+type SortDirection = "asc" | "desc";
+
+function DashboardSortHeader({
+  label,
+  active,
+  direction,
+  onClick,
+  className,
+}: {
+  label: string;
+  active: boolean;
+  direction: SortDirection;
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex max-w-full items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors",
+        active ? "text-[var(--text-secondary)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
+        className,
+      )}
+    >
+      <span className="truncate">{label}</span>
+      {active ? (
+        direction === "asc" ? (
+          <ChevronUp className="h-3 w-3 shrink-0" aria-hidden />
+        ) : (
+          <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
+        )
+      ) : null}
+    </button>
+  );
+}
+
+function toggleSort<T extends string>(
+  column: T,
+  activeColumn: T,
+  direction: SortDirection,
+  setColumn: (col: T) => void,
+  setDirection: (dir: SortDirection) => void,
+  defaultDesc: boolean,
+) {
+  if (activeColumn === column) {
+    setDirection(direction === "asc" ? "desc" : "asc");
+  } else {
+    setColumn(column);
+    setDirection(defaultDesc ? "desc" : "asc");
+  }
+}
+
+const CHECKIN_TABLE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-x-2 sm:gap-x-3";
+
+const SALES_TABLE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(3.25rem,1fr)_minmax(3.75rem,1fr)] items-center gap-x-2 sm:gap-x-3";
+
 function StaffAvatar({
   name,
   recordId,
@@ -480,21 +540,45 @@ export function DashboardEmployeeCheckIn({
   staffHref?: (row: EmployeeCheckInRow) => string;
   className?: string;
 }) {
-  const sortedStaff = [...staff].sort((a, b) => {
-    const aTime = a.entryTime ? new Date(a.entryTime).getTime() : 0;
-    const bTime = b.entryTime ? new Date(b.entryTime).getTime() : 0;
-    if (bTime !== aTime) return bTime - aTime;
-    return a.staffName.localeCompare(b.staffName);
-  });
+  type CheckInSortKey = "name" | "checkIn" | "checkOut";
+  const [sortColumn, setSortColumn] = useState<CheckInSortKey>("checkIn");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const sortedStaff = useMemo(() => {
+    const rows = [...staff];
+    const dir = sortDirection === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (sortColumn) {
+        case "name":
+          return dir * a.staffName.localeCompare(b.staffName);
+        case "checkIn": {
+          const aTime = a.entryTime ? new Date(a.entryTime).getTime() : -1;
+          const bTime = b.entryTime ? new Date(b.entryTime).getTime() : -1;
+          return dir * (aTime - bTime);
+        }
+        case "checkOut": {
+          const aTime = a.exitTime ? new Date(a.exitTime).getTime() : -1;
+          const bTime = b.exitTime ? new Date(b.exitTime).getTime() : -1;
+          return dir * (aTime - bTime);
+        }
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [staff, sortColumn, sortDirection]);
+
   const placeholderRows = loading
     ? Array.from({ length: BRANCH_PERFORMANCE_VISIBLE_ROWS }, (_, i) => i)
     : sortedStaff.length > 0
       ? sortedStaff
       : [];
   const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
-  const headerDesktopClass =
-    "employee-panel-desktop employee-panel-desktop--checkin border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:px-4";
-  const rowDesktopClass = "employee-panel-desktop employee-panel-desktop--checkin min-h-[2.75rem] py-2";
+  const headerRowClass = cn(
+    CHECKIN_TABLE_GRID,
+    "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
+  );
+  const bodyRowClass = cn(CHECKIN_TABLE_GRID, "min-h-[2.75rem] px-3 py-2 sm:px-4");
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
@@ -508,10 +592,27 @@ export function DashboardEmployeeCheckIn({
           hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
         )}
       >
-        <div className={headerDesktopClass} aria-hidden>
-          <span>{labels.staff}</span>
-          <span className="text-right">{labels.checkIn}</span>
-          <span className="text-right">{labels.checkOut}</span>
+        <div className={headerRowClass} role="row">
+          <DashboardSortHeader
+            label={labels.staff}
+            active={sortColumn === "name"}
+            direction={sortDirection}
+            onClick={() => toggleSort("name", sortColumn, sortDirection, setSortColumn, setSortDirection, false)}
+          />
+          <DashboardSortHeader
+            label={labels.checkIn}
+            active={sortColumn === "checkIn"}
+            direction={sortDirection}
+            onClick={() => toggleSort("checkIn", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+            className="ml-auto"
+          />
+          <DashboardSortHeader
+            label={labels.checkOut}
+            active={sortColumn === "checkOut"}
+            direction={sortDirection}
+            onClick={() => toggleSort("checkOut", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+            className="ml-auto"
+          />
         </div>
 
         <div
@@ -527,56 +628,32 @@ export function DashboardEmployeeCheckIn({
               const item = loading ? null : (row as EmployeeCheckInRow);
               const href = item && staffHref ? staffHref(item) : undefined;
               const rowClassName = cn(
-                "dashboard-branch-performance-row-item employee-panel-row block px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4",
+                "dashboard-branch-performance-row-item block transition-colors hover:bg-[var(--surface-muted)]/35",
                 href && "cursor-pointer touch-manipulation",
               );
               const rowInner = (
-                <>
-                  <div className="employee-panel-mobile">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {loading ? (
-                        <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
-                      ) : (
-                        <StaffAvatar
-                          name={item!.staffName}
-                          recordId={item!.attendanceRecordId}
-                          hasPhoto={item!.hasEntryPhoto}
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
-                          {loading ? "…" : item!.staffName}
-                        </p>
-                        <p className="mt-0.5 text-[11px] tabular-nums text-[var(--text-secondary)] sm:text-xs">
-                          {loading ? "…" : `${labels.checkIn}: ${formatTime(item!.entryTime)} · ${labels.checkOut}: ${formatTime(item!.exitTime)}`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={rowDesktopClass}>
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      {loading ? (
-                        <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
-                      ) : (
-                        <StaffAvatar
-                          name={item!.staffName}
-                          recordId={item!.attendanceRecordId}
-                          hasPhoto={item!.hasEntryPhoto}
-                        />
-                      )}
-                      <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
-                        {loading ? "…" : item!.staffName}
-                      </p>
-                    </div>
-                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
-                      {loading ? "…" : formatTime(item!.entryTime)}
-                    </p>
-                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
-                      {loading ? "…" : formatTime(item!.exitTime)}
+                <div className={bodyRowClass}>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {loading ? (
+                      <div className="h-9 w-9 shrink-0 animate-pulse rounded-lg bg-[var(--surface-muted)]" />
+                    ) : (
+                      <StaffAvatar
+                        name={item!.staffName}
+                        recordId={item!.attendanceRecordId}
+                        hasPhoto={item!.hasEntryPhoto}
+                      />
+                    )}
+                    <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                      {loading ? "…" : item!.staffName}
                     </p>
                   </div>
-                </>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : formatTime(item!.entryTime)}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : formatTime(item!.exitTime)}
+                  </p>
+                </div>
               );
 
               const key = item?.staffId ?? `loading-${i}`;
@@ -625,26 +702,49 @@ export function DashboardEmployeeSales({
   emptyLabel: string;
   labels: {
     name: string;
-    sales: string;
+    count: string;
     avgTicket: string;
-    totalSales: string;
+    sales: string;
   };
   formatValue: (amount: number) => string;
   staffHref?: (row: EmployeeSalesRow) => string;
   className?: string;
 }) {
-  const sortedStaff = [...staff].sort(
-    (a, b) => b.totalSales - a.totalSales || b.salesCount - a.salesCount || a.staffName.localeCompare(b.staffName),
-  );
+  type SalesSortKey = "name" | "count" | "avgTicket" | "sales";
+  const [sortColumn, setSortColumn] = useState<SalesSortKey>("sales");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const sortedStaff = useMemo(() => {
+    const rows = [...staff];
+    const dir = sortDirection === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (sortColumn) {
+        case "name":
+          return dir * a.staffName.localeCompare(b.staffName);
+        case "count":
+          return dir * (a.salesCount - b.salesCount);
+        case "avgTicket":
+          return dir * (a.avgTicketSize - b.avgTicketSize);
+        case "sales":
+          return dir * (a.totalSales - b.totalSales);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [staff, sortColumn, sortDirection]);
+
   const placeholderRows = loading
     ? Array.from({ length: BRANCH_PERFORMANCE_VISIBLE_ROWS }, (_, i) => i)
     : sortedStaff.length > 0
       ? sortedStaff
       : [];
   const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
-  const headerDesktopClass =
-    "employee-panel-desktop employee-panel-desktop--sales border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:px-4";
-  const rowDesktopClass = "employee-panel-desktop employee-panel-desktop--sales min-h-[2.75rem] py-2";
+  const headerRowClass = cn(
+    SALES_TABLE_GRID,
+    "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
+  );
+  const bodyRowClass = cn(SALES_TABLE_GRID, "min-h-[2.75rem] px-3 py-2 sm:px-4");
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
@@ -658,11 +758,34 @@ export function DashboardEmployeeSales({
           hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
         )}
       >
-        <div className={headerDesktopClass} aria-hidden>
-          <span className="truncate">{labels.name}</span>
-          <span className="text-right">{labels.sales}</span>
-          <span className="text-right truncate">{labels.avgTicket}</span>
-          <span className="text-right truncate">{labels.totalSales}</span>
+        <div className={headerRowClass} role="row">
+          <DashboardSortHeader
+            label={labels.name}
+            active={sortColumn === "name"}
+            direction={sortDirection}
+            onClick={() => toggleSort("name", sortColumn, sortDirection, setSortColumn, setSortDirection, false)}
+          />
+          <DashboardSortHeader
+            label={labels.count}
+            active={sortColumn === "count"}
+            direction={sortDirection}
+            onClick={() => toggleSort("count", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+            className="ml-auto"
+          />
+          <DashboardSortHeader
+            label={labels.avgTicket}
+            active={sortColumn === "avgTicket"}
+            direction={sortDirection}
+            onClick={() => toggleSort("avgTicket", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+            className="ml-auto"
+          />
+          <DashboardSortHeader
+            label={labels.sales}
+            active={sortColumn === "sales"}
+            direction={sortDirection}
+            onClick={() => toggleSort("sales", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+            className="ml-auto"
+          />
         </div>
 
         <div
@@ -678,48 +801,24 @@ export function DashboardEmployeeSales({
               const item = loading ? null : (row as EmployeeSalesRow);
               const href = item && staffHref ? staffHref(item) : undefined;
               const rowClassName = cn(
-                "dashboard-branch-performance-row-item employee-panel-row block px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/35 sm:px-4",
+                "dashboard-branch-performance-row-item block transition-colors hover:bg-[var(--surface-muted)]/35",
                 href && "cursor-pointer touch-manipulation",
               );
               const rowInner = (
-                <>
-                  <div className="employee-panel-mobile">
-                    <div className="flex items-start justify-between gap-2 min-w-0">
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight text-[var(--text-primary)]">
-                        {loading ? "…" : item!.staffName}
-                      </p>
-                      <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                        {loading ? "…" : formatValue(item!.totalSales)}
-                      </p>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 text-[11px] leading-snug text-[var(--text-secondary)] sm:text-xs">
-                      <span className="tabular-nums">
-                        {loading ? "…" : item!.salesCount} {labels.sales}
-                      </span>
-                      <span className="text-[var(--text-tertiary)]" aria-hidden>
-                        ·
-                      </span>
-                      <span className="tabular-nums">
-                        {loading ? "…" : formatValue(item!.avgTicketSize)} {labels.avgTicket}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={rowDesktopClass}>
-                    <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
-                      {loading ? "…" : item!.staffName}
-                    </p>
-                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
-                      {loading ? "…" : item!.salesCount}
-                    </p>
-                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
-                      {loading ? "…" : formatValue(item!.avgTicketSize)}
-                    </p>
-                    <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {loading ? "…" : formatValue(item!.totalSales)}
-                    </p>
-                  </div>
-                </>
+                <div className={bodyRowClass}>
+                  <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">
+                    {loading ? "…" : item!.staffName}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : item!.salesCount}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
+                    {loading ? "…" : formatValue(item!.avgTicketSize)}
+                  </p>
+                  <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {loading ? "…" : formatValue(item!.totalSales)}
+                  </p>
+                </div>
               );
 
               const key = item?.staffId ?? `loading-${i}`;
