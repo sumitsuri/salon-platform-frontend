@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { Megaphone, Send } from "lucide-react";
 import { api, type CampaignChannel, type CreateCampaignRequest, type Customer } from "@/lib/api";
 import { CampaignAudiencePreview } from "@/components/campaign/CampaignAudiencePreview";
@@ -183,6 +184,11 @@ export default function AdminCampaignsPage() {
                   })}
                 </p>
               )}
+              <p className="text-xs">
+                <Link href="/admin/whatsapp-templates" className="font-semibold text-[var(--brand-text)]">
+                  {t("templatesLink")}
+                </Link>
+              </p>
             </div>
           ) : (
             <p className="text-amber-700 dark:text-amber-300">{t("messagingDisabled")}</p>
