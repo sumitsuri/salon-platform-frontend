@@ -57,7 +57,6 @@ function NavItemLink({
     <div className="space-y-0.5">
       <Link
         href={item.href}
-        prefetch
         onClick={onNavigate}
         title={collapsed ? item.label : undefined}
         aria-current={active ? "page" : undefined}
@@ -86,7 +85,6 @@ function NavItemLink({
               <Link
                 key={child.href}
                 href={child.href}
-                prefetch
                 onClick={onNavigate}
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",

@@ -31,7 +31,14 @@ export function BreadcrumbProvider({
   homeLabel: string;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [pageBreadcrumbs, setPageBreadcrumbsState] = useState<BreadcrumbItem[] | null>(null);
+
+  // Route changes must drop page-level overrides; otherwise stale crumbs block shell updates.
+  useEffect(() => {
+    setPageBreadcrumbsState(null);
+  }, [pathname]);
+
   const setPageBreadcrumbs = useCallback((items: BreadcrumbItem[] | null) => {
     setPageBreadcrumbsState((prev) => {
       if (breadcrumbStableKey(prev) === breadcrumbStableKey(items)) return prev;
