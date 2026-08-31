@@ -93,7 +93,7 @@ export default function ManagerMembershipsPage() {
   });
 
   function clearCustomerScope() {
-    router.replace(managerMembershipsPath());
+    router.push(managerMembershipsPath());
     setSellOpen(false);
   }
 

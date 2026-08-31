@@ -100,7 +100,7 @@ function AdminLeadsPageContent() {
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
     if (!leadParam.isSet) return null;
     return [
-      { label: t("title"), href: leadParam.hrefWithout, onClick: () => leadParam.set(null, "replace") },
+      { label: t("title"), href: leadParam.hrefWithout, onClick: () => leadParam.unset() },
       { label: selected?.name ?? t("title") },
     ];
   }, [leadParam, selected?.name, t]);
@@ -112,7 +112,7 @@ function AdminLeadsPageContent() {
   }
 
   function closeLead() {
-    leadParam.set(null, "replace");
+    leadParam.unset();
   }
 
   const hasFilters = Object.values(filters).some((v) => v !== "");

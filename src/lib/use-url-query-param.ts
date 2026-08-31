@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 /** Static export + trailingSlash: build href consistent with the address bar. */
-function buildPathWithSearch(pathname: string, params: URLSearchParams): string {
+export function buildPathWithSearch(pathname: string, params: URLSearchParams): string {
   const q = params.toString();
   const base = pathname.endsWith("/") ? pathname : `${pathname}/`;
   return q ? `${base}?${q}` : base;
@@ -15,10 +15,23 @@ function readSearchParams(): URLSearchParams {
   return new URLSearchParams(window.location.search);
 }
 
+function applyHistoryUrl(href: string, mode: "push" | "replace") {
+  if (mode === "replace") {
+    window.history.replaceState(window.history.state, "", href);
+  } else {
+    window.history.pushState(window.history.state, "", href);
+  }
+}
+
 /**
  * Read/write a query param while preserving others.
  * Uses the History API for same-page query changes — Next.js 16.2.x static
  * export restores stale searchParams from router cache on router.replace().
+ *
+ * Navigation policy:
+ * - set(value) → push (user opened detail/filter)
+ * - unset() → history.back() when possible (matches browser back)
+ * - set(value, "replace") → replace (canonical defaults only)
  */
 export function useUrlQueryParam(name: string) {
   const pathname = usePathname();
@@ -52,26 +65,50 @@ export function useUrlQueryParam(name: string) {
     return buildPathWithSearch(pathname, params);
   }, [name, pathname, searchParams, revision]);
 
+  const bump = useCallback(() => setRevision((r) => r + 1), []);
+
+  const unset = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const params = readSearchParams();
+    if (!params.has(name)) return;
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    applyHistoryUrl(hrefWithout, "replace");
+    bump();
+  }, [name, hrefWithout, bump]);
+
   const set = useCallback(
     (next: string | null, mode: "push" | "replace" = "push") => {
       if (typeof window === "undefined") return;
 
-      const params = readSearchParams();
-      if (next) params.set(name, next);
-      else params.delete(name);
-      const href = buildPathWithSearch(pathname, params);
-
-      if (mode === "replace") {
-        window.history.replaceState(window.history.state, "", href);
-      } else {
-        window.history.pushState(window.history.state, "", href);
+      if (next === null) {
+        unset();
+        return;
       }
-      setRevision((r) => r + 1);
+
+      const params = readSearchParams();
+      params.set(name, next);
+      const href = buildPathWithSearch(pathname, params);
+      applyHistoryUrl(href, mode);
+      bump();
     },
-    [name, pathname]
+    [name, pathname, unset, bump]
   );
 
-  return { value, set, hrefWithout, isSet: !!value };
+  const pushHref = useCallback(
+    (href: string) => {
+      if (typeof window === "undefined") return;
+      applyHistoryUrl(href, "push");
+      bump();
+    },
+    [bump]
+  );
+
+  return { value, set, unset, pushHref, hrefWithout, isSet: !!value };
 }
 
 /** Pair of query params, e.g. drawer type + entity id. */
@@ -102,11 +139,7 @@ export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
     (next: URLSearchParams, mode: "push" | "replace") => {
       if (typeof window === "undefined") return;
       const href = buildPathWithSearch(pathname, next);
-      if (mode === "replace") {
-        window.history.replaceState(window.history.state, "", href);
-      } else {
-        window.history.pushState(window.history.state, "", href);
-      }
+      applyHistoryUrl(href, mode);
       setRevision((r) => r + 1);
     },
     [pathname]
@@ -123,6 +156,15 @@ export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
   );
 
   const close = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const current = readSearchParams();
+    if (!current.has(typeParam) && !current.has(idParam)) return;
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
     const next = readSearchParams();
     next.delete(typeParam);
     next.delete(idParam);

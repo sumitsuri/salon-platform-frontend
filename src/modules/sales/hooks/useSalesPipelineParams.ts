@@ -41,7 +41,7 @@ export function useSalesPipelineParams(): {
   const setDateRange = useCallback(
     (next: SalesDateRange) => {
       const q = buildPipelineSearchParams(next, filters, selectedRepIds);
-      router.replace(`${pathname}?${q.toString()}`, { scroll: false });
+      router.push(`${pathname}?${q.toString()}`, { scroll: false });
     },
     [pathname, router, filters, selectedRepIds]
   );
@@ -49,7 +49,7 @@ export function useSalesPipelineParams(): {
   const setFilters = useCallback(
     (next: SalesLeadFilterState) => {
       const q = buildPipelineSearchParams(dateRange, next, selectedRepIds);
-      router.replace(`${pathname}?${q.toString()}`, { scroll: false });
+      router.push(`${pathname}?${q.toString()}`, { scroll: false });
     },
     [pathname, router, dateRange, selectedRepIds]
   );
@@ -57,7 +57,7 @@ export function useSalesPipelineParams(): {
   const setSelectedRepIds = useCallback(
     (repIds: string[]) => {
       const q = buildPipelineSearchParams(dateRange, filters, repIds);
-      router.replace(`${pathname}?${q.toString()}`, { scroll: false });
+      router.push(`${pathname}?${q.toString()}`, { scroll: false });
     },
     [pathname, router, dateRange, filters]
   );

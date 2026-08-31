@@ -636,7 +636,7 @@ export default function WalkInPage() {
 
   function returnFromFlow() {
     setScreen("hub");
-    router.replace(urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl());
+    router.push(urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl());
     void refetchOpenVisits();
   }
 
@@ -668,7 +668,7 @@ export default function WalkInPage() {
 
   function setVisitsTab(next: HubTab) {
     setHubTab(next);
-    router.replace(
+    router.push(
       buildWalkInUrl({
         tab: next === "history" ? "history" : undefined,
         customerId: urlCustomerId,
@@ -732,7 +732,7 @@ export default function WalkInPage() {
     setDraftOffer(null);
     setDraftHandled(true);
     setDraftRestoredNotice(true);
-    router.replace("/manager/walk-in");
+    router.push("/manager/walk-in");
   }
 
   function dismissDraft() {
@@ -804,7 +804,7 @@ export default function WalkInPage() {
     setPendingMembershipPlanId("");
     setStep(1);
     setScreen("flow");
-    router.replace("/manager/walk-in");
+    router.push("/manager/walk-in");
   }, [router, user?.branchName, branchId]);
 
   useEffect(() => {
@@ -835,7 +835,7 @@ export default function WalkInPage() {
         } else {
           setStep(2);
         }
-        router.replace(`/manager/walk-in?bookingId=${id}${preferEdit ? "&edit=1" : ""}`);
+        router.push(`/manager/walk-in?bookingId=${id}${preferEdit ? "&edit=1" : ""}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : tCommon("failed"));
       } finally {
@@ -1010,7 +1010,7 @@ export default function WalkInPage() {
     setRemovedToast(null);
     setStep(target as Step);
     if (bookingId && target < 3) {
-      router.replace(`/manager/walk-in?bookingId=${bookingId}&edit=1`);
+      router.push(`/manager/walk-in?bookingId=${bookingId}&edit=1`);
     }
   }
 
@@ -1622,7 +1622,7 @@ export default function WalkInPage() {
       setHubTab("open");
       setScreen("hub");
       setStep(1);
-      router.replace("/manager/walk-in");
+      router.push("/manager/walk-in");
       await queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
       await queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (e) {
@@ -1640,7 +1640,7 @@ export default function WalkInPage() {
       hydrateFromBooking(b);
       clearWalkInDraft(branchId);
       setStep(3);
-      router.replace(`/manager/walk-in?bookingId=${b.id}`);
+      router.push(`/manager/walk-in?bookingId=${b.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("failed"));
     } finally {

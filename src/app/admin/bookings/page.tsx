@@ -13,7 +13,7 @@ import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/Boo
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { parseDateRangeFromSearchParams } from "@/lib/date-range";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
-import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { buildPathWithSearch, useUrlQueryParam } from "@/lib/use-url-query-param";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
 import {
@@ -218,13 +218,12 @@ function AdminBookingsPageContent() {
   function clearCustomerScope() {
     setCustomerIdFilter("");
     const params = new URLSearchParams(window.location.search);
+    params.delete("customerId");
     const hasRange = params.has("range") || params.has("from");
     const dateRange = hasRange ? parseDateRangeFromSearchParams(params) : undefined;
-    window.history.replaceState(
-      window.history.state,
-      "",
-      adminBookingsPath({ branchId: branchScopeId || undefined, dateRange }),
-    );
+    const href = adminBookingsPath({ branchId: branchScopeId || undefined, dateRange });
+    window.history.pushState(window.history.state, "", href);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 
   function clearBranchScope() {
@@ -232,13 +231,12 @@ function AdminBookingsPageContent() {
       const params = new URLSearchParams(window.location.search);
       params.delete("branchId");
       params.delete("branchName");
-      const q = params.toString();
-      window.history.replaceState(window.history.state, "", q ? `/admin/bookings/?${q}` : "/admin/bookings/");
+      const href = buildPathWithSearch("/admin/bookings", params);
+      window.history.pushState(window.history.state, "", href);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }
     setBranchScopeId("");
     setBranchNameFromUrl("");
-    branchParam.set(null, "replace");
     setFilters((prev) => ({ ...prev, branchId: "" }));
   }
 
@@ -306,7 +304,7 @@ function AdminBookingsPageContent() {
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
     if (!detailParam.isSet) return null;
     const crumbs: BreadcrumbItem[] = [
-      { label: t("title"), href: detailParam.hrefWithout, onClick: () => detailParam.set(null, "replace") },
+      { label: t("title"), href: detailParam.hrefWithout, onClick: () => detailParam.unset() },
     ];
     if (detailBooking) crumbs.push({ label: detailBooking.customerName });
     else crumbs.push({ label: tMgr("billingDetails") });
@@ -320,7 +318,7 @@ function AdminBookingsPageContent() {
   }
 
   function closeBookingDetail() {
-    detailParam.set(null, "replace");
+    detailParam.unset();
   }
 
   function updateFilter(key: keyof Filters, value: string) {

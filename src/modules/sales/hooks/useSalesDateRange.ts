@@ -37,7 +37,7 @@ export function useSalesDateRange(): [SalesDateRange, (range: SalesDateRange) =>
       const filters = parseFiltersFromSearchParams(searchParams);
       const repIds = parseRepIdsFromSearchParams(searchParams);
       const q = buildPipelineSearchParams(next, filters, repIds);
-      router.replace(`${pathname}?${q.toString()}`, { scroll: false });
+      router.push(`${pathname}?${q.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams]
   );

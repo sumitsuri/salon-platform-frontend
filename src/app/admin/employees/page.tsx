@@ -221,12 +221,6 @@ export default function AdminEmployeesPage() {
         <StatCard label={t("activeStaff")} value={employees.filter((e) => e.active).length} icon={Users} accent="brand" className="col-span-2 sm:col-span-1" />
       </div>
 
-      <EmployeeTargetCoachingPanel performance={performance} loading={perfLoading} />
-
-      {!trendsLoading && targetTrends && targetTrends.branches.length > 0 && (
-        <EmployeeTargetTrends branches={targetTrends.branches} periodLabel={targetTrends.periodLabel} />
-      )}
-
       <Card padding={false}>
         <div className="px-4 py-3.5 border-b border-[var(--border)]">
           <h2 className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
@@ -280,6 +274,12 @@ export default function AdminEmployeesPage() {
           </div>
         )}
       </Card>
+
+      <EmployeeTargetCoachingPanel performance={performance} loading={perfLoading} />
+
+      {!trendsLoading && targetTrends && targetTrends.branches.length > 0 && (
+        <EmployeeTargetTrends branches={targetTrends.branches} periodLabel={targetTrends.periodLabel} />
+      )}
         </>
       ) : (
         <>

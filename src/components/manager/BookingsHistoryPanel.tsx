@@ -107,7 +107,7 @@ export function BookingsHistoryPanel({
   function clearCustomerScope() {
     setCustomerIdFilter("");
     if (navigationScope === "manager") {
-      router.replace(buildWalkInUrl({ tab: "history" }));
+      router.push(buildWalkInUrl({ tab: "history" }));
     }
   }
 
@@ -165,7 +165,7 @@ export function BookingsHistoryPanel({
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
     if (!detailParam.isSet) return null;
     const crumbs: BreadcrumbItem[] = [
-      { label: listLabel, href: detailParam.hrefWithout, onClick: () => detailParam.set(null, "replace") },
+      { label: listLabel, href: detailParam.hrefWithout, onClick: () => detailParam.unset() },
     ];
     if (detailBooking) crumbs.push({ label: detailBooking.customerName });
     else crumbs.push({ label: t("billingDetails") });
@@ -179,7 +179,7 @@ export function BookingsHistoryPanel({
   }
 
   function closeBookingDetail() {
-    detailParam.set(null, "replace");
+    detailParam.unset();
   }
 
   function updateFilter(key: keyof Filters, value: string) {

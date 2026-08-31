@@ -178,7 +178,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
       {
         label: customer?.name ?? tCommon("loading"),
         href: customerDetailPathWithBooking(scope, customerId),
-        onClick: () => detailParam.set(null, "replace"),
+        onClick: () => detailParam.unset(),
       },
     ];
     if (detailBooking) {
@@ -209,7 +209,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
   }
 
   function closeBookingDetail() {
-    detailParam.set(null, "replace");
+    detailParam.unset();
   }
 
   function visitActionHref(b: Booking) {

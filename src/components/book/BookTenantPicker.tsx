@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronRight, MapPin } from "lucide-react";
 import { bookApi, bookPath, type BookBranchSummary } from "@/lib/book-api";
 import { PageLoader } from "@/components/ui";
 
 export function BookTenantPicker({ tenantSlug }: { tenantSlug: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tenantName, setTenantName] = useState("");
@@ -21,7 +23,7 @@ export function BookTenantPicker({ tenantSlug }: { tenantSlug: string }) {
         setTenantName(data.tenantName);
         setBranches(data.branches);
         if (data.branches.length === 1) {
-          window.location.href = bookPath(tenantSlug, data.branches[0].code);
+          router.push(bookPath(tenantSlug, data.branches[0].code));
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Salon not found");
@@ -32,7 +34,7 @@ export function BookTenantPicker({ tenantSlug }: { tenantSlug: string }) {
     return () => {
       cancelled = true;
     };
-  }, [tenantSlug]);
+  }, [tenantSlug, router]);
 
   if (loading) {
     return (

@@ -502,7 +502,7 @@ function ManagerSchedulePageContent() {
   const detailBreadcrumbs = useMemo(() => {
     if (!bookingParam.isSet) return null;
     return [
-      { label: t("title"), href: managerSchedulePath(date), onClick: () => bookingParam.set(null, "replace") },
+      { label: t("title"), href: managerSchedulePath(date), onClick: () => bookingParam.unset() },
       { label: selected?.block.customerName ?? t("visitDetails") },
     ];
   }, [bookingParam, date, selected?.block.customerName, t]);
@@ -514,7 +514,7 @@ function ManagerSchedulePageContent() {
   }
 
   function closeVisit() {
-    bookingParam.set(null, "replace");
+    bookingParam.unset();
   }
 
   return (
