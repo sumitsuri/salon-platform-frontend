@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { api, UpsertLocalCompetitorRequest } from "@/lib/api";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import {
   AllMetricsPanel,
@@ -51,9 +52,7 @@ export default function MarketPulsePage() {
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("overview");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
-  const [initialized, setInitialized] = useState(false);
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [compForm, setCompForm] = useState<UpsertLocalCompetitorRequest>({
     name: "",
@@ -62,17 +61,8 @@ export default function MarketPulsePage() {
 
   const apiRange = insightPeriodToRange(dateRange);
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, initialized]);
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
+    useAdminBranchSelection();
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["benchmark", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -84,7 +74,7 @@ export default function MarketPulsePage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: settings } = useQuery({
@@ -113,10 +103,6 @@ export default function MarketPulsePage() {
     { id: "local" as const, label: t("tabs.local"), icon: MapPin },
     { id: "playbook" as const, label: t("tabs.playbook"), icon: Lightbulb },
   ];
-
-  if (!initialized) {
-    return <PageLoader label={tCommon("loading")} />;
-  }
 
   return (
     <div className="space-y-5">
@@ -274,7 +260,7 @@ export default function MarketPulsePage() {
               </div>
 
               {showAddCompetitor && (
-                <div className="rounded-2xl border border-amber-200 dark:border-amber-900 p-4 space-y-3 bg-amber-50/50 dark:bg-amber-950/20 mp-animate-in">
+                <div className="rounded-2xl border border-amber-200 dark:border-amber-900 p-4 space-y-3 bg-amber-50/50 dark:bg-amber-950/20">
                   <input
                     className="w-full rounded-xl border border-[var(--border)] px-3 py-2.5 text-sm bg-[var(--surface)]"
                     placeholder={t("competitorName")}

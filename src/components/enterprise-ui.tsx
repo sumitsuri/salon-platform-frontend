@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export function PageLoader({ label }: { label?: string }) {
   return (
-    <div className="py-16 text-center space-y-3 mp-animate-in">
+    <div className="py-16 text-center space-y-3">
       <div className="inline-block w-10 h-10 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
       {label && <p className="text-sm text-[var(--text-tertiary)]">{label}</p>}
     </div>
@@ -69,7 +69,7 @@ export function PulseStatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm ring-1 transition hover:shadow-md hover:-translate-y-0.5 mp-animate-in min-w-0 max-w-full",
+        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm ring-1 transition hover:shadow-md hover:-translate-y-0.5 min-w-0 max-w-full",
         a.ring,
         a.glow,
         className
@@ -863,8 +863,8 @@ export function DashboardHero({
   className?: string;
 }) {
   return (
-    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-4 sm:p-6 shadow-xl mp-animate-in min-w-0 max-w-full w-full", className)}>
-      <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-2xl mp-pulse-glow" />
+    <div className={cn("hero-banner relative overflow-hidden rounded-2xl p-4 sm:p-6 shadow-xl min-w-0 max-w-full w-full", className)}>
+      <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
       <div className="absolute -left-4 bottom-0 w-32 h-32 rounded-full bg-white/5 blur-xl" />
       <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 min-w-0">
         <div className="flex-1 min-w-0 space-y-2">
@@ -918,7 +918,7 @@ export function PanelShell({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in min-w-0 max-w-full w-full",
+        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden min-w-0 max-w-full w-full",
         className
       )}
     >
@@ -962,7 +962,7 @@ export function WizardSteps({
 }) {
   const activeLabel = steps[current - 1] ?? "";
   return (
-    <div className={cn("rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm mp-animate-in", className)}>
+    <div className={cn("rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm", className)}>
       <div className="flex items-center gap-1.5 sm:gap-2" role="list" aria-label="Progress">
         {steps.map((label, i) => {
           const num = i + 1;
@@ -1049,7 +1049,7 @@ export function EnterpriseTableShell({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden mp-animate-in min-w-0 max-w-full w-full",
+        "rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden min-w-0 max-w-full w-full",
         className
       )}
     >

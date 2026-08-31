@@ -27,6 +27,7 @@ import {
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
@@ -334,12 +335,10 @@ export default function AdminServicesPage() {
   const [showInactive, setShowInactive] = useState(false);
 
   // Performance tab state
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
-  const [initialized, setInitialized] = useState(false);
   const [serviceFilter, setServiceFilter] = useState("");
 
-  // Catalog editor
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } = useAdminBranchSelection();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogServiceItem | null>(null);
   const [form, setForm] = useState({
@@ -355,11 +354,6 @@ export default function AdminServicesPage() {
   const [catOpen, setCatOpen] = useState(false);
   const [catForm, setCatForm] = useState({ name: "", parentCategoryId: "" });
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
   const { data: categories = [] } = useQuery({
     queryKey: ["catalog-categories", showInactive],
     queryFn: () => api.getCategories(showInactive),
@@ -369,13 +363,6 @@ export default function AdminServicesPage() {
     queryKey: ["catalog-services", showInactive],
     queryFn: () => api.getCatalogServices(showInactive),
   });
-
-  useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, initialized]);
 
   const parents = useMemo(
     () => categories.filter((c) => !c.parentCategoryId && (showInactive || c.active !== false)),
@@ -533,7 +520,7 @@ export default function AdminServicesPage() {
       const next = lastPage.page + 1;
       return next < lastPage.totalPages ? next : undefined;
     },
-    enabled: tab === "performance" && initialized && selectedBranches.length > 0,
+    enabled: tab === "performance" && branchesSelected,
   });
 
   const data = perfInfinite.data?.pages[0];
@@ -690,12 +677,8 @@ export default function AdminServicesPage() {
 
       {tab === "performance" && (
         <>
-          {!initialized ? (
-            <p className="text-[var(--text-tertiary)] text-sm py-8 text-center">{tCommon("loading")}</p>
-          ) : (
-            <>
-              <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
-              {selectedBranches.length === 0 ? (
+          <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+          {selectedBranches.length === 0 ? (
                 <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranchesServices")} />
               ) : (
                 <>
@@ -745,8 +728,6 @@ export default function AdminServicesPage() {
                   )}
                 </>
               )}
-            </>
-          )}
         </>
       )}
 

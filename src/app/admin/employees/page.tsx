@@ -178,7 +178,7 @@ export default function AdminEmployeesPage() {
   const formLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="space-y-4">
+    <div>
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -234,7 +234,7 @@ export default function AdminEmployeesPage() {
         {perfLoading ? (
           <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingPerformance")}</p>
         ) : !performance?.staff.length ? (
-          <EmptyState title={t("noTargetDataTitle")} description={t("noTargetDataDesc")} />
+          <EmptyState title={t("noTargetDataTitle")} description={t("noTargetDataDesc")} icon={Target} />
         ) : (
           <div className="divide-y divide-[var(--border)]">
             {Array.from(
@@ -327,7 +327,7 @@ export default function AdminEmployeesPage() {
         {isLoading ? (
           <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingEmployees")}</p>
         ) : employees.length === 0 ? (
-          <EmptyState title={t("noEmployeesTitle")} description={t("noEmployeesDesc")} />
+          <EmptyState title={t("noEmployeesTitle")} description={t("noEmployeesDesc")} icon={Users} />
         ) : (
           <div>
             {Array.from(byBranch.entries()).map(([branchName, list]) => (

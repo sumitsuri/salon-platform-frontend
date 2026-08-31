@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { MessageSquareHeart, Star, AlertTriangle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { PageHeader, PageLoader } from "@/components/ui";
+import { AdminDataSkeleton } from "@/components/admin/AdminDataSkeleton";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
 import { DashboardHero } from "@/components/enterprise-ui";
@@ -92,8 +94,6 @@ export default function AdminGuestVoicePage() {
   const t = useTranslations("admin.guestVoice");
   const tCommon = useTranslations("common");
   const tPeriods = useTranslations("components.dateRange.periods");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
     preset: "last_30_days",
     ...resolvePresetRange("last_30_days"),
@@ -103,17 +103,8 @@ export default function AdminGuestVoicePage() {
   const tableRef = useRef<HTMLDivElement>(null);
   const apiRange = useMemo(() => toIsoDateTimeRange(dateRange), [dateRange]);
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, initialized]);
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
+    useAdminBranchSelection();
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["guest-voice", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -126,7 +117,7 @@ export default function AdminGuestVoicePage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const scrollToReviews = useCallback(() => {
@@ -149,10 +140,6 @@ export default function AdminGuestVoicePage() {
   const clearListFilters = useCallback(() => {
     setListFilters(EMPTY_REVIEW_FILTERS);
   }, []);
-
-  if (!initialized) {
-    return <PageLoader label={tCommon("loading")} />;
-  }
 
   const topTags = Object.entries(data?.improvementTagCounts ?? {})
     .filter(([, count]) => count > 0)
@@ -188,7 +175,7 @@ export default function AdminGuestVoicePage() {
       />
 
       {(isLoading || isFetching) && !data ? (
-        <PageLoader label={tCommon("loading")} />
+        <AdminDataSkeleton rows={6} />
       ) : !data ? (
         <p className="text-sm text-muted-foreground">{t("unavailable")}</p>
       ) : (

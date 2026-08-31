@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Building2, Target } from "lucide-react";
+import { Building2, Target, Trophy, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
@@ -20,6 +20,7 @@ import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, dashboardSecondaryRange, getTodayRange, resolveProductDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { adminBookingsPath } from "@/lib/navigation-scope";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import {
   DashboardCommandBar,
   DashboardQuickLink,
@@ -36,35 +37,21 @@ export default function AdminDashboardPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tAtt = useTranslations("components.attendanceDashboard");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
     preset: "today",
     ...getTodayRange(),
   }));
-  const [initialized, setInitialized] = useState(false);
 
-  const { data: branches = [], isLoading: branchesLoading, isError: branchesError } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-    retry: 2,
-  });
-
-  useEffect(() => {
-    if (branchesLoading) return;
-    if (!initialized) {
-      if (branches.length > 0) {
-        setSelectedBranches(branches.map((b) => b.id));
-      }
-      setInitialized(true);
-    }
-  }, [branches, branchesLoading, initialized]);
+  const {
+    branches,
+    branchesError,
+    selectedBranches,
+    setSelectedBranches,
+    branchIdsFilter,
+    branchesSelected,
+  } = useAdminBranchSelection();
 
   const apiRange = insightPeriodToRange(dateRange);
-
-  const branchIdsFilter =
-    selectedBranches.length > 0 && selectedBranches.length < branches.length
-      ? selectedBranches
-      : undefined;
 
   const { data: dashboard, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -73,31 +60,31 @@ export default function AdminDashboardPage() {
         ...apiRange,
         branchIds: branchIdsFilter,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: attendanceDashboard, isLoading: attendanceLoading } = useQuery({
     queryKey: ["attendance-dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () => api.getAttendanceDashboard({ ...apiRange, branchIds: branchIdsFilter }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: staffPerformance, isLoading: staffPerfLoading } = useQuery({
     queryKey: ["staff-target-performance", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () => api.getStaffTargetPerformance({ ...apiRange, branchIds: branchIdsFilter }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: serviceContribution, isLoading: servicesLoading } = useQuery({
     queryKey: ["service-contribution", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () => api.getServiceContribution({ ...apiRange, branchIds: branchIdsFilter }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
     queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
     queryFn: () => api.getRecommendations({ ...apiRange, branchIds: branchIdsFilter }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const monthRange = dashboardSecondaryRange(dateRange);
@@ -113,7 +100,7 @@ export default function AdminDashboardPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: branchTargetTrends, isLoading: branchTrendsLoading } = useQuery({
@@ -127,7 +114,7 @@ export default function AdminDashboardPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: plSummary, isLoading: plLoading } = useQuery({
@@ -141,7 +128,7 @@ export default function AdminDashboardPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const inventoryMonth = monthRange.startDate?.slice(0, 8) + "01";
@@ -155,7 +142,7 @@ export default function AdminDashboardPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0 && !!inventoryMonth,
+    enabled: branchesSelected && !!inventoryMonth,
   });
 
   const periodSubtitle = isFetching && !isLoading ? tAdmin("updating") : undefined;
@@ -173,15 +160,12 @@ export default function AdminDashboardPage() {
     sales: t("sales"),
   };
 
-  if (!initialized || branchesLoading) {
-    return <PageLoader label={tAdmin("loadingDashboard")} />;
-  }
-
   if (branchesError) {
     return (
       <EmptyState
         title={t("branchesErrorTitle")}
         description={t("branchesErrorDesc")}
+        icon={Building2}
       />
     );
   }
@@ -198,7 +182,7 @@ export default function AdminDashboardPage() {
   const showBranchPerformance = dashboardLoading || (dashboard?.branchStats.length ?? 0) > 0;
 
   return (
-    <div className="page-stack space-y-4">
+    <div className="page-stack">
       <DashboardOverviewPanel>
         <DashboardCommandBar
           eyebrow={t("overviewEyebrow")}
@@ -242,7 +226,7 @@ export default function AdminDashboardPage() {
       </DashboardOverviewPanel>
 
       {selectedBranches.length === 0 ? (
-        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
+        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} icon={Building2} />
       ) : (
         <>
           {showBranchPerformance ? (
@@ -278,7 +262,7 @@ export default function AdminDashboardPage() {
             </DashboardWidgetCard>
           ) : null}
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <DashboardWidgetCard>
               <DashboardEmployeeCheckIn
                 loading={attendanceLoading}
@@ -315,7 +299,7 @@ export default function AdminDashboardPage() {
             </DashboardWidgetCard>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2">
             <ServiceSalesTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" />
             {dashboardLoading ? (
               <PlTeaser data={undefined} loading href="/admin/finance" />
@@ -324,7 +308,7 @@ export default function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-6 xl:grid-cols-2">
             <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" />
             <PaymentMixTeaser
               loading={dashboardLoading}
@@ -353,13 +337,13 @@ export default function AdminDashboardPage() {
                 />
               )}
 
-              <div className="grid gap-4 md:grid-cols-2 min-w-0">
+              <div className="grid gap-6 md:grid-cols-2 min-w-0">
                 <Card padding={false}>
                   <div className="px-4 py-3.5 border-b border-[var(--border)] bg-gradient-to-r from-violet-50/80 to-indigo-50/50 dark:from-violet-950/30 dark:to-indigo-950/20">
                     <h2 className="font-bold text-sm text-[var(--text-primary)]">{t("staffLeaderboard")}</h2>
                   </div>
                   {dashboard!.topStaff.length === 0 ? (
-                    <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} />
+                    <EmptyState title={t("noStaffData")} description={t("noStaffDataDesc")} icon={Trophy} />
                   ) : (
                     <div className="divide-y divide-[var(--border)]">
                       {dashboard!.topStaff.map((s, i) => (

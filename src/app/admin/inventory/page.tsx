@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ChevronRight, Package, Pencil, Plus, Trash2 } from "lucide-react";
@@ -19,6 +19,7 @@ import {
   VendorItem,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { MonthYearPicker, currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
 import { InventoryTrends } from "@/components/InventoryTrends";
@@ -81,31 +82,23 @@ export default function AdminInventoryPage() {
     [t]
   );
   const [selectedMonth, setSelectedMonth] = useState(currentMonthIso);
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState("");
   const [productDrawer, setProductDrawer] = useState<ProductDrawer | null>(null);
   const [vendorDrawer, setVendorDrawer] = useState<VendorDrawer | null>(null);
   const [movementDrawer, setMovementDrawer] = useState<MovementDrawer | null>(null);
   const [stockDrawer, setStockDrawer] = useState<StockDrawer | null>(null);
 
+  const {
+    branches,
+    selectedBranches,
+    setSelectedBranches,
+    branchesSelected,
+  } = useAdminBranchSelection();
+
   const branchFilter =
     selectedBranches.length > 0 && selectedBranches.length < 999
       ? selectedBranches
       : undefined;
-
-  const { data: branches = [], isLoading: branchesLoading } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branchesLoading) return;
-    if (!initialized) {
-      if (branches.length > 0) setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, branchesLoading, initialized]);
 
   const effectiveBranchFilter =
     selectedBranches.length > 0 && selectedBranches.length < branches.length ? selectedBranches : undefined;
@@ -114,32 +107,32 @@ export default function AdminInventoryPage() {
     queryKey: ["inventory-overview", selectedMonth, selectedBranches],
     queryFn: () =>
       api.getInventoryOverview({ month: selectedMonth, branchIds: effectiveBranchFilter }),
-    enabled: initialized && tab === "overview",
+    enabled: branchesSelected && tab === "overview",
   });
 
   const { data: trends, isLoading: trendsLoading } = useQuery({
     queryKey: ["inventory-trends", selectedMonth, selectedBranches],
     queryFn: () =>
       api.getInventoryTrends({ endMonth: selectedMonth, months: 6, branchIds: effectiveBranchFilter }),
-    enabled: initialized && tab === "overview",
+    enabled: branchesSelected && tab === "overview",
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["inventory-products"],
     queryFn: () => api.getInventoryProducts(),
-    enabled: initialized,
+    enabled: branchesSelected,
   });
 
   const { data: vendors = [] } = useQuery({
     queryKey: ["inventory-vendors"],
     queryFn: () => api.getInventoryVendors(),
-    enabled: initialized,
+    enabled: branchesSelected,
   });
 
   const { data: stock = [], isLoading: stockLoading } = useQuery({
     queryKey: ["inventory-stock", selectedBranches],
     queryFn: () => api.getInventoryStock(),
-    enabled: initialized && (tab === "stock" || tab === "overview"),
+    enabled: branchesSelected && (tab === "stock" || tab === "overview"),
   });
 
   const monthRange = useMemo(() => {
@@ -154,7 +147,7 @@ export default function AdminInventoryPage() {
   const { data: movements = [], isLoading: movementsLoading } = useQuery({
     queryKey: ["inventory-movements", monthRange.from, monthRange.to, selectedBranches],
     queryFn: () => api.getInventoryMovements({ fromDate: monthRange.from, toDate: monthRange.to }),
-    enabled: initialized && tab === "movements",
+    enabled: branchesSelected && tab === "movements",
   });
 
   const filteredStock = useMemo(() => {
@@ -268,10 +261,6 @@ export default function AdminInventoryPage() {
     createVendor.isPending ||
     updateVendor.isPending ||
     createMovement.isPending;
-
-  if (!initialized || branchesLoading) {
-    return <PageLoader label={t("loading")} />;
-  }
 
   return (
     <div className="space-y-5">

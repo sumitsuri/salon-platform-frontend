@@ -8,6 +8,7 @@ import { useAuthHydrated, useAuthStore } from "@/lib/auth-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguagePickerModal, LocaleSync } from "@/components/LanguagePickerModal";
 import { PwaScrollRecovery } from "@/components/PwaScrollRecovery";
+import { ToastViewport } from "@/components/ToastViewport";
 
 const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
@@ -50,7 +51,17 @@ function SessionKeeper() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            refetchOnWindowFocus: false,
+          },
+        },
+      })
+  );
   return (
     <QueryClientProvider client={client}>
       <ThemeProvider>
@@ -58,6 +69,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <PwaScrollRecovery />
         <LocaleSync />
         <LanguagePickerModal />
+        <ToastViewport />
         <div className="app-viewport">{children}</div>
       </ThemeProvider>
     </QueryClientProvider>

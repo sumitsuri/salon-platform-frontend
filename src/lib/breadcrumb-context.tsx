@@ -15,6 +15,11 @@ type BreadcrumbContextValue = {
 
 const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null);
 
+function breadcrumbStableKey(items: BreadcrumbItem[] | null): string {
+  if (!items) return "";
+  return items.map((i) => `${i.label}|${i.href ?? ""}|${i.onClick ? "fn" : ""}`).join(">");
+}
+
 export function BreadcrumbProvider({
   nav,
   homeHref,
@@ -28,7 +33,10 @@ export function BreadcrumbProvider({
 }) {
   const [pageBreadcrumbs, setPageBreadcrumbsState] = useState<BreadcrumbItem[] | null>(null);
   const setPageBreadcrumbs = useCallback((items: BreadcrumbItem[] | null) => {
-    setPageBreadcrumbsState(items);
+    setPageBreadcrumbsState((prev) => {
+      if (breadcrumbStableKey(prev) === breadcrumbStableKey(items)) return prev;
+      return items;
+    });
   }, []);
 
   const value = useMemo(
@@ -106,19 +114,17 @@ export function useBreadcrumbs(): BreadcrumbItem[] {
 
 /** Override auto route breadcrumbs (e.g. platform tenant drill-down). Clears on unmount. */
 export function useSetPageBreadcrumbs(items: BreadcrumbItem[] | null) {
-  const ctx = useContext(BreadcrumbContext);
+  const setPageBreadcrumbs = useContext(BreadcrumbContext)?.setPageBreadcrumbs;
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
-  const stableKey = items
-    ? items.map((i) => `${i.label}|${i.href ?? ""}|${i.onClick ? "fn" : ""}`).join(">")
-    : "";
+  const stableKey = breadcrumbStableKey(items);
 
   useEffect(() => {
-    if (!ctx) return;
-    ctx.setPageBreadcrumbs(itemsRef.current);
-    return () => ctx.setPageBreadcrumbs(null);
-  }, [ctx, stableKey]);
+    if (!setPageBreadcrumbs) return;
+    setPageBreadcrumbs(itemsRef.current);
+    return () => setPageBreadcrumbs(null);
+  }, [setPageBreadcrumbs, stableKey]);
 }
 
 export function useBreadcrumbActions() {

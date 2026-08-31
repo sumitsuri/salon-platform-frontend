@@ -231,7 +231,7 @@ export function EnterpriseAppShell({
             <main
               id="app-mobile-scroll"
               className={cn(
-                "flex-1 w-full px-4 sm:px-6 md:px-6 lg:px-8 pb-4 sm:pb-5 md:py-6 min-w-0",
+                "flex-1 w-full px-4 sm:px-6 md:px-6 lg:px-8 pb-20 sm:pb-6 md:py-6 min-w-0",
                 "max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:touch-scroll-y",
                 MOBILE_TOP_BAR_OFFSET,
                 mobileMainPadding

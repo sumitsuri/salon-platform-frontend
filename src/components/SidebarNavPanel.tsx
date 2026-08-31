@@ -57,6 +57,7 @@ function NavItemLink({
     <div className="space-y-0.5">
       <Link
         href={item.href}
+        prefetch
         onClick={onNavigate}
         title={collapsed ? item.label : undefined}
         aria-current={active ? "page" : undefined}
@@ -85,13 +86,14 @@ function NavItemLink({
               <Link
                 key={child.href}
                 href={child.href}
+                prefetch
                 onClick={onNavigate}
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
                   childIsActive
                     ? "bg-[var(--brand-light)] text-[var(--brand-text)] font-semibold"
                     : navHasSelection
-                      ? "text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+                      ? "text-[var(--text-secondary)] opacity-90 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                 )}
               >
@@ -128,7 +130,7 @@ export function SidebarNavPanel({
     "bg-[var(--brand-light)] text-[var(--brand-text)] border-[var(--brand)] font-semibold";
 
   const inactiveClass =
-    "border-transparent text-[var(--text-tertiary)] opacity-70 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]";
+    "border-transparent text-[var(--text-secondary)] opacity-90 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]";
 
   const itemIsActive = (href: string, exact?: boolean) => isActive(href, exact);
   const sections = toNavSections(nav);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -23,6 +23,7 @@ import {
   UpdateExpenditureRequest,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import {
   MonthYearPicker,
@@ -105,30 +106,20 @@ export default function AdminFinancePage() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthIso);
   const [tab, setTab] = useState<Tab>("overview");
   const [expView, setExpView] = useState<ExpView>("months");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
-  const [initialized, setInitialized] = useState(false);
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");
+
+  const {
+    branches,
+    selectedBranches,
+    setSelectedBranches,
+    branchIdsFilter: branchFilter,
+    branchesSelected,
+  } = useAdminBranchSelection();
 
   const range = monthToRange(selectedMonth);
   const selectedYear = parseMonth(selectedMonth).year;
   const { year: currentYear, month: currentMonthNum } = parseMonth(currentMonthIso());
-
-  const { data: branches = [], isLoading: branchesLoading } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branchesLoading) return;
-    if (!initialized) {
-      if (branches.length > 0) setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, branchesLoading, initialized]);
-
-  const branchFilter =
-    selectedBranches.length > 0 && selectedBranches.length < branches.length ? selectedBranches : undefined;
 
   const { data: pl, isLoading: plLoading } = useQuery({
     queryKey: ["pl-summary", selectedMonth, selectedBranches],
@@ -138,7 +129,7 @@ export default function AdminFinancePage() {
         endDate: range.endDate,
         branchIds: branchFilter,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const { data: plTrends, isLoading: plTrendsLoading } = useQuery({
@@ -149,7 +140,7 @@ export default function AdminFinancePage() {
         months: 6,
         branchIds: branchFilter,
       }),
-    enabled: initialized && selectedBranches.length > 0 && tab === "overview",
+    enabled: branchesSelected && tab === "overview",
   });
 
   const { data: yearExpenditures = [], isLoading: expLoading } = useQuery({
@@ -159,7 +150,7 @@ export default function AdminFinancePage() {
         fromMonth: `${selectedYear}-01-01`,
         toMonth: `${selectedYear}-12-01`,
       }),
-    enabled: initialized && tab === "expenditures",
+    enabled: branchesSelected && tab === "expenditures",
   });
 
   const filteredYearExpenditures = useMemo(() => {
@@ -260,10 +251,6 @@ export default function AdminFinancePage() {
     setSelectedMonth(monthIso);
     setExpView("detail");
   };
-
-  if (!initialized || branchesLoading) {
-    return <PageLoader label={t("loading")} />;
-  }
 
   const brand = pl?.brand;
   const monthsWithDataCount = monthlySummaries.filter((m) => m.lineCount > 0).length;

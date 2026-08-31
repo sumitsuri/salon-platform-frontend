@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
@@ -31,7 +30,6 @@ import {
   PageLoader,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
-import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 const STATUSES = ["", "COMPLETED", "IN_PROGRESS", "READY_FOR_BILLING", "CANCELLED", "DRAFT"];
 
@@ -103,13 +101,12 @@ function AdminBookingsPageContent() {
   const tAdminLayout = useTranslations("admin.layout");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
-  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [branchScopeId, setBranchScopeId] = useState("");
   const [branchNameFromUrl, setBranchNameFromUrl] = useState("");
-  const [urlReady, setUrlReady] = useState(false);
+  const [urlReady, setUrlReady] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const detailParam = useUrlQueryParam("detailBookingId");
   const branchParam = useUrlQueryParam("branchId");
@@ -142,10 +139,9 @@ function AdminBookingsPageContent() {
     syncFromLocation();
   }, []);
 
-  // Static export: useSearchParams() is often empty even when the address bar has query params.
   useEffect(() => {
     syncFromLocation();
-  }, [searchParams, branchParam.value]);
+  }, [branchParam.value]);
 
   const { data: branch, isLoading: branchLoading } = useQuery({
     queryKey: ["branch", branchScopeId],
@@ -578,9 +574,5 @@ function AdminBookingsPageContent() {
 }
 
 export default function AdminBookingsPage() {
-  return (
-    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
-      <AdminBookingsPageContent />
-    </Suspense>
-  );
+  return <AdminBookingsPageContent />;
 }

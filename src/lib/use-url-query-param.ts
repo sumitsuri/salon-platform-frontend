@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 /** Static export + trailingSlash: build href consistent with the address bar. */
 export function buildPathWithSearch(pathname: string, params: URLSearchParams): string {
@@ -28,14 +28,10 @@ function applyHistoryUrl(href: string, mode: "push" | "replace") {
  * Uses the History API for same-page query changes — Next.js 16.2.x static
  * export restores stale searchParams from router cache on router.replace().
  *
- * Navigation policy:
- * - set(value) → push (user opened detail/filter)
- * - unset() → history.back() when possible (matches browser back)
- * - set(value, "replace") → replace (canonical defaults only)
+ * Avoids useSearchParams() so route pages render immediately without Suspense.
  */
 export function useUrlQueryParam(name: string) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -44,26 +40,22 @@ export function useUrlQueryParam(name: string) {
     return () => window.removeEventListener("popstate", sync);
   }, []);
 
-  // Next.js client navigations update searchParams but not popstate.
   useEffect(() => {
     setRevision((r) => r + 1);
-  }, [searchParams]);
+  }, [pathname]);
 
   const value = useMemo(() => {
     void revision;
-    if (typeof window !== "undefined") {
-      return readSearchParams().get(name);
-    }
-    return searchParams.get(name);
-  }, [name, searchParams, revision]);
+    if (typeof window === "undefined") return null;
+    return readSearchParams().get(name);
+  }, [name, revision]);
 
   const hrefWithout = useMemo(() => {
     void revision;
-    const params =
-      typeof window !== "undefined" ? readSearchParams() : new URLSearchParams(searchParams.toString());
+    const params = readSearchParams();
     params.delete(name);
     return buildPathWithSearch(pathname, params);
-  }, [name, pathname, searchParams, revision]);
+  }, [name, pathname, revision]);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
 
@@ -114,7 +106,6 @@ export function useUrlQueryParam(name: string) {
 /** Pair of query params, e.g. drawer type + entity id. */
 export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -125,12 +116,12 @@ export function useUrlDrawerParams(typeParam = "drawer", idParam = "id") {
 
   useEffect(() => {
     setRevision((r) => r + 1);
-  }, [searchParams]);
+  }, [pathname]);
 
   const params = useMemo(() => {
     void revision;
-    return typeof window !== "undefined" ? readSearchParams() : new URLSearchParams(searchParams.toString());
-  }, [searchParams, revision]);
+    return readSearchParams();
+  }, [revision]);
 
   const drawerType = params.get(typeParam);
   const drawerId = params.get(idParam);

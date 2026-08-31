@@ -32,6 +32,30 @@
   --app-bg: #eef1f6;
   --shadow-color: rgba(15, 23, 42, 0.06);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  /* Elevation */
+  --shadow-sm: 0 1px 2px var(--shadow-color);
+  --shadow-md: 0 4px 12px var(--shadow-color);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand-ring);
+  /* Typography */
+  --text-display: clamp(1.375rem, 2vw + 1rem, 1.75rem);
+  --text-title: 1.125rem;
+  --text-body: 0.875rem;
+  --text-caption: 0.75rem;
   /* CEO dashboard overview — neutral executive shell (brand accent only) */
   --dashboard-shell-bg: #ffffff;
   --dashboard-shell-border: #dbe3ee;
@@ -107,9 +131,26 @@ body {
 
 /* Standard page content stack — use on route roots inside the app shell */
 .page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Consistent focus for keyboard users */
+:focus-visible {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="tab"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 /* Two-up KPI grids that must never overflow narrow phones */
@@ -587,6 +628,11 @@ body {
   border-color: var(--border-strong);
   background: var(--surface);
   color: var(--text-primary);
+}
+
+.dashboard-quick-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .dashboard-quick-link-icon {

@@ -23,20 +23,20 @@ export const inputClass =
 export const selectClass = inputClass;
 
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-sm";
+  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 bg-[var(--brand)] hover:opacity-90 active:scale-[0.98] text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-sm focus-visible:outline-none";
 
 export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 px-5 py-3 bg-[var(--surface)] hover:bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm";
+  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 bg-[var(--surface)] hover:bg-[var(--surface-muted)] active:scale-[0.98] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm focus-visible:outline-none";
 
 /** Dense toolbar / table actions — prefer over ad-hoc padding overrides. */
 export const btnPrimarySm =
-  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm";
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-[var(--brand)] hover:opacity-90 active:scale-[0.98] text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm focus-visible:outline-none";
 
 export const btnSecondarySm =
-  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-[var(--surface)] hover:bg-[var(--surface-muted)] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-xs sm:text-sm";
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-[var(--surface)] hover:bg-[var(--surface-muted)] active:scale-[0.98] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-xs sm:text-sm focus-visible:outline-none";
 
 export const btnDangerSm =
-  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm";
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm focus-visible:outline-none";
 
 /** Searchable single-select — type to filter options, click to pick. */
 export function SearchableSelect({
@@ -380,7 +380,7 @@ export function PageHeader({
       )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] tracking-tight">{title}</h1>
+          <h1 className="text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">{title}</h1>
           {subtitle && (
             <p className="text-sm text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:truncate">{subtitle}</p>
           )}
@@ -407,7 +407,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm mp-animate-in transition min-w-0 max-w-full",
+        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm transition min-w-0 max-w-full",
         padding && "p-4 sm:p-5",
         className
       )}
@@ -468,7 +468,7 @@ export function QuickAction({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] mp-animate-in min-w-0 max-w-full w-full",
+        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] min-w-0 max-w-full w-full",
         colors[color]
       )}
     >
@@ -519,8 +519,9 @@ export function SegmentedControl<T extends string>({
               "flex items-center justify-center gap-1 px-2 py-2.5 text-[10px] sm:text-sm font-semibold rounded-lg transition touch-manipulation min-h-11",
               scrollable ? "flex-none min-w-[4.5rem] whitespace-nowrap" : "min-w-0 w-full",
               active
-                ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm ring-1 ring-[var(--border)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/60",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]"
             )}
           >
             {Icon && <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />}
@@ -587,16 +588,25 @@ export function EmptyState({
   title,
   description,
   action,
+  icon: Icon,
 }: {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="py-12 px-4 text-center">
-      <p className="font-medium text-[var(--text-primary)]">{title}</p>
-      {description && <p className="text-sm text-[var(--text-secondary)] mt-1">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+      {Icon && (
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--text-tertiary)] ring-1 ring-[var(--border)]">
+          <Icon className="h-7 w-7" aria-hidden />
+        </div>
+      )}
+      <p className="text-base font-semibold text-[var(--text-primary)]">{title}</p>
+      {description && (
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">{description}</p>
+      )}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -684,8 +694,8 @@ export function ListRow({
     <Comp
       onClick={onClick}
       className={cn(
-        "w-full max-w-full min-w-0 block px-3 sm:px-4 py-3 text-left transition border-b border-[var(--border)] last:border-0",
-        onClick && "hover:bg-[var(--surface-muted)] active:bg-[var(--brand-light)]",
+        "w-full max-w-full min-w-0 block px-3 sm:px-4 py-3 text-left transition border-b border-[var(--border)] last:border-0 rounded-lg",
+        onClick && "hover:bg-[var(--surface-muted)] active:bg-[var(--brand-light)] min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-ring)]",
         !onClick && "hover:bg-[var(--surface-muted)]/50"
       )}
     >

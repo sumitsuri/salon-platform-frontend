@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
-import { PageHeader, StatCard, EmptyState, PageLoader } from "@/components/ui";
+import { PageHeader, StatCard, EmptyState } from "@/components/ui";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { DashboardHero } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
@@ -20,22 +21,11 @@ export default function AdminInsightsPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tPeriods = useTranslations("components.dateRange.periods");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
-  const [initialized, setInitialized] = useState(false);
   const apiRange = insightPeriodToRange(dateRange);
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      setSelectedBranches(branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, initialized]);
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
+    useAdminBranchSelection();
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["recommendations", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -47,16 +37,12 @@ export default function AdminInsightsPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const items = flattenInsights(data);
   const highCount = items.filter((i) => i.severity === "HIGH").length;
   const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
-
-  if (!initialized) {
-    return <PageLoader label={tCommon("loading")} />;
-  }
 
   return (
     <div className="page-stack space-y-5">

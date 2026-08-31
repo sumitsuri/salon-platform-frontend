@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, Lead } from "@/lib/api";
@@ -8,7 +8,6 @@ import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
-import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import {
   PageHeader,
   Card,
@@ -43,11 +42,7 @@ const emptyFilters: Filters = {
 };
 
 export default function AdminLeadsPage() {
-  return (
-    <Suspense fallback={<AntrahqLoading label="Loading..." />}>
-      <AdminLeadsPageContent />
-    </Suspense>
-  );
+  return <AdminLeadsPageContent />;
 }
 
 function AdminLeadsPageContent() {

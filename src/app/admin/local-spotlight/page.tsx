@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -45,6 +45,7 @@ import {
   AlertBanner,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 
 type Tab = "overview" | "branches" | "rivals" | "search" | "playbook";
 type StatFilter = "all" | "notTop3" | "ratingBelow" | "incomplete" | "noPhone";
@@ -56,9 +57,7 @@ export default function LocalSpotlightPage() {
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("overview");
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [radiusKm, setRadiusKm] = useState(2);
-  const [initialized, setInitialized] = useState(false);
   const [statFilter, setStatFilter] = useState<StatFilter>("all");
   const [detailBranch, setDetailBranch] = useState<LocalSpotlightBranchRow | null>(null);
   const [editDigital, setEditDigital] = useState(false);
@@ -69,18 +68,8 @@ export default function LocalSpotlightPage() {
     competitorType: "LOCAL",
   });
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
-  });
-
-  useEffect(() => {
-    if (branches.length > 0 && !initialized) {
-      const pilot = branches.find((b) => b.code === "VAR") ?? branches[0];
-      setSelectedBranches(pilot ? [pilot.id] : branches.map((b) => b.id));
-      setInitialized(true);
-    }
-  }, [branches, initialized]);
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
+    useAdminBranchSelection("pilot");
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["local-spotlight", selectedBranches, radiusKm],
@@ -92,7 +81,7 @@ export default function LocalSpotlightPage() {
             ? selectedBranches
             : undefined,
       }),
-    enabled: initialized && selectedBranches.length > 0,
+    enabled: branchesSelected,
   });
 
   const syncGoogle = useMutation({
@@ -177,10 +166,6 @@ export default function LocalSpotlightPage() {
       estimatedSearchRank: row.estimatedSearchRank ?? undefined,
     });
     setTab("branches");
-  }
-
-  if (!initialized) {
-    return <PageLoader label={tCommon("loading")} />;
   }
 
   return (

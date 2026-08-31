@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   X,
   CheckCircle2,
+  ClipboardList,
   Scissors,
   Sparkles,
   Tag,
@@ -1780,7 +1781,7 @@ export default function WalkInPage() {
 
   if (screen === "hub") {
     return (
-      <div className="space-y-4 w-full max-w-6xl mx-auto min-w-0 max-w-full">
+      <div className="w-full max-w-6xl mx-auto min-w-0">
         <PageHeader
           title={t("visitsTitle")}
           subtitle={t("visitsSubtitle")}
@@ -1871,6 +1872,7 @@ export default function WalkInPage() {
               <EmptyState
                 title={t("noOpenVisits")}
                 description={t("noOpenVisitsHint")}
+                icon={ClipboardList}
                 action={
                   <button type="button" onClick={startNewVisit} className={`${btnPrimary} min-h-12`}>
                     <UserPlus className="w-4 h-4" />
