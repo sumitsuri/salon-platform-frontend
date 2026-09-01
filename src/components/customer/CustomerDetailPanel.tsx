@@ -82,17 +82,11 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
   });
 
   const breadcrumbs = useMemo((): BreadcrumbItem[] => {
-    const crumbs: BreadcrumbItem[] = [
+    return [
       { label: homeLabel, href: homeHref },
       { label: customersLabel, href: customersHref },
     ];
-    if (customer?.name) {
-      crumbs.push({ label: customer.name });
-    } else {
-      crumbs.push({ label: tCommon("loading") });
-    }
-    return crumbs;
-  }, [customer?.name, homeHref, homeLabel, customersHref, customersLabel, tCommon]);
+  }, [homeHref, homeLabel, customersHref, customersLabel]);
 
   useSetPageBreadcrumbs(breadcrumbs);
 
@@ -229,7 +223,6 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
             { label: homeLabel, href: homeHref },
             { label: customersLabel, href: customersHref },
           ]}
-          breadcrumbsAlwaysVisible
           showBack={false}
         />
         <AlertBanner variant="error">
@@ -251,7 +244,6 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
         title={customer.name}
         subtitle={profileSubtitle || undefined}
         breadcrumbs={breadcrumbs}
-        breadcrumbsAlwaysVisible
         showBack={false}
       />
 

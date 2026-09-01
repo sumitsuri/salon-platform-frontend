@@ -11,9 +11,10 @@ interface PlTeaserProps {
   data?: PlSummaryResponse;
   loading?: boolean;
   href: string;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function PlTeaser({ data, loading, href }: PlTeaserProps) {
+export function PlTeaser({ data, loading, href, panelVariant = "default" }: PlTeaserProps) {
   const t = useTranslations("components.plTeaser");
   const tCommon = useTranslations("common");
   const brand = data?.brand;
@@ -27,8 +28,9 @@ export function PlTeaser({ data, loading, href }: PlTeaserProps) {
       subtitle={loading ? tCommon("loading") : data?.periodLabel ?? t("subtitleDefault")}
       icon={IndianRupee}
       accent="emerald"
+      variant={panelVariant}
       action={
-        <PanelLink href={href}>
+        <PanelLink href={href} variant={panelVariant}>
           {t("viewFinance")}
           <ChevronRight className="w-3.5 h-3.5" />
         </PanelLink>

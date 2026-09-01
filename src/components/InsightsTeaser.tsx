@@ -13,9 +13,10 @@ interface InsightsTeaserProps {
   loading?: boolean;
   href: string;
   previewCount?: number;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function InsightsTeaser({ data, loading, href, previewCount = 3 }: InsightsTeaserProps) {
+export function InsightsTeaser({ data, loading, href, previewCount = 3, panelVariant = "default" }: InsightsTeaserProps) {
   const t = useTranslations("components.insightsTeaser");
   const tCommon = useTranslations("common");
   const total = countInsights(data);
@@ -27,9 +28,10 @@ export function InsightsTeaser({ data, loading, href, previewCount = 3 }: Insigh
       subtitle={loading ? tCommon("loading") : total > 0 ? t("tipsCount", { count: total }) : t("noTips")}
       icon={Lightbulb}
       accent="brand"
+      variant={panelVariant}
       padding={false}
       action={
-        <PanelLink href={href}>
+        <PanelLink href={href} variant={panelVariant}>
           {tCommon("viewAll")}
           <ChevronRight className="w-3.5 h-3.5" />
         </PanelLink>

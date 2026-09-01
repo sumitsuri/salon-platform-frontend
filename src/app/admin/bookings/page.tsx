@@ -208,7 +208,6 @@ function AdminBookingsPageContent() {
   const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
     scope: "admin",
-    currentPageLabel: t("title"),
   });
 
   function clearCustomerScope() {

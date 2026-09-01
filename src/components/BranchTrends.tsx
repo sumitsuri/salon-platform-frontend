@@ -11,6 +11,7 @@ import { PanelShell } from "@/components/enterprise-ui";
 
 interface BranchTrendsProps {
   trends: BranchTrend[];
+  panelVariant?: "default" | "dashboard";
 }
 
 type MetricKey = "revenue" | "visits" | "avgTicket" | "discounts";
@@ -22,7 +23,7 @@ const CHANGE_KEYS: Record<MetricKey, keyof BranchTrend> = {
   discounts: "discountsChangePct",
 };
 
-export function BranchTrends({ trends }: BranchTrendsProps) {
+export function BranchTrends({ trends, panelVariant = "default" }: BranchTrendsProps) {
   const t = useTranslations("components.branchTrends");
   const locale = useLocale();
 
@@ -35,7 +36,7 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
 
   if (trends.length === 0) {
     return (
-      <PanelShell title={t("title")} icon={TrendingUp} accent="brand">
+      <PanelShell title={t("title")} icon={TrendingUp} accent="brand" variant={panelVariant}>
         <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
       </PanelShell>
     );
@@ -53,6 +54,7 @@ export function BranchTrends({ trends }: BranchTrendsProps) {
       subtitle={dateLabels.length > 0 ? `${dateLabels[0]} – ${dateLabels[dateLabels.length - 1]}` : undefined}
       icon={TrendingUp}
       accent="brand"
+      variant={panelVariant}
       padding={false}
     >
       <div className="p-4 grid lg:grid-cols-2 gap-4">

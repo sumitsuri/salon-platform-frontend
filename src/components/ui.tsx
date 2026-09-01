@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
+import { resolvePageHeaderNav } from "@/lib/page-header-nav";
 import { isHomePath } from "@/components/app-nav";
 import { PulseStatCard, PageLoader, enterpriseTableHead } from "@/components/enterprise-ui";
 
@@ -356,14 +357,16 @@ export function PageHeader({
   const { homeHref, homeLabel } = useAppShell();
   const autoBreadcrumbs = useBreadcrumbs();
   const breadcrumbs = breadcrumbsOverride ?? autoBreadcrumbs;
+  const { ancestors } = resolvePageHeaderNav(breadcrumbs, title);
   const isSubPage = !isHomePath(pathname, homeHref);
-  const shouldShowBack = (showBack ?? isSubPage) && breadcrumbs.length === 0;
+  const shouldShowBack = (showBack ?? isSubPage) && ancestors.length === 0 && breadcrumbs.length === 0;
 
   return (
-    <div className="space-y-2 min-w-0 max-w-full">
-      {breadcrumbs.length > 0 && (
+    <header className="page-header min-w-0 max-w-full space-y-1">
+      {ancestors.length > 0 && (
         <Breadcrumbs
-          items={breadcrumbs}
+          items={ancestors}
+          variant="trail"
           testId="page-breadcrumbs"
           className={cn(breadcrumbsAlwaysVisible ? "flex" : "hidden md:flex")}
         />
@@ -378,14 +381,14 @@ export function PageHeader({
           <span>{tCommon("backTo", { page: homeLabel })}</span>
         </Link>
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3 pt-0.5">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <div
-            className="hidden sm:block mt-1.5 w-1 min-h-[2.75rem] shrink-0 rounded-full bg-gradient-to-b from-[var(--brand)] to-[var(--brand-dark)] shadow-[0_0_12px_var(--brand-glow)]"
+            className="hidden sm:block mt-1 w-1 min-h-[2.5rem] shrink-0 rounded-full bg-gradient-to-b from-[var(--brand)] to-[var(--brand-dark)] shadow-[0_0_10px_var(--brand-glow)]"
             aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
+            <h1 className="font-display text-xl sm:text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
               {title}
             </h1>
             {subtitle && (
@@ -399,7 +402,7 @@ export function PageHeader({
           </div>
         )}
       </div>
-    </div>
+    </header>
   );
 }
 

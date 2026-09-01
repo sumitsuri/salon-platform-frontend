@@ -84,7 +84,6 @@ function buildRouteBreadcrumbs(
       crumbs.push({ label: item.label, href: item.href });
     }
 
-    crumbs.push({ label: matchedChild.label });
     return crumbs;
   }
 
@@ -97,7 +96,7 @@ function buildRouteBreadcrumbs(
     );
 
   if (topLevel) {
-    return [{ label: homeLabel, href: homeHref }, { label: topLevel.label }];
+    return [{ label: homeLabel, href: homeHref }];
   }
 
   const homeNav = nav.find((item) => normalizeNavPath(item.href) === home);

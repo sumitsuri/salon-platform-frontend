@@ -88,7 +88,6 @@ export default function ManagerMembershipsPage() {
   const { customer, customersHref, customersLabel, isScoped } = useCustomerScopeNavigation({
     customerId: initialCustomerId || undefined,
     scope: "manager",
-    currentPageLabel: t("title"),
     enabled: !!initialCustomerId,
   });
 

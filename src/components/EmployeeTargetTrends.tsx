@@ -12,9 +12,10 @@ interface EmployeeTargetTrendsProps {
   branches: BranchStaffTargetTrends[];
   periodLabel?: string;
   compact?: boolean;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function EmployeeTargetTrends({ branches, periodLabel, compact }: EmployeeTargetTrendsProps) {
+export function EmployeeTargetTrends({ branches, periodLabel, compact, panelVariant = "default" }: EmployeeTargetTrendsProps) {
   const t = useTranslations("components.employeeTargetTrends");
   const locale = useLocale();
 
@@ -57,31 +58,59 @@ export function EmployeeTargetTrends({ branches, periodLabel, compact }: Employe
       return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
     }) ?? [];
 
+  const header = (
+    <div className={panelVariant === "dashboard" ? "dashboard-widget-header px-4 py-3 flex items-center gap-2.5" : "flex items-center gap-2 px-0.5"}>
+      {panelVariant === "dashboard" ? (
+        <span className="dashboard-widget-icon shrink-0" aria-hidden>
+          <TrendingUp className="w-4 h-4" />
+        </span>
+      ) : (
+        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
+      )}
+      <div className="min-w-0">
+        <h2 className={panelVariant === "dashboard" ? "dashboard-widget-title" : "font-semibold text-sm text-[var(--text-primary)]"}>
+          {t("title")}
+        </h2>
+        <p className={panelVariant === "dashboard" ? "dashboard-widget-subtitle" : "text-xs text-[var(--text-secondary)]"}>
+          {periodLabel ? `${periodLabel} · ` : ""}
+          {t("subtitle")}
+        </p>
+      </div>
+    </div>
+  );
+
+  const charts = (
+    <div className={compact ? "space-y-4" : "grid lg:grid-cols-2 gap-4"}>
+      {branches.map((branch) => (
+        <Card
+          key={branch.branchId}
+          padding={panelVariant !== "dashboard"}
+          className={panelVariant === "dashboard" ? "border border-[var(--border-brand)] shadow-sm" : undefined}
+        >
+          <MetricChart
+            title={t("chartTitle", { branch: branch.branchName })}
+            labels={dateLabels}
+            formatValue={formatCurrency}
+            series={buildCombinedSeries(branch)}
+          />
+        </Card>
+      ))}
+    </div>
+  );
+
+  if (panelVariant === "dashboard") {
+    return (
+      <div className="dashboard-widget-card min-w-0 max-w-full">
+        {header}
+        <div className="dashboard-widget-body p-4 space-y-4">{charts}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 px-0.5">
-        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
-        <div className="min-w-0">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("title")}</h2>
-          <p className="text-xs text-[var(--text-secondary)]">
-            {periodLabel ? `${periodLabel} · ` : ""}
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
-
-      <div className={compact ? "space-y-4" : "grid lg:grid-cols-2 gap-4"}>
-        {branches.map((branch) => (
-          <Card key={branch.branchId}>
-            <MetricChart
-              title={t("chartTitle", { branch: branch.branchName })}
-              labels={dateLabels}
-              formatValue={formatCurrency}
-              series={buildCombinedSeries(branch)}
-            />
-          </Card>
-        ))}
-      </div>
+      {header}
+      {charts}
     </div>
   );
 }

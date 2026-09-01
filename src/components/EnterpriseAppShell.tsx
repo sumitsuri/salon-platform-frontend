@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { AppShellProvider } from "@/lib/app-shell-context";
 import { AppNavProvider } from "@/lib/app-nav-context";
 import { BreadcrumbProvider, useBreadcrumbs } from "@/lib/breadcrumb-context";
+import { resolveMobileBreadcrumbs } from "@/lib/page-header-nav";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
 import { AppNavInput, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET, flattenNavItems, isHomePath } from "@/components/app-nav";
@@ -83,6 +84,7 @@ function MobileTopBar({
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const breadcrumbs = useBreadcrumbs();
+  const mobileBreadcrumbs = resolveMobileBreadcrumbs(breadcrumbs);
   const isSubPage = !isHomePath(pathname, homeHref);
 
   return (
@@ -102,8 +104,8 @@ function MobileTopBar({
             <Menu className="w-5 h-5" />
           </button>
 
-          {breadcrumbs.length > 0 ? (
-            <Breadcrumbs items={breadcrumbs} compact testId="mobile-breadcrumbs" className="min-w-0 flex-1" />
+          {mobileBreadcrumbs.length > 0 ? (
+            <Breadcrumbs items={mobileBreadcrumbs} variant="trail" compact testId="mobile-breadcrumbs" className="min-w-0 flex-1" />
           ) : isSubPage ? (
             <Link
               href={homeHref}

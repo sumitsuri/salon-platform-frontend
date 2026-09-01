@@ -11,12 +11,10 @@ import { AppScope, customerDetailPath, customersPath } from "@/lib/navigation-sc
 export function useCustomerScopeNavigation({
   customerId,
   scope,
-  currentPageLabel,
   enabled = true,
 }: {
   customerId: string | undefined;
   scope: AppScope;
-  currentPageLabel: string;
   enabled?: boolean;
 }) {
   const tAdmin = useTranslations("admin.layout");
@@ -43,11 +41,10 @@ export function useCustomerScopeNavigation({
     if (customer?.name) {
       crumbs.push({ label: customer.name, href: customerDetailPath(scope, customerId) });
     } else if (isLoading) {
-      crumbs.push({ label: "…" });
+      crumbs.push({ label: "…", href: customerDetailPath(scope, customerId) });
     }
-    crumbs.push({ label: currentPageLabel });
     return crumbs;
-  }, [customerId, customer?.name, isLoading, scope, homeHref, homeLabel, customersHref, customersLabel, currentPageLabel]);
+  }, [customerId, customer?.name, isLoading, scope, homeHref, homeLabel, customersHref, customersLabel]);
 
   useSetPageBreadcrumbs(breadcrumbs);
 

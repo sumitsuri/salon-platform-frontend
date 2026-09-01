@@ -11,9 +11,10 @@ import { TrendingUp } from "lucide-react";
 interface BranchTargetTrendsProps {
   branches: BranchTargetTrend[];
   periodLabel?: string;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function BranchTargetTrends({ branches, periodLabel }: BranchTargetTrendsProps) {
+export function BranchTargetTrends({ branches, periodLabel, panelVariant = "default" }: BranchTargetTrendsProps) {
   const t = useTranslations("components.branchTargetTrends");
   const locale = useLocale();
 
@@ -56,27 +57,51 @@ export function BranchTargetTrends({ branches, periodLabel }: BranchTargetTrends
       return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
     }) ?? [];
 
+  const header = (
+    <div className={panelVariant === "dashboard" ? "dashboard-widget-header px-4 py-3 flex items-center gap-2.5" : "flex items-center gap-2 px-0.5"}>
+      {panelVariant === "dashboard" ? (
+        <span className="dashboard-widget-icon shrink-0" aria-hidden>
+          <TrendingUp className="w-4 h-4" />
+        </span>
+      ) : (
+        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
+      )}
+      <div className="min-w-0">
+        <h2 className={panelVariant === "dashboard" ? "dashboard-widget-title" : "font-semibold text-sm text-[var(--text-primary)]"}>
+          {t("title")}
+        </h2>
+        <p className={panelVariant === "dashboard" ? "dashboard-widget-subtitle" : "text-xs text-[var(--text-secondary)]"}>
+          {periodLabel ? `${periodLabel} · ` : ""}
+          {t("subtitle")}
+        </p>
+      </div>
+    </div>
+  );
+
+  const chart = (
+    <Card padding={panelVariant === "dashboard" ? false : true} className={panelVariant === "dashboard" ? "border-0 shadow-none rounded-none" : undefined}>
+      <MetricChart
+        title={t("chartTitle")}
+        labels={dateLabels}
+        formatValue={formatCurrency}
+        series={buildBranchTargetSeries(branches)}
+      />
+    </Card>
+  );
+
+  if (panelVariant === "dashboard") {
+    return (
+      <div className="dashboard-widget-card min-w-0 max-w-full">
+        {header}
+        <div className="dashboard-widget-body p-4">{chart}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 px-0.5">
-        <TrendingUp className="w-5 h-5 text-[var(--brand-text)] shrink-0" />
-        <div className="min-w-0">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("title")}</h2>
-          <p className="text-xs text-[var(--text-secondary)]">
-            {periodLabel ? `${periodLabel} · ` : ""}
-            {t("subtitle")}
-          </p>
-        </div>
-      </div>
-
-      <Card>
-        <MetricChart
-          title={t("chartTitle")}
-          labels={dateLabels}
-          formatValue={formatCurrency}
-          series={buildBranchTargetSeries(branches)}
-        />
-      </Card>
+      {header}
+      {chart}
     </div>
   );
 }

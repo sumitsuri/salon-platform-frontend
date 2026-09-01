@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { LucideIcon, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { LucideIcon, BarChart3, Check, ChevronDown, ChevronRight, ChevronUp, Zap } from "lucide-react";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
 import { cn } from "@/lib/utils";
 
@@ -188,11 +188,24 @@ export function DashboardOverviewPanel({
 export function DashboardWidgetCard({
   children,
   className,
+  variant = "default",
 }: {
   children: React.ReactNode;
   className?: string;
+  variant?: "default" | "metrics" | "actions";
 }) {
-  return <div className={cn("dashboard-widget-card min-w-0 max-w-full", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "dashboard-widget-card min-w-0 max-w-full",
+        variant === "metrics" && "dashboard-widget-card--metrics",
+        variant === "actions" && "dashboard-widget-card--actions",
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Side-by-side employee check-in + sales tables (stacks on mobile). */
@@ -210,26 +223,179 @@ export function DashboardKpiStrip({
   items,
   loading,
   headerLabel,
+  headerHint,
   className,
 }: {
-  items: { label: string; value: string | number }[];
+  items: {
+    label: string;
+    value: string | number;
+    href?: string;
+    icon?: LucideIcon;
+    accent?: "violet" | "sky" | "emerald" | "amber";
+  }[];
   loading?: boolean;
   headerLabel?: string;
+  headerHint?: string;
   className?: string;
 }) {
   return (
     <div className={cn("dashboard-kpi-strip min-w-0 max-w-full", className)}>
       {headerLabel && (
-        <div className="dashboard-kpi-strip-header px-4 py-3">
-          <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+        <div className="dashboard-kpi-strip-header dashboard-widget-header px-4 py-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <span className="dashboard-widget-icon dashboard-widget-icon--metrics" aria-hidden>
+              <BarChart3 className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="dashboard-widget-title">{headerLabel}</h2>
+              {headerHint ? <p className="dashboard-widget-subtitle">{headerHint}</p> : null}
+            </div>
+          </div>
         </div>
       )}
       <div className="dashboard-kpi-strip-grid">
-        {items.map((item) => (
-          <div key={item.label} className="dashboard-kpi-strip-cell min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4">
-            <p className="dashboard-kpi-strip-cell-label truncate">{item.label}</p>
-            <p className="dashboard-kpi-strip-cell-value truncate">{loading ? "…" : item.value}</p>
+        {items.map((item) => {
+          const Icon = item.icon;
+          const accent = item.accent ?? "violet";
+          const content = (
+            <>
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                {Icon ? (
+                  <span className={cn("dashboard-kpi-icon", `dashboard-kpi-icon--${accent}`)} aria-hidden>
+                    <Icon className="h-3.5 w-3.5" />
+                  </span>
+                ) : null}
+                {item.href ? (
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)] opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />
+                ) : null}
+              </div>
+              <p className="dashboard-kpi-strip-cell-label truncate">{item.label}</p>
+              <p className={cn("dashboard-kpi-strip-cell-value truncate", `dashboard-kpi-strip-cell-value--${accent}`)}>
+                {loading ? "…" : item.value}
+              </p>
+              {item.href ? (
+                <span className="dashboard-kpi-strip-cell-cta">{loading ? "" : "Tap to explore →"}</span>
+              ) : null}
+            </>
+          );
+
+          if (item.href && !loading) {
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={cn(
+                  "dashboard-kpi-strip-cell group min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4 touch-manipulation",
+                  `dashboard-kpi-strip-cell--${accent}`
+                )}
+              >
+                {content}
+              </Link>
+            );
+          }
+
+          return (
+            <div
+              key={item.label}
+              className={cn(
+                "dashboard-kpi-strip-cell min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4",
+                `dashboard-kpi-strip-cell--${accent}`
+              )}
+            >
+              {content}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export type DashboardActionTone = "urgent" | "growth" | "insight" | "celebrate";
+
+export function DashboardActionRail({
+  title,
+  subtitle,
+  actions,
+  loading,
+  className,
+}: {
+  title: string;
+  subtitle?: string;
+  actions: {
+    id: string;
+    title: string;
+    description: string;
+    href: string;
+    tone: DashboardActionTone;
+    metricLabel?: string;
+    metricValue?: string;
+  }[];
+  loading?: boolean;
+  className?: string;
+}) {
+  if (loading) {
+    return (
+      <div className={cn("dashboard-action-rail", className)}>
+        <div className="dashboard-action-rail-header dashboard-widget-header px-4 py-3">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <span className="dashboard-widget-icon dashboard-widget-icon--action" aria-hidden>
+              <Zap className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="dashboard-widget-title">{title}</h2>
+              {subtitle ? <p className="dashboard-widget-subtitle">{subtitle}</p> : null}
+            </div>
           </div>
+        </div>
+        <div className="dashboard-action-rail-list px-4 pb-4 pt-3">
+          <div className="dashboard-action-card dashboard-action-card--skeleton h-[4.75rem] animate-pulse" />
+          <div className="dashboard-action-card dashboard-action-card--skeleton h-[4.75rem] animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (actions.length === 0) return null;
+
+  return (
+    <div className={cn("dashboard-action-rail", className)}>
+      <div className="dashboard-action-rail-header dashboard-widget-header px-4 py-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <span className="dashboard-widget-icon dashboard-widget-icon--action" aria-hidden>
+            <Zap className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="dashboard-widget-title">{title}</h2>
+            {subtitle ? <p className="dashboard-widget-subtitle">{subtitle}</p> : null}
+          </div>
+        </div>
+      </div>
+      <div className="dashboard-action-rail-list px-4 pb-4 pt-3">
+        {actions.map((action, index) => (
+          <Link
+            key={action.id}
+            href={action.href}
+            className={cn(
+              "dashboard-action-card group touch-manipulation",
+              `dashboard-action-card--${action.tone}`,
+              index === 0 && "dashboard-action-card--primary"
+            )}
+          >
+            <span className={cn("dashboard-action-card-tone", `dashboard-action-card-tone--${action.tone}`)} aria-hidden />
+            <div className="relative min-w-0 flex-1">
+              <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-0.5">
+                <p className="dashboard-action-card-title">{action.title}</p>
+                {action.metricLabel && action.metricValue ? (
+                  <p className="dashboard-action-card-metric shrink-0">
+                    {action.metricLabel}: <span>{action.metricValue}</span>
+                  </p>
+                ) : null}
+              </div>
+              <p className="dashboard-action-card-desc">{action.description}</p>
+            </div>
+            <ChevronRight className="dashboard-action-card-chevron h-4 w-4 shrink-0" aria-hidden />
+          </Link>
         ))}
       </div>
     </div>
@@ -292,8 +458,8 @@ export function DashboardBranchPerformance({
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
-      <div className="dashboard-branch-performance-header px-4 py-3">
-        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      <div className="dashboard-branch-performance-header dashboard-widget-header px-4 py-3">
+        <h2 className="dashboard-widget-title">{headerLabel}</h2>
       </div>
 
       <div
@@ -585,8 +751,8 @@ export function DashboardEmployeeCheckIn({
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
-      <div className="dashboard-branch-performance-header px-4 py-3">
-        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      <div className="dashboard-branch-performance-header dashboard-widget-header px-4 py-3">
+        <h2 className="dashboard-widget-title">{headerLabel}</h2>
       </div>
 
       <div
@@ -751,8 +917,8 @@ export function DashboardEmployeeSales({
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
-      <div className="dashboard-branch-performance-header px-4 py-3">
-        <h2 className="dashboard-kpi-strip-title">{headerLabel}</h2>
+      <div className="dashboard-branch-performance-header dashboard-widget-header px-4 py-3">
+        <h2 className="dashboard-widget-title">{headerLabel}</h2>
       </div>
 
       <div
@@ -898,6 +1064,7 @@ export function PanelShell({
   icon: Icon,
   action,
   accent = "brand",
+  variant = "default",
   children,
   className,
   padding = true,
@@ -907,6 +1074,7 @@ export function PanelShell({
   icon?: LucideIcon;
   action?: React.ReactNode;
   accent?: AccentColor;
+  variant?: "default" | "dashboard";
   children: React.ReactNode;
   className?: string;
   padding?: boolean;
@@ -917,6 +1085,28 @@ export function PanelShell({
     violet: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     amber: "from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
   };
+
+  if (variant === "dashboard") {
+    return (
+      <div className={cn("dashboard-widget-card min-w-0 max-w-full w-full", className)}>
+        <div className="dashboard-widget-header px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {Icon && (
+              <span className="dashboard-widget-icon shrink-0" aria-hidden>
+                <Icon className="w-4 h-4" />
+              </span>
+            )}
+            <div className="min-w-0">
+              <h2 className="dashboard-widget-title truncate">{title}</h2>
+              {subtitle && <p className="dashboard-widget-subtitle truncate">{subtitle}</p>}
+            </div>
+          </div>
+          {action && <div className="shrink-0 self-end sm:self-auto">{action}</div>}
+        </div>
+        <div className={padding ? "dashboard-widget-body p-4 sm:p-5" : "dashboard-widget-body"}>{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1107,9 +1297,25 @@ export function LabeledProgressBar({
 
 /* ── Link pill for panel headers ── */
 
-export function PanelLink({ href, children }: { href: string; children: React.ReactNode }) {
+export function PanelLink({
+  href,
+  children,
+  variant = "default",
+}: {
+  href: string;
+  children: React.ReactNode;
+  variant?: "default" | "dashboard";
+}) {
   return (
-    <Link href={href} className="link-brand text-xs font-semibold flex items-center gap-0.5 hover:opacity-80">
+    <Link
+      href={href}
+      className={cn(
+        "text-xs font-semibold flex items-center gap-0.5 transition-colors",
+        variant === "dashboard"
+          ? "dashboard-widget-link text-[var(--brand-text)] hover:text-[var(--brand-dark)]"
+          : "link-brand hover:opacity-80"
+      )}
+    >
       {children}
     </Link>
   );

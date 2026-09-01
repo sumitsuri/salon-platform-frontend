@@ -98,7 +98,10 @@ function ThemePreview({
         </div>
         <button
           type="button"
-          className="w-full py-2 rounded-lg text-[10px] font-semibold text-white"
+          disabled
+          tabIndex={-1}
+          aria-hidden
+          className="w-full py-2 rounded-lg text-[10px] font-semibold text-white pointer-events-none select-none"
           style={{ background: accent }}
         >
           Primary action
@@ -161,6 +164,30 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     )
   );
 
+  useEffect(() => {
+    if (!open) {
+      applyThemeToDocument(
+        { darkMode, customAccentEnabled, customAccentColor },
+        tenantColor
+      );
+      return;
+    }
+
+    applyThemeToDocument(
+      { darkMode: previewDark, customAccentEnabled: previewAccentEnabled, customAccentColor: previewAccentColor },
+      tenantColor
+    );
+  }, [
+    open,
+    previewDark,
+    previewAccentEnabled,
+    previewAccentColor,
+    darkMode,
+    customAccentEnabled,
+    customAccentColor,
+    tenantColor,
+  ]);
+
   async function applySettings() {
     setSaving(true);
     try {
@@ -204,12 +231,22 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   if (!open || !user) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end">
-      <button className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} aria-label="Close settings" />
-      <div className="relative w-full max-w-md h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200" data-testid="settings-sheet">
+    <div
+      className="fixed inset-0 z-[140] flex justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-sheet-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+        onClick={onClose}
+        aria-label="Close settings"
+      />
+      <div className="relative z-[1] w-full max-w-md h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200" data-testid="settings-sheet">
         <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border)]">
           <div>
-            <h2 className="font-bold text-[var(--text-primary)]">{t("title")}</h2>
+            <h2 id="settings-sheet-title" className="font-bold text-[var(--text-primary)]">{t("title")}</h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("subtitle")}</p>
           </div>
           <button
@@ -279,26 +316,34 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
             {previewAccentEnabled && (
               <div className="space-y-3 pl-12">
                 <div className="flex flex-wrap gap-2">
-                  {ACCENT_PRESETS.map((preset) => (
+                  {ACCENT_PRESETS.map((preset) => {
+                    const selected = previewAccentColor.toLowerCase() === preset.color.toLowerCase();
+                    return (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => setPreviewAccentColor(preset.color)}
                       className={cn(
                         "w-8 h-8 rounded-full border-2 transition scale-100 hover:scale-110",
-                        previewAccentColor === preset.color ? "border-[var(--text-primary)] ring-2 ring-offset-2 ring-[var(--brand)]" : "border-transparent"
+                        selected ? "border-[var(--text-primary)]" : "border-transparent"
                       )}
-                      style={{ background: preset.color }}
+                      style={{
+                        background: preset.color,
+                        boxShadow: selected ? `0 0 0 2px var(--surface), 0 0 0 4px ${previewAccent}` : undefined,
+                      }}
                       title={preset.label}
+                      aria-label={preset.label}
+                      aria-pressed={selected}
                     />
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
                     value={previewAccentColor}
-                    onChange={(e) => setPreviewAccentColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-[var(--border)] cursor-pointer"
+                    onChange={(e) => setPreviewAccentColor(e.target.value.toLowerCase())}
+                    className="w-10 h-10 rounded-lg border border-[var(--border)] cursor-pointer touch-manipulation"
                   />
                   <span className="text-xs font-mono text-[var(--text-secondary)]">{previewAccentColor}</span>
                 </div>
@@ -319,16 +364,22 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           </section>
         </div>
 
-        <div className="p-4 border-t border-[var(--border)] space-y-2 bg-[var(--surface-muted)]">
-          <button onClick={applySettings} disabled={saving} className={`${btnPrimary} w-full`} data-testid="settings-apply-button">
+        <div className="relative z-[1] p-4 border-t border-[var(--border)] space-y-2 bg-[var(--surface-muted)] pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={() => void applySettings()}
+            disabled={saving}
+            className={`${btnPrimary} w-full touch-manipulation`}
+            data-testid="settings-apply-button"
+          >
             {saving ? tCommon("processing") : t("apply")}
           </button>
           <div className="flex gap-2">
-            <button onClick={handleReset} className={`${btnSecondary} flex-1 text-xs`}>
+            <button type="button" onClick={handleReset} className={`${btnSecondary} flex-1 text-xs touch-manipulation`}>
               <RotateCcw className="w-3.5 h-3.5" />
               {tCommon("reset")}
             </button>
-            <button onClick={onClose} className={`${btnSecondary} flex-1 text-xs`}>
+            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1 text-xs touch-manipulation`}>
               {tCommon("cancel")}
             </button>
           </div>

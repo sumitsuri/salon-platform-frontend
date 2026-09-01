@@ -1177,6 +1177,7 @@
       "branchesLabel": "Branches",
       "shortcutsLabel": "Shortcuts",
       "keyMetricsLabel": "Key metrics",
+      "keyMetricsHint": "How your salons are performing for the selected period.",
       "branchPerformance": "Branch performance",
       "employeeCheckIn": "Employee check-in",
       "employeeSales": "Employee sales",
@@ -1195,7 +1196,25 @@
       "staffLeaderboard": "Staff leaderboard",
       "noStaffData": "No staff data",
       "noStaffDataDesc": "For selected branches in this period",
-      "paymentMix": "Payment mix"
+      "paymentMix": "Payment mix",
+      "actionsTitle": "Act now",
+      "actionsHint": "Top follow-ups your team should tackle today.",
+      "actions": {
+        "zeroVisitsTitle": "Floor is quiet — drive walk-ins",
+        "zeroVisitsDesc": "Launch a WhatsApp campaign or review open leads to fill today's calendar.",
+        "highDiscountsTitle": "Discounts are heavy this period",
+        "highDiscountsDesc": "{pct}% of revenue went to discounts — tighten promo rules before margin slips.",
+        "staffAbsentTitle": "{count} staff absent today",
+        "staffAbsentDesc": "Review attendance and reassign visits so customers aren't kept waiting.",
+        "insightTitle": "{title}",
+        "insightDesc": "AI spotted an opportunity — open Insights for the full playbook.",
+        "trailingBranchTitle": "{branch} is trailing",
+        "trailingBranchDesc": "Only {revenue} this period — drill into bookings and spot what's slowing the floor.",
+        "topPerformerTitle": "Celebrate {name}",
+        "topPerformerDesc": "Top seller at {branch} — share the win and set a stretch target.",
+        "cashHeavyTitle": "Cash-heavy payments",
+        "cashHeavyDesc": "{pct}% of collections are cash — nudge UPI for faster reconciliation."
+      }
     },
     "leads": {
       "title": "Leads",

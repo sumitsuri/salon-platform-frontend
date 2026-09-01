@@ -13,9 +13,10 @@ interface ServiceSalesTeaserProps {
   data?: ServiceContributionResponse;
   loading?: boolean;
   href: string;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function ServiceSalesTeaser({ data, loading, href }: ServiceSalesTeaserProps) {
+export function ServiceSalesTeaser({ data, loading, href, panelVariant = "default" }: ServiceSalesTeaserProps) {
   const t = useTranslations("components.serviceSalesTeaser");
   const tCommon = useTranslations("common");
   const services = [...(data?.services ?? [])].sort((a, b) => b.revenue - a.revenue || b.count - a.count);
@@ -34,9 +35,10 @@ export function ServiceSalesTeaser({ data, loading, href }: ServiceSalesTeaserPr
       }
       icon={Scissors}
       accent="brand"
+      variant={panelVariant}
       padding={false}
       action={
-        <PanelLink href={href}>
+        <PanelLink href={href} variant={panelVariant}>
           {tCommon("viewAll")}
           <ChevronRight className="w-3.5 h-3.5" />
         </PanelLink>

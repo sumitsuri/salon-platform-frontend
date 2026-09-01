@@ -8,9 +8,10 @@ import { PanelShell, LabeledProgressBar } from "@/components/enterprise-ui";
 interface PaymentMixTeaserProps {
   paymentMix?: { cash: number; upi: number; card: number };
   loading?: boolean;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function PaymentMixTeaser({ paymentMix, loading }: PaymentMixTeaserProps) {
+export function PaymentMixTeaser({ paymentMix, loading, panelVariant = "default" }: PaymentMixTeaserProps) {
   const t = useTranslations("admin.dashboard");
   const tCommon = useTranslations("common");
 
@@ -23,6 +24,7 @@ export function PaymentMixTeaser({ paymentMix, loading }: PaymentMixTeaserProps)
       subtitle={loading ? tCommon("loading") : total > 0 ? formatCurrency(total) : undefined}
       icon={Wallet}
       accent="emerald"
+      variant={panelVariant}
     >
       {loading ? (
         <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>

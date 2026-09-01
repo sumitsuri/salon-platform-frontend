@@ -11,9 +11,10 @@ interface InventoryTeaserProps {
   data?: InventoryOverview;
   loading?: boolean;
   href: string;
+  panelVariant?: "default" | "dashboard";
 }
 
-export function InventoryTeaser({ data, loading, href }: InventoryTeaserProps) {
+export function InventoryTeaser({ data, loading, href, panelVariant = "default" }: InventoryTeaserProps) {
   const t = useTranslations("components.inventoryTeaser");
   const tCommon = useTranslations("common");
   const alertCount = (data?.lowStockCount ?? 0) + (data?.outOfStockCount ?? 0);
@@ -24,8 +25,9 @@ export function InventoryTeaser({ data, loading, href }: InventoryTeaserProps) {
       subtitle={loading ? tCommon("loading") : data?.periodLabel ?? t("subtitleDefault")}
       icon={Package}
       accent="amber"
+      variant={panelVariant}
       action={
-        <PanelLink href={href}>
+        <PanelLink href={href} variant={panelVariant}>
           {t("manage")}
           <ChevronRight className="w-3.5 h-3.5" />
         </PanelLink>

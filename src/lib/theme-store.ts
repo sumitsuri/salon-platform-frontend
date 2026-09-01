@@ -5,8 +5,8 @@ import { persist } from "zustand/middleware";
 import { THEME_BOOT_SCRIPT } from "./theme-boot";
 
 export const ACCENT_PRESETS = [
-  { id: "indigo", label: "Indigo", color: "#4f46e5" },
   { id: "violet", label: "Violet", color: "#7c3aed" },
+  { id: "indigo", label: "Indigo", color: "#4f46e5" },
   { id: "blue", label: "Blue", color: "#2563eb" },
   { id: "emerald", label: "Emerald", color: "#059669" },
   { id: "rose", label: "Rose", color: "#e11d48" },
@@ -120,30 +120,51 @@ export function resolveAccentColor(
   return ensureReadableAccent(raw);
 }
 
+/** Build all brand-derived CSS custom properties for runtime + boot script parity. */
+export function brandCssProperties(accent: string, isDark: boolean): Record<string, string> {
+  const accentDark = darken(accent, 0.22);
+  const accentDeeper = darken(accent, 0.35);
+  const accentText = isLightColor(accent) ? darken(accent, 0.55) : accent;
+  const accentSoftStart = isDark
+    ? `color-mix(in srgb, ${accent} 18%, #0f172a)`
+    : `color-mix(in srgb, ${accent} 14%, white)`;
+  const accentSoftEnd = isDark
+    ? `color-mix(in srgb, ${accent} 8%, #0f172a)`
+    : `color-mix(in srgb, ${accent} 5%, white)`;
+
+  return {
+    "--brand": accent,
+    "--brand-dark": accentDark,
+    "--brand-text": accentText,
+    "--brand-on-brand": "#ffffff",
+    "--brand-light": isDark ? `color-mix(in srgb, ${accent} 20%, #0f172a)` : lighten(accent, 0.9),
+    "--brand-muted": isDark ? `${accent}33` : `${accent}1f`,
+    "--brand-ring": `${accent}55`,
+    "--brand-glow": `color-mix(in srgb, ${accent} 28%, transparent)`,
+    "--gradient-brand": `linear-gradient(135deg, ${lighten(accent, 0.06)} 0%, ${accent} 52%, ${accentDark} 100%)`,
+    "--gradient-brand-soft": `linear-gradient(135deg, ${accentSoftStart} 0%, ${accentSoftEnd} 100%)`,
+    "--shadow-brand": `0 4px 20px color-mix(in srgb, ${accent} 18%, transparent)`,
+    "--hero-from": accent,
+    "--hero-to": accentDeeper,
+    "--hero-text": "#ffffff",
+    "--dashboard-header-from": lighten(accent, 0.04),
+    "--dashboard-header-mid": accent,
+    "--dashboard-header-to": accentDark,
+  };
+}
+
 export function applyThemeToDocument(
   settings: ThemeSettings,
   tenantColor?: string | null
 ) {
   const root = document.documentElement;
   const accent = resolveAccentColor(settings, tenantColor);
-  const accentDark = darken(accent, 0.22);
-  const accentText = isLightColor(accent) ? darken(accent, 0.55) : accent;
-  const isDark = settings.darkMode;
+  const tokens = brandCssProperties(accent, settings.darkMode);
 
-  root.dataset.theme = isDark ? "dark" : "light";
-  root.style.setProperty("--brand", accent);
-  root.style.setProperty("--brand-dark", accentDark);
-  root.style.setProperty("--brand-text", accentText);
-  root.style.setProperty("--brand-on-brand", "#ffffff");
-  root.style.setProperty(
-    "--brand-light",
-    isDark ? `color-mix(in srgb, ${accent} 20%, #0f172a)` : lighten(accent, 0.9)
-  );
-  root.style.setProperty("--brand-muted", isDark ? `${accent}33` : `${accent}1f`);
-  root.style.setProperty("--brand-ring", `${accent}55`);
-  root.style.setProperty("--hero-from", accent);
-  root.style.setProperty("--hero-to", darken(accent, 0.32));
-  root.style.setProperty("--hero-text", "#ffffff");
+  root.dataset.theme = settings.darkMode ? "dark" : "light";
+  for (const [name, value] of Object.entries(tokens)) {
+    root.style.setProperty(name, value);
+  }
 }
 
 /** Inline boot script — must mirror applyThemeToDocument for no flash. */

@@ -100,7 +100,6 @@ export function BookingsHistoryPanel({
   const { customer, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
     customerId: navigationScope && customerIdFilter ? customerIdFilter : undefined,
     scope: navigationScope ?? "manager",
-    currentPageLabel: embedded ? historyTabLabel : t("title"),
     enabled: !!navigationScope && !!customerIdFilter,
   });
 
