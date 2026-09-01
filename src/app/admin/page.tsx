@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
   const showBranchPerformance = dashboardLoading || (dashboard?.branchStats.length ?? 0) > 0;
 
   return (
-    <div className="page-stack">
+    <>
       <DashboardOverviewPanel>
         <DashboardCommandBar
           eyebrow={t("overviewEyebrow")}
@@ -372,6 +372,6 @@ export default function AdminDashboardPage() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

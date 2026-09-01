@@ -26,6 +26,7 @@ export function MobilePrimaryFab({ items, color = "var(--brand)", hidden }: Mobi
   return (
     <Link
       href={fabHref}
+      prefetch={false}
       aria-label={fab.label}
       data-testid="mobile-primary-fab"
       className={cn(

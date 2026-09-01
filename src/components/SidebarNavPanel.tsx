@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LogOut, Palette, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useAppNav } from "@/lib/app-nav-context";
 import { AppNavInput, AppNavItem, flattenNavItems, toNavSections } from "@/components/app-nav";
 import { SidebarBrandFooter } from "@/components/brand/SidebarBrandFooter";
 
@@ -34,6 +35,8 @@ function NavItemLink({
   navHasSelection,
   itemIsActive,
   onNavigate,
+  isNavigating,
+  beginNavigation,
 }: {
   item: AppNavItem;
   collapsed: boolean;
@@ -43,38 +46,56 @@ function NavItemLink({
   navHasSelection: boolean;
   itemIsActive: (href: string, exact?: boolean) => boolean;
   onNavigate?: () => void;
+  isNavigating: boolean;
+  beginNavigation: (href: string) => void;
 }) {
   const Icon = item.icon;
   const childActive = item.children?.some((child) => itemIsActive(child.href, child.exact));
   const active = itemIsActive(item.href, item.exact) || !!childActive;
   const isFab = item.fab === true;
-  // FAB solid CTA is for the mobile floating button only — in the sidebar,
-  // use normal active/inactive styles so another route can be selected cleanly.
   const fabActive = isFab && !collapsed && active;
   const showChildren = !collapsed && item.children && item.children.length > 0;
+
+  const handleNavClick = (href: string) => {
+    onNavigate?.();
+    beginNavigation(href);
+  };
 
   return (
     <div className="space-y-0.5">
       <Link
         href={item.href}
-        onClick={onNavigate}
+        prefetch={false}
+        scroll
+        onClick={() => handleNavClick(item.href)}
         title={collapsed ? item.label : undefined}
         aria-current={active ? "page" : undefined}
+        aria-busy={isNavigating && !active ? true : undefined}
         className={cn(
-          "flex items-center text-sm rounded-lg border-l-[3px] transition-colors touch-manipulation min-h-[44px]",
-          collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
+          "nav-link touch-manipulation",
+          collapsed ? "justify-center px-2 py-3" : "px-3 py-2.5",
+          isNavigating && !active && "pointer-events-none opacity-60",
           fabActive
-            ? "border-transparent font-semibold text-white shadow-sm my-1"
+            ? "font-semibold text-white shadow-[var(--shadow-brand)] my-1 border-transparent"
             : active
-              ? activeClass
-              : navHasSelection
-                ? inactiveClass
-                : "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
+              ? "nav-link-active"
+              : cn(
+                  "border-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]",
+                  inactiveClass
+                )
         )}
-        style={fabActive ? { backgroundColor: brandColor } : undefined}
+        style={fabActive ? { background: brandColor } : undefined}
       >
-        <Icon className={cn("w-[18px] h-[18px] shrink-0", fabActive ? "opacity-100" : "opacity-90")} />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        {collapsed ? (
+          <Icon className="w-[18px] h-[18px] shrink-0" />
+        ) : (
+          <>
+            <span className="nav-icon-tile">
+              <Icon className="w-[18px] h-[18px]" />
+            </span>
+            <span className="truncate">{item.label}</span>
+          </>
+        )}
       </Link>
 
       {showChildren && (
@@ -85,11 +106,14 @@ function NavItemLink({
               <Link
                 key={child.href}
                 href={child.href}
-                onClick={onNavigate}
+                prefetch={false}
+                scroll
+                onClick={() => handleNavClick(child.href)}
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm transition-colors touch-manipulation min-h-[36px]",
+                  isNavigating && !childIsActive && "pointer-events-none opacity-60",
                   childIsActive
-                    ? "bg-[var(--brand-light)] text-[var(--brand-text)] font-semibold"
+                    ? "bg-[var(--gradient-brand-soft)] text-[var(--brand-text)] font-semibold ring-1 ring-[var(--border-brand)]"
                     : navHasSelection
                       ? "text-[var(--text-secondary)] opacity-90 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
                       : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]"
@@ -123,12 +147,12 @@ export function SidebarNavPanel({
   showCollapseToggle = false,
 }: SidebarNavPanelProps) {
   const tCommon = useTranslations("common");
+  const { isNavigating, beginNavigation } = useAppNav();
   const activeClass =
     activeNavClassName ??
     "bg-[var(--brand-light)] text-[var(--brand-text)] border-[var(--brand)] font-semibold";
 
-  const inactiveClass =
-    "border-transparent text-[var(--text-secondary)] opacity-90 hover:opacity-100 hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]";
+  const inactiveClass = "opacity-90 hover:opacity-100";
 
   const itemIsActive = (href: string, exact?: boolean) => isActive(href, exact);
   const sections = toNavSections(nav);
@@ -152,21 +176,21 @@ export function SidebarNavPanel({
         {!collapsed && (
           <>
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0"
-              style={{ backgroundColor: brandColor }}
+              className="brand-avatar w-10 h-10 text-sm shrink-0"
+              style={{ background: brandColor }}
             >
               {brandLetter}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm text-[var(--text-primary)] truncate leading-tight">{brandName}</p>
+              <p className="font-display font-bold text-sm text-[var(--text-primary)] truncate leading-tight">{brandName}</p>
               <p className="text-[11px] text-[var(--text-secondary)] truncate leading-tight">{brandSubtitle}</p>
             </div>
           </>
         )}
         {collapsed && (
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0"
-            style={{ backgroundColor: brandColor }}
+            className="brand-avatar w-9 h-9 text-sm shrink-0"
+            style={{ background: brandColor }}
             title={brandName}
           >
             {brandLetter}
@@ -199,7 +223,7 @@ export function SidebarNavPanel({
         </div>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-3">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-3" aria-busy={isNavigating}>
         {sections.map((section, sectionIndex) => (
           <div
             key={section.id}
@@ -222,6 +246,8 @@ export function SidebarNavPanel({
                 navHasSelection={navHasSelection}
                 itemIsActive={itemIsActive}
                 onNavigate={onNavigate}
+                isNavigating={isNavigating}
+                beginNavigation={beginNavigation}
               />
             ))}
           </div>

@@ -45,7 +45,7 @@ export function ToastViewport() {
             key={item.id}
             role="status"
             className={cn(
-              "pointer-events-auto flex max-w-md items-start gap-2.5 rounded-xl border px-4 py-3 shadow-lg mp-animate-in",
+              "pointer-events-auto flex max-w-md items-start gap-2.5 rounded-xl border px-4 py-3 shadow-[var(--shadow-lg)] backdrop-blur-sm",
               v.className,
             )}
           >

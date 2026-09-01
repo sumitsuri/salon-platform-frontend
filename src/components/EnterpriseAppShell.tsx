@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AppShellProvider } from "@/lib/app-shell-context";
+import { AppNavProvider } from "@/lib/app-nav-context";
 import { BreadcrumbProvider, useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
@@ -15,6 +16,7 @@ import { MobilePrimaryFab } from "@/components/MobilePrimaryFab";
 import { SidebarNavPanel } from "@/components/SidebarNavPanel";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { NavigationProgress } from "@/components/NavigationProgress";
 
 export interface EnterpriseAppShellProps {
   homeHref: string;
@@ -85,7 +87,7 @@ function MobileTopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-[110] bg-[var(--header-bg)] border-b border-[var(--border)] shadow-sm md:hidden"
+      className="fixed top-0 left-0 right-0 z-[110] glass-header border-b border-[var(--border-brand)] shadow-sm md:hidden"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="flex items-center justify-between h-14 px-3 w-full gap-2">
@@ -114,8 +116,8 @@ function MobileTopBar({
           ) : (
             <div className="flex items-center gap-2 min-w-0">
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
-                style={{ backgroundColor: brandColor }}
+                className="brand-avatar w-8 h-8 text-xs shrink-0"
+                style={{ background: brandColor }}
               >
                 {brandLetter}
               </div>
@@ -187,8 +189,10 @@ export function EnterpriseAppShell({
 
   return (
     <AppShellProvider homeHref={homeHref} homeLabel={homeLabel}>
-      <BreadcrumbProvider nav={flatNav} homeHref={homeHref} homeLabel={homeLabel}>
-        <div className="min-h-screen bg-[var(--app-bg)] flex w-full max-w-full min-w-0">
+      <AppNavProvider>
+        <BreadcrumbProvider nav={flatNav} homeHref={homeHref} homeLabel={homeLabel}>
+          <NavigationProgress />
+        <div className="min-h-screen app-shell-bg flex w-full max-w-full min-w-0">
           <aside
             className={cn(
               "enterprise-sidebar hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-40 transition-[width] duration-200 ease-out",
@@ -238,15 +242,16 @@ export function EnterpriseAppShell({
               )}
               data-touch-scroll
             >
-              <div className="page-stack w-full max-w-[1920px] mx-auto">{children}</div>
+              <div className="page-stack page-route-enter w-full max-w-[1920px] mx-auto">{children}</div>
             </main>
           </div>
-
-          <MobileNavDrawer open={mobileDrawerOpen} onClose={closeDrawer} {...panelProps} />
-          <MobilePrimaryFab items={flatNav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
-          <SettingsSheet open={settingsOpen} onClose={() => onSettingsOpen(false)} />
         </div>
-      </BreadcrumbProvider>
+
+        <MobileNavDrawer open={mobileDrawerOpen} onClose={closeDrawer} {...panelProps} />
+        <MobilePrimaryFab items={flatNav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
+        <SettingsSheet open={settingsOpen} onClose={() => onSettingsOpen(false)} />
+        </BreadcrumbProvider>
+      </AppNavProvider>
     </AppShellProvider>
   );
 }

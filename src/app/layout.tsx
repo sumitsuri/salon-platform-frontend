@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import {
   Inter,
+  Plus_Jakarta_Sans,
   Noto_Sans_Bengali,
   Noto_Sans_Devanagari,
   Noto_Sans_Gujarati,
@@ -19,6 +20,11 @@ import { THEME_BOOT_SCRIPT } from "@/lib/theme-boot";
 import { localeFontVariable } from "@/i18n/config";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "600", "700", "800"],
+});
 const notoDevanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari"],
   variable: "--font-devanagari",
@@ -62,6 +68,7 @@ const notoGurmukhi = Noto_Sans_Gurmukhi({
 
 const fontVariables = [
   inter.variable,
+  plusJakarta.variable,
   notoDevanagari.variable,
   notoKannada.variable,
   notoGujarati.variable,

@@ -24,7 +24,7 @@ import {
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { AppNavSection, MOBILE_MAIN_PADDING } from "@/components/app-nav";
+import { isNavActive, AppNavSection, MOBILE_MAIN_PADDING } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -100,8 +100,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!user || (user.role !== "BRAND_ADMIN" && user.role !== "PLATFORM_SUPER_ADMIN")) return null;
 
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+  const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
 
   const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
 

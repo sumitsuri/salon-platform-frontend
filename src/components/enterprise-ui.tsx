@@ -10,9 +10,12 @@ import { cn } from "@/lib/utils";
 
 export function PageLoader({ label }: { label?: string }) {
   return (
-    <div className="py-16 text-center space-y-3">
-      <div className="inline-block w-10 h-10 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
-      {label && <p className="text-sm text-[var(--text-tertiary)]">{label}</p>}
+    <div className="py-16 text-center space-y-4">
+      <div className="relative inline-flex">
+        <div className="absolute inset-0 rounded-full bg-[var(--brand-glow)] blur-md" aria-hidden />
+        <div className="relative inline-block w-11 h-11 rounded-full border-[3px] border-[var(--brand-muted)] border-t-[var(--brand)] animate-spin" />
+      </div>
+      {label && <p className="text-sm font-medium text-[var(--text-secondary)]">{label}</p>}
     </div>
   );
 }
@@ -69,16 +72,16 @@ export function PulseStatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4 shadow-sm ring-1 transition hover:shadow-md hover:-translate-y-0.5 min-w-0 max-w-full",
+        "relative overflow-hidden rounded-2xl border border-[var(--border-brand)] bg-[var(--surface)] p-3 sm:p-4 shadow-[var(--shadow-md)] ring-1 ring-[color-mix(in_srgb,var(--brand)_8%,transparent)] transition hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 min-w-0 max-w-full",
         a.ring,
-        a.glow,
         className
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r", a.bar)} />
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0", a.icon)}>
+      <div className={cn("absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r opacity-90", a.bar)} />
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[var(--brand-glow)] blur-2xl pointer-events-none" aria-hidden />
+      <div className="flex items-start justify-between gap-2 min-w-0 relative">
+        <div className={cn("w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white shadow-[var(--shadow-brand)] shrink-0", a.icon)}>
           <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
         {trend && (
@@ -87,7 +90,7 @@ export function PulseStatCard({
           </span>
         )}
       </div>
-      <p className="text-base sm:text-xl md:text-2xl font-bold text-[var(--text-primary)] mt-2 sm:mt-3 tracking-tight tabular-nums truncate min-w-0">
+      <p className="text-base sm:text-xl md:text-2xl font-display font-bold text-[var(--text-primary)] mt-2 sm:mt-3 tracking-tight tabular-nums truncate min-w-0 relative">
         {value}
       </p>
       <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 font-semibold uppercase tracking-wide line-clamp-2 break-words">

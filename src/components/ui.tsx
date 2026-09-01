@@ -18,22 +18,22 @@ import { PulseStatCard, PageLoader, enterpriseTableHead } from "@/components/ent
 export { PageLoader, PulseStatCard } from "@/components/enterprise-ui";
 
 export const inputClass =
-  "w-full min-h-11 px-3.5 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-base sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm touch-manipulation";
+  "w-full min-h-11 px-3.5 py-3 rounded-xl border border-[var(--border-brand)] bg-[var(--surface)] text-base sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-ring)] focus:border-[var(--brand)] transition shadow-sm touch-manipulation";
 
 export const selectClass = inputClass;
 
 export const btnPrimary =
-  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 bg-[var(--brand)] hover:opacity-90 active:scale-[0.98] text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-sm focus-visible:outline-none";
+  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 btn-gradient hover:brightness-105 active:scale-[0.98] font-semibold rounded-xl transition disabled:opacity-40 disabled:pointer-events-none text-sm focus-visible:outline-none";
 
 export const btnSecondary =
-  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 bg-[var(--surface)] hover:bg-[var(--surface-muted)] active:scale-[0.98] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm focus-visible:outline-none";
+  "inline-flex items-center justify-center gap-2 px-5 py-3 min-h-11 bg-[var(--surface)] hover:bg-[var(--gradient-brand-soft)] active:scale-[0.98] border border-[var(--border-brand)] text-[var(--text-primary)] font-medium rounded-xl transition text-sm shadow-sm focus-visible:outline-none";
 
 /** Dense toolbar / table actions — prefer over ad-hoc padding overrides. */
 export const btnPrimarySm =
-  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-[var(--brand)] hover:opacity-90 active:scale-[0.98] text-[var(--brand-on-brand)] font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm focus-visible:outline-none";
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 btn-gradient hover:brightness-105 active:scale-[0.98] font-semibold rounded-xl transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm focus-visible:outline-none";
 
 export const btnSecondarySm =
-  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-[var(--surface)] hover:bg-[var(--surface-muted)] active:scale-[0.98] border border-[var(--border)] text-[var(--text-primary)] font-medium rounded-xl transition text-xs sm:text-sm focus-visible:outline-none";
+  "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-[var(--surface)] hover:bg-[var(--gradient-brand-soft)] active:scale-[0.98] border border-[var(--border-brand)] text-[var(--text-primary)] font-medium rounded-xl transition text-xs sm:text-sm shadow-sm focus-visible:outline-none";
 
 export const btnDangerSm =
   "inline-flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-10 bg-red-600 hover:bg-red-700 active:scale-[0.98] text-white font-semibold rounded-xl shadow-sm transition disabled:opacity-40 disabled:pointer-events-none text-xs sm:text-sm focus-visible:outline-none";
@@ -379,11 +379,19 @@ export function PageHeader({
         </Link>
       )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">{title}</h1>
-          {subtitle && (
-            <p className="text-sm text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:truncate">{subtitle}</p>
-          )}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div
+            className="hidden sm:block mt-1.5 w-1 min-h-[2.75rem] shrink-0 rounded-full bg-gradient-to-b from-[var(--brand)] to-[var(--brand-dark)] shadow-[0_0_12px_var(--brand-glow)]"
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2 sm:truncate">{subtitle}</p>
+            )}
+          </div>
         </div>
         {action && (
           <div className="shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0 max-w-full justify-stretch sm:justify-end [&_button]:min-h-11">
@@ -407,7 +415,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm transition min-w-0 max-w-full",
+        "card-premium transition min-w-0 max-w-full",
         padding && "p-4 sm:p-5",
         className
       )}
@@ -468,11 +476,11 @@ export function QuickAction({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl border transition hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] min-w-0 max-w-full w-full",
+        "flex items-center gap-3 p-4 rounded-2xl border border-[var(--border-brand)] bg-[var(--gradient-brand-soft)] transition hover:shadow-[var(--shadow-brand)] hover:-translate-y-0.5 active:scale-[0.98] min-w-0 max-w-full w-full",
         colors[color]
       )}
     >
-      <div className="w-11 h-11 rounded-xl bg-[var(--surface)] flex items-center justify-center shadow-sm">
+      <div className="w-11 h-11 rounded-xl bg-[var(--surface)] flex items-center justify-center shadow-sm ring-1 ring-[var(--border-brand)]">
         <Icon className="w-5 h-5" />
       </div>
       <div className="min-w-0">
@@ -519,8 +527,8 @@ export function SegmentedControl<T extends string>({
               "flex items-center justify-center gap-1 px-2 py-2.5 text-[10px] sm:text-sm font-semibold rounded-lg transition touch-manipulation min-h-11",
               scrollable ? "flex-none min-w-[4.5rem] whitespace-nowrap" : "min-w-0 w-full",
               active
-                ? "bg-[var(--surface)] text-[var(--brand-text)] shadow-sm ring-1 ring-[var(--border)]"
-                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/60",
+                ? "bg-[var(--gradient-brand-soft)] text-[var(--brand-text)] shadow-sm ring-1 ring-[var(--border-brand)]"
+                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)]/80",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-ring)]"
             )}
           >
@@ -596,13 +604,13 @@ export function EmptyState({
   icon?: LucideIcon;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
       {Icon && (
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-muted)] text-[var(--text-tertiary)] ring-1 ring-[var(--border)]">
-          <Icon className="h-7 w-7" aria-hidden />
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--gradient-brand-soft)] text-[var(--brand-text)] ring-1 ring-[var(--border-brand)] shadow-[var(--shadow-brand)]">
+          <Icon className="h-8 w-8" aria-hidden />
         </div>
       )}
-      <p className="text-base font-semibold text-[var(--text-primary)]">{title}</p>
+      <p className="font-display text-lg font-bold text-[var(--text-primary)]">{title}</p>
       {description && (
         <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">{description}</p>
       )}
