@@ -193,7 +193,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
         </AlertBanner>
       )}
 
-      <MobileFilterPanel columns={columns} open={showFilters} />
+      <MobileFilterPanel columns={columns} open={showFilters} onClose={() => setShowFilters(false)} />
 
       {hasFilters && (
         <button

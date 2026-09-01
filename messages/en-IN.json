@@ -767,7 +767,8 @@
       "noMatches": "No matches",
       "selectedCount": "{count} selected",
       "closePanel": "Close panel",
-      "close": "Close"
+      "close": "Close",
+      "applyFilters": "Show results"
     },
     "status": {
       "COMPLETED": "Completed",
@@ -1198,6 +1199,7 @@
       "noStaffDataDesc": "For selected branches in this period",
       "paymentMix": "Payment mix",
       "actionsTitle": "Act now",
+      "actionsRevealHint": "Tap to reveal what to do",
       "actionsHint": "Top follow-ups your team should tackle today.",
       "actions": {
         "zeroVisitsTitle": "Floor is quiet — drive walk-ins",

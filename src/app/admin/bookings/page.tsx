@@ -7,7 +7,6 @@ import { Filter } from "lucide-react";
 import { api, Booking } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
-import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { parseDateRangeFromSearchParams } from "@/lib/date-range";
@@ -28,6 +27,7 @@ import {
   AvatarInitial,
   AlertBanner,
   PageLoader,
+  ActiveScopeChip,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
 
@@ -94,11 +94,9 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 
 function AdminBookingsPageContent() {
   const t = useTranslations("admin.bookings");
-  const tCustomers = useTranslations("customers");
   const tMgr = useTranslations("manager.bookings");
   const tSchedule = useTranslations("manager.schedule");
   const tAdmin = useTranslations("admin.common");
-  const tAdminLayout = useTranslations("admin.layout");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -143,7 +141,7 @@ function AdminBookingsPageContent() {
     syncFromLocation();
   }, [branchParam.value]);
 
-  const { data: branch, isLoading: branchLoading } = useQuery({
+  const { data: branch } = useQuery({
     queryKey: ["branch", branchScopeId],
     queryFn: () => api.getBranch(branchScopeId),
     enabled: urlReady && !!branchScopeId,
@@ -205,7 +203,7 @@ function AdminBookingsPageContent() {
     return names.map((name) => ({ value: name, label: name }));
   }, [allStaff, branchScopeId, filters.branchId]);
 
-  const { customer, customersHref, customersLabel, customerDetailHref, isScoped } = useCustomerScopeNavigation({
+  const { customer, isScoped } = useCustomerScopeNavigation({
     customerId: customerIdFilter || undefined,
     scope: "admin",
   });
@@ -407,53 +405,66 @@ function AdminBookingsPageContent() {
       : []),
   ];
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (debounced.customer) count += 1;
+    if (debounced.branchId && !branchScopeId) count += 1;
+    if (debounced.service) count += 1;
+    if (debounced.stylist) count += 1;
+    if (debounced.amount) count += 1;
+    if (debounced.status) count += 1;
+    if (debounced.dateFrom) count += 1;
+    return count;
+  }, [debounced, branchScopeId]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       <PageHeader
-        title={isBranchScoped && branchDisplayName ? branchDisplayName : t("title")}
+        title={isBranchScoped && branchDisplayName ? branchDisplayName : isScoped && customer?.name ? customer.name : t("title")}
         subtitle={
-          isBranchScoped
-            ? t("branchBookingsSubtitle")
+          isBranchScoped || isScoped
+            ? undefined
             : tMgr("subtitle", { count: totalElements, loaded: bookings.length })
+        }
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            {isBranchScoped && branchDisplayName ? (
+              <ActiveScopeChip label={branchDisplayName} onClear={clearBranchScope} />
+            ) : null}
+            {isScoped && customer?.name ? (
+              <ActiveScopeChip label={customer.name} onClear={clearCustomerScope} />
+            ) : null}
+          </div>
         }
       />
 
-      {isBranchScoped && (
-        <NavigationScopeBanner
-          backHref="/admin"
-          backLabel={tCommon("backTo", { page: tAdminLayout("nav.overview") })}
-          title={branchDisplayName || (branchLoading ? tCommon("loading") : tCommon("branch"))}
-          subtitle={t("branchBookingsSubtitle")}
-          onClear={clearBranchScope}
-        />
-      )}
-
-      {isScoped && (
-        <NavigationScopeBanner
-          backHref={customerDetailHref}
-          backLabel={customer?.name ? tCommon("backTo", { page: customer.name }) : tCustomers("backToCustomers")}
-          title={customer?.name ?? tCommon("loading")}
-          subtitle={customer ? tCommon("showingFor", { name: customer.name }) : undefined}
-          onClear={clearCustomerScope}
-        />
-      )}
-
       <Card padding={false}>
-        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between gap-2">
-          <p className="text-sm text-[var(--text-secondary)]">
+        <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] p-3 md:p-4">
+          <p className="min-w-0 truncate text-sm text-[var(--text-secondary)]">
             {tMgr("subtitle", { count: totalElements, loaded: bookings.length })}
           </p>
           <button
             type="button"
-            className={`${btnSecondarySm} md:hidden min-h-11 touch-manipulation`}
-            onClick={() => setShowFilters((v) => !v)}
+            className={`${btnSecondarySm} relative min-h-11 touch-manipulation md:hidden`}
+            onClick={() => setShowFilters(true)}
+            aria-expanded={showFilters}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="h-4 w-4" />
             {tAdmin("filters")}
+            {activeFilterCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
           </button>
         </div>
 
-        {showFilters && <MobileFilterPanel columns={columns} open={showFilters} />}
+        <MobileFilterPanel
+          columns={columns}
+          open={showFilters}
+          onClose={() => setShowFilters(false)}
+          title={tAdmin("filters")}
+        />
 
         {isLoading && bookings.length === 0 && <PageLoader />}
         {isError && (

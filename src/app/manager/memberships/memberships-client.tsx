@@ -299,7 +299,7 @@ export default function ManagerMembershipsPage() {
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
       {success && <AlertBanner variant="success">{success}</AlertBanner>}
 
-      <MobileFilterPanel columns={columns} open={showFilters} />
+      <MobileFilterPanel columns={columns} open={showFilters} onClose={() => setShowFilters(false)} />
 
       {hasActiveFilters && (
         <button type="button" onClick={clearFilters} className="text-sm font-semibold text-[var(--brand-text)]">

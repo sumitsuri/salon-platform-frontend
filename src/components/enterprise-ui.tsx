@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LucideIcon, BarChart3, Check, ChevronDown, ChevronRight, ChevronUp, Zap } from "lucide-react";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
@@ -127,25 +127,27 @@ export function DashboardCommandBar({
 }) {
   return (
     <div className={cn("dashboard-command-bar min-w-0 max-w-full", className)}>
-      <div className="dashboard-command-bar-header flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="dashboard-command-bar-accent hidden sm:block" aria-hidden />
-          <div className="min-w-0 flex-1">
-            {eyebrow && <p className="dashboard-command-bar-eyebrow">{eyebrow}</p>}
-            <h1 className="dashboard-command-bar-title">{title}</h1>
-            {subtitle && <p className="dashboard-command-bar-subtitle">{subtitle}</p>}
+      <div className="dashboard-command-bar-header flex flex-col gap-3 px-4 py-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="dashboard-command-bar-accent hidden sm:block" aria-hidden />
+            <div className="min-w-0 flex-1">
+              {eyebrow && <p className="dashboard-command-bar-eyebrow">{eyebrow}</p>}
+              <h1 className="dashboard-command-bar-title">{title}</h1>
+              {subtitle && <p className="dashboard-command-bar-subtitle">{subtitle}</p>}
+            </div>
           </div>
+          {(action || filters) && (
+            <div className="dashboard-command-bar-controls w-full sm:w-auto sm:min-w-[20rem] sm:max-w-[24rem]">
+              {action && <div className="dashboard-command-bar-control min-w-0">{action}</div>}
+              {filters && <div className="dashboard-command-bar-control min-w-0">{filters}</div>}
+            </div>
+          )}
         </div>
-        {action && (
-          <div className="dashboard-command-bar-period shrink-0 w-full sm:w-auto min-w-0 sm:max-w-[20rem]">
-            <div>{action}</div>
-          </div>
-        )}
       </div>
-      {(filters || links) && (
+      {links && (
         <div className="dashboard-command-bar-toolbar grid grid-cols-1 gap-2.5 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3">
-          {filters && <div className="min-w-0 w-full sm:max-w-xs">{filters}</div>}
-          {links && <div className="dashboard-command-bar-links min-w-0 w-full sm:w-auto">{links}</div>}
+          <div className="dashboard-command-bar-links min-w-0 w-full sm:w-auto">{links}</div>
         </div>
       )}
     </div>
@@ -182,6 +184,17 @@ export function DashboardOverviewPanel({
   className?: string;
 }) {
   return <section className={cn("dashboard-overview-panel", className)}>{children}</section>;
+}
+
+/** Unified overview shell — header controls flow into nested widgets without gaps. */
+export function DashboardOverviewShell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <section className={cn("dashboard-overview-shell", className)}>{children}</section>;
 }
 
 /** Standalone dashboard table widget shell (spaced like bottom teasers). */
@@ -313,12 +326,15 @@ export function DashboardKpiStrip({
 
 export type DashboardActionTone = "urgent" | "growth" | "insight" | "celebrate";
 
+const ACTION_ROTATE_MS = 5000;
+
 export function DashboardActionRail({
   title,
   subtitle,
   actions,
   loading,
   className,
+  revealHint = "Tap to reveal",
 }: {
   title: string;
   subtitle?: string;
@@ -326,31 +342,46 @@ export function DashboardActionRail({
     id: string;
     title: string;
     description: string;
-    href: string;
     tone: DashboardActionTone;
     metricLabel?: string;
     metricValue?: string;
   }[];
   loading?: boolean;
   className?: string;
+  revealHint?: string;
 }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setActiveIndex(0);
+    setExpanded(false);
+  }, [actions.map((a) => a.id).join("|")]);
+
+  useEffect(() => {
+    if (loading || expanded || actions.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % actions.length);
+    }, ACTION_ROTATE_MS);
+    return () => window.clearInterval(timer);
+  }, [loading, expanded, actions.length]);
+
+  const safeIndex = actions.length > 0 ? activeIndex % actions.length : 0;
+  const active = actions[safeIndex];
+
   if (loading) {
     return (
-      <div className={cn("dashboard-action-rail", className)}>
-        <div className="dashboard-action-rail-header dashboard-widget-header px-4 py-3">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <span className="dashboard-widget-icon dashboard-widget-icon--action" aria-hidden>
+      <div className={cn("dashboard-action-rail dashboard-action-rail--deck", className)}>
+        <div className="dashboard-action-rail-header dashboard-action-rail-header--compact px-4 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="dashboard-action-deck-icon dashboard-action-deck-icon--pulse" aria-hidden>
               <Zap className="h-3.5 w-3.5" />
             </span>
-            <div className="min-w-0">
-              <h2 className="dashboard-widget-title">{title}</h2>
-              {subtitle ? <p className="dashboard-widget-subtitle">{subtitle}</p> : null}
-            </div>
+            <h2 className="dashboard-widget-title text-sm">{title}</h2>
           </div>
         </div>
-        <div className="dashboard-action-rail-list px-4 pb-4 pt-3">
-          <div className="dashboard-action-card dashboard-action-card--skeleton h-[4.75rem] animate-pulse" />
-          <div className="dashboard-action-card dashboard-action-card--skeleton h-[4.75rem] animate-pulse" />
+        <div className="dashboard-action-deck px-3 pb-3 pt-2">
+          <div className="dashboard-action-spot dashboard-action-spot--skeleton h-11 animate-pulse" />
         </div>
       </div>
     );
@@ -359,44 +390,118 @@ export function DashboardActionRail({
   if (actions.length === 0) return null;
 
   return (
-    <div className={cn("dashboard-action-rail", className)}>
-      <div className="dashboard-action-rail-header dashboard-widget-header px-4 py-3">
-        <div className="flex items-start gap-2.5 min-w-0">
-          <span className="dashboard-widget-icon dashboard-widget-icon--action" aria-hidden>
-            <Zap className="h-3.5 w-3.5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="dashboard-widget-title">{title}</h2>
-            {subtitle ? <p className="dashboard-widget-subtitle">{subtitle}</p> : null}
+    <div className={cn("dashboard-action-rail dashboard-action-rail--deck", className)}>
+      <div className="dashboard-action-rail-header dashboard-action-rail-header--compact px-4 py-2.5">
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="dashboard-action-deck-icon dashboard-action-deck-icon--pulse" aria-hidden>
+              <Zap className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="dashboard-widget-title text-sm leading-tight">{title}</h2>
+              {subtitle ? (
+                <p className="dashboard-action-deck-subtitle hidden sm:block">{subtitle}</p>
+              ) : null}
+            </div>
           </div>
+          <span className="dashboard-action-deck-count shrink-0">{actions.length}</span>
         </div>
       </div>
-      <div className="dashboard-action-rail-list px-4 pb-4 pt-3">
-        {actions.map((action, index) => (
-          <Link
-            key={action.id}
-            href={action.href}
+
+      <div className="dashboard-action-deck px-3 pb-3 pt-2">
+        <div
+          className={cn(
+            "dashboard-action-spot-wrap",
+            `dashboard-action-spot-wrap--${active.tone}`,
+            expanded && "dashboard-action-spot-wrap--expanded"
+          )}
+        >
+          <button
+            type="button"
             className={cn(
-              "dashboard-action-card group touch-manipulation",
-              `dashboard-action-card--${action.tone}`,
-              index === 0 && "dashboard-action-card--primary"
+              "dashboard-action-spot group touch-manipulation",
+              `dashboard-action-spot--${active.tone}`,
+              expanded && "dashboard-action-spot--expanded"
             )}
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
           >
-            <span className={cn("dashboard-action-card-tone", `dashboard-action-card-tone--${action.tone}`)} aria-hidden />
-            <div className="relative min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-0.5">
-                <p className="dashboard-action-card-title">{action.title}</p>
-                {action.metricLabel && action.metricValue ? (
-                  <p className="dashboard-action-card-metric shrink-0">
-                    {action.metricLabel}: <span>{action.metricValue}</span>
-                  </p>
+            <span
+              className={cn("dashboard-action-spot-signal", `dashboard-action-spot-signal--${active.tone}`)}
+              aria-hidden
+            />
+            <span className="dashboard-action-spot-body min-w-0 flex-1 text-left">
+              <span className="dashboard-action-spot-row flex items-start justify-between gap-2">
+                <span
+                  key={active.id}
+                  className="dashboard-action-spot-title dashboard-action-spot-title--enter min-w-0"
+                >
+                  {active.title}
+                </span>
+                {active.metricValue ? (
+                  <span className="dashboard-action-spot-metric shrink-0">
+                    {active.metricLabel ? (
+                      <span className="dashboard-action-spot-metric-label">{active.metricLabel}</span>
+                    ) : null}
+                    <span className="dashboard-action-spot-metric-value">{active.metricValue}</span>
+                  </span>
                 ) : null}
-              </div>
-              <p className="dashboard-action-card-desc">{action.description}</p>
-            </div>
-            <ChevronRight className="dashboard-action-card-chevron h-4 w-4 shrink-0" aria-hidden />
-          </Link>
-        ))}
+              </span>
+              <span
+                className={cn(
+                  "dashboard-action-spot-reveal",
+                  expanded && "dashboard-action-spot-reveal--open"
+                )}
+              >
+                <span key={`${active.id}-desc`} className="dashboard-action-spot-desc dashboard-action-spot-desc--enter">
+                  {active.description}
+                </span>
+              </span>
+              {!expanded ? (
+                <span className="dashboard-action-spot-hint">{revealHint}</span>
+              ) : null}
+            </span>
+            <ChevronDown
+              className={cn(
+                "dashboard-action-spot-chevron h-4 w-4 shrink-0 transition-transform duration-300",
+                expanded && "rotate-180"
+              )}
+              aria-hidden
+            />
+          </button>
+
+          {!expanded && actions.length > 1 ? (
+            <div
+              key={active.id}
+              className="dashboard-action-spot-progress"
+              style={{ animationDuration: `${ACTION_ROTATE_MS}ms` }}
+              aria-hidden
+            />
+          ) : null}
+        </div>
+
+        {actions.length > 1 ? (
+          <div className="dashboard-action-deck-dots" role="tablist" aria-label={title}>
+            {actions.map((action, index) => (
+              <button
+                key={action.id}
+                type="button"
+                role="tab"
+                aria-selected={index === safeIndex}
+                aria-label={action.title}
+                className={cn(
+                  "dashboard-action-deck-dot touch-manipulation",
+                  index === safeIndex && "dashboard-action-deck-dot--active",
+                  `dashboard-action-deck-dot--${action.tone}`
+                )}
+                onClick={() => {
+                  setActiveIndex(index);
+                  setExpanded(false);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );

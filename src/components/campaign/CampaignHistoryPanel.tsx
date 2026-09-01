@@ -134,7 +134,7 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
         </button>
       </div>
 
-      <MobileFilterPanel columns={columns} open={showFilters} />
+      <MobileFilterPanel columns={columns} open={showFilters} onClose={() => setShowFilters(false)} />
 
       {hasFilters && (
         <button

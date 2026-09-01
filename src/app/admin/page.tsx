@@ -29,7 +29,7 @@ import {
   DashboardEmployeeCheckIn,
   DashboardEmployeeSales,
   DashboardWidgetCard,
-  DashboardOverviewPanel,
+  DashboardOverviewShell,
   DashboardActionRail,
 } from "@/components/enterprise-ui";
 
@@ -196,7 +196,6 @@ export default function AdminDashboardPage() {
       id: action.id,
       title: t(action.titleKey as "actions.zeroVisitsTitle", action.titleValues),
       description: t(action.descKey as "actions.zeroVisitsDesc", action.descValues),
-      href: action.href,
       tone: action.tone,
       metricLabel: action.metricLabel,
       metricValue: action.metricValue,
@@ -238,8 +237,8 @@ export default function AdminDashboardPage() {
   );
 
   return (
-    <>
-      <DashboardOverviewPanel>
+    <div className="dashboard-page-flow">
+      <DashboardOverviewShell>
         <DashboardCommandBar
           eyebrow={t("overviewEyebrow")}
           title={t("title")}
@@ -252,30 +251,29 @@ export default function AdminDashboardPage() {
           }
         />
 
-      </DashboardOverviewPanel>
-
-      {selectedBranches.length > 0 ? (
-        <div className="dashboard-overview-modules">
-          <DashboardWidgetCard variant="metrics">
-            <DashboardKpiStrip
-              loading={dashboardLoading}
-              headerLabel={t("keyMetricsLabel")}
-              headerHint={t("keyMetricsHint")}
-              items={kpiItems}
-            />
-          </DashboardWidgetCard>
-          {(dashboardLoading || recommendationsLoading || overviewActions.length > 0) ? (
-            <DashboardWidgetCard variant="actions">
+        {selectedBranches.length > 0 ? (
+          <div className="dashboard-overview-modules dashboard-overview-modules--nested">
+            <DashboardWidgetCard variant="metrics">
+              <DashboardKpiStrip
+                loading={dashboardLoading}
+                headerLabel={t("keyMetricsLabel")}
+                headerHint={t("keyMetricsHint")}
+                items={kpiItems}
+              />
+            </DashboardWidgetCard>
+            {(dashboardLoading || recommendationsLoading || overviewActions.length > 0) ? (
+              <DashboardWidgetCard variant="actions">
               <DashboardActionRail
                 title={t("actionsTitle")}
-                subtitle={t("actionsHint")}
+                revealHint={t("actionsRevealHint")}
                 loading={dashboardLoading || recommendationsLoading}
                 actions={overviewActions}
               />
-            </DashboardWidgetCard>
-          ) : null}
-        </div>
-      ) : null}
+              </DashboardWidgetCard>
+            ) : null}
+          </div>
+        ) : null}
+      </DashboardOverviewShell>
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} icon={Building2} />
@@ -431,6 +429,6 @@ export default function AdminDashboardPage() {
           )}
         </div>
       )}
-    </>
+    </div>
   );
 }

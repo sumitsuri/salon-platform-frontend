@@ -1223,77 +1223,169 @@ export function TableFilterToolbar({
   );
 }
 
-/** Mobile filter stack — pairs with desktop FilterableTable. */
-export function MobileFilterPanel({
-  columns,
-  open,
+/** Compact dismissible chip for active navigation scope (branch, customer, etc.). */
+export function ActiveScopeChip({
+  label,
+  onClear,
+  clearLabel,
+  className,
 }: {
-  columns: { label: string; filter?: ColumnFilter }[];
-  open: boolean;
+  label: string;
+  onClear: () => void;
+  clearLabel?: string;
+  className?: string;
 }) {
-  const t = useTranslations("components.ui");
-  if (!open) return null;
+  const tCommon = useTranslations("common");
+
+  return (
+    <button
+      type="button"
+      onClick={onClear}
+      className={cn(
+        "inline-flex max-w-[10rem] items-center gap-1 rounded-full border border-[var(--border-brand)] bg-[var(--brand-light)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-text)] touch-manipulation",
+        className
+      )}
+      data-testid="active-scope-chip"
+      aria-label={clearLabel ?? tCommon("showAll")}
+    >
+      <span className="truncate">{label}</span>
+      <X className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+    </button>
+  );
+}
+
+function renderMobileFilterFields(
+  columns: { label: string; filter?: ColumnFilter }[],
+  t: ReturnType<typeof useTranslations>
+) {
   const active = columns.filter((c) => c.filter && c.filter.type !== "none");
   if (active.length === 0) return null;
 
   return (
-    <div
-      className="md:hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-3 shadow-sm"
-      data-testid="mobile-filter-panel"
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {active.map((col) => {
-          const filter = col.filter!;
-          return (
-            <label key={col.label} className="block space-y-1 min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                {col.label}
-              </span>
-              {filter.type === "text" && (
-                <input
-                  value={filter.value}
-                  onChange={(e) => filter.onChange(e.target.value)}
-                  placeholder={filter.placeholder ?? t("filter")}
-                  className={`${inputClass} py-2.5 text-sm`}
-                />
-              )}
-              {filter.type === "select" && (
-                <select
-                  value={filter.value}
-                  onChange={(e) => filter.onChange(e.target.value)}
-                  className={`${selectClass} py-2.5 text-sm`}
-                >
-                  {filter.options.map((o) => (
-                    <option key={o.value || "all"} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {filter.type === "searchable-select" && (
-                <SearchableSelect
-                  value={filter.value}
-                  onChange={filter.onChange}
-                  options={filter.options}
-                  placeholder={filter.placeholder}
-                  allLabel={filter.allLabel}
-                  disabled={filter.disabled}
-                  inputClassName={`${inputClass} py-2.5 text-sm`}
-                />
-              )}
-              {filter.type === "date" && (
-                <input
-                  type="date"
-                  value={filter.value}
-                  onChange={(e) => filter.onChange(e.target.value)}
-                  className={`${inputClass} py-2.5 text-sm`}
-                />
-              )}
-            </label>
-          );
-        })}
-      </div>
+    <div className="grid grid-cols-1 gap-3">
+      {active.map((col) => {
+        const filter = col.filter!;
+        return (
+          <label key={col.label} className="block min-w-0 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+              {col.label}
+            </span>
+            {filter.type === "text" && (
+              <input
+                value={filter.value}
+                onChange={(e) => filter.onChange(e.target.value)}
+                placeholder={filter.placeholder ?? t("filter")}
+                className={`${inputClass} py-2.5 text-sm`}
+              />
+            )}
+            {filter.type === "select" && (
+              <select
+                value={filter.value}
+                onChange={(e) => filter.onChange(e.target.value)}
+                className={`${selectClass} py-2.5 text-sm`}
+              >
+                {filter.options.map((o) => (
+                  <option key={o.value || "all"} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            )}
+            {filter.type === "searchable-select" && (
+              <SearchableSelect
+                value={filter.value}
+                onChange={filter.onChange}
+                options={filter.options}
+                placeholder={filter.placeholder}
+                allLabel={filter.allLabel}
+                disabled={filter.disabled}
+                inputClassName={`${inputClass} py-2.5 text-sm`}
+              />
+            )}
+            {filter.type === "date" && (
+              <input
+                type="date"
+                value={filter.value}
+                onChange={(e) => filter.onChange(e.target.value)}
+                className={`${inputClass} py-2.5 text-sm`}
+              />
+            )}
+          </label>
+        );
+      })}
     </div>
+  );
+}
+
+/** Mobile filter bottom sheet — keeps list visible while filtering. */
+export function MobileFilterPanel({
+  columns,
+  open,
+  onClose,
+  title,
+}: {
+  columns: { label: string; filter?: ColumnFilter }[];
+  open: boolean;
+  onClose: () => void;
+  title?: string;
+}) {
+  const t = useTranslations("components.ui");
+  const tAdmin = useTranslations("admin.common");
+  useScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const fields = renderMobileFilterFields(columns, t);
+  if (!fields) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-[130] bg-black/40 md:hidden"
+        aria-label={t("close")}
+        onClick={onClose}
+        data-testid="mobile-filter-backdrop"
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 z-[140] flex max-h-[min(85dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)] md:hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title ?? tAdmin("filters")}
+        data-testid="mobile-filter-panel"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5">
+          <p className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">
+            {title ?? tAdmin("filters")}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-2 touch-manipulation hover:bg-[var(--surface-muted)]"
+            aria-label={t("close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 touch-scroll-y" data-touch-scroll>
+          {fields}
+        </div>
+        <div className="shrink-0 border-t border-[var(--border)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button type="button" onClick={onClose} className={`${btnPrimary} w-full`}>
+            {t("applyFilters")}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 

@@ -3,17 +3,16 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { MessageSquareHeart, Star, AlertTriangle } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { cn } from "@/lib/utils";
 import { BranchMultiSelect } from "@/components/BranchMultiSelect";
-import { PageHeader, PageLoader } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
 import { AdminDataSkeleton } from "@/components/admin/AdminDataSkeleton";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
-import { DashboardHero } from "@/components/enterprise-ui";
+import { GuestVoiceStatsStrip } from "@/components/reviews/GuestVoiceStatsStrip";
 import {
   GuestVoiceReviewsTable,
   EMPTY_REVIEW_FILTERS,
@@ -27,73 +26,8 @@ import {
   ratingTone,
 } from "@/components/reviews/guest-voice-utils";
 
-function ClickableStatCard({
-  label,
-  value,
-  icon: Icon,
-  accent = "brand",
-  onClick,
-  testId,
-  hint,
-  description,
-}: {
-  label: string;
-  value: string | number;
-  icon: LucideIcon;
-  accent?: "brand" | "emerald" | "amber" | "violet";
-  onClick?: () => void;
-  testId?: string;
-  hint?: string;
-  description?: string;
-}) {
-  const accentRing =
-    accent === "emerald"
-      ? "ring-emerald-500/20 hover:ring-emerald-500/40"
-      : accent === "amber"
-        ? "ring-amber-500/20 hover:ring-amber-500/40"
-        : accent === "violet"
-          ? "ring-violet-500/20 hover:ring-violet-500/40"
-          : "ring-[var(--brand)]/20 hover:ring-[var(--brand)]/40";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid={testId}
-      title={hint}
-      className={cn(
-        "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm text-left transition",
-        "hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]",
-        "ring-1",
-        accentRing,
-        !onClick && "cursor-default",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg bg-[var(--brand)]">
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-      <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] mt-3 tracking-tight tabular-nums">
-        {value}
-      </p>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] mt-1">{label}</p>
-      {description && (
-        <p className="text-xs text-[var(--text-secondary)] mt-1 leading-snug normal-case font-normal">
-          {description}
-        </p>
-      )}
-      {hint && onClick && !description && (
-        <p className="text-[10px] text-[var(--text-tertiary)] mt-2">{hint}</p>
-      )}
-    </button>
-  );
-}
-
 export default function AdminGuestVoicePage() {
   const t = useTranslations("admin.guestVoice");
-  const tCommon = useTranslations("common");
-  const tPeriods = useTranslations("components.dateRange.periods");
   const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
     preset: "last_30_days",
     ...resolvePresetRange("last_30_days"),
@@ -153,10 +87,10 @@ export default function AdminGuestVoicePage() {
   const reviewItems = data?.reviews ?? [];
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-8 md:space-y-6">
       <PageHeader
         title={t("title")}
-        subtitle={`${t("subtitle")} · ${tPeriods(dateRange.preset)}`}
+        subtitle={t("heroDescription")}
         action={
           <DateRangeSelector
             value={dateRange}
@@ -166,62 +100,40 @@ export default function AdminGuestVoicePage() {
         }
       />
 
-      <DashboardHero title={t("heroTitle")} subtitle={t("heroDescription")} />
-
-      <BranchMultiSelect
-        branches={branches}
-        selected={selectedBranches}
-        onChange={setSelectedBranches}
-      />
+      <div className="guest-voice-toolbar">
+        <BranchMultiSelect
+          branches={branches}
+          selected={selectedBranches}
+          onChange={setSelectedBranches}
+          className="max-w-full sm:max-w-xs"
+        />
+      </div>
 
       {(isLoading || isFetching) && !data ? (
-        <AdminDataSkeleton rows={6} />
+        <AdminDataSkeleton rows={4} />
       ) : !data ? (
         <p className="text-sm text-muted-foreground">{t("unavailable")}</p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ClickableStatCard
-              label={t("avgRating")}
-              value={data.totalReviews > 0 ? data.averageRating.toFixed(1) : "—"}
-              icon={Star}
-              onClick={() => {
-                clearListFilters();
-                scrollToReviews();
-              }}
-              testId="guest-voice-stat-avg"
-              hint={t("drilldownHint")}
-            />
-            <ClickableStatCard
-              label={t("totalReviews")}
-              value={String(data.totalReviews)}
-              icon={MessageSquareHeart}
-              accent="emerald"
-              onClick={() => applyListFilters({})}
-              testId="guest-voice-stat-reviews"
-              hint={t("drilldownHint")}
-            />
-            <ClickableStatCard
-              label={t("promoters")}
-              value={String(data.promotersCount)}
-              icon={Star}
-              accent="emerald"
-              description={t("promotersDescription")}
-              onClick={() => applyListFilters({ minRating: "4" })}
-              testId="guest-voice-stat-promoters"
-              hint={t("drilldownPromoters")}
-            />
-            <ClickableStatCard
-              label={t("needsAttention")}
-              value={String(data.openRecoveries.length)}
-              icon={AlertTriangle}
-              accent="amber"
-              description={t("needsAttentionDescription")}
-              onClick={() => applyListFilters({ maxRatingExclusive: "4" })}
-              testId="guest-voice-stat-recoveries"
-              hint={t("drilldownRecoveries")}
-            />
-          </div>
+          <GuestVoiceStatsStrip
+            avgRating={data.totalReviews > 0 ? `${data.averageRating.toFixed(1)}★` : "—"}
+            totalReviews={data.totalReviews}
+            promoters={data.promotersCount}
+            needsAttention={data.openRecoveries.length}
+            labels={{
+              avgRating: t("avgRating"),
+              totalReviews: t("totalReviews"),
+              promoters: t("promoters"),
+              needsAttention: t("needsAttention"),
+            }}
+            onAvgClick={() => {
+              clearListFilters();
+              scrollToReviews();
+            }}
+            onReviewsClick={() => applyListFilters({})}
+            onPromotersClick={() => applyListFilters({ minRating: "4" })}
+            onAttentionClick={() => applyListFilters({ maxRatingExclusive: "4" })}
+          />
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-2xl border bg-card p-4 space-y-3">
