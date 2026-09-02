@@ -24,7 +24,7 @@ import {
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import {
   MonthYearPicker,
   YearPicker,
@@ -264,19 +264,25 @@ export default function AdminFinancePage() {
             ? t("expenditureSummary", { year: selectedYear })
             : formatMonthYear(selectedMonth)
         }
-        action={
+      />
+
+      <ScopeFilterBar
+        layout="card"
+        dateControl={
           tab === "expenditures" && expView === "months" ? (
             <YearPicker
+              variant="pill"
               value={selectedYear}
               onChange={(year) => setSelectedMonth(toMonthIso(year, parseMonth(selectedMonth).month))}
             />
           ) : (
-            <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} />
+            <MonthYearPicker variant="pill" value={selectedMonth} onChange={setSelectedMonth} />
           )
         }
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
       />
-
-      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
 
       <SegmentedControl
         value={tab}

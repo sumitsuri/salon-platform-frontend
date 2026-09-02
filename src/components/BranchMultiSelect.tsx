@@ -12,6 +12,7 @@ interface BranchMultiSelectProps {
   selected: string[];
   onChange: (ids: string[]) => void;
   className?: string;
+  variant?: "surface" | "hero";
 }
 
 function resolveBranchLabel(
@@ -34,7 +35,13 @@ function resolveBranchLabel(
   return t("branchCount", { count: selected.length });
 }
 
-export function BranchMultiSelect({ branches, selected, onChange, className }: BranchMultiSelectProps) {
+export function BranchMultiSelect({
+  branches,
+  selected,
+  onChange,
+  className,
+  variant = "surface",
+}: BranchMultiSelectProps) {
   const t = useTranslations("components.branchMultiSelect");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -77,7 +84,10 @@ export function BranchMultiSelect({ branches, selected, onChange, className }: B
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen(!open)}
-        className="app-select-trigger flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium text-[var(--text-primary)] shadow-sm transition hover:border-[var(--brand)] touch-manipulation"
+        className={cn(
+          "scope-filter-trigger app-select-trigger touch-manipulation",
+          variant === "hero" && "scope-filter-trigger--hero"
+        )}
       >
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--text-tertiary)] transition", open && "rotate-180")} />

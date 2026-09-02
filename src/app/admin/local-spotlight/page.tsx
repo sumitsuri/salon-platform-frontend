@@ -21,7 +21,7 @@ import {
   UpdateBranchDigitalPresenceRequest,
   UpsertLocalCompetitorRequest,
 } from "@/lib/api";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import {
   BranchGbpChecklist,
   BranchSpotlightTable,
@@ -231,10 +231,12 @@ export default function LocalSpotlightPage() {
         <AlertBanner variant="info">{data.syncStatusMessage}</AlertBanner>
       )}
 
-      <BranchMultiSelect
+      <ScopeFilterBar
+        layout="card"
+        showDate={false}
         branches={branches}
-        selected={selectedBranches}
-        onChange={setSelectedBranches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
       />
 
       {isLoading ? (

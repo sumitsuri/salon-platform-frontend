@@ -10,7 +10,7 @@ import {
   type CatalogCategory,
   type CatalogServiceItem,
 } from "@/lib/api";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
@@ -28,7 +28,6 @@ import {
 } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 
@@ -567,13 +566,7 @@ export default function AdminServicesPage() {
                 {t("addService")}
               </button>
             </div>
-          ) : (
-            <DateRangeSelector
-              value={dateRange}
-              onChange={setDateRange}
-              testId="admin-services-date-range"
-            />
-          )
+          ) : undefined
         }
       />
 
@@ -677,7 +670,15 @@ export default function AdminServicesPage() {
 
       {tab === "performance" && (
         <>
-          <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+          <ScopeFilterBar
+            layout="card"
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            dateTestId="admin-services-date-range"
+            branches={branches}
+            selectedBranches={selectedBranches}
+            onBranchesChange={setSelectedBranches}
+          />
           {selectedBranches.length === 0 ? (
                 <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranchesServices")} />
               ) : (

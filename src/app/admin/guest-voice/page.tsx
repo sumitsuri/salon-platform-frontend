@@ -7,10 +7,9 @@ import { AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { cn } from "@/lib/utils";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { PageHeader } from "@/components/ui";
 import { AdminDataSkeleton } from "@/components/admin/AdminDataSkeleton";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
 import { GuestVoiceStatsStrip } from "@/components/reviews/GuestVoiceStatsStrip";
 import {
@@ -88,26 +87,17 @@ export default function AdminGuestVoicePage() {
 
   return (
     <div className="space-y-4 pb-8 md:space-y-6">
-      <PageHeader
-        title={t("title")}
-        subtitle={t("heroDescription")}
-        action={
-          <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
-            testId="guest-voice-date-range"
-          />
-        }
-      />
+      <PageHeader title={t("title")} subtitle={t("heroDescription")} />
 
-      <div className="guest-voice-toolbar">
-        <BranchMultiSelect
-          branches={branches}
-          selected={selectedBranches}
-          onChange={setSelectedBranches}
-          className="max-w-full sm:max-w-xs"
-        />
-      </div>
+      <ScopeFilterBar
+        layout="card"
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="guest-voice-date-range"
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
+      />
 
       {(isLoading || isFetching) && !data ? (
         <AdminDataSkeleton rows={4} />

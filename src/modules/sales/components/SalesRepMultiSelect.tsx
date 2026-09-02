@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Check, Users } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { SalesRep } from "@/modules/sales/api/salesApi";
 import { cn } from "@/lib/utils";
 
@@ -54,9 +54,8 @@ export function SalesRepMultiSelect({
         type="button"
         data-testid="sales-rep-multi-select-trigger"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-[var(--brand)]"
+        className="scope-filter-trigger app-select-trigger touch-manipulation"
       >
-        <Users className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown
           className={cn(

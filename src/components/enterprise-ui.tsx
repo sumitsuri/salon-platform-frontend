@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LucideIcon, BarChart3, Check, ChevronDown, ChevronRight, ChevronUp, Zap } from "lucide-react";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { cn } from "@/lib/utils";
 
 /* ── Loading ── */
@@ -111,6 +112,7 @@ export function DashboardCommandBar({
   shortcutsLabel,
   action,
   filters,
+  scopeFilters,
   links,
   className,
 }: {
@@ -122,25 +124,33 @@ export function DashboardCommandBar({
   shortcutsLabel?: string;
   action?: React.ReactNode;
   filters?: React.ReactNode;
+  /** Unified date + branch pills (preferred over action/filters). */
+  scopeFilters?: React.ReactNode;
   links?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("dashboard-command-bar min-w-0 max-w-full", className)}>
-      <div className="dashboard-command-bar-header flex flex-col gap-3 px-4 py-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
+      <div className="dashboard-command-bar-header dashboard-command-bar-header--compact flex flex-col gap-2.5 px-3 py-3 sm:gap-3 sm:px-4 sm:py-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
             <div className="dashboard-command-bar-accent hidden sm:block" aria-hidden />
             <div className="min-w-0 flex-1">
-              {eyebrow && <p className="dashboard-command-bar-eyebrow">{eyebrow}</p>}
+              {eyebrow && <p className="dashboard-command-bar-eyebrow hidden sm:block">{eyebrow}</p>}
               <h1 className="dashboard-command-bar-title">{title}</h1>
-              {subtitle && <p className="dashboard-command-bar-subtitle">{subtitle}</p>}
+              {subtitle && (
+                <p className="dashboard-command-bar-subtitle dashboard-command-bar-subtitle--mobile-clamp">{subtitle}</p>
+              )}
             </div>
           </div>
-          {(action || filters) && (
-            <div className="dashboard-command-bar-controls w-full sm:w-auto sm:min-w-[20rem] sm:max-w-[24rem]">
-              {action && <div className="dashboard-command-bar-control min-w-0">{action}</div>}
-              {filters && <div className="dashboard-command-bar-control min-w-0">{filters}</div>}
+          {(scopeFilters || action || filters) && (
+            <div className="w-full sm:w-auto sm:min-w-[20rem] sm:max-w-[28rem]">
+              {scopeFilters ?? (
+                <div className="dashboard-command-bar-controls">
+                  {action && <div className="dashboard-command-bar-control min-w-0">{action}</div>}
+                  {filters && <div className="dashboard-command-bar-control min-w-0">{filters}</div>}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -251,75 +261,32 @@ export function DashboardKpiStrip({
   headerHint?: string;
   className?: string;
 }) {
+  const compactItems = items.map((item, index) => ({
+    id: `${item.label}-${index}`,
+    label: item.label,
+    value: loading ? "…" : String(item.value),
+    icon: item.icon,
+    accent: item.accent ?? ("violet" as const),
+    href: loading ? undefined : item.href,
+    featured: index === 0,
+  }));
+
   return (
     <div className={cn("dashboard-kpi-strip min-w-0 max-w-full", className)}>
-      {headerLabel && (
-        <div className="dashboard-kpi-strip-header dashboard-widget-header px-4 py-3">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <span className="dashboard-widget-icon dashboard-widget-icon--metrics" aria-hidden>
-              <BarChart3 className="h-3.5 w-3.5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="dashboard-widget-title">{headerLabel}</h2>
-              {headerHint ? <p className="dashboard-widget-subtitle">{headerHint}</p> : null}
-            </div>
+      {headerLabel ? (
+        <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+          <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+            <BarChart3 className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="dashboard-overview-section-title">{headerLabel}</h2>
+            {headerHint ? (
+              <p className="dashboard-overview-section-hint hidden sm:block">{headerHint}</p>
+            ) : null}
           </div>
         </div>
-      )}
-      <div className="dashboard-kpi-strip-grid">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const accent = item.accent ?? "violet";
-          const content = (
-            <>
-              <div className="flex items-start justify-between gap-2 min-w-0">
-                {Icon ? (
-                  <span className={cn("dashboard-kpi-icon", `dashboard-kpi-icon--${accent}`)} aria-hidden>
-                    <Icon className="h-3.5 w-3.5" />
-                  </span>
-                ) : null}
-                {item.href ? (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-tertiary)] opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />
-                ) : null}
-              </div>
-              <p className="dashboard-kpi-strip-cell-label truncate">{item.label}</p>
-              <p className={cn("dashboard-kpi-strip-cell-value truncate", `dashboard-kpi-strip-cell-value--${accent}`)}>
-                {loading ? "…" : item.value}
-              </p>
-              {item.href ? (
-                <span className="dashboard-kpi-strip-cell-cta">{loading ? "" : "Tap to explore →"}</span>
-              ) : null}
-            </>
-          );
-
-          if (item.href && !loading) {
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={cn(
-                  "dashboard-kpi-strip-cell group min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4 touch-manipulation",
-                  `dashboard-kpi-strip-cell--${accent}`
-                )}
-              >
-                {content}
-              </Link>
-            );
-          }
-
-          return (
-            <div
-              key={item.label}
-              className={cn(
-                "dashboard-kpi-strip-cell min-w-0 px-3.5 py-3.5 sm:px-4 sm:py-4",
-                `dashboard-kpi-strip-cell--${accent}`
-              )}
-            >
-              {content}
-            </div>
-          );
-        })}
-      </div>
+      ) : null}
+      <CompactStatsStrip items={compactItems} loading={loading} testId="dashboard-kpi-stats-strip" />
     </div>
   );
 }
@@ -391,21 +358,15 @@ export function DashboardActionRail({
 
   return (
     <div className={cn("dashboard-action-rail dashboard-action-rail--deck", className)}>
-      <div className="dashboard-action-rail-header dashboard-action-rail-header--compact px-4 py-2.5">
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="dashboard-action-deck-icon dashboard-action-deck-icon--pulse" aria-hidden>
-              <Zap className="h-3.5 w-3.5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="dashboard-widget-title text-sm leading-tight">{title}</h2>
-              {subtitle ? (
-                <p className="dashboard-action-deck-subtitle hidden sm:block">{subtitle}</p>
-              ) : null}
-            </div>
-          </div>
-          <span className="dashboard-action-deck-count shrink-0">{actions.length}</span>
+      <div className="dashboard-overview-section-head dashboard-overview-section-head--action">
+        <span className="dashboard-overview-section-icon dashboard-overview-section-icon--action dashboard-action-deck-icon dashboard-action-deck-icon--pulse" aria-hidden>
+          <Zap className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="dashboard-overview-section-title">{title}</h2>
+          {subtitle ? <p className="dashboard-overview-section-hint hidden sm:block">{subtitle}</p> : null}
         </div>
+        <span className="dashboard-action-deck-count shrink-0">{actions.length}</span>
       </div>
 
       <div className="dashboard-action-deck px-3 pb-3 pt-2">

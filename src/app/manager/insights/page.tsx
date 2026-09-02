@@ -8,8 +8,8 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { PageHeader, StatCard } from "@/components/ui";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { DashboardHero } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import {
@@ -46,16 +46,17 @@ export default function ManagerInsightsPage() {
           period: tPeriods(dateRange.preset),
           updating: isFetching && !isLoading ? t("updating") : "",
         })}
-        action={
-          <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
-            testId="manager-insights-date-range"
-          />
-        }
       />
 
       <MissionStrip />
+
+      <ScopeFilterBar
+        layout="card"
+        showBranch={false}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="manager-insights-date-range"
+      />
 
       <DashboardHero
         eyebrow={user?.branchName}

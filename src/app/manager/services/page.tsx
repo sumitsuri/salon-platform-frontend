@@ -6,8 +6,8 @@ import { Scissors, Hash, IndianRupee } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { ServiceContributionPanel } from "@/components/ServiceContributionPanel";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { PageHeader, StatCard, EmptyState, DEFAULT_PAGE_SIZE } from "@/components/ui";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { insightPeriodToRange } from "@/lib/insights-utils";
@@ -61,16 +61,17 @@ export default function ManagerServicesPage() {
           period: tPeriods(dateRange.preset),
           updating: isFetching && !isLoading ? t("updating") : "",
         })}
-        action={
-          <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
-            testId="manager-services-date-range"
-          />
-        }
       />
 
       <MissionStrip />
+
+      <ScopeFilterBar
+        layout="card"
+        showBranch={false}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="manager-services-date-range"
+      />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <StatCard

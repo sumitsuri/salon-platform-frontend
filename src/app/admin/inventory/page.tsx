@@ -20,7 +20,7 @@ import {
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { MonthYearPicker, currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
 import { InventoryTrends } from "@/components/InventoryTrends";
 import {
@@ -267,10 +267,20 @@ export default function AdminInventoryPage() {
       <PageHeader
         title={t("title")}
         subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : t("subtitleOverview")}
-        action={tab === "overview" ? <MonthYearPicker value={selectedMonth} onChange={setSelectedMonth} /> : undefined}
       />
 
-      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+      <ScopeFilterBar
+        layout="card"
+        showDate={tab === "overview"}
+        dateControl={
+          tab === "overview" ? (
+            <MonthYearPicker variant="pill" value={selectedMonth} onChange={setSelectedMonth} />
+          ) : undefined
+        }
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
+      />
 
       <SegmentedControl value={tab} onChange={setTab} options={tabs} />
 

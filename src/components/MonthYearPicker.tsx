@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { selectClass } from "@/components/ui";
 
@@ -38,6 +38,7 @@ interface MonthYearPickerProps {
   className?: string;
   maxMonth?: string;
   minYear?: number;
+  variant?: "default" | "pill";
 }
 
 export function MonthYearPicker({
@@ -46,6 +47,7 @@ export function MonthYearPicker({
   className,
   maxMonth = currentMonthIso(),
   minYear = 2020,
+  variant = "default",
 }: MonthYearPickerProps) {
   const t = useTranslations("components.monthYearPicker");
   const locale = useLocale();
@@ -79,37 +81,49 @@ export function MonthYearPicker({
   };
 
   return (
-    <div ref={ref} className={cn("relative", className)}>
-      <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-sm">
-        <button
-          type="button"
-          onClick={() => canGoPrev && onChange(addMonths(value, -1))}
-          disabled={!canGoPrev}
-          className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-          aria-label={t("previousMonth")}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-
+    <div ref={ref} className={cn("relative w-full max-w-full min-w-0", className)}>
+      {variant === "pill" ? (
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--surface-muted)] transition min-w-[9.5rem]"
+          className="scope-filter-trigger app-select-trigger touch-manipulation"
         >
-          <Calendar className="w-4 h-4 text-[var(--brand-text)] shrink-0" />
-          <span className="text-sm font-semibold text-[var(--text-primary)]">{formatMonthYear(value, locale)}</span>
+          <Calendar className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
+          <span className="flex-1 truncate text-left">{formatMonthYear(value, locale)}</span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--text-tertiary)] transition", open && "rotate-180")} />
         </button>
+      ) : (
+        <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => canGoPrev && onChange(addMonths(value, -1))}
+            disabled={!canGoPrev}
+            className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
+            aria-label={t("previousMonth")}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => canGoNext && onChange(addMonths(value, 1))}
-          disabled={!canGoNext}
-          className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
-          aria-label={t("nextMonth")}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--surface-muted)] transition min-w-[9.5rem]"
+          >
+            <Calendar className="w-4 h-4 text-[var(--brand-text)] shrink-0" />
+            <span className="text-sm font-semibold text-[var(--text-primary)]">{formatMonthYear(value, locale)}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => canGoNext && onChange(addMonths(value, 1))}
+            disabled={!canGoNext}
+            className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-30 transition"
+            aria-label={t("nextMonth")}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {open && (
         <div className="absolute right-0 top-full mt-2 z-50 w-[min(100vw-2rem,18rem)] rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lg p-4">
@@ -173,6 +187,7 @@ interface YearPickerProps {
   className?: string;
   minYear?: number;
   maxYear?: number;
+  variant?: "default" | "pill";
 }
 
 export function YearPicker({
@@ -181,13 +196,61 @@ export function YearPicker({
   className,
   minYear = 2020,
   maxYear = parseMonth(currentMonthIso()).year,
+  variant = "default",
 }: YearPickerProps) {
   const t = useTranslations("components.monthYearPicker");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const years = useMemo(() => {
     const list: number[] = [];
     for (let y = maxYear; y >= minYear; y--) list.push(y);
     return list;
   }, [maxYear, minYear]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  if (variant === "pill") {
+    return (
+      <div ref={ref} className={cn("relative w-full max-w-full min-w-0", className)}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="scope-filter-trigger app-select-trigger touch-manipulation"
+        >
+          <Calendar className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
+          <span className="flex-1 truncate text-left">{value}</span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--text-tertiary)] transition", open && "rotate-180")} />
+        </button>
+        {open && (
+          <div className="absolute right-0 top-full z-50 mt-2 max-h-60 w-full min-w-[10rem] overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] py-1 shadow-lg">
+            {years.map((y) => (
+              <button
+                key={y}
+                type="button"
+                onClick={() => {
+                  onChange(y);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex w-full px-3 py-2.5 text-sm hover:bg-[var(--surface-muted)] touch-manipulation",
+                  y === value && "font-semibold text-[var(--brand-text)]"
+                )}
+              >
+                {y}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1 shadow-sm", className)}>

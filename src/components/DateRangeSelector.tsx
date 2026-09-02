@@ -21,6 +21,7 @@ interface DateRangeSelectorProps {
   onChange: (range: ProductDateRange) => void;
   className?: string;
   testId?: string;
+  variant?: "surface" | "hero";
 }
 
 export function DateRangeSelector({
@@ -28,6 +29,7 @@ export function DateRangeSelector({
   onChange,
   className,
   testId = "date-range",
+  variant = "surface",
 }: DateRangeSelectorProps) {
   const t = useTranslations("components.dateRange");
   const [open, setOpen] = useState(false);
@@ -80,7 +82,7 @@ export function DateRangeSelector({
   const presetOptions = DATE_RANGE_PRESET_ORDER.filter((preset) => preset !== "custom");
 
   return (
-    <div ref={rootRef} className={cn("relative w-full max-w-full min-w-0 sm:max-w-sm", className)} data-testid={testId}>
+    <div ref={rootRef} className={cn("relative w-full max-w-full min-w-0", className)} data-testid={testId}>
       <button
         ref={triggerRef}
         type="button"
@@ -88,7 +90,10 @@ export function DateRangeSelector({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(!open)}
-        className="app-select-trigger flex min-h-11 w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-sm font-medium shadow-sm transition hover:border-[var(--brand)] touch-manipulation"
+        className={cn(
+          "scope-filter-trigger app-select-trigger touch-manipulation",
+          variant === "hero" && "scope-filter-trigger--hero"
+        )}
       >
         <Calendar className="h-4 w-4 shrink-0 text-[var(--brand-text)]" />
         <span className="flex-1 truncate text-left">{label}</span>

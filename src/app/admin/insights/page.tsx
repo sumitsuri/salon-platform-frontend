@@ -6,11 +6,10 @@ import { useTranslations } from "next-intl";
 import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
 import { PageHeader, StatCard, EmptyState } from "@/components/ui";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { DashboardHero } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { countInsights, flattenInsights, insightPeriodToRange } from "@/lib/insights-utils";
@@ -49,18 +48,19 @@ export default function AdminInsightsPage() {
       <PageHeader
         title={t("title")}
         subtitle={`${tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
-        action={
-          <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
-            testId="admin-insights-date-range"
-          />
-        }
       />
 
       <MissionStrip />
 
-      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+      <ScopeFilterBar
+        layout="card"
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="admin-insights-date-range"
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
+      />
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranchesInsights")} />

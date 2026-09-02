@@ -1178,7 +1178,7 @@
       "branchesLabel": "Branches",
       "shortcutsLabel": "Shortcuts",
       "keyMetricsLabel": "Key metrics",
-      "keyMetricsHint": "How your salons are performing for the selected period.",
+      "keyMetricsHint": "Performance for your selected period and branches.",
       "branchPerformance": "Branch performance",
       "employeeCheckIn": "Employee check-in",
       "employeeSales": "Employee sales",

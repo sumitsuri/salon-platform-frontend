@@ -25,7 +25,7 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
   getLast30DaysRange,
@@ -382,11 +382,12 @@ export default function ManagerHomePage() {
                   <p className="text-xs text-[var(--text-secondary)] line-clamp-1">{t("analysisSubtitle")}</p>
                 </div>
               </div>
-              <DateRangeSelector
-                value={dateRange}
-                onChange={setDateRange}
-                testId="manager-home-date-range"
-                className="w-full sm:max-w-[15.5rem] shrink-0"
+              <ScopeFilterBar
+                showBranch={false}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                dateTestId="manager-home-date-range"
+                className="w-full sm:max-w-[20rem] shrink-0"
               />
             </div>
 

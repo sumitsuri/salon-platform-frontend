@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { BadgePercent, Building2, ClipboardList, IndianRupee, Trophy, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { BranchTrends } from "@/components/BranchTrends";
 import { BranchTargetTrends } from "@/components/BranchTargetTrends";
 import { EmployeeTargetTrends } from "@/components/EmployeeTargetTrends";
@@ -16,7 +16,6 @@ import { PaymentMixTeaser } from "@/components/PaymentMixTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ListRow, EmptyState } from "@/components/ui";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, dashboardSecondaryRange, getTodayRange, resolveProductDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { adminBookingsPath } from "@/lib/navigation-scope";
@@ -243,33 +242,34 @@ export default function AdminDashboardPage() {
           eyebrow={t("overviewEyebrow")}
           title={t("title")}
           subtitle={periodSubtitle}
-          action={
-            <DateRangeSelector value={dateRange} onChange={setDateRange} testId="admin-dashboard-date-range" />
-          }
-          filters={
-            <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+          scopeFilters={
+            <ScopeFilterBar
+              variant="hero"
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              dateTestId="admin-dashboard-date-range"
+              branches={branches}
+              selectedBranches={selectedBranches}
+              onBranchesChange={setSelectedBranches}
+            />
           }
         />
 
         {selectedBranches.length > 0 ? (
           <div className="dashboard-overview-modules dashboard-overview-modules--nested">
-            <DashboardWidgetCard variant="metrics">
-              <DashboardKpiStrip
-                loading={dashboardLoading}
-                headerLabel={t("keyMetricsLabel")}
-                headerHint={t("keyMetricsHint")}
-                items={kpiItems}
-              />
-            </DashboardWidgetCard>
+            <DashboardKpiStrip
+              loading={dashboardLoading}
+              headerLabel={t("keyMetricsLabel")}
+              headerHint={t("keyMetricsHint")}
+              items={kpiItems}
+            />
             {(dashboardLoading || recommendationsLoading || overviewActions.length > 0) ? (
-              <DashboardWidgetCard variant="actions">
               <DashboardActionRail
                 title={t("actionsTitle")}
                 revealHint={t("actionsRevealHint")}
                 loading={dashboardLoading || recommendationsLoading}
                 actions={overviewActions}
               />
-              </DashboardWidgetCard>
             ) : null}
           </div>
         ) : null}

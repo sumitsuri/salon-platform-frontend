@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { api, UpsertLocalCompetitorRequest } from "@/lib/api";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
-import { BranchMultiSelect } from "@/components/BranchMultiSelect";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import {
   AllMetricsPanel,
   BranchRankTable,
@@ -38,7 +38,6 @@ import {
   MobileStatGrid,
   ResponsiveTableShell,
 } from "@/components/ui";
-import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 
@@ -109,13 +108,6 @@ export default function MarketPulsePage() {
       <PageHeader
         title={t("title")}
         subtitle={`${data?.brandName ?? ""} · ${data?.periodLabel ?? tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
-        action={
-          <DateRangeSelector
-            value={dateRange}
-            onChange={setDateRange}
-            testId="market-pulse-date-range"
-          />
-        }
       />
 
       {!settings?.benchmarkOptIn && (
@@ -124,7 +116,15 @@ export default function MarketPulsePage() {
 
       <MissionStrip />
 
-      <BranchMultiSelect branches={branches} selected={selectedBranches} onChange={setSelectedBranches} />
+      <ScopeFilterBar
+        layout="card"
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="market-pulse-date-range"
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
+      />
 
       {selectedBranches.length === 0 ? (
         <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
