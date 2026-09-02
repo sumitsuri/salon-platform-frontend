@@ -351,20 +351,20 @@ export default function AdminDashboardPage() {
 
           <div className="dashboard-widgets-grid dashboard-widgets-grid--2-xl">
             <ServiceSalesTeaser data={serviceContribution} loading={servicesLoading} href="/admin/services" panelVariant="dashboard" />
-            {dashboardLoading ? (
-              <PlTeaser data={undefined} loading href="/admin/finance" panelVariant="dashboard" />
-            ) : (
-              <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" panelVariant="dashboard" />
-            )}
-          </div>
-
-          <div className="dashboard-widgets-grid dashboard-widgets-grid--2-xl">
-            <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" panelVariant="dashboard" />
             <PaymentMixTeaser
               loading={dashboardLoading}
               paymentMix={dashboardLoading ? undefined : dashboard!.paymentMix}
               panelVariant="dashboard"
             />
+          </div>
+
+          <div className="dashboard-widgets-grid dashboard-widgets-grid--2-xl">
+            <InventoryTeaser data={inventoryOverview} loading={inventoryLoading} href="/admin/inventory" panelVariant="dashboard" />
+            {dashboardLoading ? (
+              <PlTeaser data={undefined} loading href="/admin/finance" panelVariant="dashboard" />
+            ) : (
+              <PlTeaser data={plSummary} loading={plLoading} href="/admin/finance" panelVariant="dashboard" />
+            )}
           </div>
 
           {dashboardLoading ? null : (

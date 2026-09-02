@@ -9,14 +9,10 @@ import { useAuthStore } from "@/lib/auth-store";
 import { RecommendationsPanel } from "@/components/RecommendationsPanel";
 import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
-import { PageHeader, StatCard } from "@/components/ui";
-import { DashboardHero } from "@/components/enterprise-ui";
-import { MissionStrip } from "@/components/brand/MissionStrip";
-import {
-  countInsights,
-  flattenInsights,
-  insightPeriodToRange,
-} from "@/lib/insights-utils";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
+import { PageHeader } from "@/components/ui";
+import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { countInsights, insightPeriodToRange } from "@/lib/insights-utils";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 
 export default function ManagerInsightsPage() {
@@ -33,12 +29,12 @@ export default function ManagerInsightsPage() {
     enabled: !!branchId,
   });
 
-  const items = flattenInsights(data);
-  const highCount = items.filter((i) => i.severity === "HIGH").length;
-  const mediumCount = items.filter((i) => i.severity === "MEDIUM").length;
+  const allItems = (data?.brandWide ?? []).concat(...(data?.branches ?? []).flatMap((branch) => branch.items));
+  const highCount = allItems.filter((item) => item.severity === "HIGH").length;
+  const mediumCount = allItems.filter((item) => item.severity === "MEDIUM").length;
 
   return (
-    <div className="page-stack space-y-5">
+    <div className="dashboard-page-flow">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle", {
@@ -48,8 +44,6 @@ export default function ManagerInsightsPage() {
         })}
       />
 
-      <MissionStrip />
-
       <ScopeFilterBar
         layout="card"
         showBranch={false}
@@ -58,34 +52,51 @@ export default function ManagerInsightsPage() {
         dateTestId="manager-insights-date-range"
       />
 
-      <DashboardHero
-        eyebrow={user?.branchName}
-        title={t("title")}
-        subtitle={tPeriods(dateRange.preset)}
-        metric={countInsights(data)}
-        metricLabel={t("totalTips")}
-        badge={
-          highCount > 0 ? (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-white/15 text-white text-xs font-bold border border-white/20">
-              {t("highPriority")}: {highCount}
-            </span>
-          ) : undefined
-        }
-      />
+      <DashboardOverviewShell>
+        <div className="dashboard-overview-modules dashboard-overview-modules--nested">
+          <div className="dashboard-kpi-strip min-w-0 max-w-full">
+            <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+              <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                <Lightbulb className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="dashboard-overview-section-title">{t("summaryLabel")}</h2>
+              </div>
+            </div>
+            <CompactStatsStrip
+              loading={isLoading}
+              testId="manager-insights-summary-strip"
+              items={[
+                {
+                  id: "total",
+                  label: t("totalTips"),
+                  value: isLoading ? "…" : String(countInsights(data)),
+                  icon: Lightbulb,
+                  accent: "violet",
+                  featured: true,
+                },
+                {
+                  id: "high",
+                  label: t("highPriority"),
+                  value: isLoading ? "…" : String(highCount),
+                  icon: AlertTriangle,
+                  accent: "amber",
+                },
+                {
+                  id: "medium",
+                  label: t("medium"),
+                  value: isLoading ? "…" : String(mediumCount),
+                  icon: Sparkles,
+                  accent: "sky",
+                },
+              ]}
+            />
+          </div>
 
-      <div className="mobile-stat-grid mobile-stat-grid--sm-3 gap-3">
-        <StatCard label={t("totalTips")} value={countInsights(data)} icon={Lightbulb} accent="brand" />
-        <StatCard label={t("highPriority")} value={highCount} icon={AlertTriangle} accent="amber" />
-        <StatCard label={t("medium")} value={mediumCount} icon={Sparkles} accent="violet" className="col-span-2 sm:col-span-1" />
-      </div>
-
-      <WeekdayBoostPanel
-        insights={data?.weekdayInsights}
-        loading={isLoading}
-        variant="manager"
-      />
-
-      <RecommendationsPanel data={data} loading={isLoading} variant="manager" />
+          <WeekdayBoostPanel insights={data?.weekdayInsights} loading={isLoading} variant="manager" compact />
+          <RecommendationsPanel data={data} loading={isLoading} variant="manager" compact />
+        </div>
+      </DashboardOverviewShell>
     </div>
   );
 }

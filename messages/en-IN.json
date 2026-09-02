@@ -736,6 +736,7 @@
       "title": "Insights",
       "subtitle": "{branch} · {period}{updating}",
       "updating": " · updating",
+      "summaryLabel": "At a glance",
       "totalTips": "Total tips",
       "highPriority": "High priority",
       "medium": "Medium"
@@ -847,6 +848,7 @@
       "loading": "Loading recommendations...",
       "title": "Recommendations",
       "empty": "No actionable insights for this period yet. Check back after more visits are recorded.",
+      "revealHint": "Tap for details",
       "managerSubtitle": "Sales, staff & service insights for your branch",
       "ceoSubtitle": "Brand-wide and per-branch insights",
       "brandWide": "Brand-wide"
@@ -854,9 +856,12 @@
     "weekdayBoostPanel": {
       "loading": "Analyzing weekday sales patterns...",
       "title": "Weekday sales boost",
+      "revealHint": "Tap for actions",
+      "actionsLabel": "Suggested actions",
       "managerSubtitle": "Slow-day trends and offers your team can run",
       "ceoSubtitle": "Per-branch weekday patterns with promotion ideas",
-      "chartLegend": "Amber bars = slower weekdays · height = avg revenue per day",
+      "chartLegend": "Amber = slower weekdays · bar height = avg daily revenue",
+      "chartLegendShort": "Amber = slow · taller = more revenue",
       "actionsTitle": "Actions your team can take",
       "balanced": "No significantly slow weekdays detected — sales are fairly balanced across the week."
     },
@@ -1877,6 +1882,7 @@
     },
     "insights": {
       "title": "Insights",
+      "summaryLabel": "At a glance",
       "totalTips": "Total tips",
       "highPriority": "High priority",
       "medium": "Medium"
