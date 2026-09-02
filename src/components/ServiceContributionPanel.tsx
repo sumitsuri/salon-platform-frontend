@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { TrendingDown, TrendingUp, Scissors } from "lucide-react";
 import { ServiceContributionResponse } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
-import { Card, EmptyState, FilterableTable, InfiniteScrollFooter, DEFAULT_PAGE_SIZE } from "@/components/ui";
+import { Card, EmptyState, FilterableTable, InfiniteScrollFooter, InfiniteScrollViewport, DEFAULT_PAGE_SIZE } from "@/components/ui";
 
 interface ServiceContributionPanelProps {
   data?: ServiceContributionResponse;
@@ -123,7 +123,7 @@ export function ServiceContributionPanel({
         {services.length === 0 ? (
           <EmptyState title={t("noMatchTitle")} description={t("noMatchDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {services.map((s, i) => (
@@ -189,18 +189,18 @@ export function ServiceContributionPanel({
                 </div>
               ))}
             </div>
-          </>
-        )}
 
-        {infiniteScroll && (
-          <InfiniteScrollFooter
-            totalElements={infiniteScroll.totalElements}
-            loadedCount={infiniteScroll.loadedCount}
-            hasMore={infiniteScroll.hasMore}
-            isFetchingNextPage={infiniteScroll.isFetchingNextPage}
-            isLoading={infiniteScroll.isLoading}
-            onLoadMore={infiniteScroll.onLoadMore}
-          />
+            {infiniteScroll && (
+              <InfiniteScrollFooter
+                totalElements={infiniteScroll.totalElements}
+                loadedCount={infiniteScroll.loadedCount}
+                hasMore={infiniteScroll.hasMore}
+                isFetchingNextPage={infiniteScroll.isFetchingNextPage}
+                isLoading={infiniteScroll.isLoading}
+                onLoadMore={infiniteScroll.onLoadMore}
+              />
+            )}
+          </InfiniteScrollViewport>
         )}
       </Card>
     </div>

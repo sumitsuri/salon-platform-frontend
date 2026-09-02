@@ -17,6 +17,7 @@ import {
   btnPrimary,
   FilterableTable,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   AvatarInitial,
   AlertBanner,
   PageLoader,
@@ -243,7 +244,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
         ) : customers.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="md:hidden divide-y divide-[var(--border)]">
               {customers.map((c) => (
                 <button
@@ -309,7 +310,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
               isLoading={isLoading}
               onLoadMore={() => void fetchNextPage()}
             />
-          </>
+          </InfiniteScrollViewport>
         )}
       </DataListPanel>
     </div>

@@ -1,379 +1,247 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Megaphone, Send } from "lucide-react";
-import { api, type CampaignChannel, type CreateCampaignRequest, type Customer } from "@/lib/api";
-import { CampaignAudiencePreview } from "@/components/campaign/CampaignAudiencePreview";
-import { CampaignHistoryPanel } from "@/components/campaign/CampaignHistoryPanel";
-import {
-  PageHeader,
-  Card,
-  btnPrimary,
-  btnSecondary,
-  inputClass,
-  PageLoader,
-  SearchableSelect,
-  SearchableMultiSelect,
-  ConfirmDialog,
-} from "@/components/ui";
+import { Megaphone, Radio, Send, Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { CampaignCreatePanel } from "@/components/campaign/CampaignCreatePanel";
+import { CampaignDetailView } from "@/components/campaign/CampaignDetailView";
+import { CampaignListSection } from "@/components/campaign/CampaignListSection";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
+import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { PageHeader, SideSheet } from "@/components/ui";
 
-type CampaignFormState = {
-  name: string;
-  channel: CampaignChannel;
-  messageText: string;
-  filterNames: string[];
-  filterSociety: string;
-  filterPhones: string[];
-  filterMinVisitCount?: number;
-  filterMaxVisitCount?: number;
-  filterLastVisitFrom?: string;
-  filterLastVisitTo?: string;
-};
+type View = "hub" | "create";
 
-const emptyForm: CampaignFormState = {
-  name: "",
-  channel: "WHATSAPP",
-  messageText: "",
-  filterNames: [],
-  filterSociety: "",
-  filterPhones: [],
-};
+function useNarrowLayout() {
+  const [narrow, setNarrow] = useState(false);
 
-const VISIT_COUNT_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20];
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1279px)");
+    const update = () => setNarrow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
-function isoDaysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
-
-function isoStartOfYear(): string {
-  const y = new Date().getFullYear();
-  return `${y}-01-01`;
-}
-
-async function loadCampaignFilterOptions() {
-  const names = new Set<string>();
-  const societies = new Set<string>();
-  const phones = new Set<string>();
-  let page = 0;
-  let totalPages = 1;
-
-  while (page < totalPages && page < 30) {
-    const res = await api.listCustomers({ page, size: 100 });
-    totalPages = res.totalPages;
-    for (const c of res.content) {
-      if (c.name?.trim()) names.add(c.name.trim());
-      if (c.society?.trim()) societies.add(c.society.trim());
-      if (c.phone?.trim()) phones.add(c.phone.trim());
-    }
-    page += 1;
-  }
-
-  const sortLabels = (values: Set<string>) =>
-    [...values]
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-      .map((value) => ({ value, label: value }));
-
-  return {
-    names: sortLabels(names),
-    societies: sortLabels(societies),
-    phones: sortLabels(phones),
-  };
+  return narrow;
 }
 
 export default function AdminCampaignsPage() {
   const t = useTranslations("admin.campaigns");
-  const tCommon = useTranslations("common");
-  const queryClient = useQueryClient();
-  const [form, setForm] = useState<CampaignFormState>(emptyForm);
-  const [previewCount, setPreviewCount] = useState<number | null>(null);
-  const [previewCustomers, setPreviewCustomers] = useState<Customer[] | null>(null);
-  const [previewTruncated, setPreviewTruncated] = useState(false);
-  const [sendConfirmOpen, setSendConfirmOpen] = useState(false);
-  const [error, setError] = useState("");
+  const narrow = useNarrowLayout();
+  const [view, setView] = useState<View>("hub");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [createSubtitle, setCreateSubtitle] = useState("");
+  const createSheetBackRef = useRef<() => void>(() => setView("hub"));
 
   const { data: messaging } = useQuery({
     queryKey: ["messaging-config"],
     queryFn: () => api.getMessagingConfig(),
   });
 
-  const { data: filterOptions, isLoading: filtersLoading } = useQuery({
-    queryKey: ["campaign-filter-options"],
-    queryFn: loadCampaignFilterOptions,
-    staleTime: 5 * 60_000,
+  const { data: campaigns = [], isLoading } = useQuery({
+    queryKey: ["campaigns"],
+    queryFn: () => api.getCampaigns(),
+    refetchInterval: (q) =>
+      (q.state.data ?? []).some((c) => c.sendInProgress || c.status === "SENDING") ? 3000 : false,
   });
 
-  const lastVisitOptions = useMemo(
-    () => [
-      { value: "", label: t("lastVisitAny") },
-      { value: isoDaysAgo(7), label: t("lastVisit7d") },
-      { value: isoDaysAgo(30), label: t("lastVisit30d") },
-      { value: isoDaysAgo(90), label: t("lastVisit90d") },
-      { value: isoDaysAgo(180), label: t("lastVisit180d") },
-      { value: isoStartOfYear(), label: t("lastVisitYtd") },
-    ],
-    [t],
+  const stats = useMemo(() => {
+    const totalRuns = campaigns.reduce((sum, c) => sum + (c.runCount ?? 0), 0);
+    const totalSent = campaigns.reduce((sum, c) => sum + (c.sentCount ?? 0), 0);
+    const activeCampaigns = campaigns.filter((c) => c.status !== "ARCHIVED").length;
+    return { totalRuns, totalSent, activeCampaigns };
+  }, [campaigns]);
+
+  const selectedCampaign = campaigns.find((c) => c.id === selectedId);
+
+  const openDetail = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setView("hub");
+      setDetailOpen(narrow);
+    },
+    [narrow],
   );
 
-  const visitCountOptions = useMemo(
-    () => [
-      { value: "", label: t("visitAny") },
-      ...VISIT_COUNT_OPTIONS.map((n) => ({ value: String(n), label: String(n) })),
-    ],
-    [t],
+  const closeDetail = useCallback(() => {
+    setDetailOpen(false);
+  }, []);
+
+  const handleCreated = useCallback(
+    (id: string) => {
+      setSelectedId(id);
+      setView("hub");
+      setDetailOpen(narrow);
+    },
+    [narrow],
   );
 
-  const preview = useMutation({
-    mutationFn: () => api.previewCampaign(buildPayload(form)),
-    onSuccess: (res) => {
-      setPreviewCount(res.matchingCustomers);
-      setPreviewCustomers(res.customers ?? []);
-      setPreviewTruncated(res.previewTruncated ?? false);
-      setError("");
-    },
-    onError: (e: Error) => setError(e.message),
-  });
-
-  const create = useMutation({
-    mutationFn: () => api.createCampaign(buildPayload(form)),
-    onSuccess: async (campaign) => {
-      await api.sendCampaign(campaign.id);
-      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      setForm(emptyForm);
-      clearPreview();
-      setSendConfirmOpen(false);
-      setError("");
-    },
-    onError: (e: Error) => setError(e.message),
-  });
-
-  function clearPreview() {
-    setPreviewCount(null);
-    setPreviewCustomers(null);
-    setPreviewTruncated(false);
-  }
-
-  function updateField<K extends keyof CampaignFormState>(key: K, value: CampaignFormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    clearPreview();
-  }
+  const registerCreateSheetBack = useCallback((handler: () => void) => {
+    createSheetBackRef.current = handler;
+  }, []);
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    <div className="dashboard-page-flow pb-8">
+      <PageHeader title={t("title")} subtitle={t("heroDescription")} />
 
-      {messaging && (
-        <Card className="text-sm">
+      {messaging ? (
+        <div
+          className={cn(
+            "campaign-messaging-banner mb-4",
+            !messaging.msg91Enabled && "campaign-messaging-banner--warn",
+          )}
+        >
+          <span className="font-semibold">
+            {messaging.msg91Enabled ? t("messagingStatusOk") : t("messagingStatusOff")}
+          </span>
           {messaging.msg91Enabled ? (
-            <div className="space-y-1 text-[var(--text-secondary)]">
-              <p>
+            <>
+              <span className="hidden sm:inline text-[var(--text-tertiary)]">·</span>
+              <span className="hidden sm:inline">
                 {t("messagingReady", {
                   billTemplate: messaging.billReceiptTemplate,
                   promoTemplate: messaging.promoTemplate,
                 })}
-              </p>
-              {messaging.billReceiptPilotEnabled && (
-                <p className="text-xs text-amber-800 dark:text-amber-200">
-                  {t("billReceiptPilot", {
-                    tenant: messaging.billReceiptPilotTenantSlug,
-                    branch: messaging.billReceiptPilotBranchCode,
-                  })}
-                </p>
-              )}
-              <p className="text-xs">
-                <Link href="/admin/whatsapp-templates" className="font-semibold text-[var(--brand-text)]">
-                  {t("templatesLink")}
-                </Link>
-              </p>
-            </div>
+              </span>
+            </>
           ) : (
-            <p className="text-amber-700 dark:text-amber-300">{t("messagingDisabled")}</p>
+            <span>{t("messagingDisabled")}</span>
           )}
-        </Card>
-      )}
-
-      <Card className="space-y-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
-          <Megaphone className="w-4 h-4 text-[var(--brand)]" />
-          {t("newCampaign")}
+          <Link href="/admin/whatsapp-templates" className="ml-auto font-semibold text-[var(--brand-text)] shrink-0">
+            {t("templatesLink")}
+          </Link>
         </div>
+      ) : null}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <input
-            placeholder={t("campaignName")}
-            value={form.name}
-            onChange={(e) => updateField("name", e.target.value)}
-            className={inputClass}
-          />
-          <select
-            value={form.channel}
-            onChange={(e) => updateField("channel", e.target.value as CampaignChannel)}
-            className={inputClass}
-          >
-            <option value="WHATSAPP">{t("whatsapp")}</option>
-            <option value="SMS">{t("sms")}</option>
-          </select>
-        </div>
-
-        <textarea
-          placeholder={form.channel === "WHATSAPP" ? t("messageWhatsapp") : t("messageSms")}
-          value={form.messageText}
-          onChange={(e) => updateField("messageText", e.target.value)}
-          className={`${inputClass} min-h-[88px]`}
-        />
-
-        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{t("customerFilters")}</p>
-
-        {filtersLoading || !filterOptions ? (
-          <PageLoader label={t("loadingFilters")} />
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SearchableMultiSelect
-              value={form.filterNames}
-              onChange={(v) => updateField("filterNames", v)}
-              options={filterOptions.names}
-              placeholder={t("nameContains")}
-              allLabel={tCommon("all")}
-            />
-            <SearchableSelect
-              value={form.filterSociety || ""}
-              onChange={(v) => updateField("filterSociety", v)}
-              options={filterOptions.societies}
-              placeholder={t("societyContains")}
-              allLabel={tCommon("all")}
-            />
-            <SearchableMultiSelect
-              value={form.filterPhones}
-              onChange={(v) => updateField("filterPhones", v)}
-              options={filterOptions.phones}
-              placeholder={t("phoneContains")}
-              allLabel={tCommon("all")}
-            />
-            <SearchableSelect
-              value={form.filterMinVisitCount != null ? String(form.filterMinVisitCount) : ""}
-              onChange={(v) => updateField("filterMinVisitCount", v ? Number(v) : undefined)}
-              options={visitCountOptions}
-              placeholder={t("minVisits")}
-              allLabel={t("visitAny")}
-            />
-            <SearchableSelect
-              value={form.filterMaxVisitCount != null ? String(form.filterMaxVisitCount) : ""}
-              onChange={(v) => updateField("filterMaxVisitCount", v ? Number(v) : undefined)}
-              options={visitCountOptions}
-              placeholder={t("maxVisits")}
-              allLabel={t("visitAny")}
-            />
-            <SearchableSelect
-              value={form.filterLastVisitFrom || ""}
-              onChange={(v) => updateField("filterLastVisitFrom", v || undefined)}
-              options={lastVisitOptions}
-              placeholder={t("lastVisitFrom")}
-              allLabel={t("lastVisitAny")}
+      <DashboardOverviewShell>
+        <div className="dashboard-overview-modules dashboard-overview-modules--nested">
+          <div className="dashboard-kpi-strip min-w-0 max-w-full">
+            <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+              <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                <Megaphone className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="dashboard-overview-section-title">{t("summaryLabel")}</h2>
+                <p className="text-xs text-[var(--text-tertiary)]">{t("summaryHint")}</p>
+              </div>
+            </div>
+            <CompactStatsStrip
+              loading={isLoading}
+              testId="campaigns-summary-strip"
+              items={[
+                {
+                  id: "active",
+                  label: t("statActiveCampaigns"),
+                  value: isLoading ? "…" : String(stats.activeCampaigns),
+                  icon: Sparkles,
+                  accent: "violet",
+                  featured: true,
+                },
+                {
+                  id: "runs",
+                  label: t("statTotalRuns"),
+                  value: isLoading ? "…" : String(stats.totalRuns),
+                  icon: Radio,
+                  accent: "sky",
+                },
+                {
+                  id: "sent",
+                  label: t("statMessagesSent"),
+                  value: isLoading ? "…" : String(stats.totalSent),
+                  icon: Send,
+                  accent: "emerald",
+                },
+              ]}
             />
           </div>
-        )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+            <CampaignListSection
+              campaigns={campaigns}
+              loading={isLoading}
+              selectedId={selectedId}
+              onSelect={openDetail}
+              onCreate={() => setView("create")}
+            />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => preview.mutate()}
-            disabled={preview.isPending || !form.name || !form.messageText || filtersLoading}
-            className={btnSecondary}
-          >
-            {preview.isPending ? t("counting") : t("previewAudience")}
-          </button>
-          {previewCount !== null && (
-            <p className="text-sm text-[var(--text-secondary)]">
-              {t("customersMatch", { count: previewCount })}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              if (previewCount == null || previewCount <= 0) return;
-              setSendConfirmOpen(true);
-            }}
-            disabled={
-              create.isPending ||
-              !form.name ||
-              !form.messageText ||
-              previewCount == null ||
-              previewCount <= 0 ||
-              (form.channel === "WHATSAPP" && messaging && !messaging.msg91Enabled)
-            }
-            className={`${btnPrimary} ml-auto`}
-          >
-            <Send className="w-4 h-4" />
-            {create.isPending ? t("sending") : t("createAndSend")}
-          </button>
+            <div className="hidden xl:block min-w-0">
+              {view === "create" ? (
+                <CampaignCreatePanel
+                  onBack={() => setView("hub")}
+                  onCreated={handleCreated}
+                  messagingReady={!!messaging?.msg91Enabled}
+                />
+              ) : selectedId ? (
+                <CampaignDetailView
+                  campaignId={selectedId}
+                  messagingReady={!!messaging?.msg91Enabled}
+                  onDeleted={() => {
+                    setSelectedId(null);
+                    setDetailOpen(false);
+                  }}
+                />
+              ) : (
+                <div className="dashboard-widget-card flex flex-col items-center justify-center min-h-[280px] text-center p-8">
+                  <Megaphone className="w-10 h-10 text-[var(--text-tertiary)] mb-3 opacity-40" />
+                  <p className="font-semibold text-[var(--text-primary)]">{t("selectCampaignTitle")}</p>
+                  <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-sm">{t("selectCampaignDesc")}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </Card>
+      </DashboardOverviewShell>
 
-      {previewCustomers !== null && (
-        <CampaignAudiencePreview
-          customers={previewCustomers}
-          totalCount={previewCount ?? 0}
-          truncated={previewTruncated}
-          channel={form.channel}
+      <SideSheet
+        open={view === "create" && narrow}
+        onClose={() => setView("hub")}
+        onBack={() => createSheetBackRef.current()}
+        backLabel={t("backToCampaigns")}
+        wide
+        title={t("createCampaignTitle")}
+        subtitle={createSubtitle || t("createCampaignSubtitle")}
+      >
+        <CampaignCreatePanel
+          embedded
+          onBack={() => setView("hub")}
+          onCreated={handleCreated}
+          messagingReady={!!messaging?.msg91Enabled}
+          onStepMetaChange={({ subtitle }) => setCreateSubtitle(subtitle)}
+          onRegisterSheetBack={registerCreateSheetBack}
         />
-      )}
+      </SideSheet>
 
-      <ConfirmDialog
-        open={sendConfirmOpen}
-        onClose={() => setSendConfirmOpen(false)}
-        onConfirm={() => create.mutate()}
-        title={t("sendConfirmTitle")}
-        description={
-          <>
-            <p>
-              {t("sendConfirmBody", {
-                name: form.name,
-                count: previewCount ?? 0,
-                channel: form.channel === "WHATSAPP" ? t("whatsapp") : t("sms"),
-              })}
-            </p>
-            {previewCustomers && previewCustomers.length > 0 && (
-              <ul className="text-xs text-[var(--text-tertiary)] list-disc pl-4 space-y-0.5">
-                {previewCustomers.slice(0, 5).map((c) => (
-                  <li key={c.id}>
-                    {c.name}
-                    {c.phone ? ` · ${c.phone}` : ""}
-                  </li>
-                ))}
-                {(previewCount ?? 0) > 5 && (
-                  <li>{t("sendConfirmMoreRecipients", { count: (previewCount ?? 0) - 5 })}</li>
-                )}
-              </ul>
-            )}
-          </>
+      <SideSheet
+        open={detailOpen && !!selectedId}
+        onClose={closeDetail}
+        onBack={closeDetail}
+        backLabel={t("backToCampaigns")}
+        wide
+        title={selectedCampaign?.name ?? t("title")}
+        subtitle={
+          selectedCampaign
+            ? `${selectedCampaign.channel === "WHATSAPP" ? t("whatsapp") : t("sms")} · ${t("openCampaignDetail")}`
+            : undefined
         }
-        confirmLabel={create.isPending ? t("sending") : t("sendConfirmAction")}
-        confirmPending={create.isPending}
-      />
-
-      <CampaignHistoryPanel />
+      >
+        {selectedId ? (
+          <CampaignDetailView
+            campaignId={selectedId}
+            messagingReady={!!messaging?.msg91Enabled}
+            embedded
+            onDeleted={() => {
+              closeDetail();
+              setSelectedId(null);
+            }}
+          />
+        ) : null}
+      </SideSheet>
     </div>
   );
-}
-
-function buildPayload(form: CampaignFormState): CreateCampaignRequest {
-  return {
-    name: form.name,
-    channel: form.channel,
-    messageText: form.messageText,
-    filterNames: form.filterNames.length ? form.filterNames : undefined,
-    filterSociety: form.filterSociety || undefined,
-    filterPhones: form.filterPhones.length ? form.filterPhones : undefined,
-    filterMinVisitCount: form.filterMinVisitCount,
-    filterMaxVisitCount: form.filterMaxVisitCount,
-    filterLastVisitFrom: form.filterLastVisitFrom || undefined,
-    filterLastVisitTo: form.filterLastVisitTo || undefined,
-    filterWhatsappOptInOnly: form.channel === "WHATSAPP" ? true : undefined,
-    filterSmsOptInOnly: form.channel === "SMS" ? true : undefined,
-  };
 }

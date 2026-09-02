@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, MessageSquareText, Star } from "lucide-react";
 import { GuestVoiceReviewItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import { DataListPanel } from "@/components/DataListPanel";
-import { FilterableTable, selectClass } from "@/components/ui";
+import { FilterableTable, InfiniteScrollFooter, InfiniteScrollViewport, selectClass } from "@/components/ui";
 import {
   CATEGORY_LABELS,
   EMPTY_REVIEW_FILTERS,
@@ -178,6 +179,13 @@ export function GuestVoiceReviewsTable({
     () => sortReviews(filterReviews(reviews, filters), sortKey),
     [reviews, filters, sortKey]
   );
+  const {
+    visible: visibleReviews,
+    totalElements: visibleTotal,
+    loadedCount,
+    hasMore,
+    loadMore,
+  } = useClientInfiniteList(filtered);
 
   const filterCount = activeFilterCount(filters);
   const quickFilter = resolveQuickFilter(filters);
@@ -361,7 +369,7 @@ export function GuestVoiceReviewsTable({
       className="guest-voice-reviews-panel"
       icon={MessageSquareText}
       title={t("reviewsTableTitle")}
-      hint={t("reviewsTableHint", { shown: filtered.length, total: reviews.length })}
+      hint={t("reviewsTableHint", { shown: loadedCount, total: filtered.length })}
       toolbarStart={
         <div className="guest-voice-quick-filters" role="tablist" aria-label={t("reviewsTableTitle")}>
           {(
@@ -415,9 +423,9 @@ export function GuestVoiceReviewsTable({
       {filtered.length === 0 ? (
         <p className="guest-voice-reviews-empty">{t("noReviewsMatchFilters")}</p>
       ) : (
-        <>
+        <InfiniteScrollViewport>
           <div className="md:hidden guest-voice-reviews-list" data-testid="guest-voice-mobile-list">
-            {filtered.map((review) => (
+            {visibleReviews.map((review) => (
               <CompactReviewRow
                 key={review.reviewId}
                 review={review}
@@ -435,7 +443,7 @@ export function GuestVoiceReviewsTable({
 
           <div className="hidden md:block responsive-table-wrap">
             <FilterableTable columns={tableColumns}>
-              {filtered.map((review) => {
+              {visibleReviews.map((review) => {
                 const tone = ratingTone(review.overallRating);
                 return (
                   <tr
@@ -498,7 +506,14 @@ export function GuestVoiceReviewsTable({
               })}
             </FilterableTable>
           </div>
-        </>
+          <InfiniteScrollFooter
+            totalElements={visibleTotal}
+            loadedCount={loadedCount}
+            hasMore={hasMore}
+            isFetchingNextPage={false}
+            onLoadMore={loadMore}
+          />
+        </InfiniteScrollViewport>
       )}
     </DataListPanel>
   );

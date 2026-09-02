@@ -22,6 +22,7 @@ import {
   PageHeader,
   FilterableTable,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   SideSheet,
   inputClass,
   selectClass,
@@ -783,21 +784,15 @@ export function AttendanceDashboardSection({
             />
             {logLoading ? (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
+            ) : logRecords.length === 0 ? (
+              <p className="px-4 py-8 text-sm text-center text-[var(--text-secondary)]">
+                {t("noAttendanceRecords")} · {t("adjustFilters")}
+              </p>
             ) : (
-              <>
+              <InfiniteScrollViewport>
                 <div className="hidden md:block responsive-table-wrap">
                   <FilterableTable columns={logHeaderColumns} className="min-w-[72rem]">
-                    {logRecords.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={LOG_TABLE_COLUMN_COUNT}
-                          className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]"
-                        >
-                          {t("noAttendanceRecords")} · {t("adjustFilters")}
-                        </td>
-                      </tr>
-                    ) : (
-                      logRecords.map((r) => {
+                    {logRecords.map((r) => {
                         const target = hoursTargetLabel(r.hoursWorked);
                         return (
                           <tr key={r.id} className="border-t border-[var(--border)]">
@@ -862,17 +857,11 @@ export function AttendanceDashboardSection({
                             </td>
                           </tr>
                         );
-                      })
-                    )}
+                      })}
                   </FilterableTable>
                 </div>
                 <div className="md:hidden divide-y divide-[var(--border)]">
-                  {logRecords.length === 0 ? (
-                    <p className="px-4 py-8 text-sm text-center text-[var(--text-secondary)]">
-                      {t("noAttendanceRecords")} · {t("adjustFilters")}
-                    </p>
-                  ) : (
-                    logRecords.map((r) => {
+                  {logRecords.map((r) => {
                       const target = hoursTargetLabel(r.hoursWorked);
                       return (
                         <div key={r.id} className="px-4 py-3 space-y-2.5">
@@ -934,19 +923,18 @@ export function AttendanceDashboardSection({
                           )}
                         </div>
                       );
-                    })
-                  )}
+                    })}
                 </div>
-              </>
+                <InfiniteScrollFooter
+                  totalElements={logTotalElements}
+                  loadedCount={logRecords.length}
+                  hasMore={logHasMore}
+                  isFetchingNextPage={logFetchingNext}
+                  isLoading={logLoading}
+                  onLoadMore={() => void fetchNextLogPage()}
+                />
+              </InfiniteScrollViewport>
             )}
-            <InfiniteScrollFooter
-              totalElements={logTotalElements}
-              loadedCount={logRecords.length}
-              hasMore={logHasMore}
-              isFetchingNextPage={logFetchingNext}
-              isLoading={logLoading}
-              onLoadMore={() => void fetchNextLogPage()}
-            />
           </PanelShell>
 
           <PanelShell title={t("leaveRecords")}>
@@ -967,25 +955,27 @@ export function AttendanceDashboardSection({
                 {t("noLeaveRecords")} · {t("adjustFilters")}
               </p>
             ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {leaveRecords.map((l) => (
-                  <ListRow
-                    key={l.id}
-                    title={l.staffName}
-                    subtitle={`${formatDate(l.startDate)} – ${formatDate(l.endDate)} · ${l.branchName}`}
-                    trailing={<StatusBadge status={l.status} />}
-                  />
-                ))}
-              </div>
+              <InfiniteScrollViewport>
+                <div className="divide-y divide-[var(--border)]">
+                  {leaveRecords.map((l) => (
+                    <ListRow
+                      key={l.id}
+                      title={l.staffName}
+                      subtitle={`${formatDate(l.startDate)} – ${formatDate(l.endDate)} · ${l.branchName}`}
+                      trailing={<StatusBadge status={l.status} />}
+                    />
+                  ))}
+                </div>
+                <InfiniteScrollFooter
+                  totalElements={leaveTotalElements}
+                  loadedCount={leaveRecords.length}
+                  hasMore={leaveHasMore}
+                  isFetchingNextPage={leaveFetchingNext}
+                  isLoading={leaveLoading}
+                  onLoadMore={() => void fetchNextLeavePage()}
+                />
+              </InfiniteScrollViewport>
             )}
-            <InfiniteScrollFooter
-              totalElements={leaveTotalElements}
-              loadedCount={leaveRecords.length}
-              hasMore={leaveHasMore}
-              isFetchingNextPage={leaveFetchingNext}
-              isLoading={leaveLoading}
-              onLoadMore={() => void fetchNextLeavePage()}
-            />
           </PanelShell>
         </>
       )}
@@ -1001,71 +991,65 @@ export function AttendanceDashboardSection({
           filterButtonTestId="attendance-staff-open-filters"
           clearAllTestId="attendance-staff-clear-filters"
         />
-        <div className="hidden md:block responsive-table-wrap">
-          <FilterableTable columns={staffPerfHeaderColumns}>
-            {staffSlice.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-sm text-[var(--text-secondary)]">
-                  {t("noAttendanceRecords")} · {t("adjustFilters")}
-                </td>
-              </tr>
-            ) : (
-              staffSlice.map((s) => (
-                <tr
+        {staffSlice.length === 0 ? (
+          <p className="px-4 py-8 text-sm text-center text-[var(--text-secondary)]">
+            {t("noAttendanceRecords")} · {t("adjustFilters")}
+          </p>
+        ) : (
+          <InfiniteScrollViewport>
+            <div className="hidden md:block responsive-table-wrap">
+              <FilterableTable columns={staffPerfHeaderColumns}>
+                {staffSlice.map((s) => (
+                  <tr
+                    key={s.staffId}
+                    className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--surface-muted)]/60"
+                    onClick={() => setSelectedStaffId(s.staffId)}
+                  >
+                    <td className="px-4 py-2.5">
+                      <p className="font-medium">{s.staffName}</p>
+                      <p className="text-xs text-[var(--text-tertiary)]">{s.branchName}</p>
+                    </td>
+                    <td className="px-4 py-2.5">{s.daysPresent}</td>
+                    <td className="px-4 py-2.5">{s.daysLeave}</td>
+                    <td className="px-4 py-2.5">{s.totalHours}h</td>
+                    <td className="px-4 py-2.5">{s.lateArrivals}</td>
+                    <td className="px-4 py-2.5">{s.geoFlags}</td>
+                    <td className="px-4 py-2.5 font-semibold text-[var(--brand-text)]">{s.complianceScore}</td>
+                    <td className="px-4 py-2.5 font-semibold">{s.performanceScore}</td>
+                  </tr>
+                ))}
+              </FilterableTable>
+            </div>
+            <div className="md:hidden divide-y divide-[var(--border)]">
+              {staffSlice.map((s) => (
+                <button
                   key={s.staffId}
-                  className="border-t border-[var(--border)] cursor-pointer hover:bg-[var(--surface-muted)]/60"
+                  type="button"
+                  className="w-full text-left"
                   onClick={() => setSelectedStaffId(s.staffId)}
                 >
-                  <td className="px-4 py-2.5">
-                    <p className="font-medium">{s.staffName}</p>
-                    <p className="text-xs text-[var(--text-tertiary)]">{s.branchName}</p>
-                  </td>
-                  <td className="px-4 py-2.5">{s.daysPresent}</td>
-                  <td className="px-4 py-2.5">{s.daysLeave}</td>
-                  <td className="px-4 py-2.5">{s.totalHours}h</td>
-                  <td className="px-4 py-2.5">{s.lateArrivals}</td>
-                  <td className="px-4 py-2.5">{s.geoFlags}</td>
-                  <td className="px-4 py-2.5 font-semibold text-[var(--brand-text)]">{s.complianceScore}</td>
-                  <td className="px-4 py-2.5 font-semibold">{s.performanceScore}</td>
-                </tr>
-              ))
-            )}
-          </FilterableTable>
-        </div>
-        <div className="md:hidden divide-y divide-[var(--border)]">
-          {staffSlice.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-center text-[var(--text-secondary)]">
-              {t("noAttendanceRecords")} · {t("adjustFilters")}
-            </p>
-          ) : (
-            staffSlice.map((s) => (
-              <button
-                key={s.staffId}
-                type="button"
-                className="w-full text-left"
-                onClick={() => setSelectedStaffId(s.staffId)}
-              >
-                <ListRow
-                  title={s.staffName}
-                  subtitle={`${s.branchName} · ${t("complianceScore", { score: s.complianceScore })}`}
-                  trailing={
-                    <div className="flex items-center gap-1 text-sm font-bold text-[var(--brand-text)]">
-                      {s.performanceScore}
-                      <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                    </div>
-                  }
-                />
-              </button>
-            ))
-          )}
-        </div>
-        <InfiniteScrollFooter
-          totalElements={staffTotalElements}
-          loadedCount={staffLoadedCount}
-          hasMore={staffHasMore}
-          isFetchingNextPage={false}
-          onLoadMore={loadMoreStaff}
-        />
+                  <ListRow
+                    title={s.staffName}
+                    subtitle={`${s.branchName} · ${t("complianceScore", { score: s.complianceScore })}`}
+                    trailing={
+                      <div className="flex items-center gap-1 text-sm font-bold text-[var(--brand-text)]">
+                        {s.performanceScore}
+                        <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      </div>
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+            <InfiniteScrollFooter
+              totalElements={staffTotalElements}
+              loadedCount={staffLoadedCount}
+              hasMore={staffHasMore}
+              isFetchingNextPage={false}
+              onLoadMore={loadMoreStaff}
+            />
+          </InfiniteScrollViewport>
+        )}
       </PanelShell>
 
       <SideSheet

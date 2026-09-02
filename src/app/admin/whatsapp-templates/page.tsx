@@ -11,10 +11,13 @@ import {
   type WhatsAppTemplateCategory,
 } from "@/lib/api";
 import { WhatsAppTemplatePreviewSheet } from "@/components/whatsapp/WhatsAppTemplatePreviewSheet";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import {
   Card,
   EmptyState,
   FilterableTable,
+  InfiniteScrollFooter,
+  InfiniteScrollViewport,
   MobileFilterPanel,
   PageHeader,
   PageLoader,
@@ -75,6 +78,14 @@ export default function AdminWhatsAppTemplatesPage() {
     if (debounced.status === "planned") return templates.filter((row) => !row.wired);
     return templates;
   }, [templates, debounced.status]);
+
+  const {
+    visible: visibleTemplates,
+    totalElements: templatesTotal,
+    loadedCount,
+    hasMore,
+    loadMore,
+  } = useClientInfiniteList(filtered);
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -189,9 +200,9 @@ export default function AdminWhatsAppTemplatesPage() {
         ) : filtered.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="md:hidden divide-y divide-[var(--border)]">
-              {filtered.map((row) => (
+              {visibleTemplates.map((row) => (
                 <div key={row.code} className="px-4 py-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -222,7 +233,7 @@ export default function AdminWhatsAppTemplatesPage() {
 
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
-                {filtered.map((row) => (
+                {visibleTemplates.map((row) => (
                   <tr key={row.code} className="border-t border-[var(--border)]">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-[var(--text-primary)]">{row.displayName}</p>
@@ -262,7 +273,14 @@ export default function AdminWhatsAppTemplatesPage() {
                 ))}
               </FilterableTable>
             </div>
-          </>
+            <InfiniteScrollFooter
+              totalElements={templatesTotal}
+              loadedCount={loadedCount}
+              hasMore={hasMore}
+              isFetchingNextPage={false}
+              onLoadMore={loadMore}
+            />
+          </InfiniteScrollViewport>
         )}
       </Card>
 

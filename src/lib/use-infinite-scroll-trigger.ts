@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
-export function useInfiniteScrollTrigger(onTrigger: () => void, disabled: boolean) {
+export function useInfiniteScrollTrigger(
+  onTrigger: () => void,
+  disabled: boolean,
+  scrollRootRef?: RefObject<Element | null>
+) {
   const ref = useRef<HTMLDivElement>(null);
   const onTriggerRef = useRef(onTrigger);
   onTriggerRef.current = onTrigger;
@@ -12,16 +16,17 @@ export function useInfiniteScrollTrigger(onTrigger: () => void, disabled: boolea
     const element = ref.current;
     if (!element) return;
 
+    const root = scrollRootRef?.current ?? null;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) onTriggerRef.current();
       },
-      { rootMargin: "240px" }
+      { root, rootMargin: root ? "120px" : "240px" }
     );
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [disabled]);
+  }, [disabled, scrollRootRef]);
 
   return ref;
 }

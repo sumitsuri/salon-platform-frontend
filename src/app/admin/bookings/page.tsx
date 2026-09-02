@@ -24,6 +24,7 @@ import {
   btnPrimary,
   FilterableTable,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   AvatarInitial,
   AlertBanner,
   PageLoader,
@@ -536,7 +537,7 @@ function AdminBookingsPageContent() {
           <EmptyState title={tMgr("noBookingsTitle")} description={tMgr("noBookingsDesc")} />
         ) : null}
         {!isError && bookings.length > 0 ? (
-          <>
+          <InfiniteScrollViewport>
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
@@ -611,17 +612,17 @@ function AdminBookingsPageContent() {
                 </button>
               ))}
             </div>
-          </>
-        ) : null}
 
-        <InfiniteScrollFooter
-          totalElements={totalElements}
-          loadedCount={bookings.length}
-          hasMore={hasMore}
-          isFetchingNextPage={isFetchingNextPage}
-          isLoading={isLoading}
-          onLoadMore={() => void fetchNextPage()}
-        />
+            <InfiniteScrollFooter
+              totalElements={totalElements}
+              loadedCount={bookings.length}
+              hasMore={hasMore}
+              isFetchingNextPage={isFetchingNextPage}
+              isLoading={isLoading}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          </InfiniteScrollViewport>
+        ) : null}
       </DataListPanel>
 
       <BookingDetailSheet

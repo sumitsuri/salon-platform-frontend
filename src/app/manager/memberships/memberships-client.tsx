@@ -22,6 +22,7 @@ import {
   Card,
   FilterableTable,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   MobileFilterPanel,
   StatCard,
   SideSheet,
@@ -326,28 +327,53 @@ export default function ManagerMembershipsPage() {
             </button>
           </div>
         )}
-        {!isError && !showInitialLoading && (
+        {!isError && !showInitialLoading && members.length === 0 && (
           <ResponsiveTableShell
             mobile={
-              <div className="divide-y divide-[var(--border)]">
-                {members.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
-                    <p className="font-semibold text-[var(--text-primary)]">{emptyMessage}</p>
-                    <p className="mt-1">{emptyDescription}</p>
-                    {showFilteredEmpty ? (
-                      <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="mt-3 text-sm font-semibold text-[var(--brand-text)]"
-                      >
-                        {tAdmin("clearFilters")}
-                      </button>
-                    ) : (
-                      <div className="mt-4 flex justify-center">{sellButton}</div>
-                    )}
-                  </div>
+              <div className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
+                <p className="font-semibold text-[var(--text-primary)]">{emptyMessage}</p>
+                <p className="mt-1">{emptyDescription}</p>
+                {showFilteredEmpty ? (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-3 text-sm font-semibold text-[var(--brand-text)]"
+                  >
+                    {tAdmin("clearFilters")}
+                  </button>
                 ) : (
-                  members.map((m) => (
+                  <div className="mt-4 flex justify-center">{sellButton}</div>
+                )}
+              </div>
+            }
+          >
+            <FilterableTable columns={columns}>
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
+                  <p className="font-semibold text-[var(--text-primary)]">{emptyMessage}</p>
+                  <p className="mt-1">{emptyDescription}</p>
+                  {showFilteredEmpty ? (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="mt-3 text-sm font-semibold text-[var(--brand-text)]"
+                    >
+                      {tAdmin("clearFilters")}
+                    </button>
+                  ) : (
+                    <div className="mt-4 flex justify-center">{sellButton}</div>
+                  )}
+                </td>
+              </tr>
+            </FilterableTable>
+          </ResponsiveTableShell>
+        )}
+        {!isError && !showInitialLoading && members.length > 0 && (
+          <InfiniteScrollViewport>
+            <ResponsiveTableShell
+              mobile={
+                <div className="divide-y divide-[var(--border)]">
+                  {members.map((m) => (
                     <div key={m.id} className="px-4 py-3">
                       <div className="flex gap-3">
                         <AvatarInitial name={m.customerName || "?"} />
@@ -371,69 +397,47 @@ export default function ManagerMembershipsPage() {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            }
-          >
-            <FilterableTable columns={columns}>
-              {members.map((m) => (
-                <tr key={m.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <AvatarInitial name={m.customerName || "?"} />
-                      <p className="font-semibold text-[var(--text-primary)] truncate">{m.customerName || "—"}</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)] text-sm whitespace-nowrap">
-                    {m.customerPhone || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-[var(--brand-light)] text-[var(--brand-text)]">
-                      {m.planName || "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-sm text-[var(--text-primary)]">{m.cardNumber}</td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)] text-sm whitespace-nowrap">
-                    {formatMembershipDate(m.endsOn, localeKit.locale, localeKit.timeZone)}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-[var(--text-primary)] whitespace-nowrap">
-                    {m.benefitPercent != null ? `${m.benefitPercent}%` : "—"}
-                  </td>
-                </tr>
-              ))}
-              {members.length === 0 && (
-                <tr>
-                  <td colSpan={columns.length} className="px-4 py-10 text-center text-sm text-[var(--text-secondary)]">
-                    <p className="font-semibold text-[var(--text-primary)]">{emptyMessage}</p>
-                    <p className="mt-1">{emptyDescription}</p>
-                    {showFilteredEmpty ? (
-                      <button
-                        type="button"
-                        onClick={clearFilters}
-                        className="mt-3 text-sm font-semibold text-[var(--brand-text)]"
-                      >
-                        {tAdmin("clearFilters")}
-                      </button>
-                    ) : (
-                      <div className="mt-4 flex justify-center">{sellButton}</div>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </FilterableTable>
-          </ResponsiveTableShell>
-        )}
-
-        {!isError && !showInitialLoading && (
-          <InfiniteScrollFooter
-            totalElements={totalElements}
-            loadedCount={members.length}
-            hasMore={hasMore}
-            isFetchingNextPage={isFetchingNextPage}
-            isLoading={isLoading}
-            onLoadMore={() => void fetchNextPage()}
-          />
+                  ))}
+                </div>
+              }
+            >
+              <FilterableTable columns={columns}>
+                {members.map((m) => (
+                  <tr key={m.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-muted)] transition">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <AvatarInitial name={m.customerName || "?"} />
+                        <p className="font-semibold text-[var(--text-primary)] truncate">{m.customerName || "—"}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-sm whitespace-nowrap">
+                      {m.customerPhone || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-[var(--brand-light)] text-[var(--brand-text)]">
+                        {m.planName || "—"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-sm text-[var(--text-primary)]">{m.cardNumber}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-sm whitespace-nowrap">
+                      {formatMembershipDate(m.endsOn, localeKit.locale, localeKit.timeZone)}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-[var(--text-primary)] whitespace-nowrap">
+                      {m.benefitPercent != null ? `${m.benefitPercent}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </FilterableTable>
+            </ResponsiveTableShell>
+            <InfiniteScrollFooter
+              totalElements={totalElements}
+              loadedCount={members.length}
+              hasMore={hasMore}
+              isFetchingNextPage={isFetchingNextPage}
+              isLoading={isLoading}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          </InfiniteScrollViewport>
         )}
       </Card>
 

@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import {
   PageHeader,
   Card,
@@ -23,6 +24,8 @@ import {
   AlertBanner,
   SideSheet,
   DetailField,
+  InfiniteScrollFooter,
+  InfiniteScrollViewport,
   inputClass,
   selectClass,
   btnPrimary,
@@ -78,6 +81,21 @@ export default function ManagerInventoryPage() {
     enabled: !!branchId,
   });
 
+  const {
+    visible: visibleStock,
+    totalElements: stockTotal,
+    loadedCount: stockLoaded,
+    hasMore: stockHasMore,
+    loadMore: loadMoreStock,
+  } = useClientInfiniteList(stock);
+  const {
+    visible: visibleMovements,
+    totalElements: movementsTotal,
+    loadedCount: movementsLoaded,
+    hasMore: movementsHasMore,
+    loadMore: loadMoreMovements,
+  } = useClientInfiniteList(movements);
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["inventory-stock"] });
     queryClient.invalidateQueries({ queryKey: ["inventory-movements"] });
@@ -115,29 +133,38 @@ export default function ManagerInventoryPage() {
         ) : stock.length === 0 ? (
           <EmptyState title={t("noStockTitle")} description={t("noStockDesc")} />
         ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {stock.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setStockDrawer({ mode: "view", item: s })}
-                className="w-full text-left hover:bg-[var(--surface-muted)]/60 transition"
-              >
-                <ListRow
-                  title={s.productName}
-                  subtitle={`${s.vendorName} · ${s.quantity} ${s.unit}`}
-                  trailing={
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${s.outOfStock ? "text-red-600" : s.lowStock ? "text-amber-600" : ""}`}>
-                        {s.outOfStock ? t("out") : s.lowStock ? t("low") : formatCurrency(s.stockValue)}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                    </div>
-                  }
-                />
-              </button>
-            ))}
-          </div>
+          <InfiniteScrollViewport>
+            <div className="divide-y divide-[var(--border)]">
+              {visibleStock.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setStockDrawer({ mode: "view", item: s })}
+                  className="w-full text-left hover:bg-[var(--surface-muted)]/60 transition"
+                >
+                  <ListRow
+                    title={s.productName}
+                    subtitle={`${s.vendorName} · ${s.quantity} ${s.unit}`}
+                    trailing={
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-bold ${s.outOfStock ? "text-red-600" : s.lowStock ? "text-amber-600" : ""}`}>
+                          {s.outOfStock ? t("out") : s.lowStock ? t("low") : formatCurrency(s.stockValue)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                      </div>
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+            <InfiniteScrollFooter
+              totalElements={stockTotal}
+              loadedCount={stockLoaded}
+              hasMore={stockHasMore}
+              isFetchingNextPage={false}
+              onLoadMore={loadMoreStock}
+            />
+          </InfiniteScrollViewport>
         )}
       </Card>
 
@@ -150,13 +177,22 @@ export default function ManagerInventoryPage() {
         ) : movements.length === 0 ? (
           <EmptyState title={t("noMovementsTitle")} description={t("noMovementsDesc")} />
         ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {movements.map((m) => (
-              <button key={m.id} type="button" onClick={() => setDrawer({ mode: "view", movement: m })} className="w-full text-left">
-                <MovementListRow movement={m} />
-              </button>
-            ))}
-          </div>
+          <InfiniteScrollViewport>
+            <div className="divide-y divide-[var(--border)]">
+              {visibleMovements.map((m) => (
+                <button key={m.id} type="button" onClick={() => setDrawer({ mode: "view", movement: m })} className="w-full text-left">
+                  <MovementListRow movement={m} />
+                </button>
+              ))}
+            </div>
+            <InfiniteScrollFooter
+              totalElements={movementsTotal}
+              loadedCount={movementsLoaded}
+              hasMore={movementsHasMore}
+              isFetchingNextPage={false}
+              onLoadMore={loadMoreMovements}
+            />
+          </InfiniteScrollViewport>
         )}
       </Card>
 

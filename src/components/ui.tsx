@@ -1,14 +1,15 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LucideIcon, ChevronLeft, ChevronRight, ChevronDown, X, Check } from "lucide-react";
+import { LucideIcon, ChevronLeft, ChevronRight, ChevronDown, ArrowLeft, X, Check } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useInfiniteScrollTrigger } from "@/lib/use-infinite-scroll-trigger";
 import { useScrollLock } from "@/lib/use-scroll-lock";
 import { repairOrphanedScrollLock } from "@/lib/scroll-lock";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -547,6 +548,8 @@ export function SegmentedControl<T extends string>({
 }
 
 const STATUS_KEYS = new Set([
+  "ACTIVE",
+  "ARCHIVED",
   "COMPLETED",
   "CONFIRMED",
   "IN_PROGRESS",
@@ -578,7 +581,7 @@ export function StatusBadge({
   const t = useTranslations("components.status");
   const label = STATUS_KEYS.has(status) ? t(status as "COMPLETED") : status.replace(/_/g, " ");
   const style =
-    status === "COMPLETED" || status === "APPROVED" || status === "READY_FOR_BILLING" || status === "SENT"
+    status === "COMPLETED" || status === "APPROVED" || status === "READY_FOR_BILLING" || status === "SENT" || status === "ACTIVE"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800"
       : status === "PRESENT" || status === "IN_PROGRESS" || status === "INFO" || status === "SENDING"
         ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800"
@@ -696,7 +699,7 @@ export function ListRow({
   onClick,
   meta,
 }: {
-  title: string;
+  title: React.ReactNode;
   subtitle?: string;
   trailing?: React.ReactNode;
   onClick?: () => void;
@@ -715,7 +718,7 @@ export function ListRow({
       <div className="flex items-start justify-between gap-x-2 gap-y-1 min-w-0">
         {meta}
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-sm text-[var(--text-primary)] leading-snug truncate">{title}</p>
+          <div className="font-medium text-sm text-[var(--text-primary)] leading-snug">{title}</div>
           {subtitle && (
             <p className="text-xs text-[var(--text-secondary)] mt-0.5 line-clamp-2 sm:line-clamp-1 sm:truncate">{subtitle}</p>
           )}
@@ -818,21 +821,28 @@ export function DataTable({
 export function SideSheet({
   open,
   onClose,
+  onBack,
+  backLabel,
   title,
   subtitle,
   children,
   footer,
   wide,
+  className,
 }: {
   open: boolean;
   onClose: () => void;
+  onBack?: () => void;
+  backLabel?: string;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
+  className?: string;
 }) {
   const t = useTranslations("components.ui");
+  const handleBack = onBack ?? onClose;
 
   useScrollLock(open);
 
@@ -853,7 +863,12 @@ export function SideSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex justify-end" role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className={cn("fixed inset-0 z-[120] flex justify-end", className)}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <button
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
@@ -864,14 +879,25 @@ export function SideSheet({
         className={cn(
           "relative w-full h-full bg-[var(--surface)] border-l border-[var(--border)] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200",
           wide ? "max-w-xl" : "max-w-md",
-          "max-sm:max-w-none"
+          "max-sm:max-w-none max-sm:border-l-0"
         )}
       >
-        <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-[var(--border)] shrink-0 pt-[max(1rem,env(safe-area-inset-top,0px))] max-sm:pt-4">
-          <div className="min-w-0">
-            <h2 className="font-bold text-[var(--text-primary)] truncate">{title}</h2>
+        <div className="flex items-center gap-2 px-3 py-3 border-b border-[var(--border)] shrink-0 pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:px-4 sm:py-4">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1.5 p-2.5 -ml-1 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] shrink-0 touch-manipulation min-h-[44px] min-w-[44px] justify-center sm:min-w-0 sm:px-2.5"
+            aria-label={backLabel ?? t("back")}
+          >
+            <ArrowLeft className="w-5 h-5 shrink-0" />
+            <span className="hidden sm:inline text-sm font-semibold truncate max-w-[8rem]">
+              {backLabel ?? t("back")}
+            </span>
+          </button>
+          <div className="min-w-0 flex-1 text-center sm:text-left px-1">
+            <h2 className="font-bold text-[var(--text-primary)] truncate text-sm sm:text-base">{title}</h2>
             {subtitle && (
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
+              <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
           <button
@@ -883,7 +909,9 @@ export function SideSheet({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 overscroll-contain touch-scroll-y" data-touch-scroll>{children}</div>
+        <div className="flex-1 overflow-y-auto p-4 overscroll-contain touch-scroll-y min-h-0" data-touch-scroll>
+          {children}
+        </div>
         {footer && (
           <div className="shrink-0 p-4 border-t border-[var(--border)] bg-[var(--surface-muted)]/50 space-y-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {footer}
@@ -904,6 +932,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   confirmPending = false,
+  error,
 }: {
   open: boolean;
   onClose: () => void;
@@ -913,6 +942,7 @@ export function ConfirmDialog({
   confirmLabel: string;
   cancelLabel?: string;
   confirmPending?: boolean;
+  error?: string;
 }) {
   const tCommon = useTranslations("common");
 
@@ -929,7 +959,7 @@ export function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  const dialog = (
     <div
       className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
       role="dialog"
@@ -948,6 +978,7 @@ export function ConfirmDialog({
             {title}
           </h2>
           <div className="text-sm text-[var(--text-secondary)] mt-2 space-y-2">{description}</div>
+          {error ? <p className="text-sm text-red-600 mt-2">{error}</p> : null}
         </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
           <button
@@ -970,6 +1001,9 @@ export function ConfirmDialog({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return dialog;
+  return createPortal(dialog, document.body);
 }
 
 export function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
@@ -1018,6 +1052,35 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 export const DEFAULT_PAGE_SIZE = 20;
+export const INFINITE_SCROLL_VISIBLE_ROWS = DEFAULT_PAGE_SIZE;
+
+const InfiniteScrollViewportContext = createContext<RefObject<HTMLDivElement | null> | null>(null);
+
+/** Caps table/list height to ~N rows; children scroll inside. Pair with InfiniteScrollFooter inside. */
+export function InfiniteScrollViewport({
+  children,
+  visibleRows = INFINITE_SCROLL_VISIBLE_ROWS,
+  className,
+}: {
+  children: React.ReactNode;
+  visibleRows?: number;
+  className?: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <InfiniteScrollViewportContext.Provider value={scrollRef}>
+      <div
+        className={cn("infinite-scroll-viewport min-h-0", className)}
+        style={{ "--infinite-scroll-visible-rows": visibleRows } as React.CSSProperties}
+      >
+        <div ref={scrollRef} className="infinite-scroll-viewport__scroll">
+          {children}
+        </div>
+      </div>
+    </InfiniteScrollViewportContext.Provider>
+  );
+}
 
 export function TablePagination({
   page,
@@ -1094,7 +1157,12 @@ export function InfiniteScrollFooter({
   onLoadMore: () => void;
 }) {
   const t = useTranslations("components.ui");
-  const sentinelRef = useInfiniteScrollTrigger(onLoadMore, !hasMore || isFetchingNextPage || !!isLoading);
+  const viewportRoot = useContext(InfiniteScrollViewportContext);
+  const sentinelRef = useInfiniteScrollTrigger(
+    onLoadMore,
+    !hasMore || isFetchingNextPage || !!isLoading,
+    viewportRoot ?? undefined
+  );
 
   return (
     <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-muted)]/50">

@@ -6,10 +6,13 @@ import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, type Campaign, type CampaignChannel, type CampaignStatus } from "@/lib/api";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import {
   Card,
   EmptyState,
   FilterableTable,
+  InfiniteScrollFooter,
+  InfiniteScrollViewport,
   MobileFilterPanel,
   PageLoader,
   StatusBadge,
@@ -61,6 +64,14 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
       return rows.some((c) => c.status === "SENDING") ? 3000 : false;
     },
   });
+
+  const {
+    visible: visibleCampaigns,
+    totalElements: campaignTotal,
+    loadedCount,
+    hasMore,
+    loadMore,
+  } = useClientInfiniteList(campaigns);
 
   function updateFilter(key: keyof Filters, value: string) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -152,9 +163,9 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
         ) : campaigns.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="md:hidden divide-y divide-[var(--border)]">
-              {campaigns.map((c) => (
+              {visibleCampaigns.map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -179,7 +190,7 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
 
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
-                {campaigns.map((c) => (
+                {visibleCampaigns.map((c) => (
                   <tr
                     key={c.id}
                     className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
@@ -207,7 +218,14 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
                 ))}
               </FilterableTable>
             </div>
-          </>
+            <InfiniteScrollFooter
+              totalElements={campaignTotal}
+              loadedCount={loadedCount}
+              hasMore={hasMore}
+              isFetchingNextPage={false}
+              onLoadMore={loadMore}
+            />
+          </InfiniteScrollViewport>
         )}
       </Card>
 

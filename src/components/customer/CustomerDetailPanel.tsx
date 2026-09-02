@@ -28,6 +28,7 @@ import {
   inputClass,
   StatusBadge,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   AvatarInitial,
   AlertBanner,
   PageLoader,
@@ -360,7 +361,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
         ) : bookings.length === 0 ? (
           <EmptyState title={t("noVisitsTitle")} description={t("noVisitsDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="hidden md:block responsive-table-wrap">
               <table className="w-full text-sm">
                 <thead>
@@ -497,7 +498,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
               isLoading={bookingsLoading}
               onLoadMore={() => void fetchNextPage()}
             />
-          </>
+          </InfiniteScrollViewport>
         )}
       </Card>
 

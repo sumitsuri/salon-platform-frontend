@@ -17,6 +17,7 @@ import {
   FilterableTable,
   MobileFilterPanel,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   PageLoader,
   SideSheet,
   DetailField,
@@ -205,7 +206,7 @@ function AdminLeadsPageContent() {
         ) : leads.length === 0 ? (
           <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
         ) : (
-          <>
+          <InfiniteScrollViewport>
             <div className="md:hidden divide-y divide-[var(--border)]">
               {leads.map((lead) => (
                 <ListRow
@@ -247,17 +248,17 @@ function AdminLeadsPageContent() {
                 ))}
               </FilterableTable>
             </div>
-          </>
-        )}
 
-        <InfiniteScrollFooter
-          totalElements={totalElements}
-          loadedCount={leads.length}
-          hasMore={hasMore}
-          isFetchingNextPage={isFetchingNextPage}
-          isLoading={isLoading}
-          onLoadMore={() => void fetchNextPage()}
-        />
+            <InfiniteScrollFooter
+              totalElements={totalElements}
+              loadedCount={leads.length}
+              hasMore={hasMore}
+              isFetchingNextPage={isFetchingNextPage}
+              isLoading={isLoading}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          </InfiniteScrollViewport>
+        )}
       </Card>
 
       <SideSheet

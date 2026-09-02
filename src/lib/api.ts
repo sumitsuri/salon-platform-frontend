@@ -551,6 +551,8 @@ export const api = {
     return request<Campaign[]>(`/api/v1/campaigns${q ? `?${q}` : ""}`);
   },
 
+  getCampaign: (id: string) => request<Campaign>(`/api/v1/campaigns/${id}`),
+
   getCampaignDeliveries: (id: string) =>
     request<CampaignDelivery[]>(`/api/v1/campaigns/${id}/deliveries`),
 
@@ -562,6 +564,24 @@ export const api = {
 
   sendCampaign: (id: string) =>
     request<Campaign>(`/api/v1/campaigns/${id}/send`, { method: "POST" }),
+
+  deleteCampaign: (id: string) =>
+    request<void>(`/api/v1/campaigns/${id}`, { method: "DELETE" }),
+
+  getCampaignTemplateLibrary: () =>
+    request<CampaignTemplateLibrary>("/api/v1/campaigns/templates"),
+
+  getCampaignTemplate: (templateId: string) =>
+    request<CampaignTemplate>(`/api/v1/campaigns/templates/${templateId}`),
+
+  previewSavedCampaign: (id: string) =>
+    request<CampaignPreview>(`/api/v1/campaigns/${id}/preview`),
+
+  getCampaignRuns: (id: string) =>
+    request<CampaignRun[]>(`/api/v1/campaigns/${id}/runs`),
+
+  getCampaignRunDeliveries: (campaignId: string, runId: string) =>
+    request<CampaignDelivery[]>(`/api/v1/campaigns/${campaignId}/runs/${runId}/deliveries`),
 
   getCoupons: () => request<Coupon[]>("/api/v1/promotions/coupons"),
   createCoupon: (data: CreateCouponRequest) =>
@@ -1546,12 +1566,66 @@ export interface Lead {
 }
 
 export type CampaignChannel = "WHATSAPP" | "SMS";
-export type CampaignStatus = "DRAFT" | "SENDING" | "COMPLETED" | "FAILED";
+export type CampaignStatus = "ACTIVE" | "DRAFT" | "SENDING" | "COMPLETED" | "FAILED" | "ARCHIVED";
+export type CampaignRunStatus = "SENDING" | "COMPLETED" | "FAILED";
+export type CampaignTemplateCategoryCode =
+  | "WINBACK"
+  | "MEMBERSHIP"
+  | "PREMIUM_UPSELL"
+  | "CROSS_SELL"
+  | "REVIEWS"
+  | "VIP_BEHAVIOURAL";
+export type CampaignMembershipFilter = "NON_MEMBER" | "ACTIVE" | "EXPIRED" | "EXPIRING_SOON";
+export type CampaignBookingSource = "WALK_IN" | "ONLINE";
+
+export interface CampaignTemplateFilters {
+  minVisitCount?: number;
+  maxVisitCount?: number;
+  minLifetimeSpend?: number;
+  maxLifetimeSpend?: number;
+  lastVisitFrom?: string;
+  lastVisitTo?: string;
+  branchId?: string;
+  membershipFilter?: CampaignMembershipFilter;
+  membershipExpiringWithinDays?: number;
+  hasServiceIds?: string[];
+  excludeServiceIds?: string[];
+  hasServiceCategoryIds?: string[];
+  excludeServiceCategoryIds?: string[];
+  maxOverallRating?: number;
+  minOverallRating?: number;
+  hasSubmittedReview?: boolean;
+  googleReviewNotSubmitted?: boolean;
+  bookingSource?: CampaignBookingSource;
+}
+
+export interface CampaignTemplate {
+  id: string;
+  category: CampaignTemplateCategoryCode;
+  categoryLabel: string;
+  name: string;
+  description: string;
+  goal: string;
+  suggestedMessage: string;
+  filters: CampaignTemplateFilters;
+}
+
+export interface CampaignTemplateCategory {
+  code: CampaignTemplateCategoryCode;
+  label: string;
+  description: string;
+  templates: CampaignTemplate[];
+}
+
+export interface CampaignTemplateLibrary {
+  categories: CampaignTemplateCategory[];
+}
 
 export interface CreateCampaignRequest {
   name: string;
   channel: CampaignChannel;
   messageText: string;
+  templateId?: string;
   filterName?: string;
   filterNames?: string[];
   filterSociety?: string;
@@ -1565,6 +1639,18 @@ export interface CreateCampaignRequest {
   filterLastVisitTo?: string;
   filterWhatsappOptInOnly?: boolean;
   filterSmsOptInOnly?: boolean;
+  filterBranchId?: string;
+  filterMembershipFilter?: CampaignMembershipFilter;
+  filterMembershipExpiringWithinDays?: number;
+  filterHasServiceIds?: string[];
+  filterExcludeServiceIds?: string[];
+  filterHasServiceCategoryIds?: string[];
+  filterExcludeServiceCategoryIds?: string[];
+  filterMaxOverallRating?: number;
+  filterMinOverallRating?: number;
+  filterHasSubmittedReview?: boolean;
+  filterGoogleReviewNotSubmitted?: boolean;
+  filterBookingSource?: CampaignBookingSource;
 }
 
 export interface CampaignPreview {
@@ -1579,6 +1665,7 @@ export interface Campaign {
   channel: CampaignChannel;
   status: CampaignStatus;
   messageText: string;
+  templateId?: string;
   filterName?: string;
   filterNames?: string[];
   filterSociety?: string;
@@ -1590,12 +1677,39 @@ export interface Campaign {
   filterMaxLifetimeSpend?: number;
   filterLastVisitFrom?: string;
   filterLastVisitTo?: string;
+  filterBranchId?: string;
+  filterMembershipFilter?: CampaignMembershipFilter;
+  filterMembershipExpiringWithinDays?: number;
+  filterHasServiceIds?: string[];
+  filterExcludeServiceIds?: string[];
+  filterHasServiceCategoryIds?: string[];
+  filterExcludeServiceCategoryIds?: string[];
+  filterMaxOverallRating?: number;
+  filterMinOverallRating?: number;
+  filterHasSubmittedReview?: boolean;
+  filterGoogleReviewNotSubmitted?: boolean;
+  filterBookingSource?: CampaignBookingSource;
   recipientCount: number;
   sentCount: number;
   failedCount: number;
   skippedCount?: number;
   sentAt?: string;
   createdAt: string;
+  runCount?: number;
+  lastRunAt?: string;
+  sendInProgress?: boolean;
+}
+
+export interface CampaignRun {
+  id: string;
+  campaignId: string;
+  status: CampaignRunStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  skippedCount?: number;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export type MessageDeliveryStatus = "PENDING" | "SENT" | "SKIPPED" | "FAILED";

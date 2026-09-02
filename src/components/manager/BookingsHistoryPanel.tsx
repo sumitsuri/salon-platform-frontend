@@ -27,6 +27,7 @@ import {
   StatCard,
   FilterableTable,
   InfiniteScrollFooter,
+  InfiniteScrollViewport,
   AvatarInitial,
   AlertBanner,
   DEFAULT_PAGE_SIZE,
@@ -333,7 +334,7 @@ export function BookingsHistoryPanel({
           />
         ) : null}
         {!isError && bookings.length > 0 ? (
-          <>
+          <InfiniteScrollViewport>
             <div className="hidden md:block responsive-table-wrap">
               <FilterableTable columns={columns}>
                 {bookings.map((b) => (
@@ -439,17 +440,17 @@ export function BookingsHistoryPanel({
                 </div>
               ))}
             </div>
-          </>
-        ) : null}
 
-        <InfiniteScrollFooter
-          totalElements={totalElements}
-          loadedCount={bookings.length}
-          hasMore={hasMore}
-          isFetchingNextPage={isFetchingNextPage}
-          isLoading={isLoading}
-          onLoadMore={() => void fetchNextPage()}
-        />
+            <InfiniteScrollFooter
+              totalElements={totalElements}
+              loadedCount={bookings.length}
+              hasMore={hasMore}
+              isFetchingNextPage={isFetchingNextPage}
+              isLoading={isLoading}
+              onLoadMore={() => void fetchNextPage()}
+            />
+          </InfiniteScrollViewport>
+        ) : null}
       </Card>
 
       <BookingDetailSheet

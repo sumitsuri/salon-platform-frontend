@@ -4,10 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api, type Campaign } from "@/lib/api";
 import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import {
   DetailField,
   EmptyState,
   FilterableTable,
+  InfiniteScrollFooter,
+  InfiniteScrollViewport,
   PageLoader,
   SideSheet,
   StatusBadge,
@@ -36,6 +39,13 @@ export function CampaignDeliverySheet({
     queryFn: () => api.getCampaignDeliveries(campaign!.id),
     enabled: !!campaign?.id,
   });
+  const {
+    visible: visibleDeliveries,
+    totalElements: deliveryTotal,
+    loadedCount,
+    hasMore,
+    loadMore,
+  } = useClientInfiniteList(deliveries);
 
   const columns = [
     { label: tCommon("name") },
@@ -86,9 +96,9 @@ export function CampaignDeliverySheet({
                 }
               />
             ) : (
-              <>
+              <InfiniteScrollViewport>
                 <div className="md:hidden divide-y divide-[var(--border)] rounded-xl border border-[var(--border)] overflow-hidden">
-                  {deliveries.map((d) => (
+                  {visibleDeliveries.map((d) => (
                     <div key={d.id} className="px-4 py-3 space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold text-sm">{d.customerName || "—"}</p>
@@ -103,7 +113,7 @@ export function CampaignDeliverySheet({
                 </div>
                 <div className="hidden md:block responsive-table-wrap rounded-xl border border-[var(--border)]">
                   <FilterableTable columns={columns}>
-                    {deliveries.map((d) => (
+                    {visibleDeliveries.map((d) => (
                       <tr key={d.id} className="border-t border-[var(--border)]">
                         <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">
                           {d.customerName || "—"}
@@ -122,7 +132,14 @@ export function CampaignDeliverySheet({
                     ))}
                   </FilterableTable>
                 </div>
-              </>
+                <InfiniteScrollFooter
+                  totalElements={deliveryTotal}
+                  loadedCount={loadedCount}
+                  hasMore={hasMore}
+                  isFetchingNextPage={false}
+                  onLoadMore={loadMore}
+                />
+              </InfiniteScrollViewport>
             )}
           </div>
         </div>

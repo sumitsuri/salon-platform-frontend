@@ -20,6 +20,7 @@ import {
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { MonthYearPicker, currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
 import { InventoryTrends } from "@/components/InventoryTrends";
@@ -33,6 +34,8 @@ import {
   SideSheet,
   DetailField,
   SegmentedControl,
+  InfiniteScrollFooter,
+  InfiniteScrollViewport,
   inputClass,
   selectClass,
   btnPrimary,
@@ -161,6 +164,28 @@ export default function AdminInventoryPage() {
     const set = new Set(effectiveBranchFilter);
     return movements.filter((m) => set.has(m.branchId));
   }, [movements, effectiveBranchFilter]);
+
+  const {
+    visible: visibleProducts,
+    totalElements: productsTotal,
+    loadedCount: productsLoaded,
+    hasMore: productsHasMore,
+    loadMore: loadMoreProducts,
+  } = useClientInfiniteList(products);
+  const {
+    visible: visibleVendors,
+    totalElements: vendorsTotal,
+    loadedCount: vendorsLoaded,
+    hasMore: vendorsHasMore,
+    loadMore: loadMoreVendors,
+  } = useClientInfiniteList(vendors);
+  const {
+    visible: visibleMovements,
+    totalElements: movementsTotal,
+    loadedCount: movementsLoaded,
+    hasMore: movementsHasMore,
+    loadMore: loadMoreMovements,
+  } = useClientInfiniteList(filteredMovements);
 
   const stockByBranch = useMemo(() => {
     const map = new Map<string, StockItem[]>();
@@ -345,22 +370,31 @@ export default function AdminInventoryPage() {
             <EmptyState title={t("noProductsTitle")} description={t("noProductsDesc")} />
           ) : (
             <Card padding={false}>
-              <div className="divide-y divide-[var(--border)]">
-                {products.map((p) => (
-                  <button key={p.id} type="button" onClick={() => setProductDrawer({ mode: "view", product: p })} className="w-full text-left">
-                    <ListRow
-                      title={p.name}
-                      subtitle={`${t(`categories.${p.category}`)} · ${p.vendorName} · ${p.sku || t("noSku")}`}
-                      trailing={
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{formatCurrency(p.unitCost)}</span>
-                          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                        </div>
-                      }
-                    />
-                  </button>
-                ))}
-              </div>
+              <InfiniteScrollViewport>
+                <div className="divide-y divide-[var(--border)]">
+                  {visibleProducts.map((p) => (
+                    <button key={p.id} type="button" onClick={() => setProductDrawer({ mode: "view", product: p })} className="w-full text-left">
+                      <ListRow
+                        title={p.name}
+                        subtitle={`${t(`categories.${p.category}`)} · ${p.vendorName} · ${p.sku || t("noSku")}`}
+                        trailing={
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold">{formatCurrency(p.unitCost)}</span>
+                            <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                          </div>
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+                <InfiniteScrollFooter
+                  totalElements={productsTotal}
+                  loadedCount={productsLoaded}
+                  hasMore={productsHasMore}
+                  isFetchingNextPage={false}
+                  onLoadMore={loadMoreProducts}
+                />
+              </InfiniteScrollViewport>
             </Card>
           )}
         </div>
@@ -375,17 +409,26 @@ export default function AdminInventoryPage() {
             <EmptyState title={t("noVendorsTitle")} description={t("noVendorsDesc")} />
           ) : (
             <Card padding={false}>
-              <div className="divide-y divide-[var(--border)]">
-                {vendors.map((v) => (
-                  <button key={v.id} type="button" onClick={() => setVendorDrawer({ mode: "view", vendor: v })} className="w-full text-left">
-                    <ListRow
-                      title={v.name}
-                      subtitle={[v.contactPhone, v.contactEmail].filter(Boolean).join(" · ") || tAdmin("noContact")}
-                      trailing={<ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />}
-                    />
-                  </button>
-                ))}
-              </div>
+              <InfiniteScrollViewport>
+                <div className="divide-y divide-[var(--border)]">
+                  {visibleVendors.map((v) => (
+                    <button key={v.id} type="button" onClick={() => setVendorDrawer({ mode: "view", vendor: v })} className="w-full text-left">
+                      <ListRow
+                        title={v.name}
+                        subtitle={[v.contactPhone, v.contactEmail].filter(Boolean).join(" · ") || tAdmin("noContact")}
+                        trailing={<ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <InfiniteScrollFooter
+                  totalElements={vendorsTotal}
+                  loadedCount={vendorsLoaded}
+                  hasMore={vendorsHasMore}
+                  isFetchingNextPage={false}
+                  onLoadMore={loadMoreVendors}
+                />
+              </InfiniteScrollViewport>
             </Card>
           )}
         </div>
@@ -458,22 +501,31 @@ export default function AdminInventoryPage() {
             <EmptyState title={t("noMovementsTitle")} description={t("noMovementsDesc")} />
           ) : (
             <Card padding={false}>
-              <div className="divide-y divide-[var(--border)]">
-                {filteredMovements.map((m) => (
-                  <button key={m.id} type="button" onClick={() => setMovementDrawer({ mode: "view", movement: m })} className="w-full text-left">
-                    <ListRow
-                      title={`${t(`movements.${m.movementType}`)} · ${m.productName}`}
-                      subtitle={`${m.branchName} · ${m.vendorName} · ${m.movementDate}`}
-                      trailing={
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{formatCurrency(m.totalCost)}</span>
-                          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
-                        </div>
-                      }
-                    />
-                  </button>
-                ))}
-              </div>
+              <InfiniteScrollViewport>
+                <div className="divide-y divide-[var(--border)]">
+                  {visibleMovements.map((m) => (
+                    <button key={m.id} type="button" onClick={() => setMovementDrawer({ mode: "view", movement: m })} className="w-full text-left">
+                      <ListRow
+                        title={`${t(`movements.${m.movementType}`)} · ${m.productName}`}
+                        subtitle={`${m.branchName} · ${m.vendorName} · ${m.movementDate}`}
+                        trailing={
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold">{formatCurrency(m.totalCost)}</span>
+                            <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                          </div>
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+                <InfiniteScrollFooter
+                  totalElements={movementsTotal}
+                  loadedCount={movementsLoaded}
+                  hasMore={movementsHasMore}
+                  isFetchingNextPage={false}
+                  onLoadMore={loadMoreMovements}
+                />
+              </InfiniteScrollViewport>
             </Card>
           )}
         </div>
