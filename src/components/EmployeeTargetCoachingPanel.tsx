@@ -1,14 +1,16 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Lightbulb, Target, TrendingUp, Zap } from "lucide-react";
 import { StaffTargetPerformance, StaffTargetPerformanceItem } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { Card, EmptyState } from "@/components/ui";
 
 interface EmployeeTargetCoachingPanelProps {
   performance?: StaffTargetPerformance;
   loading?: boolean;
+  variant?: "default" | "dashboard";
 }
 
 function buildCoachingTips(
@@ -62,9 +64,11 @@ function buildCoachingTips(
 function CoachingCard({
   item,
   t,
+  compact,
 }: {
   item: StaffTargetPerformanceItem;
   t: ReturnType<typeof useTranslations<"components.employeeTargetCoaching">>;
+  compact?: boolean;
 }) {
   const tips = buildCoachingTips(item, t);
   const status = item.meetingTarget ? "met" : item.onTrack ? "track" : "behind";
@@ -78,8 +82,13 @@ function CoachingCard({
     status === "met" ? t("targetMet") : status === "track" ? t("onTrack") : t("needsSupport");
 
   return (
-    <div className="rounded-xl border border-[var(--border)] p-4 bg-[var(--surface-muted)]/30">
-      <div className="flex items-start justify-between gap-3 mb-3">
+    <div
+      className={cn(
+        "rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/30",
+        compact ? "p-3" : "p-4"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0">
           <p className="font-semibold text-sm text-[var(--text-primary)]">{item.staffName}</p>
           <p className="text-xs text-[var(--text-secondary)]">
@@ -95,10 +104,10 @@ function CoachingCard({
           {statusLabel}
         </span>
       </div>
-      <ul className="space-y-2">
+      <ul className="space-y-1.5">
         {tips.map((tip, i) => (
-          <li key={i} className="flex gap-2 text-sm text-[var(--text-secondary)] leading-relaxed">
-            <Zap className="w-4 h-4 text-[var(--brand-text)] shrink-0 mt-0.5" />
+          <li key={i} className="flex gap-2 text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+            <Zap className="w-3.5 h-3.5 text-[var(--brand-text)] shrink-0 mt-0.5" />
             <span>{tip}</span>
           </li>
         ))}
@@ -107,10 +116,28 @@ function CoachingCard({
   );
 }
 
-export function EmployeeTargetCoachingPanel({ performance, loading }: EmployeeTargetCoachingPanelProps) {
+export function EmployeeTargetCoachingPanel({
+  performance,
+  loading,
+  variant = "default",
+}: EmployeeTargetCoachingPanelProps) {
   const t = useTranslations("components.employeeTargetCoaching");
+  const isDashboard = variant === "dashboard";
 
   if (loading) {
+    if (isDashboard) {
+      return (
+        <CompactStatsStrip
+          loading
+          testId="coaching-summary-strip"
+          items={[
+            { id: "behind", label: t("behindPace"), value: "…" },
+            { id: "track", label: t("onTrack"), value: "…" },
+            { id: "met", label: t("targetMet"), value: "…" },
+          ]}
+        />
+      );
+    }
     return (
       <Card>
         <p className="text-sm text-[var(--text-tertiary)]">{t("loading")}</p>
@@ -125,13 +152,114 @@ export function EmployeeTargetCoachingPanel({ performance, loading }: EmployeeTa
 
   if (staff.length === 0) {
     return (
-      <Card>
-        <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
-      </Card>
+      <section className={cn(isDashboard && "dashboard-widget-card min-w-0 max-w-full overflow-hidden")}>
+        {isDashboard ? (
+          <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+            <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+              <Lightbulb className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="dashboard-overview-section-title">{t("title")}</h2>
+            </div>
+          </div>
+        ) : null}
+        <div className={isDashboard ? "p-4" : undefined}>
+          <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
+        </div>
+      </section>
     );
   }
 
   const priority = [...needsHelp, ...onTrack, ...met];
+
+  const summaryStrip = (
+    <CompactStatsStrip
+      testId="coaching-summary-strip"
+      items={[
+        {
+          id: "behind",
+          label: t("behindPace"),
+          value: String(needsHelp.length),
+          icon: Target,
+          accent: "amber",
+        },
+        {
+          id: "track",
+          label: t("onTrack"),
+          value: String(onTrack.length),
+          icon: TrendingUp,
+          accent: "sky",
+        },
+        {
+          id: "met",
+          label: t("targetMet"),
+          value: String(met.length),
+          icon: Target,
+          accent: "emerald",
+        },
+      ]}
+    />
+  );
+
+  const legacySummary = (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+        <div className="flex items-center gap-2 text-amber-700 mb-1">
+          <Target className="w-4 h-4" />
+          <span className="text-xs font-semibold uppercase tracking-wide">{t("behindPace")}</span>
+        </div>
+        <p className="text-2xl font-bold text-amber-800">{needsHelp.length}</p>
+      </div>
+      <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3">
+        <div className="flex items-center gap-2 text-sky-700 mb-1">
+          <TrendingUp className="w-4 h-4" />
+          <span className="text-xs font-semibold uppercase tracking-wide">{t("onTrack")}</span>
+        </div>
+        <p className="text-2xl font-bold text-sky-800">{onTrack.length}</p>
+      </div>
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 col-span-2 sm:col-span-1">
+        <div className="flex items-center gap-2 text-emerald-700 mb-1">
+          <Target className="w-4 h-4" />
+          <span className="text-xs font-semibold uppercase tracking-wide">{t("targetMet")}</span>
+        </div>
+        <p className="text-2xl font-bold text-emerald-800">{met.length}</p>
+      </div>
+    </div>
+  );
+
+  const coachingCards = (
+    <div className={cn("grid gap-3", isDashboard ? "md:grid-cols-2 p-3 md:p-4 pt-0" : "md:grid-cols-2 gap-4")}>
+      {priority.slice(0, 6).map((item) => (
+        <CoachingCard key={item.staffId} item={item} t={t} compact={isDashboard} />
+      ))}
+    </div>
+  );
+
+  if (isDashboard) {
+    return (
+      <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+        <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+          <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+            <Lightbulb className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="dashboard-overview-section-title">{t("title")}</h2>
+            <p className="dashboard-overview-section-hint">
+              {t("subtitle")}
+              {performance?.periodLabel ? ` · ${performance.periodLabel}` : ""}
+            </p>
+          </div>
+        </div>
+        <div className="px-3 pb-3 md:px-4 md:pb-4 space-y-3">
+          {summaryStrip}
+          {coachingCards}
+          {priority.length > 6 ? (
+            <p className="text-xs text-[var(--text-tertiary)] text-center">{t("showingTop6")}</p>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-4">
@@ -145,37 +273,8 @@ export function EmployeeTargetCoachingPanel({ performance, loading }: EmployeeTa
           </p>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
-          <div className="flex items-center gap-2 text-amber-700 mb-1">
-            <Target className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">{t("behindPace")}</span>
-          </div>
-          <p className="text-2xl font-bold text-amber-800">{needsHelp.length}</p>
-        </div>
-        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-3">
-          <div className="flex items-center gap-2 text-sky-700 mb-1">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">{t("onTrack")}</span>
-          </div>
-          <p className="text-2xl font-bold text-sky-800">{onTrack.length}</p>
-        </div>
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 text-emerald-700 mb-1">
-            <Target className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">{t("targetMet")}</span>
-          </div>
-          <p className="text-2xl font-bold text-emerald-800">{met.length}</p>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        {priority.slice(0, 6).map((item) => (
-          <CoachingCard key={item.staffId} item={item} t={t} />
-        ))}
-      </div>
-
+      {legacySummary}
+      {coachingCards}
       {priority.length > 6 && (
         <p className="text-xs text-[var(--text-tertiary)] text-center">{t("showingTop6")}</p>
       )}

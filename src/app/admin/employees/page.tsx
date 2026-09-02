@@ -26,10 +26,13 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { EmployeeTargetTrends } from "@/components/EmployeeTargetTrends";
 import { EmployeeTargetCoachingPanel } from "@/components/EmployeeTargetCoachingPanel";
 import { AttendanceDashboardSection } from "@/components/AttendanceDashboardSection";
+import { ScopeFilterBar } from "@/components/ScopeFilterBar";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
+import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import {
   PageHeader,
-  Card,
-  StatCard,
   ListRow,
   EmptyState,
   AlertBanner,
@@ -41,6 +44,7 @@ import {
   selectClass,
   btnPrimary,
   btnSecondary,
+  btnPrimarySm,
 } from "@/components/ui";
 
 const STAFF_ROLES: StaffRole[] = ["STYLIST", "BRANCH_MANAGER", "SALON_MANAGER"];
@@ -50,13 +54,6 @@ type SectionTab = "targets" | "attendance";
 type DrawerState =
   | { mode: "create" }
   | { mode: "view" | "edit"; employee: EmployeeDetail };
-
-function monthRange() {
-  const now = new Date();
-  const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  return { start, end };
-}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -79,56 +76,62 @@ export default function AdminEmployeesPage() {
   const t = useTranslations("admin.employees");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
+  const tPeriods = useTranslations("components.dateRange.periods");
   const queryClient = useQueryClient();
-  const [branchFilter, setBranchFilter] = useState("");
+  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
   const [sectionTab, setSectionTab] = useState<SectionTab>("attendance");
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");
 
-  const range = monthRange();
-  const [attendanceStart, setAttendanceStart] = useState(range.start);
-  const [attendanceEnd, setAttendanceEnd] = useState(range.end);
-  const attendanceRange = { start: attendanceStart, end: attendanceEnd };
+  const {
+    branches,
+    selectedBranches,
+    setSelectedBranches,
+    branchIdsFilter,
+    branchesSelected,
+  } = useAdminBranchSelection();
 
-  const { data: branches = [] } = useQuery({
-    queryKey: ["branches"],
-    queryFn: () => api.getBranches(),
+  const { data: allEmployees = [], isLoading } = useQuery({
+    queryKey: ["employees", branchIdsFilter],
+    queryFn: () => api.getAllStaff(),
   });
 
-  const { data: employees = [], isLoading } = useQuery({
-    queryKey: ["employees", branchFilter],
-    queryFn: () => api.getAllStaff(branchFilter || undefined),
-  });
+  const employees = useMemo(() => {
+    if (!branchIdsFilter) return allEmployees;
+    return allEmployees.filter((employee) => branchIdsFilter.includes(employee.branchId));
+  }, [allEmployees, branchIdsFilter]);
 
   const { data: performance, isLoading: perfLoading } = useQuery({
-    queryKey: ["staff-targets", branchFilter, range.start, range.end],
+    queryKey: ["staff-targets", branchIdsFilter, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getStaffTargetPerformance({
-        startDate: range.start,
-        endDate: range.end,
-        branchIds: branchFilter ? [branchFilter] : undefined,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        branchIds: branchIdsFilter,
       }),
+    enabled: branchesSelected,
   });
 
   const { data: targetTrends, isLoading: trendsLoading } = useQuery({
-    queryKey: ["staff-target-trends", branchFilter, range.start, range.end],
+    queryKey: ["staff-target-trends", branchIdsFilter, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getStaffTargetTrends({
-        startDate: range.start,
-        endDate: range.end,
-        branchIds: branchFilter ? [branchFilter] : undefined,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        branchIds: branchIdsFilter,
       }),
+    enabled: branchesSelected,
   });
 
   const { data: attendanceDashboard, isLoading: attendanceLoading } = useQuery({
-    queryKey: ["attendance-dashboard", branchFilter, attendanceRange.start, attendanceRange.end],
+    queryKey: ["attendance-dashboard", branchIdsFilter, dateRange.from, dateRange.to],
     queryFn: () =>
       api.getAttendanceDashboard({
-        startDate: attendanceRange.start,
-        endDate: attendanceRange.end,
-        branchIds: branchFilter ? [branchFilter] : undefined,
+        startDate: dateRange.from,
+        endDate: dateRange.to,
+        branchIds: branchIdsFilter,
       }),
-    enabled: sectionTab === "attendance",
+    enabled: branchesSelected && sectionTab === "attendance",
   });
 
   const perfByStaff = useMemo(() => {
@@ -178,31 +181,35 @@ export default function AdminEmployeesPage() {
   const formLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div>
+    <div className="dashboard-page-flow pb-8">
       <PageHeader
         title={t("title")}
-        subtitle={t("subtitle")}
+        subtitle={`${tPeriods(dateRange.preset)} · ${t("subtitle")}`}
         action={
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className={`${selectClass} py-2.5 w-full sm:w-auto min-w-0 sm:min-w-[9rem]`}
-            >
-              <option value="">{t("allBranches")}</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-            <button onClick={() => setDrawer({ mode: "create" })} className={`${btnPrimary} py-2.5 px-4 shrink-0`}>
-              <Plus className="w-4 h-4" />
-              {t("addEmployee")}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setDrawer({ mode: "create" })}
+            className={btnPrimarySm}
+            aria-label={t("addEmployee")}
+            data-testid="employees-add-button"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("addEmployee")}</span>
+          </button>
         }
       />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+
+      <ScopeFilterBar
+        layout="card"
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
+        dateTestId="admin-employees-date-range"
+        branches={branches}
+        selectedBranches={selectedBranches}
+        onBranchesChange={setSelectedBranches}
+      />
 
       <SegmentedControl
         options={[
@@ -213,156 +220,195 @@ export default function AdminEmployeesPage() {
         onChange={setSectionTab}
       />
 
-      {sectionTab === "targets" ? (
-        <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <StatCard label={t("meetingTarget")} value={perfLoading ? "…" : (performance?.meetingTargetCount ?? 0)} icon={CheckCircle2} accent="emerald" />
-        <StatCard label={t("belowTarget")} value={perfLoading ? "…" : (performance?.belowTargetCount ?? 0)} icon={AlertTriangle} accent="amber" />
-        <StatCard label={t("activeStaff")} value={employees.filter((e) => e.active).length} icon={Users} accent="brand" className="col-span-2 sm:col-span-1" />
-      </div>
+      {!branchesSelected ? (
+        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} />
+      ) : (
+        <DashboardOverviewShell>
+          <div className="dashboard-overview-modules dashboard-overview-modules--nested">
+            {sectionTab === "attendance" ? (
+              <AttendanceDashboardSection
+                variant="dashboard"
+                data={attendanceDashboard}
+                loading={attendanceLoading}
+                startDate={dateRange.from}
+                endDate={dateRange.to}
+                branchIds={branchIdsFilter ?? selectedBranches}
+                showPageHeader={false}
+              />
+            ) : (
+              <>
+                <div className="dashboard-kpi-strip min-w-0 max-w-full">
+                  <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                    <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                      <Target className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="dashboard-overview-section-title">{t("summaryLabel")}</h2>
+                      {performance?.periodLabel ? (
+                        <p className="dashboard-overview-section-hint">{performance.periodLabel}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <CompactStatsStrip
+                    loading={perfLoading}
+                    testId="employees-targets-summary-strip"
+                    items={[
+                      {
+                        id: "met",
+                        label: t("meetingTarget"),
+                        value: perfLoading ? "…" : String(performance?.meetingTargetCount ?? 0),
+                        icon: CheckCircle2,
+                        accent: "emerald",
+                        featured: true,
+                      },
+                      {
+                        id: "below",
+                        label: t("belowTarget"),
+                        value: perfLoading ? "…" : String(performance?.belowTargetCount ?? 0),
+                        icon: AlertTriangle,
+                        accent: "amber",
+                      },
+                      {
+                        id: "active",
+                        label: t("activeStaff"),
+                        value: String(employees.filter((e) => e.active).length),
+                        icon: Users,
+                        accent: "violet",
+                      },
+                    ]}
+                  />
+                </div>
 
-      <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)] flex items-center gap-2">
-            <Target className="w-4 h-4 text-[var(--brand-text)]" />
-            {t("monthlyPerformance")}
-            {performance?.periodLabel && (
-              <span className="text-xs font-normal text-[var(--text-tertiary)]">· {performance.periodLabel}</span>
-            )}
-          </h2>
-        </div>
-        {perfLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingPerformance")}</p>
-        ) : !performance?.staff.length ? (
-          <EmptyState title={t("noTargetDataTitle")} description={t("noTargetDataDesc")} icon={Target} />
-        ) : (
-          <div className="divide-y divide-[var(--border)]">
-            {Array.from(
-              performance.staff.reduce((map, item) => {
-                if (!map.has(item.branchName)) map.set(item.branchName, []);
-                map.get(item.branchName)!.push(item);
-                return map;
-              }, new Map<string, typeof performance.staff>())
-            ).map(([branchName, items]) => (
-              <div key={branchName}>
-                <p className="px-4 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider bg-[var(--surface-muted)]/50">
-                  {branchName}
-                </p>
-                {items.map((p) => {
-                  const emp = employees.find((e) => e.id === p.staffId);
-                  return (
-                    <ListRow
-                      key={p.staffId}
-                      title={p.staffName}
-                      subtitle={t("salesOfTarget", {
-                        actual: formatCurrency(p.actualSales),
-                        target: formatCurrency(p.monthlySalesTarget),
-                        percent: p.achievementPercent,
-                      })}
-                      onClick={() => emp && setDrawer({ mode: "view", employee: emp })}
-                      trailing={
-                        <div className="flex items-center gap-2">
-                          <TargetBadge meeting={p.meetingTarget} onTrack={p.onTrack} />
-                          <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+                  <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                    <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                      <Target className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="dashboard-overview-section-title">{t("monthlyPerformance")}</h2>
+                      {performance?.periodLabel ? (
+                        <p className="dashboard-overview-section-hint">{performance.periodLabel}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  {perfLoading ? (
+                    <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingPerformance")}</p>
+                  ) : !performance?.staff.length ? (
+                    <EmptyState title={t("noTargetDataTitle")} description={t("noTargetDataDesc")} icon={Target} />
+                  ) : (
+                    <div className="divide-y divide-[var(--border)]">
+                      {Array.from(
+                        performance.staff.reduce((map, item) => {
+                          if (!map.has(item.branchName)) map.set(item.branchName, []);
+                          map.get(item.branchName)!.push(item);
+                          return map;
+                        }, new Map<string, typeof performance.staff>())
+                      ).map(([branchName, items]) => (
+                        <div key={branchName}>
+                          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface-muted)]/50 md:px-4">
+                            {branchName}
+                          </p>
+                          {items.map((p) => {
+                            const emp = employees.find((e) => e.id === p.staffId);
+                            return (
+                              <ListRow
+                                key={p.staffId}
+                                title={p.staffName}
+                                subtitle={t("salesOfTarget", {
+                                  actual: formatCurrency(p.actualSales),
+                                  target: formatCurrency(p.monthlySalesTarget),
+                                  percent: p.achievementPercent,
+                                })}
+                                onClick={() => emp && setDrawer({ mode: "view", employee: emp })}
+                                trailing={
+                                  <div className="flex items-center gap-2">
+                                    <TargetBadge meeting={p.meetingTarget} onTrack={p.onTrack} />
+                                    <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)]" />
+                                  </div>
+                                }
+                              />
+                            );
+                          })}
                         </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <EmployeeTargetCoachingPanel performance={performance} loading={perfLoading} variant="dashboard" />
+
+                {!trendsLoading && targetTrends && targetTrends.branches.length > 0 && (
+                  <EmployeeTargetTrends
+                    branches={targetTrends.branches}
+                    periodLabel={targetTrends.periodLabel}
+                    compact
+                    panelVariant="dashboard"
+                  />
+                )}
+
+                <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+                  <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                    <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                      <Users className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="dashboard-overview-section-title">{t("roster")}</h2>
+                      <p className="dashboard-overview-section-hint">{t("rosterHint")}</p>
+                    </div>
+                  </div>
+                  {isLoading ? (
+                    <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingEmployees")}</p>
+                  ) : employees.length === 0 ? (
+                    <EmptyState
+                      title={t("noEmployeesTitle")}
+                      description={t("noEmployeesDesc")}
+                      icon={Users}
+                      action={
+                        <button type="button" onClick={() => setDrawer({ mode: "create" })} className={btnPrimarySm}>
+                          <Plus className="w-4 h-4" />
+                          {t("addEmployee")}
+                        </button>
                       }
                     />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      <EmployeeTargetCoachingPanel performance={performance} loading={perfLoading} />
-
-      {!trendsLoading && targetTrends && targetTrends.branches.length > 0 && (
-        <EmployeeTargetTrends branches={targetTrends.branches} periodLabel={targetTrends.periodLabel} />
-      )}
-        </>
-      ) : (
-        <>
-          <Card className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <Field label={t("attendanceFrom")}>
-                <input
-                  type="date"
-                  value={attendanceStart}
-                  onChange={(e) => setAttendanceStart(e.target.value)}
-                  className={inputClass}
-                  data-testid="attendance-date-from"
-                />
-              </Field>
-              <Field label={t("attendanceTo")}>
-                <input
-                  type="date"
-                  value={attendanceEnd}
-                  onChange={(e) => setAttendanceEnd(e.target.value)}
-                  className={inputClass}
-                  data-testid="attendance-date-to"
-                />
-              </Field>
-            </div>
-          </Card>
-          <AttendanceDashboardSection
-            data={attendanceDashboard}
-            loading={attendanceLoading}
-            startDate={attendanceRange.start}
-            endDate={attendanceRange.end}
-            branchFilter={branchFilter}
-            showPageHeader={false}
-          />
-        </>
-      )}
-
-      {sectionTab === "targets" && (
-      <Card padding={false}>
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h2 className="font-semibold text-sm text-[var(--text-primary)]">{t("roster")}</h2>
-          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
-            {t("rosterHint")}
-          </p>
-        </div>
-        {isLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingEmployees")}</p>
-        ) : employees.length === 0 ? (
-          <EmptyState title={t("noEmployeesTitle")} description={t("noEmployeesDesc")} icon={Users} />
-        ) : (
-          <div>
-            {Array.from(byBranch.entries()).map(([branchName, list]) => (
-              <div key={branchName}>
-                <p className="px-4 py-2 text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider bg-[var(--surface-muted)]/50">
-                  {branchName}
-                </p>
-                <div className="divide-y divide-[var(--border)]">
-                  {list.map((e) => {
-                    const perf = perfByStaff.get(e.id);
-                    const isSelected = drawer && drawer.mode !== "create" && drawer.employee.id === e.id;
-                    return (
-                      <ListRow
-                        key={e.id}
-                        title={e.name}
-                        subtitle={[e.role.replace("_", " "), e.salary != null ? t("perMonth", { amount: formatCurrency(e.salary) }) : null, perf ? t("ofTargetShort", { percent: perf.achievementPercent }) : null].filter(Boolean).join(" · ")}
-                        onClick={() => setDrawer({ mode: "view", employee: e })}
-                        trailing={
-                          <div className="flex items-center gap-2">
-                            {!e.active && <StatusBadge status="INACTIVE" />}
-                            {e.idProofCollected === false && (
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">{t("idPending")}</span>
-                            )}
-                            <ChevronRight className={cn("w-4 h-4", isSelected ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
+                  ) : (
+                    <div>
+                      {Array.from(byBranch.entries()).map(([branchName, list]) => (
+                        <div key={branchName}>
+                          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface-muted)]/50 md:px-4">
+                            {branchName}
+                          </p>
+                          <div className="divide-y divide-[var(--border)]">
+                            {list.map((e) => {
+                              const perf = perfByStaff.get(e.id);
+                              const isSelected = drawer && drawer.mode !== "create" && drawer.employee.id === e.id;
+                              return (
+                                <ListRow
+                                  key={e.id}
+                                  title={e.name}
+                                  subtitle={[e.role.replace("_", " "), e.salary != null ? t("perMonth", { amount: formatCurrency(e.salary) }) : null, perf ? t("ofTargetShort", { percent: perf.achievementPercent }) : null].filter(Boolean).join(" · ")}
+                                  onClick={() => setDrawer({ mode: "view", employee: e })}
+                                  trailing={
+                                    <div className="flex items-center gap-2">
+                                      {!e.active && <StatusBadge status="INACTIVE" />}
+                                      {e.idProofCollected === false && (
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">{t("idPending")}</span>
+                                      )}
+                                      <ChevronRight className={cn("w-4 h-4", isSelected ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
+                                    </div>
+                                  }
+                                />
+                              );
+                            })}
                           </div>
-                        }
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
           </div>
-        )}
-      </Card>
+        </DashboardOverviewShell>
       )}
 
       <EmployeeDrawer

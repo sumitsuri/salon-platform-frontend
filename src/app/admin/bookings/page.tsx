@@ -3,9 +3,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Filter } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { api, Booking } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { formatBookingVisitAt } from "@/lib/booking-display";
+import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
 import { adminBookingsPath } from "@/lib/navigation-scope";
@@ -14,15 +16,13 @@ import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation"
 import { buildPathWithSearch, useUrlQueryParam } from "@/lib/use-url-query-param";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
+import { ActiveFilterChip, DataListPanel } from "@/components/DataListPanel";
 import {
   PageHeader,
-  Card,
   StatusBadge,
   EmptyState,
   btnPrimary,
-  btnSecondarySm,
   FilterableTable,
-  MobileFilterPanel,
   InfiniteScrollFooter,
   AvatarInitial,
   AlertBanner,
@@ -95,10 +95,12 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 function AdminBookingsPageContent() {
   const t = useTranslations("admin.bookings");
   const tMgr = useTranslations("manager.bookings");
+  const tCustomers = useTranslations("customers");
   const tSchedule = useTranslations("manager.schedule");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
+  const localeKit = getTenantLocaleKit();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
@@ -318,6 +320,76 @@ function AdminBookingsPageContent() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
+  function clearAllFilters() {
+    setFilters((prev) => ({
+      ...emptyFilters,
+      ...(branchScopeId ? { branchId: branchScopeId } : {}),
+    }));
+  }
+
+  const activeChips = useMemo((): ActiveFilterChip[] => {
+    const chips: ActiveFilterChip[] = [];
+    if (debounced.customer.trim()) {
+      chips.push({
+        key: "customer",
+        label: debounced.customer.trim(),
+        onClear: () => updateFilter("customer", ""),
+      });
+    }
+    if (debounced.branchId && !branchScopeId) {
+      const branchLabel =
+        branchOptions.find((option) => option.value === debounced.branchId)?.label ?? debounced.branchId;
+      chips.push({
+        key: "branch",
+        label: branchLabel,
+        onClear: () => updateFilter("branchId", ""),
+      });
+    }
+    if (debounced.service) {
+      chips.push({
+        key: "service",
+        label: debounced.service,
+        onClear: () => updateFilter("service", ""),
+      });
+    }
+    if (debounced.stylist) {
+      chips.push({
+        key: "stylist",
+        label: debounced.stylist,
+        onClear: () => updateFilter("stylist", ""),
+      });
+    }
+    if (debounced.amount.trim()) {
+      chips.push({
+        key: "amount",
+        label: debounced.amount.trim(),
+        onClear: () => updateFilter("amount", ""),
+      });
+    }
+    if (debounced.status) {
+      chips.push({
+        key: "status",
+        label: tStatus(debounced.status as "COMPLETED"),
+        onClear: () => updateFilter("status", ""),
+      });
+    }
+    if (debounced.dateFrom) {
+      chips.push({
+        key: "dateFrom",
+        label: debounced.dateFrom,
+        onClear: () => updateFilter("dateFrom", ""),
+      });
+    }
+    if (debounced.dateTo && debounced.dateTo !== debounced.dateFrom) {
+      chips.push({
+        key: "dateTo",
+        label: `${t("dateTo")} ${debounced.dateTo}`,
+        onClear: () => updateFilter("dateTo", ""),
+      });
+    }
+    return chips;
+  }, [debounced, branchScopeId, branchOptions, t, tStatus]);
+
   const columns = [
     {
       label: tMgr("columns.customer"),
@@ -384,7 +456,7 @@ function AdminBookingsPageContent() {
       },
     },
     {
-      label: tMgr("columns.time"),
+      label: tCustomers("lastVisit"),
       filter: {
         type: "date" as const,
         value: filters.dateFrom,
@@ -423,8 +495,8 @@ function AdminBookingsPageContent() {
         title={isBranchScoped && branchDisplayName ? branchDisplayName : isScoped && customer?.name ? customer.name : t("title")}
         subtitle={
           isBranchScoped || isScoped
-            ? undefined
-            : tMgr("subtitle", { count: totalElements, loaded: bookings.length })
+            ? tMgr("subtitle", { count: totalElements, loaded: bookings.length })
+            : undefined
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -438,34 +510,17 @@ function AdminBookingsPageContent() {
         }
       />
 
-      <Card padding={false}>
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] p-3 md:p-4">
-          <p className="min-w-0 truncate text-sm text-[var(--text-secondary)]">
-            {tMgr("subtitle", { count: totalElements, loaded: bookings.length })}
-          </p>
-          <button
-            type="button"
-            className={`${btnSecondarySm} relative min-h-11 touch-manipulation md:hidden`}
-            onClick={() => setShowFilters(true)}
-            aria-expanded={showFilters}
-          >
-            <Filter className="h-4 w-4" />
-            {tAdmin("filters")}
-            {activeFilterCount > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-bold text-white">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </button>
-        </div>
-
-        <MobileFilterPanel
-          columns={columns}
-          open={showFilters}
-          onClose={() => setShowFilters(false)}
-          title={tAdmin("filters")}
-        />
-
+      <DataListPanel
+        icon={CalendarDays}
+        title={t("title")}
+        hint={tMgr("subtitle", { count: totalElements, loaded: bookings.length })}
+        activeChips={activeChips}
+        onClearAllFilters={clearAllFilters}
+        filterColumns={columns}
+        showFilters={showFilters}
+        onShowFiltersChange={setShowFilters}
+        activeFilterCount={activeFilterCount}
+      >
         {isLoading && bookings.length === 0 && <PageLoader />}
         {isError && (
           <div className="p-4 space-y-3">
@@ -522,7 +577,7 @@ function AdminBookingsPageContent() {
                       <StatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
-                      {b.createdAt ? new Date(b.createdAt).toLocaleString("en-IN") : "—"}
+                      {formatBookingVisitAt(b, localeKit)}
                     </td>
                   </tr>
                 ))}
@@ -546,6 +601,9 @@ function AdminBookingsPageContent() {
                     <p className="text-xs text-[var(--text-secondary)] col-span-2">
                       {b.branchName} · {b.lines?.map((l) => l.serviceName).join(", ")}
                     </p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] col-span-2">
+                      {tCustomers("lastVisit")}: {formatBookingVisitAt(b, localeKit)}
+                    </p>
                     <div className="col-span-2 flex items-center justify-between">
                       <StatusBadge status={b.status} />
                     </div>
@@ -564,7 +622,7 @@ function AdminBookingsPageContent() {
           isLoading={isLoading}
           onLoadMore={() => void fetchNextPage()}
         />
-      </Card>
+      </DataListPanel>
 
       <BookingDetailSheet
         booking={detailBooking}

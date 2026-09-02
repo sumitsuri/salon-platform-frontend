@@ -1646,6 +1646,7 @@
         "targets": "Targets & coaching",
         "attendance": "Attendance & leave"
       },
+      "summaryLabel": "Summary",
       "attendanceFrom": "From date",
       "attendanceTo": "To date",
       "meetingTarget": "Meeting target",
@@ -1889,6 +1890,7 @@
     },
     "guestVoice": {
       "title": "Customer voice",
+      "summaryLabel": "At a glance",
       "subtitle": "Ratings and feedback from customers after their visit (last 30 days)",
       "heroTitle": "What customers are saying",
       "heroDescription": "Reviews collected via QR after billing. High ratings are routed to Google in the background; low scores stay private and alert branch managers to follow up.",
@@ -1922,6 +1924,10 @@
       "sortOldest": "Oldest first",
       "sortRatingHigh": "Highest rating",
       "sortRatingLow": "Lowest rating",
+      "quickFilterAll": "All",
+      "quickFilterPromoters": "4–5★",
+      "quickFilterNeedsAttention": "Needs follow-up",
+      "reviewRevealHint": "Tap for details",
       "columns": {
         "customer": "Customer",
         "branch": "Branch",
@@ -1939,6 +1945,8 @@
         "minRating": "Minimum rating",
         "atLeastStars": "At least {stars}★",
         "dateTo": "Submitted until",
+        "dateToChip": "Until {date}",
+        "dateFromChip": "From {date}",
         "resetAll": "Reset filters"
       }
     },

@@ -30,11 +30,20 @@ export function CompactStatsStrip({
   testId?: string;
   loading?: boolean;
 }) {
+  const gridCountClass =
+    items.length === 3
+      ? "compact-stats-grid--count-3"
+      : items.length === 2
+        ? "compact-stats-grid--count-2"
+        : undefined;
+
   if (loading) {
     return (
       <div className={cn("compact-stats-strip", className)} data-testid={testId}>
-        <div className="compact-stats-grid">
-          {Array.from({ length: Math.max(items.length, 4) }).slice(0, 4).map((_, index) => (
+        <div className={cn("compact-stats-grid", gridCountClass)}>
+          {Array.from({ length: items.length === 3 ? 3 : Math.max(items.length, 4) })
+            .slice(0, items.length === 3 ? 3 : 4)
+            .map((_, index) => (
             <div
               key={index}
               className="compact-stat-cell compact-stat-cell--skeleton animate-pulse"
@@ -48,7 +57,7 @@ export function CompactStatsStrip({
 
   return (
     <div className={cn("compact-stats-strip", className)} data-testid={testId}>
-      <div className="compact-stats-grid">
+      <div className={cn("compact-stats-grid", gridCountClass)}>
         {items.map((item, index) => {
           const Icon = item.icon;
           const accent = item.accent ?? "violet";

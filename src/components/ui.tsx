@@ -388,19 +388,21 @@ export function PageHeader({
             aria-hidden
           />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-xl sm:text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight">
-              {title}
-            </h1>
+            <div className="flex items-start justify-between gap-2 min-w-0">
+              <h1 className="font-display text-xl sm:text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight min-w-0">
+                {title}
+              </h1>
+              {action ? (
+                <div className="shrink-0 flex items-center gap-2 [&_button]:min-h-10 sm:[&_button]:min-h-11">
+                  {action}
+                </div>
+              ) : null}
+            </div>
             {subtitle && (
               <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2 sm:truncate">{subtitle}</p>
             )}
           </div>
         </div>
-        {action && (
-          <div className="shrink-0 flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0 max-w-full justify-stretch sm:justify-end [&_button]:min-h-11">
-            {action}
-          </div>
-        )}
       </div>
     </header>
   );

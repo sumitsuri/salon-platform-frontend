@@ -1,22 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Filter } from "lucide-react";
+import { Users } from "lucide-react";
 import { api, Customer } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { customerDetailPath } from "@/lib/navigation-scope";
+import { formatCustomerLastVisit } from "@/lib/booking-display";
+import { ActiveFilterChip, DataListPanel } from "@/components/DataListPanel";
 import {
   PageHeader,
-  Card,
   EmptyState,
   btnPrimary,
-  btnSecondarySm,
   FilterableTable,
-  MobileFilterPanel,
   InfiniteScrollFooter,
   AvatarInitial,
   AlertBanner,
@@ -98,6 +97,10 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
+  function clearAllFilters() {
+    setFilters(emptyFilters);
+  }
+
   function openCustomer(customer: Customer) {
     if ((customer.visitCount ?? 0) <= 0) {
       setZeroBookingNotice(
@@ -111,7 +114,47 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
     router.push(customerDetailPath(scope, customer.id));
   }
 
-  const hasFilters = Object.values(filters).some((v) => v !== "");
+  const activeFilterCount = useMemo(() => {
+    return Object.values(debounced).filter((value) => value.trim()).length;
+  }, [debounced]);
+
+  const activeChips = useMemo((): ActiveFilterChip[] => {
+    const chips: ActiveFilterChip[] = [];
+    if (debounced.name.trim()) {
+      chips.push({
+        key: "name",
+        label: debounced.name.trim(),
+        onClear: () => updateFilter("name", ""),
+      });
+    }
+    if (debounced.visitPassId.trim()) {
+      chips.push({
+        key: "visitPassId",
+        label: debounced.visitPassId.trim(),
+        onClear: () => updateFilter("visitPassId", ""),
+      });
+    }
+    if (debounced.phone.trim()) {
+      chips.push({
+        key: "phone",
+        label: debounced.phone.trim(),
+        onClear: () => updateFilter("phone", ""),
+      });
+    }
+    if (debounced.society.trim()) {
+      chips.push({
+        key: "society",
+        label: debounced.society.trim(),
+        onClear: () => updateFilter("society", ""),
+      });
+    }
+    return chips;
+  }, [debounced]);
+
+  const listHint =
+    isLoading && customers.length === 0
+      ? tCommon("loading")
+      : `${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`;
 
   const columns = [
     {
@@ -150,33 +193,15 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
         onChange: (v: string) => updateFilter("society", v),
       },
     },
+    { label: tCommon("branch") },
     { label: t("visits") },
     { label: t("lifetimeSpend") },
     { label: t("lastVisit") },
   ];
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title={t("title")}
-        subtitle={
-          isLoading && customers.length === 0
-            ? tCommon("loading")
-            : `${totalElements}${tAdmin("totalSuffix")}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`
-        }
-        action={
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            className={`${btnSecondarySm} md:hidden`}
-            aria-pressed={showFilters}
-            aria-label="Filters"
-          >
-            <Filter className="w-4 h-4" />
-            Filters
-          </button>
-        }
-      />
+    <div className="space-y-3 md:space-y-4">
+      <PageHeader title={t("title")} />
 
       {zeroBookingNotice && (
         <AlertBanner variant="info">
@@ -193,19 +218,17 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
         </AlertBanner>
       )}
 
-      <MobileFilterPanel columns={columns} open={showFilters} onClose={() => setShowFilters(false)} />
-
-      {hasFilters && (
-        <button
-          type="button"
-          onClick={() => setFilters(emptyFilters)}
-          className="text-sm font-semibold text-[var(--brand-text)]"
-        >
-          {tAdmin("clearFilters")}
-        </button>
-      )}
-
-      <Card padding={false}>
+      <DataListPanel
+        icon={Users}
+        title={t("title")}
+        hint={listHint}
+        activeChips={activeChips}
+        onClearAllFilters={clearAllFilters}
+        filterColumns={columns}
+        showFilters={showFilters}
+        onShowFiltersChange={setShowFilters}
+        activeFilterCount={activeFilterCount}
+      >
         {isLoading ? (
           <PageLoader label={tCommon("loading")} />
         ) : isError ? (
@@ -234,6 +257,10 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
                     <p className="font-semibold text-sm text-[var(--text-primary)] truncate">{c.name}</p>
                     <p className="text-xs font-mono text-[var(--brand-text)] truncate">{c.visitPassId || "—"}</p>
                     <p className="text-xs text-[var(--text-secondary)] mt-0.5">{formatPhone(c.phone)}</p>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-0.5 truncate">
+                      {c.lastVisitBranchName ? `${c.lastVisitBranchName} · ` : ""}
+                      {t("lastVisit")}: {formatCustomerLastVisit(c.lastVisitAt, localeKit)}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold tabular-nums">{formatCurrency(c.lifetimeSpend)}</p>
@@ -257,6 +284,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
                     <td className="px-4 py-3 font-mono text-sm text-[var(--brand-text)]">{c.visitPassId || "—"}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{formatPhone(c.phone)}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{c.society || "—"}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs">{c.lastVisitBranchName || "—"}</td>
                     <td className="px-4 py-3 tabular-nums">
                       {(c.visitCount ?? 0) <= 0 ? (
                         <span className="text-[var(--text-tertiary)]">{t("zeroBookings")}</span>
@@ -266,7 +294,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
                     </td>
                     <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(c.lifetimeSpend)}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
-                      {c.lastVisitAt ? formatTenantDateTime(c.lastVisitAt, localeKit) : "—"}
+                      {formatCustomerLastVisit(c.lastVisitAt, localeKit)}
                     </td>
                   </tr>
                 ))}
@@ -283,7 +311,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
             />
           </>
         )}
-      </Card>
+      </DataListPanel>
     </div>
   );
 }

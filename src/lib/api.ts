@@ -1153,6 +1153,7 @@ export interface Customer {
   visitCount: number;
   lifetimeSpend: number;
   lastVisitAt?: string;
+  lastVisitBranchName?: string;
   whatsappOptIn?: boolean | null;
   smsOptIn?: boolean | null;
 }

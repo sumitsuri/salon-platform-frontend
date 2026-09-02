@@ -8,7 +8,8 @@ import { UserPlus, IndianRupee, Clock, CheckCircle2, Receipt } from "lucide-reac
 import { api, Booking } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { formatBookingVisitAt } from "@/lib/booking-display";
+import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
@@ -247,7 +248,7 @@ export function BookingsHistoryPanel({
       },
     },
     {
-      label: t("columns.time"),
+      label: tCustomers("lastVisit"),
       filter: {
         type: "date" as const,
         value: filters.date,
@@ -372,7 +373,7 @@ export function BookingsHistoryPanel({
                       <StatusBadge status={b.status} />
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
-                      {formatTenantDateTime(b.createdAt, localeKit)}
+                      {formatBookingVisitAt(b, localeKit)}
                       {isOpenStatus(b.status) && (
                         <div className="mt-1">
                           <Link
@@ -405,7 +406,7 @@ export function BookingsHistoryPanel({
                         {b.billPreview ? formatCurrency(b.billPreview.grandTotal) : "—"}
                       </p>
                       <p className="text-xs text-[var(--text-secondary)] col-span-2">
-                        {formatTenantDateTime(b.createdAt, localeKit)}
+                        {formatBookingVisitAt(b, localeKit)}
                         {" · "}
                         {b.lines?.map((l) => l.serviceName).join(", ")}
                       </p>

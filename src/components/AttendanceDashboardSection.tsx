@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users, UserCheck, CalendarOff, UserX, Clock, ChevronRight } from "lucide-react";
 import { MetricChart } from "@/components/LineChart";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { api, AttendanceDashboard as AttendanceData, AttendanceRecord } from "@/lib/api";
 import { formatCoords, formatPunchGeo } from "@/lib/attendance-geo";
 import { cn } from "@/lib/utils";
 import { ATTENDANCE_CHART_COLORS } from "@/lib/chart-colors";
 import { AttendancePhotoThumb } from "@/components/AttendancePhotoThumb";
+import { ActiveFilterChip } from "@/components/DataListPanel";
+import { PanelFilterBar } from "@/components/PanelFilterBar";
 import {
   Card,
   StatCard,
@@ -19,7 +22,6 @@ import {
   PageHeader,
   FilterableTable,
   InfiniteScrollFooter,
-  TableFilterToolbar,
   SideSheet,
   inputClass,
   selectClass,
@@ -38,9 +40,10 @@ interface Props {
   loading?: boolean;
   startDate?: string;
   endDate?: string;
-  branchFilter?: string;
+  branchIds?: string[];
   showPageHeader?: boolean;
   showLeaveAndLogs?: boolean;
+  variant?: "default" | "dashboard";
 }
 
 export function AttendanceDashboardSection({
@@ -48,9 +51,10 @@ export function AttendanceDashboardSection({
   loading,
   startDate,
   endDate,
-  branchFilter = "",
+  branchIds = [],
   showPageHeader = true,
   showLeaveAndLogs = true,
+  variant = "default",
 }: Props) {
   const t = useTranslations("components.attendanceDashboard");
   const tCommon = useTranslations("common");
@@ -59,7 +63,7 @@ export function AttendanceDashboardSection({
   const [logFilters, setLogFilters] = useState({
     date: "",
     staffId: "",
-    branchId: branchFilter,
+    branchId: "",
     status: "",
     compliance: "",
   });
@@ -67,16 +71,48 @@ export function AttendanceDashboardSection({
   const [leaveFilters, setLeaveFilters] = useState({
     date: "",
     staffId: "",
-    branchId: branchFilter,
+    branchId: "",
     status: "",
   });
   const [leaveDebounced, setLeaveDebounced] = useState(leaveFilters);
-  const [staffPerfFilters, setStaffPerfFilters] = useState({ staffId: "", branchId: branchFilter });
+  const [staffPerfFilters, setStaffPerfFilters] = useState({ staffId: "", branchId: "" });
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [incidentType, setIncidentType] = useState<"NOTE" | "PENALTY" | "IMPROVEMENT">("NOTE");
   const [incidentNote, setIncidentNote] = useState("");
   const [incidentPenalty, setIncidentPenalty] = useState("");
+  const [showLogFilters, setShowLogFilters] = useState(false);
+  const [showLeaveFilters, setShowLeaveFilters] = useState(false);
+  const [showStaffPerfFilters, setShowStaffPerfFilters] = useState(false);
   const queryClient = useQueryClient();
+
+  const scopedBranchId = branchIds.length === 1 ? branchIds[0] : "";
+
+  function optionLabel(options: { value: string; label: string }[], value: string) {
+    return options.find((option) => option.value === value)?.label ?? value;
+  }
+
+  function clearLogFilters() {
+    setLogFilters({
+      date: "",
+      staffId: "",
+      branchId: scopedBranchId,
+      status: "",
+      compliance: "",
+    });
+  }
+
+  function clearLeaveFilters() {
+    setLeaveFilters({
+      date: "",
+      staffId: "",
+      branchId: scopedBranchId,
+      status: "",
+    });
+  }
+
+  function clearStaffPerfFilters() {
+    setStaffPerfFilters({ staffId: "", branchId: scopedBranchId });
+  }
 
   function formatTime(iso?: string) {
     if (!iso) return "—";
@@ -125,10 +161,11 @@ export function AttendanceDashboardSection({
   }, [leaveFilters]);
 
   useEffect(() => {
-    setLogFilters((f) => ({ ...f, branchId: branchFilter }));
-    setLeaveFilters((f) => ({ ...f, branchId: branchFilter }));
-    setStaffPerfFilters((f) => ({ ...f, branchId: branchFilter }));
-  }, [branchFilter]);
+    const branchId = scopedBranchId;
+    setLogFilters((f) => ({ ...f, branchId }));
+    setLeaveFilters((f) => ({ ...f, branchId }));
+    setStaffPerfFilters((f) => ({ ...f, branchId }));
+  }, [scopedBranchId]);
 
   const { data: branches = [] } = useQuery({
     queryKey: ["branches"],
@@ -440,7 +477,134 @@ export function AttendanceDashboardSection({
     [t]
   );
 
+  const logActiveChips = useMemo((): ActiveFilterChip[] => {
+    const chips: ActiveFilterChip[] = [];
+    if (logFilters.date) {
+      chips.push({
+        key: "date",
+        label: logFilters.date,
+        onClear: () => setLogFilters((f) => ({ ...f, date: "" })),
+      });
+    }
+    if (logFilters.staffId) {
+      chips.push({
+        key: "staff",
+        label: optionLabel(staffOptions, logFilters.staffId),
+        onClear: () => setLogFilters((f) => ({ ...f, staffId: "" })),
+      });
+    }
+    if (logFilters.branchId && logFilters.branchId !== scopedBranchId) {
+      chips.push({
+        key: "branch",
+        label: optionLabel(branchOptions, logFilters.branchId),
+        onClear: () => setLogFilters((f) => ({ ...f, branchId: scopedBranchId })),
+      });
+    }
+    if (logFilters.compliance === "late") {
+      chips.push({
+        key: "compliance",
+        label: t("lateOnly"),
+        onClear: () => setLogFilters((f) => ({ ...f, compliance: "" })),
+      });
+    }
+    if (logFilters.compliance === "early") {
+      chips.push({
+        key: "compliance",
+        label: t("earlyExitOnly"),
+        onClear: () => setLogFilters((f) => ({ ...f, compliance: "" })),
+      });
+    }
+    if (logFilters.status) {
+      chips.push({
+        key: "status",
+        label: optionLabel(
+          [
+            { value: "COMPLETED", label: tStatus("COMPLETED") },
+            { value: "PRESENT", label: tStatus("PRESENT") },
+            { value: "ABSENT", label: tStatus("ABSENT") },
+          ],
+          logFilters.status
+        ),
+        onClear: () => setLogFilters((f) => ({ ...f, status: "" })),
+      });
+    }
+    return chips;
+  }, [logFilters, staffOptions, branchOptions, scopedBranchId, t, tStatus]);
+
+  const leaveActiveChips = useMemo((): ActiveFilterChip[] => {
+    const chips: ActiveFilterChip[] = [];
+    if (leaveFilters.date) {
+      chips.push({
+        key: "date",
+        label: leaveFilters.date,
+        onClear: () => setLeaveFilters((f) => ({ ...f, date: "" })),
+      });
+    }
+    if (leaveFilters.staffId) {
+      chips.push({
+        key: "staff",
+        label: optionLabel(staffOptions, leaveFilters.staffId),
+        onClear: () => setLeaveFilters((f) => ({ ...f, staffId: "" })),
+      });
+    }
+    if (leaveFilters.branchId && leaveFilters.branchId !== scopedBranchId) {
+      chips.push({
+        key: "branch",
+        label: optionLabel(branchOptions, leaveFilters.branchId),
+        onClear: () => setLeaveFilters((f) => ({ ...f, branchId: scopedBranchId })),
+      });
+    }
+    if (leaveFilters.status) {
+      chips.push({
+        key: "status",
+        label: optionLabel(
+          [
+            { value: "APPROVED", label: tStatus("APPROVED") },
+            { value: "PENDING", label: tStatus("PENDING") },
+            { value: "REJECTED", label: tStatus("REJECTED") },
+          ],
+          leaveFilters.status
+        ),
+        onClear: () => setLeaveFilters((f) => ({ ...f, status: "" })),
+      });
+    }
+    return chips;
+  }, [leaveFilters, staffOptions, branchOptions, scopedBranchId, tStatus]);
+
+  const staffPerfActiveChips = useMemo((): ActiveFilterChip[] => {
+    const chips: ActiveFilterChip[] = [];
+    if (staffPerfFilters.staffId) {
+      chips.push({
+        key: "staff",
+        label: optionLabel(staffOptions, staffPerfFilters.staffId),
+        onClear: () => setStaffPerfFilters((f) => ({ ...f, staffId: "" })),
+      });
+    }
+    if (staffPerfFilters.branchId && staffPerfFilters.branchId !== scopedBranchId) {
+      chips.push({
+        key: "branch",
+        label: optionLabel(branchOptions, staffPerfFilters.branchId),
+        onClear: () => setStaffPerfFilters((f) => ({ ...f, branchId: scopedBranchId })),
+      });
+    }
+    return chips;
+  }, [staffPerfFilters, staffOptions, branchOptions, scopedBranchId]);
+
   if (loading) {
+    if (variant === "dashboard") {
+      return (
+        <CompactStatsStrip
+          loading
+          testId="attendance-summary-strip"
+          items={[
+            { id: "total", label: t("totalStaff"), value: "…" },
+            { id: "present", label: t("presentToday"), value: "…" },
+            { id: "leave", label: t("onLeave"), value: "…" },
+            { id: "absent", label: t("absentToday"), value: "…" },
+          ]}
+        />
+      );
+    }
     return (
       <Card>
         <p className="text-sm text-[var(--text-tertiary)]">{t("loading")}</p>
@@ -450,48 +614,173 @@ export function AttendanceDashboardSection({
 
   if (!data) return null;
 
+  const isDashboard = variant === "dashboard";
+
+  const kpiStrip = (
+    <CompactStatsStrip
+      testId="attendance-summary-strip"
+      items={[
+        {
+          id: "total",
+          label: t("totalStaff"),
+          value: String(data.totalStaff),
+          icon: Users,
+          accent: "violet",
+          featured: true,
+        },
+        {
+          id: "present",
+          label: t("presentToday"),
+          value: String(data.presentToday),
+          icon: UserCheck,
+          accent: "emerald",
+        },
+        {
+          id: "leave",
+          label: t("onLeave"),
+          value: String(data.onLeaveToday),
+          icon: CalendarOff,
+          accent: "amber",
+        },
+        {
+          id: "absent",
+          label: t("absentToday"),
+          value: String(data.absentToday),
+          icon: UserX,
+          accent: "violet",
+        },
+      ]}
+    />
+  );
+
+  const statCards = (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <StatCard label={t("totalStaff")} value={data.totalStaff} icon={Users} accent="brand" />
+      <StatCard label={t("presentToday")} value={data.presentToday} icon={UserCheck} accent="emerald" />
+      <StatCard label={t("onLeave")} value={data.onLeaveToday} icon={CalendarOff} accent="amber" />
+      <StatCard label={t("absentToday")} value={data.absentToday} icon={UserX} accent="violet" />
+      <StatCard
+        label={t("avgHours")}
+        value={`${data.avgHoursPerStaff}h`}
+        icon={Clock}
+        accent="brand"
+        className="col-span-2 sm:col-span-1"
+      />
+    </div>
+  );
+
+  function PanelShell({
+    title,
+    hint,
+    children,
+    className,
+  }: {
+    title: string;
+    hint?: string;
+    children: ReactNode;
+    className?: string;
+  }) {
+    if (!isDashboard) {
+      return (
+        <Card padding={false} className={cn("min-w-0 overflow-hidden", className)}>
+          <div className="px-4 py-3.5 border-b border-[var(--border)]">
+            <h3 className="font-semibold text-sm text-[var(--text-primary)]">{title}</h3>
+            {hint ? <p className="text-xs text-[var(--text-secondary)] mt-0.5">{hint}</p> : null}
+          </div>
+          {children}
+        </Card>
+      );
+    }
+    return (
+      <section className={cn("dashboard-widget-card min-w-0 max-w-full overflow-hidden", className)}>
+        <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+          <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+            <Clock className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="dashboard-overview-section-title">{title}</h2>
+            {hint ? <p className="dashboard-overview-section-hint">{hint}</p> : null}
+          </div>
+        </div>
+        {children}
+      </section>
+    );
+  }
+
   return (
-    <section className="space-y-4">
+    <section className={cn(isDashboard ? "space-y-3 md:space-y-4" : "space-y-4")}>
       {showPageHeader && <PageHeader title={t("title")} subtitle={t("subtitle")} />}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label={t("totalStaff")} value={data.totalStaff} icon={Users} accent="brand" />
-        <StatCard label={t("presentToday")} value={data.presentToday} icon={UserCheck} accent="emerald" />
-        <StatCard label={t("onLeave")} value={data.onLeaveToday} icon={CalendarOff} accent="amber" />
-        <StatCard label={t("absentToday")} value={data.absentToday} icon={UserX} accent="violet" />
-        <StatCard
-          label={t("avgHours")}
-          value={`${data.avgHoursPerStaff}h`}
-          icon={Clock}
-          accent="brand"
-          className="col-span-2 sm:col-span-1"
-        />
-      </div>
+      {isDashboard ? kpiStrip : statCards}
 
       {data.dailyTrends.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <MetricChart title={t("dailyPresentCount")} labels={trendLabels} series={presentSeries} />
-          </Card>
-          <Card>
-            <MetricChart
-              title={t("avgWorkingHours")}
-              labels={trendLabels}
-              series={hoursSeries}
-              formatValue={(v) => `${v.toFixed(1)}h`}
-            />
-          </Card>
+        <div className={cn(isDashboard ? "space-y-3 md:space-y-4" : "grid grid-cols-1 md:grid-cols-2 gap-4")}>
+          {isDashboard ? (
+            <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+              <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                  <UserCheck className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="dashboard-overview-section-title">{t("dailyPresentCount")}</h2>
+                  <p className="dashboard-overview-section-hint">
+                    {t("avgHours")}: {data.avgHoursPerStaff}h
+                  </p>
+                </div>
+              </div>
+              <div className="p-3 md:p-4">
+                <MetricChart title={t("dailyPresentCount")} labels={trendLabels} series={presentSeries} />
+              </div>
+            </section>
+          ) : (
+            <Card>
+              <MetricChart title={t("dailyPresentCount")} labels={trendLabels} series={presentSeries} />
+            </Card>
+          )}
+          {isDashboard ? (
+            <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+              <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                  <Clock className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="dashboard-overview-section-title">{t("avgWorkingHours")}</h2>
+                </div>
+              </div>
+              <div className="p-3 md:p-4">
+                <MetricChart
+                  title={t("avgWorkingHours")}
+                  labels={trendLabels}
+                  series={hoursSeries}
+                  formatValue={(v) => `${v.toFixed(1)}h`}
+                />
+              </div>
+            </section>
+          ) : (
+            <Card>
+              <MetricChart
+                title={t("avgWorkingHours")}
+                labels={trendLabels}
+                series={hoursSeries}
+                formatValue={(v) => `${v.toFixed(1)}h`}
+              />
+            </Card>
+          )}
         </div>
       )}
 
       {showLeaveAndLogs && (
         <>
-          <Card padding={false} className="min-w-0 overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("entryExitLog")}</h3>
-              <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("entryExitLogHint")}</p>
-            </div>
-            <TableFilterToolbar columns={logFilterColumns} />
+          <PanelShell title={t("entryExitLog")} hint={t("entryExitLogHint")}>
+            <PanelFilterBar
+              columns={logFilterColumns}
+              showFilters={showLogFilters}
+              onShowFiltersChange={setShowLogFilters}
+              activeChips={logActiveChips}
+              onClearAllFilters={clearLogFilters}
+              filterButtonTestId="attendance-log-open-filters"
+              clearAllTestId="attendance-log-clear-filters"
+            />
             {logLoading ? (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
             ) : (
@@ -658,13 +947,19 @@ export function AttendanceDashboardSection({
               isLoading={logLoading}
               onLoadMore={() => void fetchNextLogPage()}
             />
-          </Card>
+          </PanelShell>
 
-          <Card padding={false} className="min-w-0 overflow-hidden">
-            <div className="px-4 py-3.5 border-b border-[var(--border)]">
-              <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("leaveRecords")}</h3>
-            </div>
-            <TableFilterToolbar columns={leaveFilterColumns} className="lg:grid-cols-4" />
+          <PanelShell title={t("leaveRecords")}>
+            <PanelFilterBar
+              columns={leaveFilterColumns}
+              toolbarClassName="lg:grid-cols-4"
+              showFilters={showLeaveFilters}
+              onShowFiltersChange={setShowLeaveFilters}
+              activeChips={leaveActiveChips}
+              onClearAllFilters={clearLeaveFilters}
+              filterButtonTestId="attendance-leave-open-filters"
+              clearAllTestId="attendance-leave-clear-filters"
+            />
             {leaveLoading ? (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
             ) : leaveRecords.length === 0 ? (
@@ -691,15 +986,21 @@ export function AttendanceDashboardSection({
               isLoading={leaveLoading}
               onLoadMore={() => void fetchNextLeavePage()}
             />
-          </Card>
+          </PanelShell>
         </>
       )}
 
-      <Card padding={false} className="min-w-0 overflow-hidden">
-        <div className="px-4 py-3.5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-sm text-[var(--text-primary)]">{t("staffPerformance")}</h3>
-        </div>
-        <TableFilterToolbar columns={staffPerfFilterColumns} className="lg:grid-cols-2" />
+      <PanelShell title={t("staffPerformance")}>
+        <PanelFilterBar
+          columns={staffPerfFilterColumns}
+          toolbarClassName="lg:grid-cols-2"
+          showFilters={showStaffPerfFilters}
+          onShowFiltersChange={setShowStaffPerfFilters}
+          activeChips={staffPerfActiveChips}
+          onClearAllFilters={clearStaffPerfFilters}
+          filterButtonTestId="attendance-staff-open-filters"
+          clearAllTestId="attendance-staff-clear-filters"
+        />
         <div className="hidden md:block responsive-table-wrap">
           <FilterableTable columns={staffPerfHeaderColumns}>
             {staffSlice.length === 0 ? (
@@ -765,7 +1066,7 @@ export function AttendanceDashboardSection({
           isFetchingNextPage={false}
           onLoadMore={loadMoreStaff}
         />
-      </Card>
+      </PanelShell>
 
       <SideSheet
         open={!!selectedStaff}
