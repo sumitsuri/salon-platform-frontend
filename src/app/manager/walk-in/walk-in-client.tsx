@@ -1370,7 +1370,10 @@ export default function WalkInPage() {
       let isNew = false;
       let createdVisitPassId = visitPassId;
       if (!id) {
-        const existing = await matchCustomerByExactName(customerName.trim());
+        const existing = await matchCustomerByExactName(customerName.trim(), {
+          branchId,
+          branchSocietyDefault: branch?.societyDefault,
+        });
         if (existing === "ambiguous") {
           setError(t("multipleCustomersSameName", { name: customerName.trim() }));
           return;
@@ -1530,7 +1533,10 @@ export default function WalkInPage() {
     if (phoneNumberRequired && !normalized) {
       throw new Error(t("customerRequiredBeforeSave"));
     }
-    const existing = await matchCustomerByExactName(customerName.trim());
+    const existing = await matchCustomerByExactName(customerName.trim(), {
+      branchId,
+      branchSocietyDefault: branch?.societyDefault,
+    });
     if (existing === "ambiguous") {
       throw new Error(t("multipleCustomersSameName", { name: customerName.trim() }));
     }

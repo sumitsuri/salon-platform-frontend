@@ -372,6 +372,9 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
                       </th>
                     )}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-tertiary)]">
+                      {tCommon("phone")}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-tertiary)]">
                       {tBookings("columns.services")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-[var(--text-tertiary)]">
@@ -398,6 +401,9 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
                       {scope === "admin" && (
                         <td className="px-4 py-3 text-[var(--text-primary)]">{b.branchName}</td>
                       )}
+                      <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
+                        {formatPhone(b.customerPhone)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1 max-w-[240px]">
                           {b.lines?.map((l) => (
@@ -458,6 +464,7 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
                     {scope === "admin" && (
                       <p className="text-xs text-[var(--text-secondary)]">{b.branchName}</p>
                     )}
+                    <p className="text-xs text-[var(--text-secondary)]">{formatPhone(b.customerPhone)}</p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {b.lines?.map((l) => l.serviceName).join(", ")}
                     </p>
