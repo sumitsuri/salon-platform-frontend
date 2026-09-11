@@ -106,7 +106,7 @@ export function SellMembershipPanel({
 
     let cancelled = false;
     void api
-      .findCustomerByPhone(normalized)
+      .findCustomerByPhone(normalized, branchId)
       .then((c) => {
         if (cancelled || isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
         if (lookupPhoneRef.current !== normalized) return;

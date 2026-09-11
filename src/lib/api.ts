@@ -334,14 +334,21 @@ export const api = {
       body: JSON.stringify({ locale }),
     }),
 
-  searchCustomers: (q: string) =>
-    request<Customer[]>(`/api/v1/customers/search?q=${encodeURIComponent(q)}`),
+  searchCustomers: (q: string, branchId?: string) => {
+    const params = new URLSearchParams({ q });
+    if (branchId) params.set("branchId", branchId);
+    return request<Customer[]>(`/api/v1/customers/search?${params.toString()}`);
+  },
 
-  findCustomerByPhone: (phone: string) =>
-    request<Customer>(`/api/v1/customers/phone/${encodeURIComponent(phone)}`),
+  findCustomerByPhone: (phone: string, branchId?: string) => {
+    const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+    return request<Customer>(`/api/v1/customers/phone/${encodeURIComponent(phone)}${q}`);
+  },
 
-  findCustomerByVisitPass: (visitPassId: string) =>
-    request<Customer>(`/api/v1/customers/visit-pass/${encodeURIComponent(visitPassId)}`),
+  findCustomerByVisitPass: (visitPassId: string, branchId?: string) => {
+    const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+    return request<Customer>(`/api/v1/customers/visit-pass/${encodeURIComponent(visitPassId)}${q}`);
+  },
 
   createCustomer: (data: CreateCustomerRequest) =>
     request<Customer>("/api/v1/customers", { method: "POST", body: JSON.stringify(data) }),
@@ -362,6 +369,7 @@ export const api = {
     if (params?.society) search.set("society", params.society);
     if (params?.phone) search.set("phone", params.phone);
     if (params?.visitPassId) search.set("visitPassId", params.visitPassId);
+    if (params?.branchId) search.set("branchId", params.branchId);
     if (params?.minVisitCount != null) search.set("minVisitCount", String(params.minVisitCount));
     if (params?.maxVisitCount != null) search.set("maxVisitCount", String(params.maxVisitCount));
     if (params?.minLifetimeSpend != null) search.set("minLifetimeSpend", String(params.minLifetimeSpend));
@@ -1163,6 +1171,7 @@ export const api = {
 
 export interface Customer {
   id: string;
+  branchId?: string;
   name: string;
   phone?: string | null;
   visitPassId?: string;
@@ -1428,6 +1437,7 @@ export interface CustomerListParams {
   society?: string;
   phone?: string;
   visitPassId?: string;
+  branchId?: string;
   minVisitCount?: number;
   maxVisitCount?: number;
   minLifetimeSpend?: number;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Users } from "lucide-react";
+import { useAuthStore } from "@/lib/auth-store";
 import { api, Customer } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { getTenantLocaleKit } from "@/lib/tenant-locale";
@@ -49,6 +50,7 @@ function formatPhone(phone?: string | null) {
 
 export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
   const router = useRouter();
+  const managerBranchId = useAuthStore((s) => s.user?.branchId);
   const t = useTranslations("customers");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
@@ -81,13 +83,14 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
     refetch,
     fetchNextPage,
   } = useInfinitePagedList({
-    queryKey: ["customers", scope, debounced],
+    queryKey: ["customers", scope, managerBranchId, debounced],
     queryFn: (page) =>
       api.listCustomers({
         name: debounced.name || undefined,
         visitPassId: debounced.visitPassId || undefined,
         phone: debounced.phone || undefined,
         society: debounced.society || undefined,
+        branchId: scope === "manager" ? managerBranchId : undefined,
         page,
         size: DEFAULT_PAGE_SIZE,
       }),

@@ -659,6 +659,21 @@ export default function WalkInPage() {
     void refetchOpenVisits();
   }
 
+  function resetCompletedVisitState() {
+    setPaidInvoiceId("");
+    setPaymentSuccess("");
+    setReviewInvitationUrl("");
+    setReviewSubmittedRating(null);
+    setBookingId("");
+  }
+
+  /** After payment, return manager to Today dashboard. */
+  function finishVisitGoToday() {
+    resetCompletedVisitState();
+    setScreen("hub");
+    router.push("/manager");
+  }
+
   function hasFlowProgress() {
     return (
       cart.length > 0 ||
@@ -1168,8 +1183,8 @@ export default function WalkInPage() {
     try {
       const customer =
         lookupField === "visitPass"
-          ? await api.findCustomerByVisitPass(passNorm)
-          : await api.findCustomerByPhone(phoneNorm!);
+          ? await api.findCustomerByVisitPass(passNorm, branchId)
+          : await api.findCustomerByPhone(phoneNorm!, branchId);
       if (isLookupGenerationStale(existingLookupGenerationRef, generationAtStart)) return;
       if (existingLookupRef.current !== lookupKey) return;
       applyExistingCustomer(customer, passRaw, phoneRaw);
@@ -1247,7 +1262,7 @@ export default function WalkInPage() {
     setLookupState("loading");
     setError("");
     try {
-      const c = await api.findCustomerByPhone(normalized);
+      const c = await api.findCustomerByPhone(normalized, branchId);
       if (isLookupGenerationStale(newPhoneLookupGenerationRef, generationAtStart)) return;
       if (lookupPhoneRef.current !== normalized) return;
       setCustomerId(c.id);
@@ -3066,15 +3081,7 @@ export default function WalkInPage() {
               registrationCard={registrationCard}
               processingLabel={tCommon("processing")}
               onError={setError}
-              onDone={() => {
-                setScreen("hub");
-                setPaidInvoiceId("");
-                setPaymentSuccess("");
-                setReviewInvitationUrl("");
-                setReviewSubmittedRating(null);
-                setBookingId("");
-                returnFromFlow();
-              }}
+              onDone={finishVisitGoToday}
               onViewHistory={() =>
                 router.push(
                   urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl({ tab: "history" })
@@ -3110,15 +3117,7 @@ export default function WalkInPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setScreen("hub");
-                  setPaidInvoiceId("");
-                  setPaymentSuccess("");
-                  setReviewInvitationUrl("");
-                  setReviewSubmittedRating(null);
-                  setBookingId("");
-                  returnFromFlow();
-                }}
+                onClick={finishVisitGoToday}
                 className={`${btnSecondary} w-full min-h-11`}
               >
                 {t("done")}
