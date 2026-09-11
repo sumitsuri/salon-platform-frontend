@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronRight, Plus } from "lucide-react";
@@ -52,6 +53,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export default function ManagerInventoryPage() {
   const t = useTranslations("manager.inventory");
   const tCommon = useTranslations("common");
+  const searchParams = useSearchParams();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
@@ -59,6 +61,12 @@ export default function ManagerInventoryPage() {
   const [error, setError] = useState("");
 
   const branchId = user?.branchId ?? "";
+
+  useEffect(() => {
+    if (searchParams.get("add") === "1") {
+      setDrawer({ mode: "create" });
+    }
+  }, [searchParams]);
 
   const { data: stock = [], isLoading: stockLoading } = useQuery({
     queryKey: ["inventory-stock", branchId],

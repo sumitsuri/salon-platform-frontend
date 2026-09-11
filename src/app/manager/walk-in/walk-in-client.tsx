@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -79,12 +79,14 @@ import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
 import { WalkInPaymentSuccess } from "./WalkInPaymentSuccess";
+import { WalkInReviewInvitePanel } from "./WalkInReviewInvitePanel";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
 import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
 import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
+import { WalkInStylistPickerSheet } from "./WalkInStylistPickerSheet";
 import { WalkInCatalogTrail, type WalkInCatalogTrailSegment } from "./WalkInCatalogTrail";
 import { WalkInMobileCartActions } from "./WalkInMobileCartActions";
 import { WalkInMobilePaymentActions } from "./WalkInMobilePaymentActions";
@@ -157,6 +159,18 @@ function isValidVisitPassFormat(raw: string) {
   return VISIT_PASS_RE.test(normalizeVisitPassInput(raw));
 }
 
+const LG_DOWN_MQ = "(max-width: 1023px)";
+
+function subscribeLgDown(cb: () => void) {
+  const mq = window.matchMedia(LG_DOWN_MQ);
+  mq.addEventListener("change", cb);
+  return () => mq.removeEventListener("change", cb);
+}
+
+function getLgDown() {
+  return window.matchMedia(LG_DOWN_MQ).matches;
+}
+
 export default function WalkInPage() {
   const t = useTranslations("manager.walkIn");
   const tCustomers = useTranslations("customers");
@@ -193,6 +207,7 @@ export default function WalkInPage() {
   const existingAutoFilledRef = useRef<AutoFilledLookupFields>(emptyAutoFilledFields());
   const newPhoneLookupGenerationRef = useRef(0);
   const newPhoneAutoFilledRef = useRef({ name: false, visitPass: false });
+  const packagesCatalogRef = useRef(false);
   const existingAutoAdvanceKeyRef = useRef("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
@@ -233,6 +248,7 @@ export default function WalkInPage() {
   const [draftHandled, setDraftHandled] = useState(false);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
+  const [stylistPickerService, setStylistPickerService] = useState<BranchServiceItem | null>(null);
   const [priceEditIdx, setPriceEditIdx] = useState<number | null>(null);
   const [discountSheetOpen, setDiscountSheetOpen] = useState(false);
   const [discountApplySuccess, setDiscountApplySuccess] = useState(false);
@@ -465,6 +481,8 @@ export default function WalkInPage() {
     queryFn: () => api.getStaff(branchId),
     enabled: !!branchId,
   });
+
+  const isCatalogMobileLayout = useSyncExternalStore(subscribeLgDown, getLgDown, () => false);
 
   const { data: branch } = useQuery({
     queryKey: ["branch", branchId],
@@ -811,9 +829,16 @@ export default function WalkInPage() {
   useEffect(() => {
     if (!wantNewVisit) return;
     if (searchParams.get("bookingId") || preferredStaffId) return;
+    packagesCatalogRef.current = searchParams.get("packages") === "1";
     startNewVisit();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot from ?new=1
   }, [wantNewVisit]);
+
+  useEffect(() => {
+    if (step !== 2 || !packagesCatalogRef.current) return;
+    setServiceQuery("package");
+    packagesCatalogRef.current = false;
+  }, [step]);
 
   const openVisit = useCallback(
     async (id: string, opts?: { preferBill?: boolean; preferEdit?: boolean }) => {
@@ -1428,13 +1453,9 @@ export default function WalkInPage() {
     return "";
   }
 
-  function toggleService(s: BranchServiceItem) {
+  function addServiceToCart(s: BranchServiceItem, staffId: string) {
     setCart((prev) => {
-      const existingIdx = prev.findIndex((c) => c.branchServiceId === s.id);
-      if (existingIdx >= 0) {
-        setRemovedToast(s.serviceName);
-        return prev.filter((_, i) => i !== existingIdx);
-      }
+      if (prev.some((c) => c.branchServiceId === s.id)) return prev;
       pushRecentService(branchId, s.id);
       setRecentServiceIds(getRecentServiceIds(branchId));
       setAddedToast(s.serviceName);
@@ -1446,15 +1467,42 @@ export default function WalkInPage() {
           basePrice: s.price,
           priceExtra: 0,
           variablePricing: !!s.variablePricing,
-          staffId: defaultStaffId(prev),
+          staffId,
         },
       ];
     });
   }
 
-  function applyStylistToAll(staffId: string) {
-    if (!staffId) return;
-    setCart((prev) => prev.map((c) => ({ ...c, staffId })));
+  function removeServiceFromCartItem(s: BranchServiceItem) {
+    setCart((prev) => {
+      const existingIdx = prev.findIndex((c) => c.branchServiceId === s.id);
+      if (existingIdx < 0) return prev;
+      setRemovedToast(s.serviceName);
+      return prev.filter((_, i) => i !== existingIdx);
+    });
+  }
+
+  function handleCatalogServiceToggle(s: BranchServiceItem) {
+    const inCart = cart.some((c) => c.branchServiceId === s.id);
+    if (inCart) {
+      removeServiceFromCartItem(s);
+      return;
+    }
+    if (isCatalogMobileLayout && staff.length > 0) {
+      setStylistPickerService(s);
+      return;
+    }
+    addServiceToCart(s, defaultStaffId(cart));
+  }
+
+  function closeStylistPicker() {
+    setStylistPickerService(null);
+  }
+
+  function pickStylistForPendingService(staffId: string) {
+    if (!stylistPickerService || !staffId) return;
+    addServiceToCart(stylistPickerService, staffId);
+    closeStylistPicker();
   }
 
   function toggleFavorite(serviceId: string) {
@@ -2519,7 +2567,7 @@ export default function WalkInPage() {
                 filteredServices={filteredServices}
                 cartServiceIds={cart.map((c) => c.branchServiceId)}
                 localeKit={localeKit}
-                onToggleService={toggleService}
+                onToggleService={handleCatalogServiceToggle}
                 onToggleFavorite={toggleFavorite}
               />
             </div>
@@ -2542,7 +2590,6 @@ export default function WalkInPage() {
                 stylistsComplete={stylistsComplete}
                 onRemove={removeFromCart}
                 onUpdateStaff={updateStaff}
-                onApplyStylistToAll={applyStylistToAll}
                 onEditPrice={setPriceEditIdx}
                 onSaveOpen={() => void saveOpenVisit()}
                 onProceedToBill={() => void proceedToBill()}
@@ -2551,15 +2598,24 @@ export default function WalkInPage() {
           </div>
 
           <div className="lg:hidden">
+            <WalkInStylistPickerSheet
+              open={!!stylistPickerService}
+              service={stylistPickerService}
+              staff={staff}
+              onPickStaff={pickStylistForPendingService}
+              onClose={closeStylistPicker}
+              localeKit={localeKit}
+            />
+
             {cartSheetOpen && (
               <>
                 <button
                   type="button"
-                  className="fixed inset-0 z-40 bg-black/45"
+                  className="fixed inset-0 z-[140] bg-black/45"
                   aria-label={tCommon("close")}
                   onClick={() => setCartSheetOpen(false)}
                 />
-                <div className="fixed inset-x-0 bottom-0 z-50 flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
+                <div className="fixed inset-x-0 bottom-0 z-[150] flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
                   <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 shrink-0">
                     <p className="font-bold text-sm text-[var(--text-primary)]">
                       {t("cartSheetTitle", { count: cart.length })}
@@ -2591,7 +2647,6 @@ export default function WalkInPage() {
                       stylistsComplete={stylistsComplete}
                       onRemove={removeFromCart}
                       onUpdateStaff={updateStaff}
-                      onApplyStylistToAll={applyStylistToAll}
                       onEditPrice={setPriceEditIdx}
                       onSaveOpen={() => void saveOpenVisit()}
                       onProceedToBill={() => void proceedToBill()}
@@ -2601,7 +2656,7 @@ export default function WalkInPage() {
               </>
             )}
 
-            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)]">
+            <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">
               {cart.length === 0 ? (
                 <p className="text-center text-xs text-[var(--text-tertiary)] py-0.5">{t("cartEmpty")}</p>
               ) : (
@@ -2650,6 +2705,15 @@ export default function WalkInPage() {
 
       {step === 3 && billPreview && (
         <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+          {paymentSuccess && reviewInvitationUrl ? (
+            <WalkInReviewInvitePanel
+              reviewUrl={reviewInvitationUrl}
+              reviewSubmittedRating={reviewSubmittedRating}
+              onError={setError}
+              prominent
+            />
+          ) : null}
+
           {membership && (
             <div className="flex items-center gap-2 rounded-lg border border-violet-200/90 bg-violet-50/50 px-3 py-2 text-xs dark:border-violet-900/50 dark:bg-violet-950/25">
               <Sparkles className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
@@ -2999,8 +3063,6 @@ export default function WalkInPage() {
               customerPhone={phone}
               receiptDeliveryStatus={receiptDeliveryStatus}
               receiptDeliveryError={receiptDeliveryError || undefined}
-              reviewUrl={reviewInvitationUrl || undefined}
-              reviewSubmittedRating={reviewSubmittedRating}
               registrationCard={registrationCard}
               processingLabel={tCommon("processing")}
               onError={setError}
@@ -3086,7 +3148,7 @@ export default function WalkInPage() {
 
           {!billingLocked && (
             <div className="lg:hidden">
-              <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)]">
+              <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">
                 <WalkInMobilePaymentActions
                   saving={payBooking.isPending}
                   payDisabled={

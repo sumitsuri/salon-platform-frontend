@@ -12,8 +12,10 @@ import { BreadcrumbProvider, useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { resolveMobileBreadcrumbs } from "@/lib/page-header-nav";
 import { useSidebarCollapsed } from "@/lib/sidebar-state";
 import { SettingsButton, SettingsSheet } from "@/components/SettingsSheet";
-import { AppNavInput, MOBILE_MAIN_PADDING, MOBILE_TOP_BAR_OFFSET, flattenNavItems, isHomePath } from "@/components/app-nav";
+import { AppNavInput, MOBILE_MAIN_PADDING, MOBILE_MAIN_PADDING_BOTTOM_TABS, MOBILE_TOP_BAR_OFFSET, MobileBottomNavConfig, flattenNavItems, isHomePath, shouldHideMobileBottomBar } from "@/components/app-nav";
 import { MobilePrimaryFab } from "@/components/MobilePrimaryFab";
+import { MobileBottomTabBar } from "@/components/MobileBottomTabBar";
+import { MobileMoreMenuSheet } from "@/components/MobileMoreMenuSheet";
 import { SidebarNavPanel } from "@/components/SidebarNavPanel";
 import { MobileNavDrawer } from "@/components/MobileNavDrawer";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -36,6 +38,8 @@ export interface EnterpriseAppShellProps {
   mobileMainPadding?: string;
   mobileNavFabColor?: string;
   activeNavClassName?: string;
+  /** Branch manager: bottom tabs + More sheet instead of drawer nav on phone. */
+  mobileBottomNav?: MobileBottomNavConfig;
 }
 
 const SIDEBAR_MQ = "(min-width: 768px)";
@@ -67,6 +71,7 @@ function MobileTopBar({
   logoutLabel,
   usesSidebar,
   drawerOpen,
+  hideMenuButton,
 }: {
   homeHref: string;
   homeLabel: string;
@@ -80,6 +85,7 @@ function MobileTopBar({
   logoutLabel: string;
   usesSidebar: boolean;
   drawerOpen: boolean;
+  hideMenuButton?: boolean;
 }) {
   const tCommon = useTranslations("common");
   const pathname = usePathname();
@@ -94,15 +100,17 @@ function MobileTopBar({
     >
       <div className="flex items-center justify-between h-14 px-3 w-full gap-2">
         <div className="flex items-center gap-1 min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={onOpenMenu}
-            data-testid="mobile-menu-button"
-            className="p-2.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] touch-manipulation shrink-0"
-            aria-label={tCommon("openMenu")}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          {!hideMenuButton ? (
+            <button
+              type="button"
+              onClick={onOpenMenu}
+              data-testid="mobile-menu-button"
+              className="p-2.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] touch-manipulation shrink-0"
+              aria-label={tCommon("openMenu")}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          ) : null}
 
           {mobileBreadcrumbs.length > 0 ? (
             <Breadcrumbs items={mobileBreadcrumbs} variant="trail" compact testId="mobile-breadcrumbs" className="min-w-0 flex-1" />
@@ -167,12 +175,28 @@ export function EnterpriseAppShell({
   mobileMainPadding = MOBILE_MAIN_PADDING,
   mobileNavFabColor,
   activeNavClassName,
+  mobileBottomNav,
 }: EnterpriseAppShellProps) {
   const usesSidebar = useSidebarLayout();
   const { collapsed, toggle, ready } = useSidebarCollapsed();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const closeDrawer = useCallback(() => setMobileDrawerOpen(false), []);
+  const pathname = usePathname();
   const flatNav = flattenNavItems(nav);
+  const useBottomNav = !!mobileBottomNav;
+  const hideBottomBarByRoute =
+    useBottomNav && mobileBottomNav ? shouldHideMobileBottomBar(mobileBottomNav, pathname) : false;
+  const resolvedMainPadding =
+    mobileMainPadding === MOBILE_MAIN_PADDING && useBottomNav
+      ? hideBottomBarByRoute
+        ? MOBILE_MAIN_PADDING
+        : MOBILE_MAIN_PADDING_BOTTOM_TABS
+      : mobileMainPadding;
+
+  const moreActive =
+    useBottomNav &&
+    (mobileBottomNav.moreActivePrefixes ?? []).some((prefix) => pathname.startsWith(prefix));
 
   const sidebarWidth = collapsed ? "var(--sidebar-width-collapsed)" : "var(--sidebar-width)";
 
@@ -232,6 +256,7 @@ export function EnterpriseAppShell({
               logoutLabel={logoutLabel}
               usesSidebar={usesSidebar}
               drawerOpen={mobileDrawerOpen}
+              hideMenuButton={useBottomNav}
             />
 
             <main
@@ -240,7 +265,7 @@ export function EnterpriseAppShell({
                 "flex-1 w-full px-4 sm:px-6 md:px-6 lg:px-8 pb-20 sm:pb-6 md:py-6 min-w-0",
                 "max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:touch-scroll-y",
                 MOBILE_TOP_BAR_OFFSET,
-                mobileMainPadding
+                resolvedMainPadding
               )}
               data-touch-scroll
             >
@@ -249,8 +274,32 @@ export function EnterpriseAppShell({
           </div>
         </div>
 
-        <MobileNavDrawer open={mobileDrawerOpen} onClose={closeDrawer} {...panelProps} />
-        <MobilePrimaryFab items={flatNav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
+        {!useBottomNav ? (
+          <MobileNavDrawer open={mobileDrawerOpen} onClose={closeDrawer} {...panelProps} />
+        ) : null}
+        {!useBottomNav ? (
+          <MobilePrimaryFab items={flatNav} color={mobileNavFabColor ?? brandColor} hidden={mobileDrawerOpen} />
+        ) : null}
+        {useBottomNav && mobileBottomNav ? (
+          <>
+            <MobileBottomTabBar
+              tabs={mobileBottomNav.tabs}
+              brandColor={mobileNavFabColor ?? brandColor}
+              moreLabel={mobileBottomNav.moreTabLabel}
+              moreActive={moreActive || mobileMoreOpen}
+              onMoreClick={() => setMobileMoreOpen(true)}
+              hidden={mobileMoreOpen || hideBottomBarByRoute}
+            />
+            <MobileMoreMenuSheet
+              open={mobileMoreOpen}
+              onClose={() => setMobileMoreOpen(false)}
+              title={mobileBottomNav.menuTitle}
+              sections={mobileBottomNav.moreSections}
+              brandName={brandName}
+              brandSubtitle={brandSubtitle}
+            />
+          </>
+        ) : null}
         <SettingsSheet open={settingsOpen} onClose={() => onSettingsOpen(false)} />
         </BreadcrumbProvider>
       </AppNavProvider>

@@ -1,8 +1,7 @@
 "use client";
 
+import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { Check, CheckCircle2 } from "lucide-react";
-import QRCode from "react-qr-code";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { btnPrimary, btnSecondary } from "@/components/ui";
@@ -16,8 +15,6 @@ type Props = {
   customerPhone?: string;
   receiptDeliveryStatus?: "SENT" | "SKIPPED" | "FAILED" | "PENDING";
   receiptDeliveryError?: string;
-  reviewUrl?: string;
-  reviewSubmittedRating?: number | null;
   registrationCard?: CustomerRegistrationCard | null;
   processingLabel: string;
   onError?: (message: string) => void;
@@ -32,8 +29,6 @@ export function WalkInPaymentSuccess({
   customerPhone,
   receiptDeliveryStatus,
   receiptDeliveryError,
-  reviewUrl,
-  reviewSubmittedRating,
   registrationCard,
   processingLabel,
   onError,
@@ -42,7 +37,6 @@ export function WalkInPaymentSuccess({
 }: Props) {
   const t = useTranslations("manager.walkIn");
   const [busy, setBusy] = useState<"share" | "download" | null>(null);
-  const [reviewCopied, setReviewCopied] = useState(false);
 
   async function shareBill() {
     setBusy("share");
@@ -65,17 +59,6 @@ export function WalkInPaymentSuccess({
       onError?.(e instanceof Error ? e.message : "Unable to download bill");
     } finally {
       setBusy(null);
-    }
-  }
-
-  async function copyReviewLink() {
-    if (!reviewUrl) return;
-    try {
-      await navigator.clipboard.writeText(reviewUrl);
-      setReviewCopied(true);
-      window.setTimeout(() => setReviewCopied(false), 2000);
-    } catch {
-      onError?.("Could not copy link");
     }
   }
 
@@ -123,35 +106,6 @@ export function WalkInPaymentSuccess({
             {busy === "download" ? processingLabel : t("downloadBill")}
           </button>
         </p>
-
-        {reviewUrl && (
-          <div className="mt-2.5 rounded-lg border border-[var(--border)]/80 bg-[var(--surface)]/90 px-2.5 py-2">
-            <p className="text-xs font-semibold text-[var(--text-secondary)]">
-              {reviewSubmittedRating != null
-                ? t("reviewRatedSummary", { rating: reviewSubmittedRating })
-                : t("reviewInviteTitle")}
-            </p>
-            <button
-              type="button"
-              onClick={() => void copyReviewLink()}
-              className="mt-2 flex w-full flex-col items-center gap-2.5 text-center touch-manipulation sm:flex-row sm:items-center sm:gap-3 sm:text-left"
-            >
-              <div className="shrink-0 rounded-lg bg-white p-2 ring-1 ring-[var(--border)]">
-                <QRCode value={reviewUrl} size={96} />
-              </div>
-              <span className="min-w-0 text-xs leading-snug text-[var(--text-secondary)] sm:flex-1">
-                {reviewCopied ? (
-                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
-                    <Check className="h-3.5 w-3.5" aria-hidden />
-                    {t("reviewCopiedLink")}
-                  </span>
-                ) : (
-                  t("reviewQrTapHint")
-                )}
-              </span>
-            </button>
-          </div>
-        )}
 
         {registrationCard && (
           <details className="group mt-2 rounded-lg border border-emerald-200/60 bg-white/40 dark:border-emerald-900/40 dark:bg-black/10">

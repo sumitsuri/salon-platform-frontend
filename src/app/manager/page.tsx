@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  UserPlus,
   TrendingUp,
   Users,
   Clock,
@@ -17,14 +15,19 @@ import {
   Receipt,
   BarChart3,
   Sparkles,
+  ChevronRight,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatTenantDateTime, getTenantLocaleKit } from "@/lib/tenant-locale";
+import { aggregateTodayEmployeeSales } from "@/lib/manager-today-sales";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
+import { ServiceSalesTeaser } from "@/components/ServiceSalesTeaser";
+import { ManagerHomeQuickActions } from "@/components/manager/ManagerHomeQuickActions";
+import { ManagerPrimaryWalkInCta } from "@/components/manager/ManagerPrimaryWalkInCta";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
@@ -33,7 +36,8 @@ import {
   formatDateRangeLabel,
   type ProductDateRange,
 } from "@/lib/date-range";
-import { Card, StatusBadge, ListRow, btnPrimary } from "@/components/ui";
+import { Card } from "@/components/ui";
+import { DashboardEmployeeSales, DashboardWidgetCard } from "@/components/enterprise-ui";
 
 function useGreeting() {
   const t = useTranslations("manager.home");
@@ -173,14 +177,13 @@ function QuickNavChip({
 export default function ManagerHomePage() {
   const t = useTranslations("manager.home");
   const tNav = useTranslations("manager.nav");
-  const tCommon = useTranslations("common");
+  const tDash = useTranslations("admin.dashboard");
   const greeting = useGreeting();
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const localeKit = getTenantLocaleKit();
-  const router = useRouter();
   const today = todayIsoDate();
   const todayLabel = formatDateRangeLabel(today, today);
+  const todayRange = useMemo(() => ({ startDate: today, endDate: today }), [today]);
 
   const [dateRange, setDateRange] = useState<ProductDateRange>(managerDateRange);
   const apiRange = insightPeriodToRange(dateRange);
@@ -194,7 +197,17 @@ export default function ManagerHomePage() {
         dateFrom: today,
         dateTo: today,
         page: 0,
-        size: 30,
+        size: 200,
+      }),
+    enabled: !!branchId,
+  });
+
+  const { data: todayServiceContribution, isLoading: todayServicesLoading } = useQuery({
+    queryKey: ["service-contribution-today", branchId, today],
+    queryFn: () =>
+      api.getServiceContribution({
+        ...todayRange,
+        branchIds: branchFilter,
       }),
     enabled: !!branchId,
   });
@@ -240,7 +253,7 @@ export default function ManagerHomePage() {
   });
 
   const firstName = user?.name?.split(" ")[0] || t("manager");
-  const queue = [...inProgress, ...completed].slice(0, 8);
+  const todayEmployeeSales = useMemo(() => aggregateTodayEmployeeSales(completed), [completed]);
 
   const periodReady = !!periodDashboard && !periodLoading;
   const periodSummaryLoading = (periodLoading || periodFetching) && !periodDashboard;
@@ -266,13 +279,6 @@ export default function ManagerHomePage() {
                 <p className="hero-subtitle mt-0.5 truncate text-[11px] font-medium sm:text-xs">{user.branchName}</p>
               )}
             </div>
-            <Link
-              href="/manager/walk-in?new=1"
-              className="hero-cta inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-semibold min-h-9 shadow-sm sm:text-sm"
-            >
-              <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-              {t("newWalkIn")}
-            </Link>
           </div>
         </div>
         <div
@@ -303,71 +309,70 @@ export default function ManagerHomePage() {
         </div>
       </section>
 
-      <InsightsTeaser
-        data={recommendations}
-        loading={recommendationsLoading}
-        href="/manager/insights"
-        previewCount={3}
+      <ManagerPrimaryWalkInCta
+        href="/manager/walk-in?new=1"
+        title={t("newWalkIn")}
+        subtitle={t("primaryWalkInSubtitle")}
       />
 
-      <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ManagerHomeQuickActions />
+
+      {inProgress.length > 0 ? (
+        <Link
+          href="/manager/walk-in"
+          className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/80 bg-amber-50/90 px-3 py-2.5 text-sm font-semibold text-amber-950 shadow-sm touch-manipulation dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-100"
+        >
+          <span>{t("openWalkInsBanner", { count: inProgress.length })}</span>
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+        </Link>
+      ) : null}
+
+      <div className="hidden md:block">
+        <InsightsTeaser
+          data={recommendations}
+          loading={recommendationsLoading}
+          href="/manager/insights"
+          previewCount={3}
+        />
+      </div>
+
+      <div className="hidden md:flex gap-1.5 overflow-x-auto overscroll-x-contain pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <QuickNavChip href="/manager/schedule" icon={CalendarClock} label={tNav("floor")} />
         <QuickNavChip href="/manager/walk-in?tab=history" icon={ClipboardList} label={tNav("visitsShort")} />
         <QuickNavChip href="/manager/memberships" icon={CreditCard} label={tNav("member")} />
-        <QuickNavChip href="/manager/attendance" icon={Fingerprint} label={tNav("staff")} />
+        <QuickNavChip href="/manager/attendance" icon={Fingerprint} label={tNav("employees")} />
+        <QuickNavChip href="/manager/stock" icon={Warehouse} label={tNav("tabStock")} />
         <QuickNavChip href="/manager/insights" icon={Sparkles} label={tNav("tips")} />
       </div>
 
-      <Card padding={false} className="min-w-0 shadow-sm ring-1 ring-[var(--border)]">
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-3 py-2.5">
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold text-[var(--text-primary)]">{t("recentVisits")}</h2>
-            <p className="mt-0.5 text-[11px] text-[var(--text-secondary)]">{t("recentVisitsHint")}</p>
-          </div>
-          <Link href="/manager/walk-in?tab=history" className="link-brand shrink-0 pt-0.5 text-xs font-semibold">
-            {tCommon("viewAll")}
-          </Link>
-        </div>
-        {todayLoading ? (
-          <p className="p-4 text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>
-        ) : queue.length === 0 ? (
-          <div className="px-4 py-6 text-center space-y-3">
-            <p className="font-semibold text-[var(--text-primary)]">{t("noVisitsTitle")}</p>
-            <p className="text-sm text-[var(--text-secondary)] max-w-sm mx-auto">{t("noVisitsDesc")}</p>
-            <Link href="/manager/walk-in?new=1" className={`${btnPrimary} inline-flex min-h-11`}>
-              <UserPlus className="w-4 h-4" />
-              {t("newWalkIn")}
-            </Link>
-          </div>
-        ) : (
-          <div>
-            {queue.map((b) => (
-              <ListRow
-                key={b.id}
-                onClick={
-                  b.status !== "COMPLETED" && b.status !== "CANCELLED"
-                    ? () => router.push(`/manager/walk-in?bookingId=${b.id}`)
-                    : undefined
-                }
-                title={b.customerName}
-                subtitle={`${formatTenantDateTime(b.createdAt, localeKit)} · ${b.lines?.map((l) => l.serviceName).join(", ") || "—"}`}
-                trailing={
-                  <div className="text-right min-w-0">
-                    {b.billPreview ? (
-                      <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] tabular-nums truncate">
-                        {formatCurrency(b.billPreview.grandTotal)}
-                      </p>
-                    ) : null}
-                    <StatusBadge status={b.status} className="mt-0.5" />
-                  </div>
-                }
-              />
-            ))}
-          </div>
-        )}
-      </Card>
+      <div className="space-y-3 min-w-0">
+        <DashboardWidgetCard>
+          <DashboardEmployeeSales
+            loading={todayLoading}
+            headerLabel={t("employeePerformanceToday")}
+            emptyLabel={tDash("noEmployeeSales")}
+            staff={todayEmployeeSales}
+            labels={{
+              name: tNav("tabEmployees"),
+              count: tDash("count"),
+              avgTicket: tDash("avgTicket"),
+              sales: tDash("sales"),
+            }}
+            formatValue={formatCurrency}
+            staffHref={() => "/manager/attendance"}
+          />
+        </DashboardWidgetCard>
 
-      <section aria-labelledby="analysis-section">
+        <ServiceSalesTeaser
+          data={todayServiceContribution}
+          loading={todayServicesLoading}
+          href="/manager/services"
+          panelVariant="dashboard"
+          rowLimit={null}
+        />
+      </div>
+
+      <section aria-labelledby="analysis-section" className="hidden md:block">
         <Card padding={false} className="overflow-hidden shadow-sm ring-1 ring-[var(--border)]">
           <div className="space-y-2.5 border-b border-[var(--border)] bg-gradient-to-br from-[var(--brand-light)]/60 via-[var(--surface)] to-violet-50/30 px-3 py-3 dark:from-indigo-950/30 dark:via-[var(--surface)] dark:to-violet-950/15 sm:px-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -101,10 +101,10 @@ export default function ManagerMembershipsPage() {
   const hasDebouncedFilters = filtersActive(debounced);
 
   useEffect(() => {
-    if (initialPhone || initialCustomerId) {
+    if (initialPhone || initialCustomerId || params.get("sell") === "1") {
       setSellOpen(true);
     }
-  }, [initialPhone, initialCustomerId]);
+  }, [initialPhone, initialCustomerId, params]);
 
   useEffect(() => {
     if (!filtersReady.current) {

@@ -14,14 +14,17 @@ interface ServiceSalesTeaserProps {
   loading?: boolean;
   href: string;
   panelVariant?: "default" | "dashboard";
+  /** Max rows to show; omit for default preview. Pass `null` to show all services. */
+  rowLimit?: number | null;
 }
 
-export function ServiceSalesTeaser({ data, loading, href, panelVariant = "default" }: ServiceSalesTeaserProps) {
+export function ServiceSalesTeaser({ data, loading, href, panelVariant = "default", rowLimit }: ServiceSalesTeaserProps) {
   const t = useTranslations("components.serviceSalesTeaser");
   const tCommon = useTranslations("common");
   const services = [...(data?.services ?? [])].sort((a, b) => b.revenue - a.revenue || b.count - a.count);
-  const preview = services.slice(0, PREVIEW_ROWS);
-  const hasMore = services.length > PREVIEW_ROWS;
+  const limit = rowLimit === null ? services.length : (rowLimit ?? PREVIEW_ROWS);
+  const preview = services.slice(0, limit);
+  const hasMore = rowLimit === null ? false : services.length > limit;
 
   return (
     <PanelShell

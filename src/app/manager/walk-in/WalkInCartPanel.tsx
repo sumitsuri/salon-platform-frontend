@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { BillPreview, StaffItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
 import { formatMoney, cn } from "@/lib/utils";
-import { Card, inputClass, selectClass, btnPrimary, btnSecondary } from "@/components/ui";
+import { Card, selectClass, btnPrimary, btnSecondary } from "@/components/ui";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { WalkInMobileCartActions } from "./WalkInMobileCartActions";
@@ -26,7 +26,6 @@ interface WalkInCartPanelProps {
   stylistsComplete: boolean;
   onRemove: (idx: number) => void;
   onUpdateStaff: (idx: number, staffId: string) => void;
-  onApplyStylistToAll: (staffId: string) => void;
   onEditPrice: (idx: number) => void;
   onSaveOpen: () => void;
   onProceedToBill: () => void;
@@ -50,7 +49,6 @@ export function WalkInCartPanel({
   stylistsComplete,
   onRemove,
   onUpdateStaff,
-  onApplyStylistToAll,
   onEditPrice,
   onSaveOpen,
   onProceedToBill,
@@ -95,26 +93,6 @@ export function WalkInCartPanel({
         <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
       ) : (
         <>
-          {staff.length > 0 && (
-            <label className="block text-xs">
-              <span className="font-semibold text-[var(--text-secondary)]">{t("sameStylistForAll")}</span>
-              <select
-                className={`${selectClass} mt-1 py-2.5 min-h-11`}
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) onApplyStylistToAll(e.target.value);
-                }}
-              >
-                <option value="">{t("selectStylist")}</option>
-                {staff.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
           <div
             className={cn(
               "space-y-2 overflow-y-auto overscroll-contain touch-scroll-y",

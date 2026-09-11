@@ -79,6 +79,59 @@ export const MOBILE_MAIN_PADDING =
 export const MOBILE_MAIN_PADDING_FAB =
   "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-6";
 
+/** Bottom tab bar (branch manager mobile). */
+export const MOBILE_MAIN_PADDING_BOTTOM_TABS =
+  "pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6";
+
+export type MobileBottomTabItem = {
+  id: string;
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+  /** Also highlight tab when pathname starts with any of these prefixes. */
+  activePrefixes?: string[];
+  /** Elevated center action (e.g. new visit). */
+  primary?: boolean;
+  /** Hide global tab bar on these path prefixes (walk-in has its own footer). */
+  hideBarOnPrefixes?: string[];
+};
+
+export type MobileMoreNavLink = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  description?: string;
+};
+
+export type MobileMoreNavSection = {
+  id: string;
+  label: string;
+  links: MobileMoreNavLink[];
+};
+
+export type MobileBottomNavConfig = {
+  tabs: MobileBottomTabItem[];
+  moreSections: MobileMoreNavSection[];
+  moreTabLabel: string;
+  menuTitle: string;
+  /** Paths that activate the More tab highlight */
+  moreActivePrefixes?: string[];
+  /** Hide the bottom tab bar on these path prefixes (e.g. walk-in wizard with its own footer). */
+  hideBarOnPrefixes?: string[];
+};
+
+/** True when the mobile bottom tab bar should not render for the current route. */
+export function shouldHideMobileBottomBar(config: MobileBottomNavConfig, pathname: string): boolean {
+  const path = normalizeNavPath(pathname);
+  if (config.hideBarOnPrefixes?.some((prefix) => path.startsWith(normalizeNavPath(prefix)))) {
+    return true;
+  }
+  return config.tabs.some((tab) =>
+    tab.hideBarOnPrefixes?.some((prefix) => path.startsWith(normalizeNavPath(prefix))),
+  );
+}
+
 /** @deprecated use MOBILE_MAIN_PADDING */
 export const MOBILE_NAV_MAIN_PADDING = MOBILE_MAIN_PADDING;
 

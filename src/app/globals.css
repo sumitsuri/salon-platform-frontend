@@ -4115,3 +4115,201 @@ html[lang="pa-IN"] body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Manager home — primary walk-in CTA (neutral surface, subtle motion) */
+.manager-walk-in-cta {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--kpi-emerald) 28%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 8%, var(--surface)) 0%,
+    var(--surface) 45%,
+    color-mix(in srgb, var(--kpi-sky) 6%, var(--surface)) 100%
+  );
+  padding: 0.875rem 1rem;
+  min-height: 4.75rem;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--kpi-emerald) 12%, transparent),
+    0 12px 28px color-mix(in srgb, var(--kpi-emerald) 10%, transparent);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.manager-walk-in-cta:hover {
+  border-color: color-mix(in srgb, var(--kpi-emerald) 45%, var(--border));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--kpi-emerald) 18%, transparent),
+    0 16px 36px color-mix(in srgb, var(--kpi-emerald) 14%, transparent);
+}
+
+.manager-walk-in-cta:active {
+  transform: scale(0.985);
+}
+
+.manager-walk-in-cta:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--kpi-emerald) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.manager-walk-in-cta-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 40%,
+    color-mix(in srgb, var(--kpi-emerald) 12%, transparent) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: manager-walk-in-shimmer 4.5s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.manager-walk-in-cta-glow {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  width: 3.5rem;
+  height: 3.5rem;
+  translate: 0 -50%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--kpi-emerald) 22%, transparent) 0%, transparent 70%);
+  animation: manager-walk-in-glow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.manager-walk-in-cta-icon-wrap {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+}
+
+.manager-walk-in-cta-icon-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 0.875rem;
+  border: 2px solid color-mix(in srgb, var(--kpi-emerald) 35%, transparent);
+  animation: manager-walk-in-ring 2.4s ease-out infinite;
+}
+
+.manager-walk-in-cta-icon {
+  position: relative;
+  display: flex;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--kpi-emerald) 14%, var(--surface-muted));
+  color: color-mix(in srgb, var(--kpi-emerald) 85%, var(--text-primary));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent);
+  animation: manager-walk-in-icon-nudge 2.8s ease-in-out infinite;
+}
+
+.manager-walk-in-cta-title {
+  position: relative;
+  z-index: 1;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+@media (min-width: 640px) {
+  .manager-walk-in-cta-title {
+    font-size: 1.125rem;
+  }
+}
+
+.manager-walk-in-cta-subtitle {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+@media (min-width: 640px) {
+  .manager-walk-in-cta-subtitle {
+    font-size: 0.875rem;
+  }
+}
+
+.manager-walk-in-cta-chevron {
+  position: relative;
+  z-index: 1;
+  color: color-mix(in srgb, var(--kpi-emerald) 70%, var(--text-tertiary));
+  transition: transform 0.25s ease;
+}
+
+.manager-walk-in-cta:hover .manager-walk-in-cta-chevron {
+  transform: translateX(3px);
+}
+
+@keyframes manager-walk-in-shimmer {
+  0%,
+  100% {
+    background-position: 200% 0;
+  }
+  50% {
+    background-position: -20% 0;
+  }
+}
+
+@keyframes manager-walk-in-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes manager-walk-in-ring {
+  0% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes manager-walk-in-icon-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manager-walk-in-cta-shimmer,
+  .manager-walk-in-cta-glow,
+  .manager-walk-in-cta-icon-ring,
+  .manager-walk-in-cta-icon {
+    animation: none;
+  }
+}
