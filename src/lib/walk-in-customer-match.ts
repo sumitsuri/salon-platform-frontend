@@ -7,7 +7,7 @@ export type WalkInNameMatchScope = {
   branchSocietyDefault?: string | null;
 };
 
-/** Reuse an existing profile when the name matches at this branch — avoids duplicate guests on walk-in. */
+/** Reuse an existing profile when the name matches at this branch (phone-required branches only). */
 export async function matchCustomerByExactName(
   name: string,
   scope: WalkInNameMatchScope

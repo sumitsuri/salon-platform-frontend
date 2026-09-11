@@ -1410,23 +1410,26 @@ export default function WalkInPage() {
       let isNew = false;
       let createdVisitPassId = visitPassId;
       if (!id) {
-        const existing = await matchCustomerByExactName(customerName.trim(), {
-          branchId,
-          branchSocietyDefault: branch?.societyDefault,
-        });
-        if (existing === "ambiguous") {
-          setError(t("multipleCustomersSameName", { name: customerName.trim() }));
-          return;
+        if (phoneNumberRequired) {
+          const existing = await matchCustomerByExactName(customerName.trim(), {
+            branchId,
+            branchSocietyDefault: branch?.societyDefault,
+          });
+          if (existing === "ambiguous") {
+            setError(t("multipleCustomersSameName", { name: customerName.trim() }));
+            return;
+          }
+          if (existing) {
+            id = existing.id;
+            setCustomerId(id);
+            setVisitPassId(existing.visitPassId || "");
+            setVisitPassInput(existing.visitPassId || "");
+            if (existing.society) setSociety(existing.society);
+            if (existing.flatUnit) setFlat(existing.flatUnit);
+            createdVisitPassId = existing.visitPassId || "";
+          }
         }
-        if (existing) {
-          id = existing.id;
-          setCustomerId(id);
-          setVisitPassId(existing.visitPassId || "");
-          setVisitPassInput(existing.visitPassId || "");
-          if (existing.society) setSociety(existing.society);
-          if (existing.flatUnit) setFlat(existing.flatUnit);
-          createdVisitPassId = existing.visitPassId || "";
-        } else {
+        if (!id) {
           const c = await api.createCustomer({
             name: customerName.trim(),
             phone: normalized || undefined,
@@ -1596,25 +1599,27 @@ export default function WalkInPage() {
     if (phoneNumberRequired && !normalized) {
       throw new Error(t("customerRequiredBeforeSave"));
     }
-    const existing = await matchCustomerByExactName(customerName.trim(), {
-      branchId,
-      branchSocietyDefault: branch?.societyDefault,
-    });
-    if (existing === "ambiguous") {
-      throw new Error(t("multipleCustomersSameName", { name: customerName.trim() }));
-    }
-    if (existing) {
-      setCustomerId(existing.id);
-      setVisitPassId(existing.visitPassId || "");
-      pushRecentCustomer(branchId, {
-        phone: normalized || undefined,
-        visitPassId: existing.visitPassId,
-        name: existing.name,
-        customerId: existing.id,
-        society: existing.society,
-        flat: existing.flatUnit,
+    if (phoneNumberRequired) {
+      const existing = await matchCustomerByExactName(customerName.trim(), {
+        branchId,
+        branchSocietyDefault: branch?.societyDefault,
       });
-      return existing.id;
+      if (existing === "ambiguous") {
+        throw new Error(t("multipleCustomersSameName", { name: customerName.trim() }));
+      }
+      if (existing) {
+        setCustomerId(existing.id);
+        setVisitPassId(existing.visitPassId || "");
+        pushRecentCustomer(branchId, {
+          phone: normalized || undefined,
+          visitPassId: existing.visitPassId,
+          name: existing.name,
+          customerId: existing.id,
+          society: existing.society,
+          flat: existing.flatUnit,
+        });
+        return existing.id;
+      }
     }
     const c = await api.createCustomer({
       name: customerName.trim(),
