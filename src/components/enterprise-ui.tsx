@@ -722,6 +722,9 @@ const CHECKIN_TABLE_GRID =
   "grid grid-cols-[minmax(0,1fr)_4.5rem_4.5rem] items-center gap-x-2 sm:gap-x-3";
 
 const SALES_TABLE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_2rem_minmax(2.5rem,1fr)_minmax(2.75rem,1fr)_minmax(2.75rem,1fr)] items-center gap-x-1.5 sm:gap-x-2";
+
+const SALES_TABLE_GRID_LEGACY =
   "grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(3.25rem,1fr)_minmax(3.75rem,1fr)] items-center gap-x-2 sm:gap-x-3";
 
 function StaffAvatar({
@@ -918,7 +921,11 @@ export type EmployeeSalesRow = {
   staffName: string;
   salesCount: number;
   avgTicketSize: number;
+  /** Final (discounted) total — primary sales metric. */
   totalSales: number;
+  totalListSales?: number;
+  totalFinalSales?: number;
+  avgListTicketSize?: number;
 };
 
 export function DashboardEmployeeSales({
@@ -940,14 +947,17 @@ export function DashboardEmployeeSales({
     count: string;
     avgTicket: string;
     sales: string;
+    listPrice?: string;
+    finalPrice?: string;
   };
   formatValue: (amount: number) => string;
   staffHref?: (row: EmployeeSalesRow) => string;
   className?: string;
 }) {
-  type SalesSortKey = "name" | "count" | "avgTicket" | "sales";
-  const [sortColumn, setSortColumn] = useState<SalesSortKey>("sales");
+  type SalesSortKey = "name" | "count" | "avgTicket" | "list" | "final" | "sales";
+  const [sortColumn, setSortColumn] = useState<SalesSortKey>("final");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const showDiscountColumns = Boolean(labels.listPrice && labels.finalPrice);
 
   const sortedStaff = useMemo(() => {
     const rows = [...staff];
@@ -960,8 +970,11 @@ export function DashboardEmployeeSales({
           return dir * (a.salesCount - b.salesCount);
         case "avgTicket":
           return dir * (a.avgTicketSize - b.avgTicketSize);
+        case "list":
+          return dir * ((a.totalListSales ?? a.totalSales) - (b.totalListSales ?? b.totalSales));
+        case "final":
         case "sales":
-          return dir * (a.totalSales - b.totalSales);
+          return dir * ((a.totalFinalSales ?? a.totalSales) - (b.totalFinalSales ?? b.totalSales));
         default:
           return 0;
       }
@@ -976,10 +989,10 @@ export function DashboardEmployeeSales({
       : [];
   const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
   const headerRowClass = cn(
-    SALES_TABLE_GRID,
+    showDiscountColumns ? SALES_TABLE_GRID : SALES_TABLE_GRID_LEGACY,
     "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
   );
-  const bodyRowClass = cn(SALES_TABLE_GRID, "min-h-[2.75rem] px-3 py-2 sm:px-4");
+  const bodyRowClass = cn(showDiscountColumns ? SALES_TABLE_GRID : SALES_TABLE_GRID_LEGACY, "min-h-[2.75rem] px-3 py-2 sm:px-4");
 
   return (
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
@@ -1014,13 +1027,32 @@ export function DashboardEmployeeSales({
             onClick={() => toggleSort("avgTicket", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
             className="ml-auto"
           />
-          <DashboardSortHeader
-            label={labels.sales}
-            active={sortColumn === "sales"}
-            direction={sortDirection}
-            onClick={() => toggleSort("sales", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
-            className="ml-auto"
-          />
+          {showDiscountColumns ? (
+            <>
+              <DashboardSortHeader
+                label={labels.listPrice!}
+                active={sortColumn === "list"}
+                direction={sortDirection}
+                onClick={() => toggleSort("list", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+                className="ml-auto"
+              />
+              <DashboardSortHeader
+                label={labels.finalPrice!}
+                active={sortColumn === "final"}
+                direction={sortDirection}
+                onClick={() => toggleSort("final", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+                className="ml-auto"
+              />
+            </>
+          ) : (
+            <DashboardSortHeader
+              label={labels.sales}
+              active={sortColumn === "sales"}
+              direction={sortDirection}
+              onClick={() => toggleSort("sales", sortColumn, sortDirection, setSortColumn, setSortDirection, true)}
+              className="ml-auto"
+            />
+          )}
         </div>
 
         <div
@@ -1050,9 +1082,20 @@ export function DashboardEmployeeSales({
                   <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">
                     {loading ? "…" : formatValue(item!.avgTicketSize)}
                   </p>
-                  <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                    {loading ? "…" : formatValue(item!.totalSales)}
-                  </p>
+                  {showDiscountColumns ? (
+                    <>
+                      <p className="text-right text-[11px] sm:text-sm tabular-nums text-[var(--text-secondary)]">
+                        {loading ? "…" : formatValue(item!.totalListSales ?? item!.totalSales)}
+                      </p>
+                      <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        {loading ? "…" : formatValue(item!.totalFinalSales ?? item!.totalSales)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {loading ? "…" : formatValue(item!.totalSales)}
+                    </p>
+                  )}
                 </div>
               );
 

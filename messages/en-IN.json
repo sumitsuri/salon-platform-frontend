@@ -893,7 +893,8 @@
       "empty": "Sales show up after completed walk-ins in this period.",
       "service": "Service",
       "count": "Count",
-      "total": "Total"
+      "total": "List",
+      "finalTotal": "Final"
     },
     "serviceContributionTeaser": {
       "title": "Service Sales",
@@ -1257,6 +1258,8 @@
       "totalRevenue": "Total Revenue",
       "visits": "Visits",
       "avgTicket": "Avg Ticket",
+      "listTotal": "List",
+      "finalTotal": "Final",
       "discounts": "Discounts",
       "branchComparison": "Branch comparison",
       "revenue": "Revenue",

@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Scissors, ChevronRight } from "lucide-react";
 import { ServiceContributionResponse } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { PanelShell, PanelLink } from "@/components/enterprise-ui";
 
 const PREVIEW_ROWS = 6;
+
+const SERVICE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_3rem_minmax(3.25rem,1fr)_minmax(3.25rem,1fr)] items-center gap-x-2 sm:gap-x-3";
 
 interface ServiceSalesTeaserProps {
   data?: ServiceContributionResponse;
@@ -54,12 +57,16 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
       ) : (
         <>
           <div
-            className="ui-table-head hidden sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_5.5rem] sm:items-center sm:gap-3 border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2"
+            className={cn(
+              "ui-table-head hidden border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2 sm:grid",
+              SERVICE_GRID,
+            )}
             aria-hidden
           >
             <span>{t("service")}</span>
             <span className="text-right">{t("count")}</span>
             <span className="text-right">{t("total")}</span>
+            <span className="text-right">{t("finalTotal")}</span>
           </div>
           <div
             className="service-sales-scroll divide-y divide-[var(--border)]"
@@ -67,34 +74,41 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
             aria-label={t("title")}
             tabIndex={hasMore ? 0 : undefined}
           >
-            {preview.map((s) => (
-              <Link
-                key={s.serviceName}
-                href={href}
-                className="block px-3 py-3 transition-colors hover:bg-[var(--surface-muted)]/60 sm:px-4 sm:py-2.5"
-              >
-                <div className="sm:hidden">
-                  <div className="flex items-start justify-between gap-2 min-w-0">
-                    <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]">
-                      {s.serviceName}
-                    </p>
-                    <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {formatCurrency(s.revenue)}
+            {preview.map((s) => {
+              const listAmount = s.listRevenue ?? s.revenue;
+              const finalAmount = s.revenue;
+              return (
+                <Link
+                  key={s.serviceName}
+                  href={href}
+                  className="block px-3 py-3 transition-colors hover:bg-[var(--surface-muted)]/60 sm:px-4 sm:py-2.5"
+                >
+                  <div className="sm:hidden">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]">
+                        {s.serviceName}
+                      </p>
+                      <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                        {formatCurrency(finalAmount)}
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-[11px] tabular-nums text-[var(--text-secondary)] sm:text-xs">
+                      {t("count")}: {s.count} · {t("total")}: {formatCurrency(listAmount)}
                     </p>
                   </div>
-                  <p className="mt-0.5 text-[11px] tabular-nums text-[var(--text-secondary)] sm:text-xs">
-                    {t("count")}: {s.count}
-                  </p>
-                </div>
-                <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_5.5rem] sm:items-center sm:gap-3">
-                  <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">{s.serviceName}</p>
-                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">{s.count}</p>
-                  <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                    {formatCurrency(s.revenue)}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                  <div className={cn("hidden sm:grid", SERVICE_GRID)}>
+                    <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">{s.serviceName}</p>
+                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">{s.count}</p>
+                    <p className="text-right text-[11px] sm:text-sm tabular-nums text-[var(--text-secondary)]">
+                      {formatCurrency(listAmount)}
+                    </p>
+                    <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                      {formatCurrency(finalAmount)}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </>
       )}

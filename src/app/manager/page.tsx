@@ -357,6 +357,8 @@ export default function ManagerHomePage() {
               count: tDash("count"),
               avgTicket: tDash("avgTicket"),
               sales: tDash("sales"),
+              listPrice: tDash("listTotal"),
+              finalPrice: tDash("finalTotal"),
             }}
             formatValue={formatCurrency}
             staffHref={() => "/manager/attendance"}

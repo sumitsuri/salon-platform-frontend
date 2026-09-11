@@ -2215,6 +2215,9 @@ export interface WeekdaySalesInsight {
 
 export interface ServiceContributionItem {
   serviceName: string;
+  /** Catalog / list total before discounts. */
+  listRevenue?: number;
+  /** Final collected amount (after discounts, incl. line GST). */
   revenue: number;
   count: number;
   revenueSharePct: number;

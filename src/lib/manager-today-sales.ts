@@ -1,14 +1,16 @@
 import type { Booking } from "@/lib/api";
 import type { EmployeeSalesRow } from "@/components/enterprise-ui";
+import { lineFinalAmount, lineListAmount } from "@/lib/booking-line-revenue";
 
 type StaffAccumulator = {
   staffId: string;
   staffName: string;
   serviceCount: number;
-  revenue: number;
+  listRevenue: number;
+  finalRevenue: number;
 };
 
-/** Today’s completed visits — service count and revenue by stylist (matches invoice line logic). */
+/** Today’s completed visits — list vs final (discounted) revenue by stylist. */
 export function aggregateTodayEmployeeSales(completedBookings: Booking[]): EmployeeSalesRow[] {
   const byStaff = new Map<string, StaffAccumulator>();
 
@@ -16,17 +18,20 @@ export function aggregateTodayEmployeeSales(completedBookings: Booking[]): Emplo
     for (const line of booking.lines ?? []) {
       if (!line.staffId) continue;
       const qty = Math.max(1, line.quantity ?? 1);
-      const lineRevenue = line.unitPrice * qty;
+      const listRevenue = lineListAmount(line);
+      const finalRevenue = lineFinalAmount(booking, line);
       const existing = byStaff.get(line.staffId);
       if (existing) {
         existing.serviceCount += qty;
-        existing.revenue += lineRevenue;
+        existing.listRevenue += listRevenue;
+        existing.finalRevenue += finalRevenue;
       } else {
         byStaff.set(line.staffId, {
           staffId: line.staffId,
           staffName: line.staffName || "—",
           serviceCount: qty,
-          revenue: lineRevenue,
+          listRevenue,
+          finalRevenue,
         });
       }
     }
@@ -37,8 +42,11 @@ export function aggregateTodayEmployeeSales(completedBookings: Booking[]): Emplo
       staffId: row.staffId,
       staffName: row.staffName,
       salesCount: row.serviceCount,
-      totalSales: row.revenue,
-      avgTicketSize: row.serviceCount > 0 ? row.revenue / row.serviceCount : 0,
+      totalListSales: row.listRevenue,
+      totalFinalSales: row.finalRevenue,
+      totalSales: row.finalRevenue,
+      avgTicketSize: row.serviceCount > 0 ? row.finalRevenue / row.serviceCount : 0,
+      avgListTicketSize: row.serviceCount > 0 ? row.listRevenue / row.serviceCount : 0,
     }))
-    .sort((a, b) => b.totalSales - a.totalSales || b.salesCount - a.salesCount);
+    .sort((a, b) => b.totalFinalSales - a.totalFinalSales || b.salesCount - a.salesCount);
 }
