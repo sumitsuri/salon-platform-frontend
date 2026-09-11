@@ -83,8 +83,8 @@ function PeriodMetricCell({
         <Icon className="w-4 h-4" aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-secondary)] truncate">{label}</p>
-        <p className="text-sm sm:text-lg font-bold tabular-nums text-[var(--text-primary)] truncate mt-0.5">{value}</p>
+        <p className="text-[10px] font-semibold text-[var(--text-secondary)] truncate heading-case">{label}</p>
+        <p className="text-sm font-semibold tabular-nums text-[var(--text-primary)] truncate mt-0.5">{value}</p>
       </div>
     </div>
   );
@@ -141,7 +141,7 @@ function ManagerTodayMetric({
       </div>
       <p
         className={cn(
-          "w-full truncate text-base font-extrabold tabular-nums leading-none tracking-tight sm:text-xl",
+          "w-full truncate text-sm font-bold tabular-nums leading-none tracking-tight sm:text-base",
           s.value,
           loading && "animate-pulse opacity-70",
         )}
@@ -149,7 +149,7 @@ function ManagerTodayMetric({
       >
         {loading ? "…" : value}
       </p>
-      <p className={cn("mt-1 w-full truncate text-[10px] font-semibold leading-none", s.label)}>{label}</p>
+      <p className={cn("mt-1 w-full truncate text-[10px] font-semibold leading-none heading-case", s.label)}>{label}</p>
     </div>
   );
 }
@@ -264,19 +264,19 @@ export default function ManagerHomePage() {
         <div className="hero-banner relative rounded-none px-3 py-3 shadow-none sm:px-4 sm:py-3.5">
           <div className="flex items-start gap-2.5 min-w-0">
             <div className="min-w-0 flex-1">
-              <p className="hero-muted truncate text-[11px] font-semibold sm:text-xs">
+              <p className="hero-muted truncate text-[11px] font-medium">
                 {greeting} · {todayLabel}
               </p>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                <h1 className="truncate text-base font-bold tracking-tight text-white sm:text-lg">{firstName}</h1>
-                {inProgress.length > 0 && (
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200/40 bg-amber-400/90 px-2 py-0.5 text-[10px] font-bold text-amber-950 shadow-sm">
-                    {t("openVisitsBadge", { count: inProgress.length })}
-                  </span>
-                )}
-              </div>
-              {user?.branchName && (
-                <p className="hero-subtitle mt-0.5 truncate text-[11px] font-medium sm:text-xs">{user.branchName}</p>
+              <h1 className="mt-0.5 truncate text-sm font-semibold leading-snug text-white">
+                {user?.branchName || firstName}
+              </h1>
+              {user?.branchName && user?.name && (
+                <p className="hero-subtitle mt-0.5 truncate text-[10px] font-normal opacity-90">{user.name}</p>
+              )}
+              {inProgress.length > 0 && (
+                <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200/40 bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 shadow-sm">
+                  {t("openVisitsBadge", { count: inProgress.length })}
+                </span>
               )}
             </div>
           </div>
@@ -381,7 +381,7 @@ export default function ManagerHomePage() {
                   <BarChart3 className="w-4 h-4" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <h2 id="analysis-section" className="font-bold text-[var(--text-primary)] leading-tight">
+                  <h2 id="analysis-section" className="dashboard-widget-title">
                     {t("analysisSection")}
                   </h2>
                   <p className="text-xs text-[var(--text-secondary)] line-clamp-1">{t("analysisSubtitle")}</p>

@@ -54,7 +54,7 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
       ) : (
         <>
           <div
-            className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_5.5rem] sm:items-center sm:gap-3 border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]"
+            className="ui-table-head hidden sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_5.5rem] sm:items-center sm:gap-3 border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2"
             aria-hidden
           >
             <span>{t("service")}</span>

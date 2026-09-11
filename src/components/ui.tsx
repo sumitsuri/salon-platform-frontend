@@ -390,7 +390,7 @@ export function PageHeader({
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2 min-w-0">
-              <h1 className="font-display text-xl sm:text-[length:var(--text-display)] font-bold text-[var(--text-primary)] tracking-tight leading-tight min-w-0">
+              <h1 className="min-w-0 text-[var(--text-primary)] tracking-tight leading-snug">
                 {title}
               </h1>
               {action ? (
@@ -974,7 +974,7 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div>
-          <h2 id="confirm-dialog-title" className="text-lg font-bold text-[var(--text-primary)]">
+          <h2 id="confirm-dialog-title" className="text-sm font-semibold text-[var(--text-primary)] heading-case">
             {title}
           </h2>
           <div className="text-sm text-[var(--text-secondary)] mt-2 space-y-2">{description}</div>
@@ -1009,7 +1009,7 @@ export function ConfirmDialog({
 export function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">
+      <p className="ui-field-label mb-1">
         {label}
       </p>
       <p className="text-sm text-[var(--text-primary)]">{value ?? "—"}</p>
@@ -1283,7 +1283,7 @@ export function TableFilterToolbar({
     >
       {active.map((col) => (
         <label key={col.label} className="block min-w-0 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+          <span className="ui-field-label block">
             {col.filterLabel ?? col.label}
           </span>
           {renderColumnFilter(col.filter!, t, "md")}
@@ -1337,7 +1337,7 @@ function renderMobileFilterFields(
         const filter = col.filter!;
         return (
           <label key={col.label} className="block min-w-0 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+            <span className="ui-field-label block">
               {col.label}
             </span>
             {filter.type === "text" && (

@@ -2043,11 +2043,11 @@ textarea:focus-visible {
 
 .dashboard-section-label {
   margin-bottom: 0.375rem;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--text-secondary);
 }
 
 .dashboard-kpi-strip-header .dashboard-section-label {
@@ -2341,12 +2341,13 @@ textarea:focus-visible {
 
 .dashboard-widget-title {
   margin: 0;
-  font-family: var(--font-display, var(--font-inter)), system-ui, sans-serif;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
   color: var(--text-primary);
+  text-transform: capitalize;
 }
 
 .dashboard-widget-subtitle {
@@ -3501,11 +3502,24 @@ html[lang="pa-IN"] body {
 }
 
 .section-label {
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--brand) 42%, var(--text-tertiary));
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+}
+
+/* Short action / list titles — Title Case (strict heading style) */
+.ui-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--text-primary);
+}
+
+.heading-case {
+  text-transform: capitalize;
 }
 
 /* Do not set position here — Tailwind `fixed` on shell/drawer asides must not be overridden */
@@ -4116,6 +4130,38 @@ html[lang="pa-IN"] body {
   display: none;
 }
 
+/* App-wide page & table typography — Title Case headings, compact */
+.page-header h1 {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+}
+
+@media (min-width: 640px) {
+  .page-header h1 {
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+}
+
+.ui-table-head {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--text-tertiary);
+}
+
+.ui-field-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+  color: var(--text-tertiary);
+}
+
 /* Manager home — primary walk-in CTA (neutral surface, subtle motion) */
 .manager-walk-in-cta {
   position: relative;
@@ -4219,16 +4265,11 @@ html[lang="pa-IN"] body {
 .manager-walk-in-cta-title {
   position: relative;
   z-index: 1;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
-}
-
-@media (min-width: 640px) {
-  .manager-walk-in-cta-title {
-    font-size: 1.125rem;
-  }
+  text-transform: capitalize;
 }
 
 .manager-walk-in-cta-subtitle {

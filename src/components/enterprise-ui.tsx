@@ -91,10 +91,10 @@ export function PulseStatCard({
           </span>
         )}
       </div>
-      <p className="text-base sm:text-xl md:text-2xl font-display font-bold text-[var(--text-primary)] mt-2 sm:mt-3 tracking-tight tabular-nums truncate min-w-0 relative">
+      <p className="text-sm sm:text-lg font-semibold text-[var(--text-primary)] mt-2 sm:mt-2.5 tracking-tight tabular-nums truncate min-w-0 relative">
         {value}
       </p>
-      <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 font-semibold uppercase tracking-wide line-clamp-2 break-words">
+      <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 font-medium line-clamp-2 break-words heading-case">
         {label}
       </p>
     </div>
@@ -537,7 +537,7 @@ export function DashboardBranchPerformance({
         <div
           className={cn(
             desktopGrid,
-            "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]",
+            "ui-table-head border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2",
           )}
           aria-hidden
         >
@@ -685,7 +685,7 @@ function DashboardSortHeader({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex max-w-full items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide transition-colors",
+        "ui-table-head inline-flex max-w-full items-center gap-0.5 transition-colors",
         active ? "text-[var(--text-secondary)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
         className,
       )}
@@ -1105,7 +1105,7 @@ export function DashboardHero({
         <div className="flex-1 min-w-0 space-y-2">
           {eyebrow && <p className="hero-muted text-sm font-medium truncate">{eyebrow}</p>}
           <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <h2 className="text-lg sm:text-2xl font-bold tracking-tight break-words min-w-0">{title}</h2>
+            <h2 className="text-sm sm:text-base font-semibold tracking-tight break-words min-w-0 heading-case">{title}</h2>
             {badge}
           </div>
           {subtitle && <p className="text-sm hero-subtitle line-clamp-2 sm:line-clamp-none">{subtitle}</p>}
@@ -1113,8 +1113,8 @@ export function DashboardHero({
         </div>
         {metric != null && metricLabel && (
           <div className="flex items-center justify-between sm:block shrink-0 w-full sm:w-auto min-w-0 border-t border-white/15 sm:border-0 pt-3 sm:pt-0 sm:max-w-[45%]">
-            <p className="text-[10px] hero-muted uppercase tracking-wider font-bold sm:text-right truncate">{metricLabel}</p>
-            <p className="text-xl sm:text-3xl font-bold tabular-nums sm:mt-0.5 sm:text-right truncate">{metric}</p>
+            <p className="text-[10px] hero-muted font-medium sm:text-right truncate">{metricLabel}</p>
+            <p className="text-base sm:text-xl font-semibold tabular-nums sm:mt-0.5 sm:text-right truncate">{metric}</p>
           </div>
         )}
       </div>
@@ -1194,7 +1194,7 @@ export function PanelShell({
             </div>
           )}
           <div className="min-w-0">
-            <h2 className="font-bold text-[var(--text-primary)] text-sm truncate">{title}</h2>
+            <h2 className="font-semibold text-[var(--text-primary)] text-sm truncate heading-case">{title}</h2>
             {subtitle && <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">{subtitle}</p>}
           </div>
         </div>
@@ -1282,8 +1282,7 @@ export function WizardSteps({
 
 /* ── Enterprise table utilities ── */
 
-export const enterpriseTableHead =
-  "text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]";
+export const enterpriseTableHead = "ui-table-head";
 
 export function EnterpriseTableShell({
   title,

@@ -44,7 +44,7 @@ function HubAction({
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-bold text-[var(--text-primary)]">{label}</p>
+        <p className="text-sm font-semibold text-[var(--text-primary)] ui-card-title">{label}</p>
         <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-snug">{description}</p>
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
@@ -80,7 +80,7 @@ export default function ManagerStockHubPage() {
 
       <Card padding={false} className="overflow-hidden">
         <div className="border-b border-[var(--border)] px-4 py-3">
-          <p className="text-sm font-bold text-[var(--text-primary)]">{t("manageSection")}</p>
+          <p className="dashboard-widget-title">{t("manageSection")}</p>
           <p className="text-xs text-[var(--text-secondary)]">{t("manageHint")}</p>
         </div>
         <div className="divide-y divide-[var(--border)]">

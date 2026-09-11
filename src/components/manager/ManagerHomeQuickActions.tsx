@@ -42,7 +42,7 @@ function ActionTile({
         <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", a.icon)}>
           <Icon className="h-4 w-4" aria-hidden />
         </span>
-        <span className="truncate text-sm font-bold text-[var(--text-primary)]">{label}</span>
+        <span className="truncate ui-card-title">{label}</span>
       </div>
       <p className="line-clamp-2 pl-10 text-[11px] leading-snug text-[var(--text-secondary)]">{description}</p>
     </Link>
@@ -54,10 +54,7 @@ export function ManagerHomeQuickActions() {
 
   return (
     <section aria-labelledby="manager-quick-actions" className="min-w-0">
-      <h2
-        id="manager-quick-actions"
-        className="mb-2 px-0.5 text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]"
-      >
+      <h2 id="manager-quick-actions" className="section-label mb-2">
         {t("quickActions")}
       </h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

@@ -43,7 +43,7 @@ function renderTab(tab: MobileBottomTabItem, pathname: string) {
       )}
     >
       <Icon className={cn("h-5 w-5 shrink-0", active && "text-[var(--brand)]")} aria-hidden />
-      <span className="text-[10px] font-bold leading-none tracking-tight">{tab.label}</span>
+      <span className="text-[10px] font-bold leading-none tracking-tight heading-case">{tab.label}</span>
     </Link>
   );
 }
@@ -67,7 +67,7 @@ function renderPrimary(tab: MobileBottomTabItem, brandColor: string) {
       >
         <tab.icon className="h-6 w-6" aria-hidden />
       </span>
-      <span className="mt-1 text-[10px] font-bold text-[var(--brand-text)] leading-none">{tab.label}</span>
+      <span className="mt-1 text-[10px] font-bold text-[var(--brand-text)] leading-none heading-case">{tab.label}</span>
     </Link>
   );
 }
@@ -126,7 +126,7 @@ export function MobileBottomTabBar({
           )}
         >
           <LayoutGrid className={cn("h-5 w-5 shrink-0", moreActive && "text-[var(--brand)]")} aria-hidden />
-          <span className="text-[10px] font-bold leading-none tracking-tight">{moreLabel}</span>
+          <span className="text-[10px] font-bold leading-none tracking-tight heading-case">{moreLabel}</span>
         </button>
       </div>
     </nav>

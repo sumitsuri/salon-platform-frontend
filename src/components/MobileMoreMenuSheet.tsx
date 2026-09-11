@@ -43,7 +43,7 @@ export function MobileMoreMenuSheet({ open, onClose, title, sections, brandName,
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 shrink-0">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-[var(--text-primary)]">{title}</h2>
+            <h2 className="text-sm font-semibold text-[var(--text-primary)] heading-case">{title}</h2>
             {brandName ? (
               <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                 {brandName}
@@ -64,9 +64,7 @@ export function MobileMoreMenuSheet({ open, onClose, title, sections, brandName,
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-4">
           {sections.map((section) => (
             <div key={section.id}>
-              <p className="px-1 mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                {section.label}
-              </p>
+              <p className="section-label px-1 mb-2">{section.label}</p>
               <div className="grid grid-cols-2 gap-2">
                 {section.links.map((link) => {
                   const Icon = link.icon;
@@ -81,7 +79,7 @@ export function MobileMoreMenuSheet({ open, onClose, title, sections, brandName,
                       <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--surface)] border border-[var(--border-brand)] text-[var(--brand-text)] shadow-sm">
                         <Icon className="h-4 w-4" aria-hidden />
                       </span>
-                      <span className="text-xs font-bold text-[var(--text-primary)] leading-snug">{link.label}</span>
+                      <span className="text-xs font-semibold text-[var(--text-primary)] leading-snug heading-case">{link.label}</span>
                       {link.description ? (
                         <span className="text-[10px] text-[var(--text-secondary)] line-clamp-2 leading-snug -mt-1">
                           {link.description}

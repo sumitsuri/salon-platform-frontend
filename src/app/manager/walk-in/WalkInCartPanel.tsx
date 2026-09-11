@@ -76,15 +76,15 @@ export function WalkInCartPanel({
   const inner = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">
+        <p className="ui-field-label">
           {t("cart", { count: cart.length })}
         </p>
         {cart.length > 0 && (
           <div className="text-right min-w-0">
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
+            <p className="ui-field-label">
               {useBillPreview ? t("billTotal") : t("estimatedTotal")}
             </p>
-            <p className="text-lg font-bold text-[var(--text-primary)] tabular-nums truncate">{totalDisplay}</p>
+            <p className="text-base font-semibold text-[var(--text-primary)] tabular-nums truncate">{totalDisplay}</p>
           </div>
         )}
       </div>
