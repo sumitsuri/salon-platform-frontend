@@ -2,7 +2,8 @@ import { Booking } from "@/lib/api";
 import { formatTenantDateTime, TenantLocaleKit } from "@/lib/tenant-locale";
 
 export function bookingVisitAt(booking: Booking): string | undefined {
-  return booking.completedAt ?? booking.createdAt;
+  const at = booking.completedAt ?? booking.createdAt;
+  return at ?? undefined;
 }
 
 export function formatBookingVisitAt(

@@ -2,44 +2,30 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CreditCard, Gift, type LucideIcon } from "lucide-react";
+import { CreditCard, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PackageUpsellCta } from "@/app/manager/packages/PackageUpsellCta";
 
 function ActionTile({
   href,
   icon: Icon,
   label,
   description,
-  accent,
 }: {
   href: string;
   icon: LucideIcon;
   label: string;
   description: string;
-  accent: "brand" | "sky";
 }) {
-  const accents = {
-    brand: {
-      ring: "ring-[var(--brand)]/15",
-      icon: "bg-[var(--brand-light)] text-[var(--brand-text)]",
-    },
-    sky: {
-      ring: "ring-sky-500/15",
-      icon: "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200",
-    },
-  };
-  const a = accents[accent];
-
   return (
     <Link
       href={href}
       className={cn(
-        "flex min-h-[4.25rem] min-w-0 flex-col justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-sm ring-1 transition active:scale-[0.98] touch-manipulation hover:border-[var(--brand)]/30 hover:bg-[var(--surface-muted)]/40",
-        a.ring,
+        "flex min-h-[4.25rem] min-w-0 flex-col justify-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-sm ring-1 ring-[var(--brand)]/15 transition active:scale-[0.98] touch-manipulation hover:border-[var(--brand)]/30 hover:bg-[var(--surface-muted)]/40",
       )}
     >
       <div className="flex items-center gap-2 min-w-0">
-        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", a.icon)}>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-light)] text-[var(--brand-text)]">
           <Icon className="h-4 w-4" aria-hidden />
         </span>
         <span className="truncate ui-card-title">{label}</span>
@@ -51,6 +37,7 @@ function ActionTile({
 
 export function ManagerHomeQuickActions() {
   const t = useTranslations("manager.home");
+  const tPkg = useTranslations("manager.packages");
 
   return (
     <section aria-labelledby="manager-quick-actions" className="min-w-0">
@@ -63,15 +50,15 @@ export function ManagerHomeQuickActions() {
           icon={CreditCard}
           label={t("actionSellMembership")}
           description={t("actionSellMembershipDesc")}
-          accent="brand"
         />
-        <ActionTile
-          href="/manager/walk-in?new=1&packages=1"
-          icon={Gift}
-          label={t("actionSellPackage")}
-          description={t("actionSellPackageDesc")}
-          accent="sky"
-        />
+        <div className="min-w-0 sm:col-span-2">
+          <PackageUpsellCta
+            href="/manager/packages"
+            title={tPkg("upsellTitle")}
+            subtitle={tPkg("upsellSubtitleHome")}
+            className="manager-package-upsell-vibrant"
+          />
+        </div>
       </div>
     </section>
   );

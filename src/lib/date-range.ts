@@ -76,6 +76,22 @@ export function getTodayRange(): Pick<ProductDateRange, "from" | "to"> {
   return { from: iso, to: iso };
 }
 
+/** Active packages expiring from today through end of the current calendar week (Sunday). */
+export function getExpiringThisWeekRange(): Pick<ProductDateRange, "from" | "to"> {
+  const start = todayDate();
+  const dow = start.getDay();
+  const daysUntilSunday = dow === 0 ? 0 : 7 - dow;
+  const end = addDays(start, daysUntilSunday);
+  return { from: toIsoDate(start), to: toIsoDate(end) };
+}
+
+/** Active packages expiring from today through the last day of the current calendar month. */
+export function getExpiringThisMonthRange(): Pick<ProductDateRange, "from" | "to"> {
+  const start = todayDate();
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  return { from: toIsoDate(start), to: toIsoDate(end) };
+}
+
 export function getYesterdayRange(): Pick<ProductDateRange, "from" | "to"> {
   const day = addDays(todayDate(), -1);
   const iso = toIsoDate(day);

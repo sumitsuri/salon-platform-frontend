@@ -29,11 +29,17 @@ export function getTenantLocaleKit(_tenantId?: string | null): TenantLocaleKit {
 }
 
 export function formatTenantDateTime(
-  iso: string | Date,
+  iso: string | Date | null | undefined,
   kit: TenantLocaleKit = DEFAULT_TENANT_LOCALE,
   options?: Intl.DateTimeFormatOptions
 ): string {
+  if (iso == null || iso === "") {
+    return "—";
+  }
   const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
+    return "—";
+  }
   return d.toLocaleString(kit.locale, {
     timeZone: kit.timeZone,
     day: "numeric",

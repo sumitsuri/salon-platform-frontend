@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./manager-home-cta-themes.css";
+@import "./manager-home-walkin-motions.css";
 
 :root,
 [data-theme="light"] {
@@ -4299,6 +4301,76 @@ html[lang="pa-IN"] body {
   transform: translateX(3px);
 }
 
+/* Manager home — package upsell (vibrant cyan / violet motion) */
+.manager-package-upsell-vibrant {
+  border-color: color-mix(in srgb, #0ea5e9 42%, var(--border));
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, #06b6d4 14%, var(--surface)) 0%,
+    var(--surface) 38%,
+    color-mix(in srgb, #8b5cf6 12%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #22d3ee 22%, transparent),
+    0 14px 36px color-mix(in srgb, #0ea5e9 16%, transparent);
+}
+
+.manager-package-upsell-vibrant:hover {
+  border-color: color-mix(in srgb, #06b6d4 55%, var(--border));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #22d3ee 28%, transparent),
+    0 18px 42px color-mix(in srgb, #6366f1 18%, transparent);
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-shimmer {
+  opacity: 0.9;
+  animation-duration: 3.2s;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 32%,
+    color-mix(in srgb, #22d3ee 28%, transparent) 48%,
+    color-mix(in srgb, #a78bfa 22%, transparent) 52%,
+    transparent 68%,
+    transparent 100%
+  );
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, #06b6d4 32%, transparent) 0%,
+    color-mix(in srgb, #8b5cf6 12%, transparent) 45%,
+    transparent 72%
+  );
+  animation-duration: 2.4s;
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-icon-ring {
+  border-color: color-mix(in srgb, #22d3ee 55%, transparent);
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-icon {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #cffafe 90%, var(--surface)) 0%,
+    color-mix(in srgb, #ddd6fe 70%, var(--surface-muted)) 100%
+  );
+  color: color-mix(in srgb, #0e7490 75%, var(--text-primary));
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-title {
+  color: color-mix(in srgb, #0c4a6e 88%, var(--text-primary));
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-subtitle {
+  color: color-mix(in srgb, #0369a1 55%, var(--text-secondary));
+}
+
+.manager-package-upsell-vibrant .manager-walk-in-cta-chevron {
+  color: color-mix(in srgb, #0891b2 80%, var(--text-tertiary));
+}
+
 @keyframes manager-walk-in-shimmer {
   0%,
   100% {
@@ -4350,7 +4422,29 @@ html[lang="pa-IN"] body {
   .manager-walk-in-cta-shimmer,
   .manager-walk-in-cta-glow,
   .manager-walk-in-cta-icon-ring,
-  .manager-walk-in-cta-icon {
+  .manager-walk-in-cta-icon,
+  [data-manager-cta-theme] .manager-home-cta .manager-walk-in-cta-shimmer,
+  [data-manager-cta-theme] .manager-home-cta .manager-walk-in-cta-glow,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-ambient,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-edge,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-bill-accent,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-bill-bar,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-live-dot,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-perimeter-runner {
     animation: none;
+    stroke-dashoffset: var(--mh-perim-cycle, -400);
+  }
+
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-shimmer,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-glow,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-icon-ring,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-icon,
+  [data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-chevron,
+  [data-manager-walkin-motion] .manager-home-cta--walkin.manager-walk-in-cta {
+    animation: none !important;
+  }
+
+  [data-manager-walkin-motion="live-floor"] .manager-home-cta--walkin .manager-walk-in-cta-live-dot {
+    opacity: 1;
   }
 }

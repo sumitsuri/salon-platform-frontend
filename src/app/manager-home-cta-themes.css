@@ -1,0 +1,1421 @@
+/* Manager home floor actions — theme lab (wrapper: data-manager-cta-theme) */
+
+[data-manager-cta-theme="soft-minimal"] .manager-home-cta .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="soft-minimal"] .manager-home-cta .manager-walk-in-cta-glow,
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--walkin .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--walkin .manager-walk-in-cta-glow,
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--membership .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--membership .manager-walk-in-cta-glow,
+[data-manager-cta-theme="icon-pulse"] .manager-home-cta .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="icon-pulse"] .manager-home-cta .manager-walk-in-cta-glow {
+  animation: none;
+  opacity: 0;
+}
+
+[data-manager-cta-theme="icon-pulse"] .manager-home-cta .manager-walk-in-cta-icon-ring {
+  animation-duration: 1.6s;
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership.manager-walk-in-cta {
+  border-color: color-mix(in srgb, var(--brand) 26%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand) 7%, var(--surface)) 0%,
+    var(--surface) 55%,
+    var(--surface) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--brand) 10%, transparent),
+    0 10px 24px color-mix(in srgb, var(--brand) 8%, transparent);
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership .manager-walk-in-cta-shimmer {
+  opacity: 0.45;
+  animation-duration: 5.5s;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 42%,
+    color-mix(in srgb, var(--brand) 11%, transparent) 50%,
+    transparent 58%,
+    transparent 100%
+  );
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership .manager-walk-in-cta-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) 18%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership .manager-walk-in-cta-icon-ring {
+  border-color: color-mix(in srgb, var(--brand) 35%, transparent);
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership .manager-walk-in-cta-icon {
+  background: color-mix(in srgb, var(--brand-light) 85%, var(--surface-muted));
+  color: var(--brand-text);
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--membership .manager-walk-in-cta-chevron {
+  color: color-mix(in srgb, var(--brand) 65%, var(--text-tertiary));
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package.manager-walk-in-cta {
+  border-color: color-mix(in srgb, #0284c7 30%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #0ea5e9 9%, var(--surface)) 0%,
+    var(--surface) 48%,
+    color-mix(in srgb, #0ea5e9 5%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #38bdf8 14%, transparent),
+    0 12px 28px color-mix(in srgb, #0ea5e9 10%, transparent);
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package .manager-walk-in-cta-shimmer {
+  opacity: 0.55;
+  animation-duration: 4.8s;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 38%,
+    color-mix(in srgb, #38bdf8 14%, transparent) 50%,
+    transparent 62%,
+    transparent 100%
+  );
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package .manager-walk-in-cta-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 20%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package .manager-walk-in-cta-icon-ring {
+  border-color: color-mix(in srgb, #38bdf8 40%, transparent);
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package .manager-walk-in-cta-icon {
+  background: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  color: #0369a1;
+}
+
+[data-manager-cta-theme="salon-classic"] .manager-home-cta--package .manager-walk-in-cta-chevron {
+  color: color-mix(in srgb, #0284c7 70%, var(--text-tertiary));
+}
+
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--membership.manager-walk-in-cta,
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--package.manager-walk-in-cta {
+  border-color: color-mix(in srgb, var(--kpi-emerald) 28%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 8%, var(--surface)) 0%,
+    var(--surface) 45%,
+    color-mix(in srgb, var(--kpi-sky) 6%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--kpi-emerald) 12%, transparent),
+    0 12px 28px color-mix(in srgb, var(--kpi-emerald) 10%, transparent);
+}
+
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--membership .manager-walk-in-cta-icon,
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--package .manager-walk-in-cta-icon {
+  background: color-mix(in srgb, var(--kpi-emerald) 14%, var(--surface-muted));
+  color: color-mix(in srgb, var(--kpi-emerald) 85%, var(--text-primary));
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta.manager-walk-in-cta {
+  border-color: color-mix(in srgb, var(--brand) 32%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand) 10%, var(--surface)) 0%,
+    var(--surface) 40%,
+    color-mix(in srgb, var(--brand) 6%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--brand) 14%, transparent),
+    0 14px 32px color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta .manager-walk-in-cta-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 36%,
+    color-mix(in srgb, var(--brand) 16%, transparent) 50%,
+    transparent 64%,
+    transparent 100%
+  );
+  opacity: 0.75;
+  animation-duration: 3.8s;
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta .manager-walk-in-cta-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) 24%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta .manager-walk-in-cta-icon-ring {
+  border-color: color-mix(in srgb, var(--brand) 42%, transparent);
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta .manager-walk-in-cta-icon {
+  background: color-mix(in srgb, var(--brand-light) 90%, var(--surface-muted));
+  color: var(--brand-text);
+}
+
+[data-manager-cta-theme="brand-floor"] .manager-home-cta .manager-walk-in-cta-chevron {
+  color: color-mix(in srgb, var(--brand) 72%, var(--text-tertiary));
+}
+
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--walkin.manager-walk-in-cta,
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--membership.manager-walk-in-cta {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--package.manager-walk-in-cta {
+  border-color: color-mix(in srgb, #0284c7 38%, var(--border));
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 12%, var(--surface)) 0%,
+    var(--surface) 42%,
+    color-mix(in srgb, #0ea5e9 8%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #38bdf8 18%, transparent),
+    0 14px 34px color-mix(in srgb, #0ea5e9 14%, transparent);
+}
+
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--package .manager-walk-in-cta-shimmer {
+  opacity: 0.8;
+  animation-duration: 3.6s;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 30%,
+    color-mix(in srgb, #38bdf8 22%, transparent) 48%,
+    transparent 66%,
+    transparent 100%
+  );
+}
+
+[data-manager-cta-theme="sky-upsell"] .manager-home-cta--package .manager-walk-in-cta-glow {
+  animation-duration: 2.8s;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 28%, transparent) 0%,
+    transparent 72%
+  );
+}
+
+[data-manager-cta-theme="soft-minimal"] .manager-home-cta.manager-walk-in-cta {
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+[data-manager-cta-theme="soft-minimal"] .manager-home-cta .manager-walk-in-cta-icon-ring {
+  animation: none;
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+[data-manager-cta-theme="soft-minimal"] .manager-home-cta .manager-walk-in-cta-icon {
+  animation: none;
+}
+
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--package.manager-walk-in-cta {
+  border-color: color-mix(in srgb, #0ea5e9 42%, var(--border));
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, #06b6d4 14%, var(--surface)) 0%,
+    var(--surface) 38%,
+    color-mix(in srgb, #8b5cf6 12%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #22d3ee 22%, transparent),
+    0 14px 36px color-mix(in srgb, #0ea5e9 16%, transparent);
+}
+
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--package .manager-walk-in-cta-shimmer {
+  opacity: 0.9;
+  animation-duration: 3.2s;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    transparent 32%,
+    color-mix(in srgb, #22d3ee 28%, transparent) 48%,
+    color-mix(in srgb, #a78bfa 22%, transparent) 52%,
+    transparent 68%,
+    transparent 100%
+  );
+}
+
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--package .manager-walk-in-cta-glow {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, #06b6d4 32%, transparent) 0%,
+    color-mix(in srgb, #8b5cf6 12%, transparent) 45%,
+    transparent 72%
+  );
+  animation-duration: 2.4s;
+}
+
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--package .manager-walk-in-cta-icon {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #cffafe 90%, var(--surface)) 0%,
+    color-mix(in srgb, #ddd6fe 70%, var(--surface-muted)) 100%
+  );
+  color: color-mix(in srgb, #0e7490 75%, var(--text-primary));
+}
+
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--walkin .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="aurora-lab"] .manager-home-cta--membership .manager-walk-in-cta-shimmer {
+  opacity: 0.35;
+  animation-duration: 6s;
+}
+
+/* --- Token applicator: set --cta-{w|m|p}-* on [data-manager-cta-theme="…"] --- */
+[data-manager-cta-theme] .manager-home-cta--walkin.manager-walk-in-cta {
+  border-color: var(--cta-w-border);
+  background: var(--cta-w-bg);
+  box-shadow: var(--cta-w-shadow);
+}
+[data-manager-cta-theme] .manager-home-cta--membership.manager-walk-in-cta {
+  border-color: var(--cta-m-border);
+  background: var(--cta-m-bg);
+  box-shadow: var(--cta-m-shadow);
+}
+[data-manager-cta-theme] .manager-home-cta--package.manager-walk-in-cta {
+  border-color: var(--cta-p-border);
+  background: var(--cta-p-bg);
+  box-shadow: var(--cta-p-shadow);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-title {
+  color: var(--cta-w-title);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-subtitle {
+  color: var(--cta-w-sub);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-title {
+  color: var(--cta-m-title);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-subtitle {
+  color: var(--cta-m-sub);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-title {
+  color: var(--cta-p-title);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-subtitle {
+  color: var(--cta-p-sub);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-icon {
+  background: var(--cta-w-icon-bg);
+  color: var(--cta-w-icon-fg);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-icon {
+  background: var(--cta-m-icon-bg);
+  color: var(--cta-m-icon-fg);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-icon {
+  background: var(--cta-p-icon-bg);
+  color: var(--cta-p-icon-fg);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-icon-ring {
+  border-color: var(--cta-w-ring);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-icon-ring {
+  border-color: var(--cta-m-ring);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-icon-ring {
+  border-color: var(--cta-p-ring);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-chevron {
+  color: var(--cta-w-chevron);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-chevron {
+  color: var(--cta-m-chevron);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-chevron {
+  color: var(--cta-p-chevron);
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-shimmer {
+  opacity: var(--cta-w-shim-op);
+  animation-duration: var(--cta-w-shim-dur);
+  background: var(--cta-w-shim-bg);
+  background-size: 220% 100%;
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-shimmer {
+  opacity: var(--cta-m-shim-op);
+  animation-duration: var(--cta-m-shim-dur);
+  background: var(--cta-m-shim-bg);
+  background-size: 220% 100%;
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-shimmer {
+  opacity: var(--cta-p-shim-op);
+  animation-duration: var(--cta-p-shim-dur);
+  background: var(--cta-p-shim-bg);
+  background-size: 220% 100%;
+}
+[data-manager-cta-theme] .manager-home-cta--walkin .manager-walk-in-cta-glow {
+  background: var(--cta-w-glow-bg);
+  animation-duration: var(--cta-w-glow-dur, 3s);
+}
+[data-manager-cta-theme] .manager-home-cta--membership .manager-walk-in-cta-glow {
+  background: var(--cta-m-glow-bg);
+  animation-duration: var(--cta-m-glow-dur, 3s);
+}
+[data-manager-cta-theme] .manager-home-cta--package .manager-walk-in-cta-glow {
+  background: var(--cta-p-glow-bg);
+  animation-duration: var(--cta-p-glow-dur, 3s);
+}
+
+/* 02 · Midnight emerald */
+[data-manager-cta-theme="midnight-emerald"] {
+  --cta-w-bg: linear-gradient(145deg, #0b1220 0%, #1e293b 52%, #0f172a 100%);
+  --cta-w-border: color-mix(in srgb, #34d399 38%, #334155);
+  --cta-w-shadow: 0 1px 0 rgba(52, 211, 153, 0.18), 0 18px 42px rgba(2, 6, 23, 0.55);
+  --cta-w-title: #ecfdf5;
+  --cta-w-sub: #94a3b8;
+  --cta-w-icon-bg: color-mix(in srgb, #10b981 32%, #1e293b);
+  --cta-w-icon-fg: #6ee7b7;
+  --cta-w-ring: color-mix(in srgb, #34d399 55%, transparent);
+  --cta-w-chevron: #6ee7b7;
+  --cta-w-shim-op: 0.82;
+  --cta-w-shim-dur: 3.6s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(52, 211, 153, 0.28) 50%,
+    transparent 68%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(16, 185, 129, 0.38) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 9%, var(--surface)) 0%,
+    var(--surface) 50%,
+    var(--surface) 100%
+  );
+  --cta-m-border: color-mix(in srgb, var(--kpi-emerald) 26%, var(--border));
+  --cta-m-shadow: 0 1px 0 color-mix(in srgb, var(--kpi-emerald) 12%, transparent),
+    0 12px 26px color-mix(in srgb, var(--kpi-emerald) 8%, transparent);
+  --cta-m-shim-op: 0.55;
+  --cta-m-shim-dur: 5s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, var(--kpi-emerald) 14%, transparent) 50%,
+    transparent 62%
+  );
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--kpi-emerald) 18%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-m-icon-bg: color-mix(in srgb, var(--kpi-emerald) 14%, var(--surface-muted));
+  --cta-m-icon-fg: color-mix(in srgb, var(--kpi-emerald) 85%, var(--text-primary));
+  --cta-m-ring: color-mix(in srgb, var(--kpi-emerald) 35%, transparent);
+  --cta-m-chevron: color-mix(in srgb, var(--kpi-emerald) 65%, var(--text-tertiary));
+  --cta-p-bg: var(--cta-m-bg);
+  --cta-p-border: color-mix(in srgb, #0ea5e9 28%, var(--border));
+  --cta-p-shadow: 0 1px 0 color-mix(in srgb, #38bdf8 14%, transparent),
+    0 12px 28px color-mix(in srgb, #0ea5e9 9%, transparent);
+  --cta-p-shim-op: 0.6;
+  --cta-p-shim-dur: 4.6s;
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    color-mix(in srgb, #38bdf8 16%, transparent) 50%,
+    transparent 64%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 22%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  --cta-p-icon-fg: #0369a1;
+  --cta-p-ring: color-mix(in srgb, #38bdf8 40%, transparent);
+  --cta-p-chevron: color-mix(in srgb, #0284c7 70%, var(--text-tertiary));
+}
+
+/* 03 · Obsidian gold */
+[data-manager-cta-theme="obsidian-gold"] {
+  --cta-w-bg: linear-gradient(155deg, #0c0c0e 0%, #1a1a1f 45%, #0a0a0c 100%);
+  --cta-m-bg: linear-gradient(155deg, #121214 0%, #222228 48%, #0e0e11 100%);
+  --cta-p-bg: var(--cta-m-bg);
+  --cta-w-border: color-mix(in srgb, #d4af37 42%, #3f3f46);
+  --cta-m-border: color-mix(in srgb, #eab308 36%, #3f3f46);
+  --cta-p-border: var(--cta-m-border);
+  --cta-w-shadow: 0 1px 0 rgba(234, 179, 8, 0.16), 0 20px 44px rgba(0, 0, 0, 0.65);
+  --cta-m-shadow: var(--cta-w-shadow);
+  --cta-p-shadow: var(--cta-w-shadow);
+  --cta-w-title: #fefce8;
+  --cta-m-title: var(--cta-w-title);
+  --cta-p-title: var(--cta-w-title);
+  --cta-w-sub: #a1a1aa;
+  --cta-m-sub: var(--cta-w-sub);
+  --cta-p-sub: var(--cta-w-sub);
+  --cta-w-icon-bg: color-mix(in srgb, #ca8a04 28%, #27272a);
+  --cta-m-icon-bg: var(--cta-w-icon-bg);
+  --cta-p-icon-bg: var(--cta-w-icon-bg);
+  --cta-w-icon-fg: #fde047;
+  --cta-m-icon-fg: var(--cta-w-icon-fg);
+  --cta-p-icon-fg: var(--cta-w-icon-fg);
+  --cta-w-ring: color-mix(in srgb, #facc15 50%, transparent);
+  --cta-m-ring: var(--cta-w-ring);
+  --cta-p-ring: var(--cta-w-ring);
+  --cta-w-chevron: #fde68a;
+  --cta-m-chevron: var(--cta-w-chevron);
+  --cta-p-chevron: var(--cta-w-chevron);
+  --cta-w-shim-op: 0.78;
+  --cta-m-shim-op: 0.78;
+  --cta-p-shim-op: 0.78;
+  --cta-w-shim-dur: 4.2s;
+  --cta-m-shim-dur: 4.2s;
+  --cta-p-shim-dur: 4.2s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(250, 204, 21, 0.22) 50%,
+    transparent 70%
+  );
+  --cta-m-shim-bg: var(--cta-w-shim-bg);
+  --cta-p-shim-bg: var(--cta-w-shim-bg);
+  --cta-w-glow-bg: radial-gradient(circle, rgba(234, 179, 8, 0.32) 0%, transparent 72%);
+  --cta-m-glow-bg: var(--cta-w-glow-bg);
+  --cta-p-glow-bg: var(--cta-w-glow-bg);
+}
+
+/* 04 · Velvet noir */
+[data-manager-cta-theme="velvet-noir"] {
+  --cta-w-bg: linear-gradient(140deg, #1a0a1f 0%, #2d1435 50%, #140818 100%);
+  --cta-w-border: color-mix(in srgb, #c084fc 35%, #4c1d95);
+  --cta-w-shadow: 0 1px 0 rgba(192, 132, 252, 0.2), 0 18px 40px rgba(20, 8, 24, 0.6);
+  --cta-w-title: #faf5ff;
+  --cta-w-sub: #c4b5fd;
+  --cta-w-icon-bg: color-mix(in srgb, #7c3aed 35%, #2e1065);
+  --cta-w-icon-fg: #e9d5ff;
+  --cta-w-ring: color-mix(in srgb, #a78bfa 55%, transparent);
+  --cta-w-chevron: #ddd6fe;
+  --cta-w-shim-op: 0.75;
+  --cta-w-shim-dur: 3.9s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 34%,
+    rgba(167, 139, 250, 0.26) 50%,
+    transparent 66%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(124, 58, 237, 0.35) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand) 12%, var(--surface)) 0%,
+    var(--surface) 45%,
+    var(--surface) 100%
+  );
+  --cta-m-border: color-mix(in srgb, var(--brand) 30%, var(--border));
+  --cta-m-shadow: 0 1px 0 color-mix(in srgb, var(--brand) 14%, transparent),
+    0 14px 32px color-mix(in srgb, var(--brand) 10%, transparent);
+  --cta-m-shim-op: 0.7;
+  --cta-m-shim-dur: 4s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    color-mix(in srgb, var(--brand) 18%, transparent) 50%,
+    transparent 64%
+  );
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) 24%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-m-icon-bg: color-mix(in srgb, var(--brand-light) 88%, var(--surface-muted));
+  --cta-m-icon-fg: var(--brand-text);
+  --cta-m-ring: color-mix(in srgb, var(--brand) 42%, transparent);
+  --cta-m-chevron: color-mix(in srgb, var(--brand) 72%, var(--text-tertiary));
+  --cta-p-bg: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 11%, var(--surface)) 0%,
+    var(--surface) 42%,
+    color-mix(in srgb, #8b5cf6 6%, var(--surface)) 100%
+  );
+  --cta-p-border: color-mix(in srgb, #38bdf8 34%, var(--border));
+  --cta-p-shadow: 0 1px 0 color-mix(in srgb, #38bdf8 16%, transparent),
+    0 14px 34px color-mix(in srgb, #0ea5e9 12%, transparent);
+  --cta-p-shim-op: 0.72;
+  --cta-p-shim-dur: 3.5s;
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 32%,
+    color-mix(in srgb, #22d3ee 20%, transparent) 48%,
+    color-mix(in srgb, #a78bfa 16%, transparent) 52%,
+    transparent 68%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 26%, transparent) 0%,
+    transparent 72%
+  );
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 78%, var(--surface-muted));
+  --cta-p-icon-fg: #0c4a6e;
+  --cta-p-ring: color-mix(in srgb, #38bdf8 42%, transparent);
+  --cta-p-chevron: color-mix(in srgb, #0284c7 68%, var(--text-tertiary));
+}
+
+/* 05 · Champagne luxe */
+[data-manager-cta-theme="champagne-luxe"] {
+  --cta-w-bg: linear-gradient(150deg, #1c1812 0%, #2a2418 48%, #14110c 100%);
+  --cta-w-border: color-mix(in srgb, #fcd34d 40%, #57534e);
+  --cta-w-shadow: 0 1px 0 rgba(252, 211, 77, 0.15), 0 18px 42px rgba(12, 10, 6, 0.55);
+  --cta-w-title: #fffbeb;
+  --cta-w-sub: #d6d3d1;
+  --cta-w-icon-bg: color-mix(in srgb, #b45309 30%, #292524);
+  --cta-w-icon-fg: #fde68a;
+  --cta-w-ring: color-mix(in srgb, #fbbf24 48%, transparent);
+  --cta-w-chevron: #fef3c7;
+  --cta-w-shim-op: 0.8;
+  --cta-w-shim-dur: 4.4s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(251, 191, 36, 0.24) 50%,
+    transparent 72%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, #fef3c7 35%, var(--surface)) 0%,
+    var(--surface) 50%,
+    color-mix(in srgb, #fde68a 12%, var(--surface)) 100%
+  );
+  --cta-p-bg: var(--cta-m-bg);
+  --cta-m-border: color-mix(in srgb, #d97706 28%, var(--border));
+  --cta-p-border: var(--cta-m-border);
+  --cta-m-shadow: 0 1px 0 color-mix(in srgb, #fbbf24 18%, transparent),
+    0 14px 32px color-mix(in srgb, #d97706 10%, transparent);
+  --cta-p-shadow: var(--cta-m-shadow);
+  --cta-m-shim-op: 0.65;
+  --cta-p-shim-op: 0.65;
+  --cta-m-shim-dur: 4.8s;
+  --cta-p-shim-dur: 4.8s;
+  --cta-m-shim-bg: var(--cta-w-shim-bg);
+  --cta-p-shim-bg: var(--cta-w-shim-bg);
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #fbbf24 22%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-glow-bg: var(--cta-m-glow-bg);
+  --cta-m-icon-bg: color-mix(in srgb, #fef3c7 85%, var(--surface-muted));
+  --cta-p-icon-bg: var(--cta-m-icon-bg);
+  --cta-m-icon-fg: #92400e;
+  --cta-p-icon-fg: var(--cta-m-icon-fg);
+  --cta-m-ring: color-mix(in srgb, #f59e0b 40%, transparent);
+  --cta-p-ring: var(--cta-m-ring);
+  --cta-m-chevron: color-mix(in srgb, #b45309 65%, var(--text-tertiary));
+  --cta-p-chevron: var(--cta-m-chevron);
+}
+
+/* 08 · Slate cyan edge */
+[data-manager-cta-theme="slate-cyan-edge"] {
+  --cta-w-bg: linear-gradient(145deg, #0f1419 0%, #1e293b 55%, #0b1014 100%);
+  --cta-w-border: color-mix(in srgb, #22d3ee 32%, #334155);
+  --cta-w-shadow: 0 1px 0 rgba(34, 211, 238, 0.14), 0 0 0 1px rgba(34, 211, 238, 0.08),
+    0 20px 44px rgba(2, 8, 23, 0.58);
+  --cta-w-title: #ecfeff;
+  --cta-w-sub: #94a3b8;
+  --cta-w-icon-bg: color-mix(in srgb, #0891b2 30%, #1e293b);
+  --cta-w-icon-fg: #67e8f9;
+  --cta-w-ring: color-mix(in srgb, #22d3ee 52%, transparent);
+  --cta-w-chevron: #a5f3fc;
+  --cta-w-shim-op: 0.7;
+  --cta-w-shim-dur: 3.4s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(34, 211, 238, 0.2) 50%,
+    transparent 65%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(6, 182, 212, 0.32) 0%, transparent 72%);
+  --cta-m-bg: var(--surface);
+  --cta-p-bg: var(--surface);
+  --cta-m-border: color-mix(in srgb, #06b6d4 45%, var(--border));
+  --cta-p-border: color-mix(in srgb, #0ea5e9 38%, var(--border));
+  --cta-m-shadow: 0 0 0 1px color-mix(in srgb, #22d3ee 12%, transparent),
+    0 10px 24px color-mix(in srgb, #0891b2 8%, transparent);
+  --cta-p-shadow: 0 0 0 1px color-mix(in srgb, #38bdf8 14%, transparent),
+    0 12px 28px color-mix(in srgb, #0ea5e9 9%, transparent);
+  --cta-m-shim-op: 0.45;
+  --cta-p-shim-op: 0.5;
+  --cta-m-shim-dur: 5.5s;
+  --cta-p-shim-dur: 5s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 40%,
+    color-mix(in srgb, #22d3ee 12%, transparent) 50%,
+    transparent 60%
+  );
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, #38bdf8 14%, transparent) 50%,
+    transparent 62%
+  );
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #06b6d4 14%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 18%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-m-icon-bg: color-mix(in srgb, #cffafe 70%, var(--surface-muted));
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  --cta-m-icon-fg: #0e7490;
+  --cta-p-icon-fg: #0369a1;
+  --cta-m-ring: color-mix(in srgb, #22d3ee 38%, transparent);
+  --cta-p-ring: color-mix(in srgb, #38bdf8 40%, transparent);
+  --cta-m-chevron: color-mix(in srgb, #0891b2 60%, var(--text-tertiary));
+  --cta-p-chevron: color-mix(in srgb, #0284c7 65%, var(--text-tertiary));
+}
+
+/* 09 · Rose gold dusk */
+[data-manager-cta-theme="rose-gold-dusk"] {
+  --cta-w-bg: linear-gradient(145deg, #2a1520 0%, #4a2030 48%, #1a0c14 100%);
+  --cta-w-border: color-mix(in srgb, #fb7185 38%, #881337);
+  --cta-w-shadow: 0 1px 0 rgba(251, 113, 133, 0.18), 0 18px 40px rgba(26, 12, 20, 0.58);
+  --cta-w-title: #fff1f2;
+  --cta-w-sub: #fda4af;
+  --cta-w-icon-bg: color-mix(in srgb, #be123c 32%, #3f0d1a);
+  --cta-w-icon-fg: #fecdd3;
+  --cta-w-ring: color-mix(in srgb, #fb7185 50%, transparent);
+  --cta-w-chevron: #fecdd3;
+  --cta-w-shim-op: 0.76;
+  --cta-w-shim-dur: 4.1s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 33%,
+    rgba(251, 113, 133, 0.22) 50%,
+    transparent 67%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(225, 29, 72, 0.32) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, #fef3c7 28%, var(--surface)) 0%,
+    var(--surface) 48%,
+    color-mix(in srgb, #fde68a 10%, var(--surface)) 100%
+  );
+  --cta-m-border: color-mix(in srgb, #d97706 32%, var(--border));
+  --cta-m-shadow: 0 1px 0 color-mix(in srgb, #fbbf24 16%, transparent),
+    0 12px 30px color-mix(in srgb, #b45309 9%, transparent);
+  --cta-m-shim-op: 0.62;
+  --cta-m-shim-dur: 4.6s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    color-mix(in srgb, #fbbf24 18%, transparent) 50%,
+    transparent 64%
+  );
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #f59e0b 20%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-m-icon-bg: color-mix(in srgb, #fef3c7 82%, var(--surface-muted));
+  --cta-m-icon-fg: #92400e;
+  --cta-m-ring: color-mix(in srgb, #f59e0b 42%, transparent);
+  --cta-m-chevron: color-mix(in srgb, #b45309 62%, var(--text-tertiary));
+  --cta-p-bg: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 10%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  --cta-p-border: color-mix(in srgb, #38bdf8 32%, var(--border));
+  --cta-p-shadow: 0 12px 28px color-mix(in srgb, #0ea5e9 10%, transparent);
+  --cta-p-shim-op: 0.58;
+  --cta-p-shim-dur: 4.8s;
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, #38bdf8 15%, transparent) 50%,
+    transparent 62%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 20%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  --cta-p-icon-fg: #0369a1;
+  --cta-p-ring: color-mix(in srgb, #38bdf8 38%, transparent);
+  --cta-p-chevron: color-mix(in srgb, #0284c7 68%, var(--text-tertiary));
+}
+
+/* 10 · Navy coral pulse */
+[data-manager-cta-theme="navy-coral-pulse"] {
+  --cta-w-bg: linear-gradient(145deg, #0a1628 0%, #132a4a 50%, #071018 100%);
+  --cta-m-bg: linear-gradient(145deg, #0c1a30 0%, #1e3a5f 48%, #081220 100%);
+  --cta-p-bg: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 14%, #0a1628) 0%,
+    #132a4a 45%,
+    #071018 100%
+  );
+  --cta-w-border: color-mix(in srgb, #fb7185 34%, #1e3a8a);
+  --cta-m-border: color-mix(in srgb, #f97316 32%, #1e40af);
+  --cta-p-border: color-mix(in srgb, #38bdf8 40%, #1e3a8a);
+  --cta-w-shadow: 0 1px 0 rgba(251, 113, 133, 0.16), 0 18px 42px rgba(4, 12, 24, 0.62);
+  --cta-m-shadow: var(--cta-w-shadow);
+  --cta-p-shadow: 0 1px 0 rgba(56, 189, 248, 0.2), 0 20px 46px rgba(4, 12, 24, 0.65);
+  --cta-w-title: #eff6ff;
+  --cta-m-title: var(--cta-w-title);
+  --cta-p-title: var(--cta-w-title);
+  --cta-w-sub: #93c5fd;
+  --cta-m-sub: var(--cta-w-sub);
+  --cta-p-sub: #bae6fd;
+  --cta-w-icon-bg: color-mix(in srgb, #e11d48 28%, #172554);
+  --cta-m-icon-bg: color-mix(in srgb, #ea580c 26%, #172554);
+  --cta-p-icon-bg: color-mix(in srgb, #0284c7 30%, #172554);
+  --cta-w-icon-fg: #fda4af;
+  --cta-m-icon-fg: #fdba74;
+  --cta-p-icon-fg: #7dd3fc;
+  --cta-w-ring: color-mix(in srgb, #fb7185 55%, transparent);
+  --cta-m-ring: color-mix(in srgb, #f97316 52%, transparent);
+  --cta-p-ring: color-mix(in srgb, #38bdf8 55%, transparent);
+  --cta-w-chevron: #fecdd3;
+  --cta-m-chevron: #fed7aa;
+  --cta-p-chevron: #bae6fd;
+  --cta-w-shim-op: 0.55;
+  --cta-m-shim-op: 0.55;
+  --cta-p-shim-op: 0.85;
+  --cta-w-shim-dur: 5.2s;
+  --cta-m-shim-dur: 5.2s;
+  --cta-p-shim-dur: 3.2s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(251, 113, 133, 0.16) 50%,
+    transparent 62%
+  );
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(249, 115, 22, 0.14) 50%,
+    transparent 62%
+  );
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(56, 189, 248, 0.28) 50%,
+    transparent 72%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(251, 113, 133, 0.28) 0%, transparent 72%);
+  --cta-m-glow-bg: radial-gradient(circle, rgba(249, 115, 22, 0.24) 0%, transparent 72%);
+  --cta-p-glow-bg: radial-gradient(circle, rgba(14, 165, 233, 0.38) 0%, transparent 72%);
+  --cta-p-glow-dur: 2.4s;
+}
+
+[data-manager-cta-theme="navy-coral-pulse"] .manager-home-cta .manager-walk-in-cta-icon-ring {
+  animation-duration: 1.15s;
+}
+
+[data-manager-cta-theme="navy-coral-pulse"] .manager-home-cta--package .manager-walk-in-cta-icon-ring {
+  animation-duration: 0.95s;
+}
+
+/* 11 · Forest deep */
+[data-manager-cta-theme="forest-deep"] {
+  --cta-w-bg: linear-gradient(150deg, #052e16 0%, #14532d 46%, #022c15 100%);
+  --cta-w-border: color-mix(in srgb, #4ade80 36%, #166534);
+  --cta-w-shadow: 0 1px 0 rgba(74, 222, 128, 0.16), 0 20px 44px rgba(2, 44, 21, 0.55);
+  --cta-w-title: #ecfdf5;
+  --cta-w-sub: #86efac;
+  --cta-w-icon-bg: color-mix(in srgb, #15803d 35%, #052e16);
+  --cta-w-icon-fg: #bbf7d0;
+  --cta-w-ring: color-mix(in srgb, #4ade80 50%, transparent);
+  --cta-w-chevron: #86efac;
+  --cta-w-shim-op: 0.74;
+  --cta-w-shim-dur: 4s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 34%,
+    rgba(74, 222, 128, 0.22) 50%,
+    transparent 66%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(34, 197, 94, 0.34) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 10%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  --cta-p-bg: var(--cta-m-bg);
+  --cta-m-border: color-mix(in srgb, var(--kpi-emerald) 28%, var(--border));
+  --cta-p-border: var(--cta-m-border);
+  --cta-m-shadow: 0 12px 28px color-mix(in srgb, var(--kpi-emerald) 10%, transparent);
+  --cta-p-shadow: var(--cta-m-shadow);
+  --cta-m-shim-op: 0.6;
+  --cta-p-shim-op: 0.6;
+  --cta-m-shim-dur: 4.5s;
+  --cta-p-shim-dur: 4.5s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, var(--kpi-emerald) 15%, transparent) 50%,
+    transparent 62%
+  );
+  --cta-p-shim-bg: var(--cta-m-shim-bg);
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--kpi-emerald) 20%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-glow-bg: var(--cta-m-glow-bg);
+  --cta-m-icon-bg: color-mix(in srgb, var(--kpi-emerald) 15%, var(--surface-muted));
+  --cta-p-icon-bg: var(--cta-m-icon-bg);
+  --cta-m-icon-fg: color-mix(in srgb, var(--kpi-emerald) 88%, var(--text-primary));
+  --cta-p-icon-fg: var(--cta-m-icon-fg);
+  --cta-m-ring: color-mix(in srgb, var(--kpi-emerald) 38%, transparent);
+  --cta-p-ring: var(--cta-m-ring);
+  --cta-m-chevron: color-mix(in srgb, var(--kpi-emerald) 65%, var(--text-tertiary));
+  --cta-p-chevron: var(--cta-m-chevron);
+}
+
+/* 12 · Platinum light */
+[data-manager-cta-theme="platinum-light"] {
+  --cta-w-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, #f4f4f5 90%, var(--surface)) 0%,
+    var(--surface) 55%,
+    color-mix(in srgb, #e4e4e7 40%, var(--surface)) 100%
+  );
+  --cta-m-bg: var(--cta-w-bg);
+  --cta-p-bg: var(--cta-w-bg);
+  --cta-w-border: color-mix(in srgb, #71717a 22%, var(--border));
+  --cta-m-border: var(--cta-w-border);
+  --cta-p-border: var(--cta-w-border);
+  --cta-w-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 14px 32px color-mix(in srgb, #18181b 8%, transparent);
+  --cta-m-shadow: var(--cta-w-shadow);
+  --cta-p-shadow: var(--cta-w-shadow);
+  --cta-w-title: #18181b;
+  --cta-m-title: var(--cta-w-title);
+  --cta-p-title: var(--cta-w-title);
+  --cta-w-sub: #52525b;
+  --cta-m-sub: var(--cta-w-sub);
+  --cta-p-sub: var(--cta-w-sub);
+  --cta-w-icon-bg: linear-gradient(145deg, #fafafa 0%, #e4e4e7 100%);
+  --cta-m-icon-bg: var(--cta-w-icon-bg);
+  --cta-p-icon-bg: var(--cta-w-icon-bg);
+  --cta-w-icon-fg: #3f3f46;
+  --cta-m-icon-fg: var(--cta-w-icon-fg);
+  --cta-p-icon-fg: var(--cta-w-icon-fg);
+  --cta-w-ring: color-mix(in srgb, #a1a1aa 45%, transparent);
+  --cta-m-ring: var(--cta-w-ring);
+  --cta-p-ring: var(--cta-w-ring);
+  --cta-w-chevron: #71717a;
+  --cta-m-chevron: var(--cta-w-chevron);
+  --cta-p-chevron: var(--cta-w-chevron);
+  --cta-w-shim-op: 0.55;
+  --cta-m-shim-op: 0.55;
+  --cta-p-shim-op: 0.55;
+  --cta-w-shim-dur: 5.8s;
+  --cta-m-shim-dur: 5.8s;
+  --cta-p-shim-dur: 5.8s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    rgba(255, 255, 255, 0.85) 50%,
+    transparent 64%
+  );
+  --cta-m-shim-bg: var(--cta-w-shim-bg);
+  --cta-p-shim-bg: var(--cta-w-shim-bg);
+  --cta-w-glow-bg: radial-gradient(circle, rgba(161, 161, 170, 0.2) 0%, transparent 72%);
+  --cta-m-glow-bg: var(--cta-w-glow-bg);
+  --cta-p-glow-bg: var(--cta-w-glow-bg);
+}
+
+/* 13 · Copper forge */
+[data-manager-cta-theme="copper-forge"] {
+  --cta-w-bg: linear-gradient(150deg, #2a1810 0%, #4a2c1a 48%, #1a0f0a 100%);
+  --cta-w-border: color-mix(in srgb, #ea580c 40%, #78350f);
+  --cta-w-shadow: 0 1px 0 rgba(234, 88, 12, 0.18), 0 18px 42px rgba(26, 15, 10, 0.58);
+  --cta-w-title: #fff7ed;
+  --cta-w-sub: #fdba74;
+  --cta-w-icon-bg: color-mix(in srgb, #c2410c 32%, #431407);
+  --cta-w-icon-fg: #fed7aa;
+  --cta-w-ring: color-mix(in srgb, #fb923c 52%, transparent);
+  --cta-w-chevron: #fdba74;
+  --cta-w-shim-op: 0.78;
+  --cta-w-shim-dur: 4.2s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(251, 146, 60, 0.24) 50%,
+    transparent 68%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(234, 88, 12, 0.32) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, #fef3c7 45%, var(--surface)) 0%,
+    var(--surface) 52%,
+    color-mix(in srgb, #ffedd5 20%, var(--surface)) 100%
+  );
+  --cta-m-border: color-mix(in srgb, #d97706 24%, var(--border));
+  --cta-m-shadow: 0 10px 26px color-mix(in srgb, #ea580c 8%, transparent);
+  --cta-m-shim-op: 0.5;
+  --cta-m-shim-dur: 5.4s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 40%,
+    color-mix(in srgb, #fdba74 14%, transparent) 50%,
+    transparent 60%
+  );
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #fb923c 16%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-m-icon-bg: color-mix(in srgb, #ffedd5 85%, var(--surface-muted));
+  --cta-m-icon-fg: #9a3412;
+  --cta-m-ring: color-mix(in srgb, #ea580c 35%, transparent);
+  --cta-m-chevron: color-mix(in srgb, #c2410c 58%, var(--text-tertiary));
+  --cta-p-bg: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 9%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  --cta-p-border: color-mix(in srgb, #38bdf8 30%, var(--border));
+  --cta-p-shadow: 0 12px 28px color-mix(in srgb, #0ea5e9 10%, transparent);
+  --cta-p-shim-op: 0.62;
+  --cta-p-shim-dur: 4.4s;
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    color-mix(in srgb, #38bdf8 16%, transparent) 50%,
+    transparent 64%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 22%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  --cta-p-icon-fg: #0369a1;
+  --cta-p-ring: color-mix(in srgb, #38bdf8 40%, transparent);
+  --cta-p-chevron: color-mix(in srgb, #0284c7 68%, var(--text-tertiary));
+}
+
+/* 14 · Wine cellar */
+[data-manager-cta-theme="wine-cellar"] {
+  --cta-w-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 7%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  --cta-w-border: color-mix(in srgb, var(--kpi-emerald) 24%, var(--border));
+  --cta-w-shadow: 0 10px 24px color-mix(in srgb, var(--kpi-emerald) 8%, transparent);
+  --cta-w-shim-op: 0.4;
+  --cta-w-shim-dur: 6s;
+  --cta-m-bg: linear-gradient(145deg, #3d0a18 0%, #5c1228 50%, #2a0610 100%);
+  --cta-m-border: color-mix(in srgb, #fb7185 32%, #881337);
+  --cta-m-shadow: 0 1px 0 rgba(251, 113, 133, 0.14), 0 20px 44px rgba(42, 6, 16, 0.58);
+  --cta-m-title: #ffe4e6;
+  --cta-m-sub: #fda4af;
+  --cta-m-icon-bg: color-mix(in srgb, #be123c 34%, #450a0a);
+  --cta-m-icon-fg: #fecdd3;
+  --cta-m-ring: color-mix(in srgb, #fb7185 52%, transparent);
+  --cta-m-chevron: #fecdd3;
+  --cta-m-shim-op: 0.72;
+  --cta-m-shim-dur: 3.8s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(251, 113, 133, 0.22) 50%,
+    transparent 68%
+  );
+  --cta-m-glow-bg: radial-gradient(circle, rgba(190, 18, 60, 0.34) 0%, transparent 72%);
+  --cta-p-bg: linear-gradient(
+    125deg,
+    color-mix(in srgb, #0ea5e9 8%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+  --cta-p-border: color-mix(in srgb, #38bdf8 28%, var(--border));
+  --cta-p-shadow: 0 12px 28px color-mix(in srgb, #0ea5e9 9%, transparent);
+  --cta-p-shim-op: 0.55;
+  --cta-p-shim-dur: 4.8s;
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    color-mix(in srgb, #38bdf8 14%, transparent) 50%,
+    transparent 62%
+  );
+  --cta-p-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, #0ea5e9 20%, transparent) 0%,
+    transparent 70%
+  );
+  --cta-p-icon-bg: color-mix(in srgb, #e0f2fe 75%, var(--surface-muted));
+  --cta-p-icon-fg: #0369a1;
+  --cta-p-ring: color-mix(in srgb, #38bdf8 38%, transparent);
+  --cta-p-chevron: color-mix(in srgb, #0284c7 65%, var(--text-tertiary));
+}
+
+/* 15 · Carbon neon trio */
+[data-manager-cta-theme="carbon-neon-trio"] {
+  --cta-w-bg: linear-gradient(155deg, #0a0a0c 0%, #141418 48%, #050506 100%);
+  --cta-m-bg: linear-gradient(155deg, #0c0c0f 0%, #18181c 48%, #060608 100%);
+  --cta-p-bg: linear-gradient(155deg, #080810 0%, #12121a 48%, #040408 100%);
+  --cta-w-border: color-mix(in srgb, #39ff14 42%, #27272a);
+  --cta-m-border: color-mix(in srgb, var(--brand) 45%, #27272a);
+  --cta-p-border: color-mix(in srgb, #00f5ff 42%, #27272a);
+  --cta-w-shadow: 0 0 20px rgba(57, 255, 20, 0.12), 0 18px 40px rgba(0, 0, 0, 0.7);
+  --cta-m-shadow: 0 0 20px color-mix(in srgb, var(--brand) 18%, transparent),
+    0 18px 40px rgba(0, 0, 0, 0.7);
+  --cta-p-shadow: 0 0 24px rgba(0, 245, 255, 0.14), 0 18px 40px rgba(0, 0, 0, 0.7);
+  --cta-w-title: #ecfccb;
+  --cta-m-title: #fafafa;
+  --cta-p-title: #ecfeff;
+  --cta-w-sub: #86efac;
+  --cta-m-sub: #d4d4d8;
+  --cta-p-sub: #67e8f9;
+  --cta-w-icon-bg: color-mix(in srgb, #22c55e 22%, #0a0a0c);
+  --cta-m-icon-bg: color-mix(in srgb, var(--brand) 28%, #0a0a0c);
+  --cta-p-icon-bg: color-mix(in srgb, #06b6d4 24%, #0a0a0c);
+  --cta-w-icon-fg: #bbf7d0;
+  --cta-m-icon-fg: var(--brand-text);
+  --cta-p-icon-fg: #a5f3fc;
+  --cta-w-ring: color-mix(in srgb, #4ade80 55%, transparent);
+  --cta-m-ring: color-mix(in srgb, var(--brand) 55%, transparent);
+  --cta-p-ring: color-mix(in srgb, #22d3ee 55%, transparent);
+  --cta-w-chevron: #86efac;
+  --cta-m-chevron: color-mix(in srgb, var(--brand) 75%, #a1a1aa);
+  --cta-p-chevron: #67e8f9;
+  --cta-w-shim-op: 0.65;
+  --cta-m-shim-op: 0.65;
+  --cta-p-shim-op: 0.75;
+  --cta-w-shim-dur: 3.2s;
+  --cta-m-shim-dur: 3.4s;
+  --cta-p-shim-dur: 3s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(74, 222, 128, 0.2) 50%,
+    transparent 70%
+  );
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in srgb, var(--brand) 22%, transparent) 50%,
+    transparent 70%
+  );
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(34, 211, 238, 0.26) 50%,
+    transparent 72%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(74, 222, 128, 0.28) 0%, transparent 72%);
+  --cta-m-glow-bg: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--brand) 30%, transparent) 0%,
+    transparent 72%
+  );
+  --cta-p-glow-bg: radial-gradient(circle, rgba(6, 182, 212, 0.32) 0%, transparent 72%);
+}
+
+/* 16 · Pearl charcoal */
+[data-manager-cta-theme="pearl-charcoal"] {
+  --cta-w-bg: linear-gradient(
+    135deg,
+    #fafaf9 0%,
+    color-mix(in srgb, #f5f5f4 85%, var(--surface)) 45%,
+    var(--surface) 100%
+  );
+  --cta-w-border: color-mix(in srgb, #d6d3d1 50%, var(--border));
+  --cta-w-shadow: 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 28px color-mix(in srgb, #78716c 10%, transparent);
+  --cta-w-title: #1c1917;
+  --cta-w-sub: #57534e;
+  --cta-w-icon-bg: linear-gradient(145deg, #ffffff 0%, #e7e5e4 100%);
+  --cta-w-icon-fg: #44403c;
+  --cta-w-ring: color-mix(in srgb, #a8a29e 40%, transparent);
+  --cta-w-chevron: #78716c;
+  --cta-w-shim-op: 0.5;
+  --cta-w-shim-dur: 5.5s;
+  --cta-w-shim-bg: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.9) 50%,
+    transparent 62%
+  );
+  --cta-w-glow-bg: radial-gradient(circle, rgba(168, 162, 158, 0.18) 0%, transparent 72%);
+  --cta-m-bg: linear-gradient(145deg, #1e1e22 0%, #2d2d33 48%, #141418 100%);
+  --cta-p-bg: linear-gradient(145deg, #18181b 0%, #27272a 48%, #0f0f12 100%);
+  --cta-m-border: color-mix(in srgb, #fafafa 18%, #3f3f46);
+  --cta-p-border: color-mix(in srgb, #38bdf8 28%, #3f3f46);
+  --cta-m-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px rgba(0, 0, 0, 0.45);
+  --cta-p-shadow: 0 1px 0 rgba(56, 189, 248, 0.12), 0 18px 42px rgba(0, 0, 0, 0.48);
+  --cta-m-title: #fafafa;
+  --cta-p-title: #f0f9ff;
+  --cta-m-sub: #a1a1aa;
+  --cta-p-sub: #7dd3fc;
+  --cta-m-icon-bg: color-mix(in srgb, #52525b 55%, #18181b);
+  --cta-p-icon-bg: color-mix(in srgb, #0284c7 28%, #18181b);
+  --cta-m-icon-fg: #e4e4e7;
+  --cta-p-icon-fg: #bae6fd;
+  --cta-m-ring: color-mix(in srgb, #fafafa 35%, transparent);
+  --cta-p-ring: color-mix(in srgb, #38bdf8 48%, transparent);
+  --cta-m-chevron: #d4d4d8;
+  --cta-p-chevron: #7dd3fc;
+  --cta-m-shim-op: 0.55;
+  --cta-p-shim-op: 0.68;
+  --cta-m-shim-dur: 4.6s;
+  --cta-p-shim-dur: 3.8s;
+  --cta-m-shim-bg: linear-gradient(
+    105deg,
+    transparent 36%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 64%
+  );
+  --cta-p-shim-bg: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(56, 189, 248, 0.22) 50%,
+    transparent 68%
+  );
+  --cta-m-glow-bg: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 72%);
+  --cta-p-glow-bg: radial-gradient(circle, rgba(14, 165, 233, 0.28) 0%, transparent 72%);
+}
+
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--walkin.manager-walk-in-cta {
+  border-color: color-mix(in srgb, var(--kpi-emerald) 28%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 8%, var(--surface)) 0%,
+    var(--surface) 45%,
+    color-mix(in srgb, var(--kpi-sky) 6%, var(--surface)) 100%
+  );
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--kpi-emerald) 12%, transparent),
+    0 12px 28px color-mix(in srgb, var(--kpi-emerald) 10%, transparent);
+}
+
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--walkin .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--membership .manager-walk-in-cta-shimmer,
+[data-manager-cta-theme="unified-emerald"] .manager-home-cta--package .manager-walk-in-cta-shimmer {
+  opacity: 0.7;
+  animation-duration: 4.5s;
+}
+
+/* ── Incentive-forward membership & package CTAs (manager home) ── */
+
+.manager-home-incentive-cta {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.75rem 0.625rem 0.75rem 0.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 80%, transparent);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.manager-home-incentive-cta:hover {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--brand) 8%, transparent);
+}
+
+.manager-home-incentive-cta:active {
+  transform: scale(0.99);
+}
+
+.manager-home-incentive-cta:focus-visible {
+  outline: 2px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.manager-home-incentive-cta-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 0.875rem 0 0 0.875rem;
+  pointer-events: none;
+}
+
+.manager-home-incentive-cta--membership .manager-home-incentive-cta-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #d97706 90%, white) 0%,
+    color-mix(in srgb, #b45309 85%, var(--brand)) 100%
+  );
+}
+
+.manager-home-incentive-cta--package .manager-home-incentive-cta-accent {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #0ea5e9 85%, white) 0%,
+    color-mix(in srgb, #0369a1 80%, var(--brand)) 100%
+  );
+}
+
+.manager-home-incentive-cta--membership {
+  background: linear-gradient(
+    118deg,
+    color-mix(in srgb, #fef3c7 55%, var(--surface)) 0%,
+    var(--surface) 42%,
+    var(--surface) 100%
+  );
+}
+
+.manager-home-incentive-cta--package {
+  background: linear-gradient(
+    118deg,
+    color-mix(in srgb, #e0f2fe 50%, var(--surface)) 0%,
+    var(--surface) 42%,
+    var(--surface) 100%
+  );
+}
+
+.manager-home-incentive-cta-icon-wrap {
+  display: flex;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-top: 0.125rem;
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 50%, var(--surface));
+}
+
+.manager-home-incentive-cta--membership .manager-home-incentive-cta-icon-wrap {
+  color: #b45309;
+  background: color-mix(in srgb, #fef3c7 70%, var(--surface));
+  border-color: color-mix(in srgb, #fcd34d 45%, var(--border));
+}
+
+.manager-home-incentive-cta--package .manager-home-incentive-cta-icon-wrap {
+  color: #0369a1;
+  background: color-mix(in srgb, #e0f2fe 75%, var(--surface));
+  border-color: color-mix(in srgb, #7dd3fc 40%, var(--border));
+}
+
+.manager-home-incentive-cta-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.manager-home-incentive-cta-chip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.manager-home-incentive-cta--membership .manager-home-incentive-cta-chip {
+  color: #78350f;
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  box-shadow: 0 1px 0 color-mix(in srgb, #b45309 25%, transparent);
+}
+
+.manager-home-incentive-cta--package .manager-home-incentive-cta-chip {
+  color: #0c4a6e;
+  background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
+  box-shadow: 0 1px 0 color-mix(in srgb, #0369a1 20%, transparent);
+}
+
+.manager-home-incentive-cta-spotlight {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.manager-home-incentive-cta-nudge {
+  margin-top: 0.25rem;
+  font-size: 0.625rem;
+  line-height: 1.35;
+  color: var(--text-tertiary);
+}
+
+.manager-home-incentive-cta-chevron {
+  margin-top: 0.375rem;
+  color: var(--text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.manager-home-incentive-cta:hover .manager-home-incentive-cta-chevron {
+  transform: translateX(2px);
+  color: var(--brand-text);
+}
+
+.manager-home-incentive-cta-momentum {
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.manager-home-incentive-cta-momentum-track {
+  flex: 1;
+  min-width: 2rem;
+  height: 3px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--border) 90%, transparent);
+  overflow: hidden;
+}
+
+.manager-home-incentive-cta-momentum-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 70%, #0ea5e9) 100%);
+  transition: width 0.4s ease;
+}
+
+.manager-home-incentive-cta-momentum-label {
+  flex-shrink: 0;
+  max-width: 45%;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-align: right;
+  line-height: 1.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manager-home-incentive-cta:hover .manager-home-incentive-cta-chevron {
+    transform: none;
+  }
+}

@@ -10,14 +10,13 @@ import { PanelShell, PanelLink } from "@/components/enterprise-ui";
 const PREVIEW_ROWS = 6;
 
 const SERVICE_GRID =
-  "grid grid-cols-[minmax(0,1fr)_3rem_minmax(3.25rem,1fr)_minmax(3.25rem,1fr)] items-center gap-x-2 sm:gap-x-3";
+  "grid grid-cols-[minmax(0,1fr)_2.25rem_minmax(2.75rem,1fr)_minmax(2.75rem,1fr)] items-center gap-x-2 sm:gap-x-3";
 
 interface ServiceSalesTeaserProps {
   data?: ServiceContributionResponse;
   loading?: boolean;
   href: string;
   panelVariant?: "default" | "dashboard";
-  /** Max rows to show; omit for default preview. Pass `null` to show all services. */
   rowLimit?: number | null;
 }
 
@@ -58,15 +57,22 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
         <>
           <div
             className={cn(
-              "ui-table-head hidden border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2 sm:grid",
+              "ui-table-head border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 grid sm:px-4",
               SERVICE_GRID,
             )}
-            aria-hidden
           >
-            <span>{t("service")}</span>
-            <span className="text-right">{t("count")}</span>
-            <span className="text-right">{t("total")}</span>
-            <span className="text-right">{t("finalTotal")}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:text-[11px]">
+              {t("service")}
+            </span>
+            <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:text-[11px]">
+              {t("count")}
+            </span>
+            <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:text-[11px]">
+              {t("total")}
+            </span>
+            <span className="text-right text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)] sm:text-[11px]">
+              {t("finalTotal")}
+            </span>
           </div>
           <div
             className="service-sales-scroll divide-y divide-[var(--border)]"
@@ -81,31 +87,18 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
                 <Link
                   key={s.serviceName}
                   href={href}
-                  className="block px-3 py-3 transition-colors hover:bg-[var(--surface-muted)]/60 sm:px-4 sm:py-2.5"
+                  className={cn("grid px-3 py-2.5 transition-colors hover:bg-[var(--surface-muted)]/60 sm:px-4", SERVICE_GRID)}
                 >
-                  <div className="sm:hidden">
-                    <div className="flex items-start justify-between gap-2 min-w-0">
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-primary)]">
-                        {s.serviceName}
-                      </p>
-                      <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                        {formatCurrency(finalAmount)}
-                      </p>
-                    </div>
-                    <p className="mt-0.5 text-[11px] tabular-nums text-[var(--text-secondary)] sm:text-xs">
-                      {t("count")}: {s.count} · {t("total")}: {formatCurrency(listAmount)}
-                    </p>
-                  </div>
-                  <div className={cn("hidden sm:grid", SERVICE_GRID)}>
-                    <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]">{s.serviceName}</p>
-                    <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">{s.count}</p>
-                    <p className="text-right text-[11px] sm:text-sm tabular-nums text-[var(--text-secondary)]">
-                      {formatCurrency(listAmount)}
-                    </p>
-                    <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                      {formatCurrency(finalAmount)}
-                    </p>
-                  </div>
+                  <p className="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]" title={s.serviceName}>
+                    {s.serviceName}
+                  </p>
+                  <p className="text-right text-sm tabular-nums text-[var(--text-primary)]">{s.count}</p>
+                  <p className="text-right text-[11px] sm:text-sm tabular-nums text-[var(--text-secondary)]">
+                    {formatCurrency(listAmount)}
+                  </p>
+                  <p className="text-right text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {formatCurrency(finalAmount)}
+                  </p>
                 </Link>
               );
             })}

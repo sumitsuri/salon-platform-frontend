@@ -47,10 +47,13 @@ import {
   loadWalkInDraft,
   saveWalkInDraft,
   clearWalkInDraft,
+  pendingPackagePlanStorageKey,
   type RecentCustomer,
   type WalkInDraft,
 } from "@/lib/walk-in-prefs";
-import { getTenantLocaleKit, formatTenantDateTime } from "@/lib/tenant-locale";
+import { formatPackageInclusions } from "@/lib/package-inclusions";
+import { getTenantLocaleKit } from "@/lib/tenant-locale";
+import { formatBookingVisitAt } from "@/lib/booking-display";
 import { buildWalkInUrl, customerDetailPath } from "@/lib/navigation-scope";
 import { matchCustomerByExactName } from "@/lib/walk-in-customer-match";
 import {
@@ -84,6 +87,8 @@ import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
 import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
 import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
+import { WalkInCustomerPackagesPanel } from "./WalkInCustomerPackagesPanel";
+import { WalkInPendingPackageSaleBanner } from "./WalkInPendingPackageSaleBanner";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
 import { WalkInServiceCatalog } from "./WalkInServiceCatalog";
 import { WalkInStylistPickerSheet } from "./WalkInStylistPickerSheet";
@@ -96,7 +101,7 @@ import { WalkInDiscountSheet } from "./WalkInDiscountSheet";
 import { WalkInAppliedAdjustmentsBanner } from "./WalkInAppliedAdjustmentsBanner";
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
-import { BillBreakdownRows, membershipFeeServiceLine } from "@/components/billing/BillBreakdownRows";
+import { BillBreakdownRows, membershipFeeServiceLine, packageFeeServiceLine, BillOfferingLineItem } from "@/components/billing/BillBreakdownRows";
 import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
 import {
   buildWalkInSubCategories,
@@ -136,6 +141,8 @@ function normalizeCartItem(
     priceExtra,
     variablePricing,
     staffId: item.staffId,
+    packageSubscriptionId: item.packageSubscriptionId,
+    quantity: item.quantity,
   };
 }
 
@@ -181,6 +188,7 @@ export default function WalkInPage() {
   const searchParams = useSearchParams();
   const preferredStaffId = searchParams.get("staffId") || "";
   const wantNewVisit = searchParams.get("new") === "1";
+  const urlPackagePlanId = searchParams.get("packagePlanId") || "";
   const hubTabParam = searchParams.get("tab") === "history" ? "history" : "open";
   const urlCustomerId = searchParams.get("customerId") || undefined;
   const queryClient = useQueryClient();
@@ -257,6 +265,8 @@ export default function WalkInPage() {
   const [addedToast, setAddedToast] = useState<string | null>(null);
   const [removedToast, setRemovedToast] = useState<string | null>(null);
   const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
+  const [pendingPackagePlanId, setPendingPackagePlanId] = useState("");
+  const [pendingPackageSoldByStaffId, setPendingPackageSoldByStaffId] = useState("");
 
   useEffect(() => {
     discountSheetOpenRef.current = discountSheetOpen;
@@ -511,7 +521,11 @@ export default function WalkInPage() {
         api.getBookings({ branchId, status: "READY_FOR_BILLING", page: 0, size: 50 }),
       ]);
       const merged = [...(ready.content || []), ...(inProgress.content || [])];
-      merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      merged.sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tb - ta;
+      });
       return merged;
     },
     enabled: !!branchId && screen === "hub",
@@ -536,6 +550,39 @@ export default function WalkInPage() {
       .catch(() => setMembership(null));
   }, [customerId]);
 
+  const { data: customerPackages = [] } = useQuery({
+    queryKey: ["customer-packages", customerId],
+    queryFn: () => api.getActiveCustomerPackages(customerId!),
+    enabled: !!customerId && screen === "flow",
+  });
+
+  const { data: sellablePackagePlans = [] } = useQuery({
+    queryKey: ["active-package-plans", branchId],
+    queryFn: () => api.getActivePackagePlans(branchId),
+    enabled: !!branchId && (!!pendingPackagePlanId || step === 3),
+  });
+
+  const pendingPackagePlan = useMemo(
+    () => sellablePackagePlans.find((p) => p.id === pendingPackagePlanId) ?? null,
+    [sellablePackagePlans, pendingPackagePlanId]
+  );
+
+  const pendingPackageInclusions = useMemo(
+    () => formatPackageInclusions(pendingPackagePlan?.items),
+    [pendingPackagePlan]
+  );
+
+  function clearPendingPackageSale() {
+    setPendingPackagePlanId("");
+    setPendingPackageSoldByStaffId("");
+    if (typeof window !== "undefined" && branchId) {
+      sessionStorage.removeItem(pendingPackagePlanStorageKey(branchId));
+    }
+    if (bookingId && !billingLocked) {
+      void api.setPendingPackagePlan(bookingId, null).then((b) => hydrateFromBooking(b)).catch(() => undefined);
+    }
+  }
+
   useEffect(() => {
     if (!bookingId || billingLocked || screen !== "flow") return;
     const delay = step === 3 ? 200 : 400;
@@ -550,6 +597,25 @@ export default function WalkInPage() {
     }, delay);
     return () => clearTimeout(handle);
   }, [pendingMembershipPlanId, bookingId, billingLocked, screen, step, tCommon]);
+
+  useEffect(() => {
+    if (!bookingId || billingLocked || screen !== "flow") return;
+    const delay = step === 3 ? 200 : 400;
+    const handle = setTimeout(() => {
+      void api
+        .setPendingPackagePlan(
+          bookingId,
+          pendingPackagePlanId || null,
+          pendingPackagePlanId ? pendingPackageSoldByStaffId || null : null
+        )
+        .then((b) => {
+          setBillPreview(b.billPreview ?? null);
+          setBookingStatus(b.status);
+        })
+        .catch((e) => setError(e instanceof Error ? e.message : tCommon("failed")));
+    }, delay);
+    return () => clearTimeout(handle);
+  }, [pendingPackagePlanId, pendingPackageSoldByStaffId, bookingId, billingLocked, screen, step, tCommon]);
 
   // Sync editable CGST/SGST from server bill preview when GST is enabled for this branch.
   useEffect(() => {
@@ -612,14 +678,18 @@ export default function WalkInPage() {
           branchServiceId: l.branchServiceId,
           serviceName: l.serviceName,
           basePrice,
-          priceExtra: Math.max(0, l.unitPrice - basePrice),
+          priceExtra: l.packageSubscriptionId ? 0 : Math.max(0, l.unitPrice - basePrice),
           variablePricing: svc?.variablePricing ?? false,
           staffId: l.staffId,
+          packageSubscriptionId: l.packageSubscriptionId,
+          quantity: l.quantity ?? 1,
         };
       })
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPendingMembershipPlanId(b.pendingMembershipPlanId || "");
+    setPendingPackagePlanId(b.pendingPackagePlanId || "");
+    setPendingPackageSoldByStaffId(b.pendingPackageSoldByStaffId || "");
     setPaymentSuccess("");
     setReceiptDeliveryStatus(undefined);
     setReceiptDeliveryError("");
@@ -670,7 +740,6 @@ export default function WalkInPage() {
   /** After payment, return manager to Today dashboard. */
   function finishVisitGoToday() {
     resetCompletedVisitState();
-    setScreen("hub");
     router.push("/manager");
   }
 
@@ -761,6 +830,12 @@ export default function WalkInPage() {
     setSociety(draftOffer.society || user?.branchName || "");
     setFlat(draftOffer.flat);
     setCart(draftOffer.cart.map((c) => normalizeCartItem(c, servicesById)));
+    if (draftOffer.pendingPackagePlanId) {
+      setPendingPackagePlanId(draftOffer.pendingPackagePlanId);
+    }
+    if (draftOffer.pendingPackageSoldByStaffId) {
+      setPendingPackageSoldByStaffId(draftOffer.pendingPackageSoldByStaffId);
+    }
     setStep(draftOffer.step);
     setScreen("flow");
     setDraftOffer(null);
@@ -778,7 +853,7 @@ export default function WalkInPage() {
   // Debounced local draft save while a visit is in progress but not yet a real booking.
   useEffect(() => {
     if (screen !== "flow" || bookingId || !branchId) return;
-    if (!phone && !visitPassInput && !customerName && cart.length === 0) return;
+    if (!phone && !visitPassInput && !customerName && cart.length === 0 && !pendingPackagePlanId) return;
     const handle = setTimeout(() => {
       saveWalkInDraft(branchId, {
         phone,
@@ -788,14 +863,19 @@ export default function WalkInPage() {
         society,
         flat,
         cart,
+        pendingPackagePlanId: pendingPackagePlanId || undefined,
+        pendingPackageSoldByStaffId: pendingPackageSoldByStaffId || undefined,
         step,
       });
     }, DRAFT_SAVE_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [screen, bookingId, branchId, phone, visitPassInput, customerName, customerId, society, flat, cart, step]);
+  }, [screen, bookingId, branchId, phone, visitPassInput, customerName, customerId, society, flat, cart, step, pendingPackagePlanId, pendingPackageSoldByStaffId]);
 
-  const startNewVisit = useCallback(() => {
+  const startNewVisit = useCallback((preselectedPackagePlanId?: string) => {
     clearWalkInDraft(branchId);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(pendingPackagePlanStorageKey(branchId));
+    }
     setBookingId("");
     setBookingStatus("");
     setPhone("");
@@ -836,8 +916,12 @@ export default function WalkInPage() {
     setDraftRestoredNotice(false);
     setHubTab("open");
     setPendingMembershipPlanId("");
+    setPendingPackagePlanId(preselectedPackagePlanId || "");
     setStep(1);
     setScreen("flow");
+    if (preselectedPackagePlanId && typeof window !== "undefined") {
+      sessionStorage.setItem(pendingPackagePlanStorageKey(branchId), preselectedPackagePlanId);
+    }
     router.push("/manager/walk-in");
   }, [router, user?.branchName, branchId]);
 
@@ -845,9 +929,39 @@ export default function WalkInPage() {
     if (!wantNewVisit) return;
     if (searchParams.get("bookingId") || preferredStaffId) return;
     packagesCatalogRef.current = searchParams.get("packages") === "1";
-    startNewVisit();
+    startNewVisit(urlPackagePlanId || undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional one-shot from ?new=1
-  }, [wantNewVisit]);
+  }, [wantNewVisit, urlPackagePlanId]);
+
+  useEffect(() => {
+    if (!branchId || pendingPackagePlanId) return;
+    const fromUrl = searchParams.get("packagePlanId");
+    if (fromUrl) {
+      setPendingPackagePlanId(fromUrl);
+      sessionStorage.setItem(pendingPackagePlanStorageKey(branchId), fromUrl);
+      return;
+    }
+    const stored = sessionStorage.getItem(pendingPackagePlanStorageKey(branchId));
+    if (stored) setPendingPackagePlanId(stored);
+  }, [branchId, pendingPackagePlanId, searchParams]);
+
+  useEffect(() => {
+    if (!pendingPackagePlanId || pendingPackageSoldByStaffId || staff.length === 0) return;
+    const fromCart = defaultStaffId(cart);
+    const next = fromCart || preferredStaffId || staff[0]?.id || "";
+    if (next) setPendingPackageSoldByStaffId(next);
+  }, [pendingPackagePlanId, pendingPackageSoldByStaffId, staff, cart, preferredStaffId]);
+
+  useEffect(() => {
+    if (step !== 3 || !bookingId || billPreview || billingLocked) return;
+    let cancelled = false;
+    void api.getBooking(bookingId).then((b) => {
+      if (!cancelled) hydrateFromBooking(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, bookingId, billPreview, billingLocked]);
 
   useEffect(() => {
     if (step !== 2 || !packagesCatalogRef.current) return;
@@ -1002,6 +1116,9 @@ export default function WalkInPage() {
       clearWalkInDraft(branchId);
       void queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      if (customerId) {
+        void queryClient.invalidateQueries({ queryKey: ["customer-packages", customerId] });
+      }
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -1513,6 +1630,78 @@ export default function WalkInPage() {
     addServiceToCart(s, defaultStaffId(cart));
   }
 
+  function packageQtyInCart(subscriptionId: string, branchServiceId: string): number {
+    const line = cart.find(
+      (c) => c.branchServiceId === branchServiceId && c.packageSubscriptionId === subscriptionId
+    );
+    if (!line) return 0;
+    return line.quantity ?? 1;
+  }
+
+  function maxPackageRedeemQty(subscriptionId: string, branchServiceId: string): number {
+    const svc = servicesById.get(branchServiceId);
+    if (!svc) return 0;
+    const sub = customerPackages.find((s) => s.id === subscriptionId);
+    const ent = sub?.entitlements.find((e) => e.serviceId === svc.serviceId);
+    if (!ent) return 0;
+    return Math.max(0, ent.quantityRemaining - packageQtyInCart(subscriptionId, branchServiceId));
+  }
+
+  function redeemPackageToCart(
+    branchServiceId: string,
+    serviceName: string,
+    basePrice: number,
+    subscriptionId: string,
+    quantity: number
+  ) {
+    const toAdd = Math.min(Math.max(1, Math.floor(quantity)), maxPackageRedeemQty(subscriptionId, branchServiceId));
+    if (toAdd <= 0) return;
+    const svc = servicesById.get(branchServiceId);
+    setCart((prev) => {
+      const idx = prev.findIndex(
+        (c) => c.branchServiceId === branchServiceId && c.packageSubscriptionId === subscriptionId
+      );
+      if (idx >= 0) {
+        const current = prev[idx].quantity ?? 1;
+        const next = [...prev];
+        next[idx] = { ...next[idx], quantity: current + toAdd };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          branchServiceId,
+          serviceName,
+          basePrice: svc?.price ?? basePrice,
+          priceExtra: 0,
+          variablePricing: !!svc?.variablePricing,
+          staffId: defaultStaffId(prev),
+          packageSubscriptionId: subscriptionId,
+          quantity: toAdd,
+        },
+      ];
+    });
+    setAddedToast(toAdd > 1 ? `${serviceName} × ${toAdd}` : serviceName);
+  }
+
+  function updatePackageCartQuantity(idx: number, nextQty: number) {
+    setCart((prev) => {
+      const item = prev[idx];
+      if (!item?.packageSubscriptionId) return prev;
+      const svc = servicesById.get(item.branchServiceId);
+      const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
+      const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
+      const maxForLine = ent?.quantityRemaining ?? 0;
+      if (maxForLine <= 0) {
+        return prev.filter((_, i) => i !== idx);
+      }
+      const clamped = Math.max(1, Math.min(nextQty, maxForLine));
+      const next = [...prev];
+      next[idx] = { ...item, quantity: clamped };
+      return next;
+    });
+  }
+
   function closeStylistPicker() {
     setStylistPickerService(null);
   }
@@ -1562,11 +1751,21 @@ export default function WalkInPage() {
   function toLinePayload(items: CartItem[]) {
     return items.map((c) => {
       const total = cartLinePrice(c);
-      const payload: { branchServiceId: string; staffId: string; quantity: number; unitPrice?: number } = {
+      const payload: {
+        branchServiceId: string;
+        staffId: string;
+        quantity: number;
+        unitPrice?: number;
+        packageSubscriptionId?: string;
+      } = {
         branchServiceId: c.branchServiceId,
         staffId: c.staffId,
-        quantity: 1,
+        quantity: c.packageSubscriptionId ? Math.max(1, c.quantity ?? 1) : 1,
       };
+      if (c.packageSubscriptionId) {
+        payload.packageSubscriptionId = c.packageSubscriptionId;
+        return payload;
+      }
       if (total > c.basePrice) {
         payload.unitPrice = total;
       }
@@ -1643,26 +1842,44 @@ export default function WalkInPage() {
   }
 
   async function persistServices(keepOpen: boolean): Promise<Booking> {
-    if (cart.length === 0) {
+    const hasOffering =
+      cart.length > 0 || !!pendingPackagePlanId || !!pendingMembershipPlanId;
+    if (!hasOffering) {
+      throw new Error(t("cartEmpty"));
+    }
+    if (cart.length === 0 && !keepOpen && !pendingPackagePlanId && !pendingMembershipPlanId) {
       throw new Error(t("cartEmpty"));
     }
 
-    if (staff.length === 0) {
+    if (cart.length > 0 && staff.length === 0) {
       throw new Error(t("noStaffConfigured"));
     }
 
-    let workingCart = cart;
-    if (cart.some((c) => !c.staffId)) {
-      workingCart = cart.map((c) => (c.staffId ? c : { ...c, staffId: defaultStaffId(cart) }));
-      setCart(workingCart);
+    if (pendingPackagePlanId && staff.length > 0 && !pendingPackageSoldByStaffId) {
+      throw new Error(t("packageSoldByRequired"));
     }
-    if (workingCart.some((c) => !c.staffId)) {
-      throw new Error(t("assignStylistError"));
+
+    let workingCart = cart;
+    if (workingCart.length > 0) {
+      if (workingCart.some((c) => !c.staffId)) {
+        workingCart = workingCart.map((c) => (c.staffId ? c : { ...c, staffId: defaultStaffId(workingCart) }));
+        setCart(workingCart);
+      }
+      if (workingCart.some((c) => !c.staffId)) {
+        throw new Error(t("assignStylistError"));
+      }
     }
 
     if (bookingId) {
-      await api.updateBookingLines(bookingId, toLinePayload(workingCart));
-      const synced = await api.setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null);
+      if (workingCart.length > 0) {
+        await api.updateBookingLines(bookingId, toLinePayload(workingCart));
+      }
+      await api.setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null);
+      const synced = await api.setPendingPackagePlan(
+        bookingId,
+        pendingPackagePlanId || null,
+        pendingPackagePlanId ? pendingPackageSoldByStaffId || null : null
+      );
       if (!keepOpen && synced.status !== "READY_FOR_BILLING") {
         return api.markBookingReadyForBilling(bookingId);
       }
@@ -1682,6 +1899,8 @@ export default function WalkInPage() {
       offerId: selectedOfferId || undefined,
       keepOpen,
       pendingMembershipPlanId: pendingMembershipPlanId || undefined,
+      pendingPackagePlanId: pendingPackagePlanId || undefined,
+      pendingPackageSoldByStaffId: pendingPackageSoldByStaffId || undefined,
       ...discountPayload(),
     });
   }
@@ -1848,6 +2067,9 @@ export default function WalkInPage() {
 
   const stylistsRequired = staff.length > 0;
   const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
+  const packageSellerComplete =
+    !pendingPackagePlanId || !stylistsRequired || !!pendingPackageSoldByStaffId;
+  const floorVisitReady = packageSellerComplete && (cart.length === 0 || stylistsComplete);
   const cartTotalDisplay = formatMoney(
     cartHasFreshBill && billPreview ? billPreview.grandTotal : cartTotals.estimatedGrand,
     localeKit
@@ -1869,7 +2091,7 @@ export default function WalkInPage() {
               </Link>
               <button
                 type="button"
-                onClick={startNewVisit}
+                onClick={() => startNewVisit()}
                 className={`${btnPrimary} py-2.5 px-4 flex-1 sm:flex-none touch-manipulation justify-center min-h-11`}
               >
                 <UserPlus className="w-4 h-4" />
@@ -1917,7 +2139,7 @@ export default function WalkInPage() {
         {hubTab === "history" ? (
           <BookingsHistoryPanel
             embedded
-            onNewVisit={startNewVisit}
+            onNewVisit={() => startNewVisit()}
             wizardBaseHref="/manager/walk-in"
             initialCustomerId={urlCustomerId}
             navigationScope="manager"
@@ -1948,7 +2170,7 @@ export default function WalkInPage() {
                 description={t("noOpenVisitsHint")}
                 icon={ClipboardList}
                 action={
-                  <button type="button" onClick={startNewVisit} className={`${btnPrimary} min-h-12`}>
+                  <button type="button" onClick={() => startNewVisit()} className={`${btnPrimary} min-h-12`}>
                     <UserPlus className="w-4 h-4" />
                     {t("newVisit")}
                   </button>
@@ -1980,7 +2202,7 @@ export default function WalkInPage() {
                           <StatusBadge status={v.status} />
                         </div>
                         <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">
-                          {v.customerPhone} · {formatTenantDateTime(v.createdAt, localeKit)}
+                          {v.customerPhone} · {formatBookingVisitAt(v, localeKit)}
                         </p>
                         <p className="mt-0.5 truncate text-[11px] text-[var(--text-tertiary)]">{servicesLabel}</p>
                       </div>
@@ -2068,7 +2290,7 @@ export default function WalkInPage() {
         <div
           className={cn(
             "rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden shadow-sm w-full min-w-0",
-            step === 2 && "max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:shadow-sm",
+            step === 2 && "max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b-0",
             step === 3 && "max-w-3xl xl:max-w-4xl mx-auto"
           )}
         >
@@ -2223,15 +2445,13 @@ export default function WalkInPage() {
                 </div>
               </div>
               <div
-                className="border-t border-[var(--border)] bg-[var(--surface-muted)]/20 px-2 py-1 md:hidden"
+                className="h-0.5 w-full bg-[var(--border)] md:hidden"
                 aria-hidden
               >
-                <div className="h-0.5 overflow-hidden rounded-full bg-[var(--border)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--brand)] transition-all duration-300"
-                    style={{ width: `${steps.length > 1 ? ((step - 1) / (steps.length - 1)) * 100 : 100}%` }}
-                  />
-                </div>
+                <div
+                  className="h-full bg-[var(--brand)] transition-all duration-300"
+                  style={{ width: `${steps.length > 1 ? ((step - 1) / (steps.length - 1)) * 100 : 100}%` }}
+                />
               </div>
               <div className="hidden md:block border-t border-[var(--border)] px-2 sm:px-3">
                 <WizardSteps
@@ -2280,6 +2500,18 @@ export default function WalkInPage() {
 
       {step === 1 && (
         <Card className="space-y-4">
+          {pendingPackagePlanId ? (
+            <WalkInPendingPackageSaleBanner
+              plan={pendingPackagePlan}
+              planId={pendingPackagePlanId}
+              onClear={clearPendingPackageSale}
+              staff={staff}
+              soldByStaffId={pendingPackageSoldByStaffId}
+              onSoldByStaffChange={setPendingPackageSoldByStaffId}
+              disabled={saving || billingLocked}
+            />
+          ) : null}
+
           {!bookingId && (
             <SegmentedControl
               value={customerLookupMode}
@@ -2553,16 +2785,38 @@ export default function WalkInPage() {
             </div>
           )}
 
-          {!membership && customerId && (
-            <div className="shrink-0">
-              <WalkInMembershipSavingsBanner
-                compact
-                customerName={customerName}
-                cart={cart}
-                servicesById={servicesById}
-                localeKit={localeKit}
+          {pendingPackagePlanId ? (
+            <div className="min-w-0">
+              <WalkInPendingPackageSaleBanner
+                plan={pendingPackagePlan}
+                planId={pendingPackagePlanId}
+                onClear={clearPendingPackageSale}
+                staff={staff}
+                soldByStaffId={pendingPackageSoldByStaffId}
+                onSoldByStaffChange={setPendingPackageSoldByStaffId}
+                disabled={saving || billingLocked}
               />
             </div>
+          ) : null}
+
+          {customerId && customerPackages.length > 0 ? (
+            <WalkInCustomerPackagesPanel
+              subscriptions={customerPackages}
+              servicesById={servicesById}
+              packageQtyInCart={packageQtyInCart}
+              disabled={saving || billingLocked}
+              onRedeem={redeemPackageToCart}
+            />
+          ) : null}
+
+          {!membership && customerId && (
+            <WalkInMembershipSavingsBanner
+              compact
+              customerName={customerName}
+              cart={cart}
+              servicesById={servicesById}
+              localeKit={localeKit}
+            />
           )}
 
           {staff.length === 0 && (
@@ -2570,7 +2824,7 @@ export default function WalkInPage() {
           )}
 
           <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0">
-            <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]">
+            <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)] order-1">
               <WalkInServiceCatalog
                 serviceQuery={serviceQuery}
                 onServiceQueryChange={setServiceQuery}
@@ -2592,7 +2846,7 @@ export default function WalkInPage() {
               />
             </div>
 
-            <div className="hidden lg:block w-full lg:w-[min(22rem,36%)] shrink-0 self-start">
+            <div className="hidden lg:block w-full lg:w-[min(22rem,36%)] shrink-0 self-start order-2">
               <WalkInCartPanel
                 variant="panel"
                 cart={cart}
@@ -2607,10 +2861,28 @@ export default function WalkInPage() {
                 billPreview={billPreview}
                 saving={saving}
                 stylistsRequired={stylistsRequired}
-                stylistsComplete={stylistsComplete}
+                stylistsComplete={floorVisitReady}
+                pendingPackagePlanName={
+                  pendingPackagePlanId ? pendingPackagePlan?.name ?? t("packageSelectedLoading") : undefined
+                }
+                pendingPackagePlanPrice={
+                  pendingPackagePlanId ? pendingPackagePlan?.packagePrice : undefined
+                }
+                pendingPackageInclusions={pendingPackagePlanId ? pendingPackageInclusions : undefined}
                 onRemove={removeFromCart}
                 onUpdateStaff={updateStaff}
                 onEditPrice={setPriceEditIdx}
+                onUpdatePackageQuantity={updatePackageCartQuantity}
+                maxPackageLineQty={(item) =>
+                  item.packageSubscriptionId
+                    ? (() => {
+                        const svc = servicesById.get(item.branchServiceId);
+                        const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
+                        const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
+                        return ent?.quantityRemaining ?? 1;
+                      })()
+                    : 1
+                }
                 onSaveOpen={() => void saveOpenVisit()}
                 onProceedToBill={() => void proceedToBill()}
               />
@@ -2664,10 +2936,28 @@ export default function WalkInPage() {
                       billPreview={billPreview}
                       saving={saving}
                       stylistsRequired={stylistsRequired}
-                      stylistsComplete={stylistsComplete}
+                      stylistsComplete={floorVisitReady}
+                      pendingPackagePlanName={
+                        pendingPackagePlanId ? pendingPackagePlan?.name ?? t("packageSelectedLoading") : undefined
+                      }
+                      pendingPackagePlanPrice={
+                        pendingPackagePlanId ? pendingPackagePlan?.packagePrice : undefined
+                      }
+                      pendingPackageInclusions={pendingPackagePlanId ? pendingPackageInclusions : undefined}
                       onRemove={removeFromCart}
                       onUpdateStaff={updateStaff}
                       onEditPrice={setPriceEditIdx}
+                      onUpdatePackageQuantity={updatePackageCartQuantity}
+                      maxPackageLineQty={(item) =>
+                        item.packageSubscriptionId
+                          ? (() => {
+                              const svc = servicesById.get(item.branchServiceId);
+                              const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
+                              const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
+                              return ent?.quantityRemaining ?? 1;
+                            })()
+                          : 1
+                      }
                       onSaveOpen={() => void saveOpenVisit()}
                       onProceedToBill={() => void proceedToBill()}
                     />
@@ -2677,8 +2967,23 @@ export default function WalkInPage() {
             )}
 
             <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">
-              {cart.length === 0 ? (
+              {pendingPackagePlanId && cart.length > 0 ? (
+                <div className="mb-1 rounded-lg border border-sky-200/90 bg-sky-50/90 px-2 py-1 dark:border-sky-900 dark:bg-sky-950/40">
+                  <p className="text-[10px] font-semibold text-sky-950 dark:text-sky-100 truncate">
+                    {t("packageSelectedTitle")}: {pendingPackagePlan?.name ?? t("packageSelectedLoading")}
+                  </p>
+                </div>
+              ) : null}
+              {cart.length === 0 && !pendingPackagePlanId ? (
                 <p className="text-center text-xs text-[var(--text-tertiary)] py-0.5">{t("cartEmpty")}</p>
+              ) : cart.length === 0 && pendingPackagePlanId ? (
+                <WalkInMobileCartActions
+                  saving={saving}
+                  proceedDisabled={saving || !floorVisitReady}
+                  saveDisabled={saving || !floorVisitReady}
+                  onProceed={() => void proceedToBill()}
+                  onSave={() => void saveOpenVisit()}
+                />
               ) : (
                 <div className="space-y-1">
                   <button
@@ -2711,8 +3016,13 @@ export default function WalkInPage() {
 
                   <WalkInMobileCartActions
                     saving={saving}
-                    proceedDisabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
-                    saveDisabled={cart.length === 0 || saving || staff.length === 0}
+                  proceedDisabled={saving || !floorVisitReady}
+                    saveDisabled={
+                      saving ||
+                      (cart.length === 0 && !pendingPackagePlanId) ||
+                      (cart.length > 0 && staff.length === 0) ||
+                      (!!pendingPackagePlanId && staff.length > 0 && !pendingPackageSoldByStaffId)
+                    }
                     onProceed={() => void proceedToBill()}
                     onSave={() => void saveOpenVisit()}
                   />
@@ -2723,8 +3033,20 @@ export default function WalkInPage() {
         </div>
       )}
 
-      {step === 3 && billPreview && (
+      {step === 3 && (
         <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+          {pendingPackagePlanId ? (
+            <WalkInPendingPackageSaleBanner
+              plan={pendingPackagePlan}
+              planId={pendingPackagePlanId}
+              onClear={clearPendingPackageSale}
+              staff={staff}
+              soldByStaffId={pendingPackageSoldByStaffId}
+              onSoldByStaffChange={setPendingPackageSoldByStaffId}
+              disabled={saving || billingLocked}
+            />
+          ) : null}
+
           {paymentSuccess && reviewInvitationUrl ? (
             <WalkInReviewInvitePanel
               reviewUrl={reviewInvitationUrl}
@@ -2753,23 +3075,35 @@ export default function WalkInPage() {
               </div>
               <WalkInMembershipPicker
                 value={pendingMembershipPlanId}
-                onChange={setPendingMembershipPlanId}
+                onChange={(id) => {
+                  setPendingMembershipPlanId(id);
+                  if (id) setPendingPackagePlanId("");
+                }}
                 disabled={!bookingId || saving}
               />
             </div>
           )}
 
+          {!billingLocked && !pendingPackagePlanId && customerId && (
+            <div className="rounded-lg border border-sky-200/90 bg-sky-50/40 px-3 py-2 dark:border-sky-900/50 dark:bg-sky-950/20">
+              <p className="text-xs text-[var(--text-secondary)]">{t("packageSellFromCatalogHint")}</p>
+            </div>
+          )}
+
+          {billPreview ? (
           <Card className="p-3 sm:p-4 space-y-3">
             <div className="rounded-lg border border-[var(--border)]/80 bg-[var(--surface-muted)]/25 p-2">
               <div className="mb-1.5 flex items-center gap-1.5">
                 <Scissors className="h-3.5 w-3.5 shrink-0 text-[var(--brand-text)]" aria-hidden />
                 <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-                  {t("servicesReview")}
+                  {t("billOfferingsReview")}
                 </span>
               </div>
               <ul className="space-y-0 divide-y divide-[var(--border)]/50">
                 {(billPreview.lines && billPreview.lines.length > 0
-                  ? billPreview.lines.map((line, idx) => {
+                  ? (
+                    <>
+                    {billPreview.lines.map((line, idx) => {
                       const membershipFee = membershipFeeServiceLine(billPreview);
                       const isMembershipRow =
                         !!membershipFee &&
@@ -2819,9 +3153,28 @@ export default function WalkInPage() {
                           )}
                         </li>
                       );
-                    })
+                    })}
+                    {(() => {
+                      const pkg = packageFeeServiceLine(billPreview);
+                      if (!pkg) return null;
+                      const shown = billPreview.lines?.some(
+                        (l) => l.serviceName === pkg.name || /package/i.test(l.serviceName)
+                      );
+                      if (shown) return null;
+                      return (
+                        <BillOfferingLineItem
+                          name={pkg.name}
+                          amount={pkg.amount}
+                          localeKit={localeKit}
+                          variant="package"
+                        />
+                      );
+                    })()}
+                    </>
+                  )
                   : (() => {
                       const fee = membershipFeeServiceLine(billPreview);
+                      const pkg = packageFeeServiceLine(billPreview);
                       const items = cart.map((item, idx) => ({ item, idx }));
                       return (
                         <>
@@ -2854,15 +3207,20 @@ export default function WalkInPage() {
                             );
                           })}
                           {fee && (
-                            <li className="flex justify-between gap-3 items-start rounded-md border-l-2 border-violet-400 bg-violet-50/50 py-1.5 pl-2 dark:border-violet-600 dark:bg-violet-950/20">
-                              <div className="min-w-0 flex items-center gap-1.5">
-                                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
-                                <p className="font-medium text-sm text-[var(--text-primary)] truncate">{fee.name}</p>
-                              </div>
-                              <span className="font-semibold text-sm text-[var(--text-primary)] shrink-0 tabular-nums">
-                                {formatMoney(fee.amount, localeKit)}
-                              </span>
-                            </li>
+                            <BillOfferingLineItem
+                              name={fee.name}
+                              amount={fee.amount}
+                              localeKit={localeKit}
+                              variant="membership"
+                            />
+                          )}
+                          {pkg && (
+                            <BillOfferingLineItem
+                              name={pkg.name}
+                              amount={pkg.amount}
+                              localeKit={localeKit}
+                              variant="package"
+                            />
                           )}
                         </>
                       );
@@ -3149,8 +3507,17 @@ export default function WalkInPage() {
             </>
           ) : null}
         </Card>
+          ) : (
+            <Card className="space-y-3 p-4">
+              <div className="h-24 rounded-xl bg-[var(--surface-muted)] animate-pulse" aria-hidden />
+              <p className="text-sm text-[var(--text-secondary)]">{t("billPreviewLoading")}</p>
+              <button type="button" onClick={() => setStep(2)} className={`${btnSecondary} min-h-11`}>
+                {t("addMoreServices")}
+              </button>
+            </Card>
+          )}
 
-          {!billingLocked && (
+          {billPreview && !billingLocked && (
             <div className="lg:hidden">
               <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">
                 <WalkInMobilePaymentActions
@@ -3174,15 +3541,6 @@ export default function WalkInPage() {
             </div>
           )}
         </div>
-      )}
-
-      {step === 3 && !billPreview && (
-        <Card className="space-y-3">
-          <div className="h-24 rounded-xl bg-[var(--surface-muted)] animate-pulse" aria-hidden />
-          <button type="button" onClick={() => setStep(2)} className={`${btnSecondary} min-h-11`}>
-            {t("addMoreServices")}
-          </button>
-        </Card>
       )}
 
       <WalkInServicePriceSheet

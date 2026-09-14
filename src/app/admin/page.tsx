@@ -20,6 +20,7 @@ import { ProductDateRange, dashboardSecondaryRange, getTodayRange, resolveProduc
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { staffSalesRowsFromTargetPerformance } from "@/lib/staff-sales-rows";
 import { deriveOverviewActions } from "@/lib/dashboard-overview-actions";
 import {
   DashboardCommandBar,
@@ -158,6 +159,8 @@ export default function AdminDashboardPage() {
     count: t("count"),
     avgTicket: t("avgTicket"),
     sales: t("sales"),
+    listPrice: t("listTotal"),
+    finalPrice: t("finalTotal"),
   };
 
   if (branchesError) {
@@ -335,13 +338,7 @@ export default function AdminDashboardPage() {
                 loading={staffPerfLoading}
                 headerLabel={t("employeeSales")}
                 emptyLabel={t("noEmployeeSales")}
-                staff={(staffPerformance?.staff ?? []).map((s) => ({
-                  staffId: s.staffId,
-                  staffName: s.staffName,
-                  salesCount: s.salesCount ?? 0,
-                  avgTicketSize: s.avgTicketSize ?? 0,
-                  totalSales: s.actualSales,
-                }))}
+                staff={staffSalesRowsFromTargetPerformance(staffPerformance?.staff ?? [])}
                 labels={employeeSalesLabels}
                 formatValue={formatCurrency}
                 staffHref={() => "/admin/employees"}

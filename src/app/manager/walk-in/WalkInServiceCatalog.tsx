@@ -31,6 +31,8 @@ interface WalkInServiceCatalogProps {
   onToggleFavorite: (id: string) => void;
   /** Customer online booking — full service names, no favorites. */
   variant?: "walk-in" | "online";
+  /** Parent (e.g. SideSheet) owns vertical scroll — avoid nested scroll traps on long catalogs. */
+  scrollWithParent?: boolean;
 }
 
 function useIsMounted() {
@@ -122,6 +124,7 @@ export function WalkInServiceCatalog({
   onToggleService,
   onToggleFavorite,
   variant = "walk-in",
+  scrollWithParent = false,
 }: WalkInServiceCatalogProps) {
   const isOnline = variant === "online";
   const t = useTranslations("manager.walkIn");
@@ -211,7 +214,8 @@ export function WalkInServiceCatalog({
     <Card
       padding={false}
       className={cn(
-        "flex flex-col lg:min-h-0 lg:flex-1 lg:overflow-hidden",
+        "flex flex-col",
+        !scrollWithParent && "lg:min-h-0 lg:flex-1 lg:overflow-hidden",
         isOnline && "border-[#e8dcc8]/80 bg-white/75 shadow-[0_12px_40px_rgba(26,22,18,0.08)] backdrop-blur-sm"
       )}
     >
@@ -371,8 +375,12 @@ export function WalkInServiceCatalog({
       </div>
 
       <div
-        className="p-1.5 sm:p-2 lg:p-2.5 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:touch-scroll-y"
-        data-touch-scroll
+        className={cn(
+          "p-1.5 sm:p-2 lg:p-2.5",
+          !scrollWithParent &&
+            "lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:touch-scroll-y"
+        )}
+        {...(!scrollWithParent ? { "data-touch-scroll": true } : {})}
       >
         {inBrowseMode ? (
           <div className="space-y-2 lg:space-y-3">

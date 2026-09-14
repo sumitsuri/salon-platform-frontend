@@ -22,12 +22,11 @@ import {
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
-import { aggregateTodayEmployeeSales } from "@/lib/manager-today-sales";
+import { staffSalesRowsFromAnalytics } from "@/lib/staff-sales-rows";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { ServiceSalesTeaser } from "@/components/ServiceSalesTeaser";
-import { ManagerHomeQuickActions } from "@/components/manager/ManagerHomeQuickActions";
-import { ManagerPrimaryWalkInCta } from "@/components/manager/ManagerPrimaryWalkInCta";
+import { ManagerHomeFloorActions } from "@/components/manager/ManagerHomeFloorActions";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
@@ -202,6 +201,16 @@ export default function ManagerHomePage() {
     enabled: !!branchId,
   });
 
+  const { data: todayStaffSales, isLoading: todayStaffSalesLoading } = useQuery({
+    queryKey: ["staff-sales-today", branchId, today],
+    queryFn: () =>
+      api.getStaffSalesPerformance({
+        ...todayRange,
+        branchIds: branchFilter,
+      }),
+    enabled: !!branchId,
+  });
+
   const { data: todayServiceContribution, isLoading: todayServicesLoading } = useQuery({
     queryKey: ["service-contribution-today", branchId, today],
     queryFn: () =>
@@ -253,7 +262,10 @@ export default function ManagerHomePage() {
   });
 
   const firstName = user?.name?.split(" ")[0] || t("manager");
-  const todayEmployeeSales = useMemo(() => aggregateTodayEmployeeSales(completed), [completed]);
+  const todayEmployeeSales = useMemo(
+    () => staffSalesRowsFromAnalytics(todayStaffSales?.staff ?? []),
+    [todayStaffSales]
+  );
 
   const periodReady = !!periodDashboard && !periodLoading;
   const periodSummaryLoading = (periodLoading || periodFetching) && !periodDashboard;
@@ -267,12 +279,14 @@ export default function ManagerHomePage() {
               <p className="hero-muted truncate text-[11px] font-medium">
                 {greeting} · {todayLabel}
               </p>
-              <h1 className="mt-0.5 truncate text-sm font-semibold leading-snug text-white">
+              <h1 className="mt-0.5 truncate text-sm font-semibold leading-snug text-white max-lg:sr-only">
                 {user?.branchName || firstName}
               </h1>
-              {user?.branchName && user?.name && (
-                <p className="hero-subtitle mt-0.5 truncate text-[10px] font-normal opacity-90">{user.name}</p>
-              )}
+              {user?.branchName && user?.name ? (
+                <p className="hero-subtitle mt-0.5 truncate text-[10px] font-normal opacity-90 max-lg:hidden">
+                  {user.name}
+                </p>
+              ) : null}
               {inProgress.length > 0 && (
                 <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200/40 bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 shadow-sm">
                   {t("openVisitsBadge", { count: inProgress.length })}
@@ -309,13 +323,7 @@ export default function ManagerHomePage() {
         </div>
       </section>
 
-      <ManagerPrimaryWalkInCta
-        href="/manager/walk-in?new=1"
-        title={t("newWalkIn")}
-        subtitle={t("primaryWalkInSubtitle")}
-      />
-
-      <ManagerHomeQuickActions />
+      <ManagerHomeFloorActions />
 
       {inProgress.length > 0 ? (
         <Link
@@ -348,7 +356,7 @@ export default function ManagerHomePage() {
       <div className="space-y-3 min-w-0">
         <DashboardWidgetCard>
           <DashboardEmployeeSales
-            loading={todayLoading}
+            loading={todayStaffSalesLoading}
             headerLabel={t("employeePerformanceToday")}
             emptyLabel={tDash("noEmployeeSales")}
             staff={todayEmployeeSales}

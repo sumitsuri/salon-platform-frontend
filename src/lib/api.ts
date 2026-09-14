@@ -495,7 +495,13 @@ export const api = {
 
   updateBookingLines: (
     id: string,
-    lines: { branchServiceId: string; staffId: string; quantity: number; unitPrice?: number }[]
+    lines: {
+      branchServiceId: string;
+      staffId: string;
+      quantity: number;
+      unitPrice?: number;
+      packageSubscriptionId?: string;
+    }[]
   ) =>
     request<Booking>(`/api/v1/bookings/${id}/lines`, {
       method: "PUT",
@@ -512,6 +518,15 @@ export const api = {
     request<Booking>(`/api/v1/bookings/${id}/pending-membership`, {
       method: "POST",
       body: JSON.stringify({ planId }),
+    }),
+
+  setPendingPackagePlan: (id: string, planId: string | null, soldByStaffId?: string | null) =>
+    request<Booking>(`/api/v1/bookings/${id}/pending-package`, {
+      method: "POST",
+      body: JSON.stringify({
+        planId,
+        soldByStaffId: soldByStaffId || undefined,
+      }),
     }),
 
   getBookings: (params?: BookingListParams) => {
@@ -642,6 +657,45 @@ export const api = {
     return request<PageResult<MembershipSubscription>>(`/api/v1/memberships/subscriptions/active?${search}`);
   },
 
+  getPackagePlans: (predefinedOnly?: boolean) =>
+    request<ServicePackagePlan[]>(
+      `/api/v1/packages/plans${predefinedOnly ? "?predefinedOnly=true" : ""}`
+    ),
+  getActivePackagePlans: (branchId: string) =>
+    request<ServicePackagePlan[]>(`/api/v1/packages/plans/active?branchId=${branchId}`),
+  createPackagePlan: (data: CreateServicePackagePlanRequest) =>
+    request<ServicePackagePlan>("/api/v1/packages/plans", { method: "POST", body: JSON.stringify(data) }),
+  updatePackagePlan: (id: string, data: UpdateServicePackagePlanRequest) =>
+    request<ServicePackagePlan>(`/api/v1/packages/plans/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deletePackagePlan: (id: string) =>
+    request<void>(`/api/v1/packages/plans/${id}`, { method: "DELETE" }),
+  updatePackagePlanStatus: (id: string, status: PromoStatus) =>
+    request<ServicePackagePlan>(`/api/v1/packages/plans/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  getActiveCustomerPackages: (customerId: string) =>
+    request<CustomerPackageSubscription[]>(`/api/v1/packages/customers/${customerId}/active`),
+  listExpiringPackages: (params: {
+    branchId?: string;
+    withinDays?: number;
+    expiresFrom?: string;
+    expiresTo?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params.branchId) search.set("branchId", params.branchId);
+    if (params.withinDays != null) search.set("withinDays", String(params.withinDays));
+    if (params.expiresFrom) search.set("expiresFrom", params.expiresFrom);
+    if (params.expiresTo) search.set("expiresTo", params.expiresTo);
+    if (params.page != null) search.set("page", String(params.page));
+    if (params.size != null) search.set("size", String(params.size));
+    return request<PageResult<CustomerPackageSubscription>>(
+      `/api/v1/packages/subscriptions/expiring?${search}`
+    );
+  },
+
   applyBookingPromo: (id: string, data: { couponId?: string | null; offerId?: string | null; clearPromo?: boolean }) =>
     request<Booking>(`/api/v1/bookings/${id}/promotions`, { method: "POST", body: JSON.stringify(data) }),
 
@@ -683,6 +737,15 @@ export const api = {
     params.set("size", String(opts?.size ?? 20));
     const q = params.toString() ? `?${params.toString()}` : "";
     return request<ServiceContributionResponse>(`/api/v1/analytics/services${q}`);
+  },
+
+  getStaffSalesPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.startDate) params.set("startDate", opts.startDate);
+    if (opts?.endDate) params.set("endDate", opts.endDate);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<StaffSalesPerformanceResponse>(`/api/v1/analytics/staff-sales${q}`);
   },
 
   getAttendanceDashboard: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
@@ -1387,6 +1450,7 @@ export interface StaffTargetPerformanceItem {
   branchName: string;
   monthlySalesTarget: number;
   actualSales: number;
+  listSales?: number;
   salesCount: number;
   avgTicketSize: number;
   achievementPercent: number;
@@ -1738,11 +1802,13 @@ export interface CampaignDelivery {
 export interface BookingLine {
   id: string;
   branchServiceId: string;
+  serviceId?: string;
   staffId: string;
   staffName: string;
   serviceName: string;
   unitPrice: number;
   quantity: number;
+  packageSubscriptionId?: string;
 }
 
 export interface BillLinePreview {
@@ -1776,6 +1842,8 @@ export interface BillPreview {
   promoLabel?: string;
   membershipFeeAmount?: number;
   membershipFeeLabel?: string;
+  packageFeeAmount?: number;
+  packageFeeLabel?: string;
 }
 
 export interface Booking {
@@ -1794,6 +1862,8 @@ export interface Booking {
   offerId?: string;
   membershipSubscriptionId?: string;
   pendingMembershipPlanId?: string;
+  pendingPackagePlanId?: string;
+  pendingPackageSoldByStaffId?: string;
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
@@ -1801,14 +1871,20 @@ export interface Booking {
   receiptDeliveryError?: string;
   reviewInvitationUrl?: string;
   reviewInvitationToken?: string;
-  createdAt: string;
+  createdAt?: string | null;
   completedAt?: string;
 }
 
 export interface CreateBookingRequest {
   branchId: string;
   customerId: string;
-  lines: { branchServiceId: string; staffId: string; quantity: number }[];
+  lines: {
+    branchServiceId: string;
+    staffId: string;
+    quantity: number;
+    unitPrice?: number;
+    packageSubscriptionId?: string;
+  }[];
   billDiscountType?: string;
   billDiscountValue?: number;
   couponId?: string;
@@ -1816,6 +1892,8 @@ export interface CreateBookingRequest {
   /** Keep visit open (IN_PROGRESS) so services can be added/changed before final bill. */
   keepOpen?: boolean;
   pendingMembershipPlanId?: string;
+  pendingPackagePlanId?: string;
+  pendingPackageSoldByStaffId?: string;
 }
 
 export type PromoStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";
@@ -1965,6 +2043,72 @@ export interface SellMembershipRequest {
   paymentMode: "CASH" | "UPI" | "CARD";
   paymentReference?: string;
   amount?: number;
+}
+
+export type PackageRedemptionMode = "SINGLE_VISIT" | "MULTI_VISIT";
+export type PackageSubscriptionStatus = "ACTIVE" | "COMPLETED" | "EXPIRED" | "CANCELLED";
+
+export interface ServicePackagePlanItem {
+  id?: string;
+  serviceId: string;
+  serviceName?: string;
+  listPrice?: number;
+  quantity: number;
+  sortOrder?: number;
+}
+
+export interface ServicePackagePlan {
+  id: string;
+  name: string;
+  description?: string;
+  listPriceTotal: number;
+  packagePrice: number;
+  validityDays: number;
+  redemptionMode: PackageRedemptionMode;
+  branchIds: string[];
+  status: PromoStatus;
+  predefinedRank?: number;
+  items: ServicePackagePlanItem[];
+  createdAt?: string;
+}
+
+export interface CreateServicePackagePlanRequest {
+  name: string;
+  description?: string;
+  packagePrice: number;
+  validityDays?: number;
+  redemptionMode?: PackageRedemptionMode;
+  branchIds?: string[];
+  status?: PromoStatus;
+  items: { serviceId: string; quantity: number; sortOrder?: number }[];
+}
+
+export interface UpdateServicePackagePlanRequest extends CreateServicePackagePlanRequest {}
+
+export interface CustomerPackageEntitlement {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  quantityTotal: number;
+  quantityRemaining: number;
+}
+
+export interface CustomerPackageSubscription {
+  id: string;
+  customerId: string;
+  customerName?: string;
+  customerPhone?: string;
+  branchId: string;
+  branchName?: string;
+  planId: string;
+  planName: string;
+  redemptionMode: PackageRedemptionMode;
+  amountPaid: number;
+  purchasedOn: string;
+  expiresOn: string;
+  status: PackageSubscriptionStatus;
+  entitlements: CustomerPackageEntitlement[];
+  createdAt?: string;
 }
 
 export interface PaymentRequest {
@@ -2243,6 +2387,21 @@ export interface ServiceContributionResponse {
   size: number;
   totalElements: number;
   totalPages: number;
+}
+
+export interface StaffSalesPerformanceRow {
+  staffId: string;
+  staffName: string;
+  branchId?: string;
+  branchName?: string;
+  salesCount: number;
+  listRevenue: number;
+  finalRevenue: number;
+  avgFinalTicket: number;
+}
+
+export interface StaffSalesPerformanceResponse {
+  staff: StaffSalesPerformanceRow[];
 }
 
 export type GeoStatus = "IN_GEOFENCE" | "OUT_OF_GEOFENCE" | "GPS_UNAVAILABLE";

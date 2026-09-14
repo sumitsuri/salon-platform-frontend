@@ -23,9 +23,13 @@ export interface WalkInDraft {
     basePrice?: number;
     priceExtra?: number;
     variablePricing?: boolean;
+    packageSubscriptionId?: string;
+    quantity?: number;
     /** @deprecated legacy total price */
     price?: number;
   }[];
+  pendingPackagePlanId?: string;
+  pendingPackageSoldByStaffId?: string;
   step: 1 | 2 | 3;
   savedAt: number;
 }
@@ -67,6 +71,10 @@ function recentCustomersKey(branchId: string) {
 }
 function draftKey(branchId: string) {
   return `walk-in:draft:${branchId}`;
+}
+
+export function pendingPackagePlanStorageKey(branchId: string) {
+  return `walk-in-pending-package:${branchId}`;
 }
 
 export function getRecentServiceIds(branchId: string): string[] {

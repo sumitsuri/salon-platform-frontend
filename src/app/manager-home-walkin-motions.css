@@ -1,0 +1,370 @@
+/* Walk-in: one stroke travels anti-clockwise on the card outline — data-manager-walkin-motion */
+
+.manager-home-cta--walkin .manager-walk-in-cta-ambient,
+.manager-home-cta--walkin .manager-walk-in-cta-edge,
+.manager-home-cta--walkin .manager-walk-in-cta-bill-accent,
+.manager-home-cta--walkin .manager-walk-in-cta-bill-bar,
+.manager-home-cta--walkin .manager-walk-in-cta-live-dot,
+.manager-home-cta--walkin .manager-walk-in-cta-perimeter-host {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+}
+
+.manager-home-cta--walkin .manager-walk-in-cta-ambient,
+.manager-home-cta--walkin .manager-walk-in-cta-edge {
+  inset: 0;
+  border-radius: inherit;
+}
+
+.manager-home-cta--walkin .manager-walk-in-cta-perimeter-host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.manager-home-cta--walkin .manager-walk-in-cta-perimeter {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.manager-home-cta--walkin .manager-walk-in-cta-perimeter-runner {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke: var(--mh-perim-core, #059669);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-dashoffset: 0;
+  --mh-perim-speed: 3s;
+  animation: mh-perimeter-line-ccw var(--mh-perim-speed) linear infinite;
+  filter: drop-shadow(0 0 4px var(--mh-perim-glow, rgba(5, 150, 105, 0.5)));
+}
+
+@keyframes mh-perimeter-line-ccw {
+  to {
+    stroke-dashoffset: var(--mh-perim-cycle, -1000);
+  }
+}
+
+[data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-perimeter-host {
+  opacity: 1;
+}
+
+[data-manager-walkin-motion] .manager-home-cta--walkin.manager-walk-in-cta {
+  border-color: transparent;
+  background-clip: padding-box;
+}
+
+[data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-shimmer,
+[data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-glow {
+  opacity: 0;
+}
+
+[data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-icon-wrap,
+[data-manager-walkin-motion] .manager-home-cta--walkin .manager-walk-in-cta-chevron,
+[data-manager-walkin-motion] .manager-home-cta--walkin .min-w-0 {
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes mh-bill-live {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+[data-manager-walkin-motion] {
+  --mh-perim-glow: rgba(5, 150, 105, 0.55);
+}
+
+[data-manager-walkin-motion="register-open"] {
+  --mh-perim-track: color-mix(in srgb, #16a34a 35%, var(--border));
+  --mh-perim-soft: rgba(74, 222, 128, 0.35);
+  --mh-perim-mid: rgba(52, 211, 153, 0.75);
+  --mh-perim-core: #16a34a;
+  --mh-perim-glow: rgba(34, 197, 94, 0.65);
+  --mh-perim-speed: 3.2s;
+}
+
+[data-manager-walkin-motion="counter-spotlight"] {
+  --mh-perim-track: color-mix(in srgb, #fff 40%, var(--border));
+  --mh-perim-soft: rgba(255, 255, 255, 0.35);
+  --mh-perim-mid: rgba(255, 255, 255, 0.65);
+  --mh-perim-core: rgba(255, 255, 255, 0.95);
+  --mh-perim-speed: 4.8s;
+}
+
+[data-manager-walkin-motion="queue-heartbeat"] {
+  --mh-perim-track: color-mix(in srgb, var(--kpi-emerald) 20%, var(--border));
+  --mh-perim-soft: rgba(52, 211, 153, 0.1);
+  --mh-perim-mid: rgba(16, 185, 129, 0.38);
+  --mh-perim-core: rgba(5, 150, 105, 0.82);
+  --mh-perim-speed: 2.6s;
+}
+
+[data-manager-walkin-motion="receipt-stream"] {
+  --mh-perim-track: color-mix(in srgb, #94a3b8 25%, var(--border));
+  --mh-perim-soft: rgba(148, 163, 184, 0.12);
+  --mh-perim-mid: rgba(100, 116, 139, 0.35);
+  --mh-perim-core: rgba(71, 85, 105, 0.55);
+  --mh-perim-speed: 4.2s;
+}
+
+[data-manager-walkin-motion="tap-to-bill"] {
+  --mh-perim-track: color-mix(in srgb, #10b981 28%, var(--border));
+  --mh-perim-soft: rgba(52, 211, 153, 0.15);
+  --mh-perim-mid: rgba(16, 185, 129, 0.45);
+  --mh-perim-core: rgba(5, 150, 105, 0.9);
+  --mh-perim-speed: 2.2s;
+}
+
+[data-manager-walkin-motion="cash-ready"] {
+  --mh-perim-track: color-mix(in srgb, #ca8a04 22%, var(--border));
+  --mh-perim-soft: rgba(253, 224, 71, 0.14);
+  --mh-perim-mid: rgba(250, 204, 21, 0.4);
+  --mh-perim-core: rgba(22, 163, 74, 0.65);
+  --mh-perim-speed: 3.6s;
+}
+
+[data-manager-walkin-motion="mint-ticket"] {
+  --mh-perim-track: color-mix(in srgb, #2dd4bf 26%, var(--border));
+  --mh-perim-soft: rgba(153, 246, 228, 0.2);
+  --mh-perim-mid: rgba(45, 212, 191, 0.42);
+  --mh-perim-core: rgba(13, 148, 136, 0.72);
+  --mh-perim-speed: 3.2s;
+}
+
+[data-manager-walkin-motion="live-floor"] {
+  --mh-perim-track: color-mix(in srgb, #22c55e 24%, var(--border));
+  --mh-perim-soft: rgba(134, 239, 172, 0.14);
+  --mh-perim-mid: rgba(74, 222, 128, 0.38);
+  --mh-perim-core: rgba(34, 197, 94, 0.78);
+  --mh-perim-speed: 3s;
+}
+
+[data-manager-walkin-motion="checkout-lane"] {
+  --mh-perim-track: color-mix(in srgb, #0ea5e9 26%, var(--border));
+  --mh-perim-soft: rgba(186, 230, 253, 0.18);
+  --mh-perim-mid: rgba(56, 189, 248, 0.42);
+  --mh-perim-core: rgba(2, 132, 199, 0.78);
+  --mh-perim-speed: 2.8s;
+}
+
+[data-manager-walkin-motion="front-desk-hero"] {
+  --mh-perim-track: color-mix(in srgb, #fed7aa 45%, var(--border));
+  --mh-perim-soft: rgba(254, 215, 170, 0.35);
+  --mh-perim-mid: rgba(251, 146, 60, 0.45);
+  --mh-perim-core: rgba(234, 88, 12, 0.85);
+  --mh-perim-speed: 2.9s;
+}
+
+[data-manager-walkin-motion="terminal-ready"] {
+  --mh-perim-track: color-mix(in srgb, #334155 55%, #0f172a);
+  --mh-perim-soft: rgba(74, 222, 128, 0.12);
+  --mh-perim-mid: rgba(52, 211, 153, 0.38);
+  --mh-perim-core: rgba(34, 197, 94, 0.92);
+  --mh-perim-speed: 2.7s;
+}
+
+[data-manager-walkin-motion="invoice-sweep"] {
+  --mh-perim-track: color-mix(in srgb, #cbd5e1 35%, var(--border));
+  --mh-perim-soft: rgba(255, 255, 255, 0.45);
+  --mh-perim-mid: rgba(241, 245, 249, 0.75);
+  --mh-perim-core: rgba(255, 255, 255, 0.98);
+  --mh-perim-speed: 3.8s;
+}
+
+[data-manager-walkin-motion="guest-arrived"] {
+  --mh-perim-track: color-mix(in srgb, #fdba74 30%, var(--border));
+  --mh-perim-soft: rgba(254, 215, 170, 0.22);
+  --mh-perim-mid: rgba(251, 146, 60, 0.4);
+  --mh-perim-core: rgba(249, 115, 22, 0.72);
+  --mh-perim-speed: 3.3s;
+}
+
+[data-manager-walkin-motion="bill-pipeline"] {
+  --mh-perim-track: color-mix(in srgb, #16a34a 18%, var(--border));
+  --mh-perim-soft: rgba(134, 239, 172, 0.1);
+  --mh-perim-mid: rgba(74, 222, 128, 0.32);
+  --mh-perim-core: rgba(22, 163, 74, 0.7);
+  --mh-perim-speed: 5.2s;
+}
+
+[data-manager-walkin-motion="settle-accent"] {
+  --mh-perim-track: color-mix(in srgb, #14532d 40%, #422006);
+  --mh-perim-soft: rgba(253, 224, 71, 0.12);
+  --mh-perim-mid: rgba(250, 204, 21, 0.38);
+  --mh-perim-core: rgba(234, 179, 8, 0.88);
+  --mh-perim-speed: 3.5s;
+}
+
+[data-manager-walkin-motion="shift-counter"] {
+  --mh-perim-track: color-mix(in srgb, #0d9488 26%, var(--border));
+  --mh-perim-soft: rgba(153, 246, 228, 0.16);
+  --mh-perim-mid: rgba(45, 212, 191, 0.4);
+  --mh-perim-core: rgba(15, 118, 110, 0.78);
+  --mh-perim-speed: 3.4s;
+}
+
+[data-manager-walkin-motion="service-desk"] {
+  --mh-perim-track: color-mix(in srgb, #1e3a8a 45%, #93c5fd);
+  --mh-perim-soft: rgba(253, 230, 138, 0.45);
+  --mh-perim-mid: rgba(251, 191, 36, 0.85);
+  --mh-perim-core: #ea580c;
+  --mh-perim-glow: rgba(234, 88, 12, 0.75);
+  --mh-perim-speed: 2.8s;
+}
+
+[data-manager-walkin-motion="fast-checkout"] {
+  --mh-perim-track: color-mix(in srgb, #10b981 24%, var(--border));
+  --mh-perim-soft: rgba(167, 243, 208, 0.12);
+  --mh-perim-mid: rgba(52, 211, 153, 0.45);
+  --mh-perim-core: rgba(5, 150, 105, 0.95);
+  --mh-perim-speed: 1.9s;
+}
+
+[data-manager-walkin-motion="open-visit-ring"] {
+  --mh-perim-track: color-mix(in srgb, var(--kpi-emerald) 24%, var(--border));
+  --mh-perim-soft: rgba(110, 231, 183, 0.14);
+  --mh-perim-mid: rgba(52, 211, 153, 0.42);
+  --mh-perim-core: rgba(16, 185, 129, 0.85);
+  --mh-perim-speed: 2.5s;
+}
+
+[data-manager-walkin-motion="collect-path"] {
+  --mh-perim-track: color-mix(in srgb, #059669 22%, var(--border));
+  --mh-perim-soft: rgba(45, 212, 191, 0.14);
+  --mh-perim-mid: rgba(20, 184, 166, 0.38);
+  --mh-perim-core: rgba(4, 120, 87, 0.78);
+  --mh-perim-speed: 3.7s;
+}
+
+[data-manager-walkin-motion="register-open"] .manager-home-cta--walkin.manager-walk-in-cta,
+[data-manager-walkin-motion="queue-heartbeat"] .manager-home-cta--walkin.manager-walk-in-cta,
+[data-manager-walkin-motion="tap-to-bill"] .manager-home-cta--walkin.manager-walk-in-cta,
+[data-manager-walkin-motion="open-visit-ring"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--kpi-emerald) 8%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+}
+
+[data-manager-walkin-motion="counter-spotlight"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(145deg, #fff 0%, var(--surface) 100%);
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+[data-manager-walkin-motion="front-desk-hero"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: #fff;
+  box-shadow: 0 14px 32px color-mix(in srgb, #ea580c 10%, transparent);
+}
+
+[data-manager-walkin-motion="front-desk-hero"] .manager-home-cta--walkin .manager-walk-in-cta-title {
+  color: #9a3412;
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin.manager-walk-in-cta,
+[data-manager-walkin-motion="settle-accent"] .manager-home-cta--walkin.manager-walk-in-cta {
+  border-color: transparent;
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(155deg, #0f172a 0%, #1e293b 100%);
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin .manager-walk-in-cta-title {
+  color: #ecfdf5;
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin .manager-walk-in-cta-subtitle {
+  color: #86efac;
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin .manager-walk-in-cta-icon {
+  background: color-mix(in srgb, #15803d 32%, #0f172a);
+  color: #4ade80;
+}
+
+[data-manager-walkin-motion="terminal-ready"] .manager-home-cta--walkin .manager-walk-in-cta-chevron {
+  color: #4ade80;
+}
+
+[data-manager-walkin-motion="settle-accent"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(145deg, #14532d 0%, #052e16 100%);
+}
+
+[data-manager-walkin-motion="settle-accent"] .manager-home-cta--walkin .manager-walk-in-cta-title {
+  color: #ecfdf5;
+}
+
+[data-manager-walkin-motion="settle-accent"] .manager-home-cta--walkin .manager-walk-in-cta-subtitle {
+  color: #fde68a;
+}
+
+[data-manager-walkin-motion="settle-accent"] .manager-home-cta--walkin .manager-walk-in-cta-chevron {
+  color: #fde68a;
+}
+
+[data-manager-walkin-motion="service-desk"] .manager-home-cta--walkin.manager-walk-in-cta {
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #eff6ff 75%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+}
+
+[data-manager-walkin-motion="service-desk"] .manager-home-cta--walkin .manager-walk-in-cta-title {
+  color: color-mix(in srgb, #1e3a8a 88%, var(--text-primary));
+}
+
+[data-manager-walkin-motion="mint-ticket"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #ccfbf1 40%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+}
+
+[data-manager-walkin-motion="cash-ready"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, #fef9c3 35%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+}
+
+[data-manager-walkin-motion="guest-arrived"] .manager-home-cta--walkin.manager-walk-in-cta {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #ffedd5 45%, var(--surface)) 0%,
+    var(--surface) 100%
+  );
+}
+
+[data-manager-walkin-motion="live-floor"] .manager-home-cta--walkin .manager-walk-in-cta-live-dot {
+  opacity: 1;
+  top: 0.65rem;
+  right: 0.75rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #22c55e;
+  z-index: 3;
+  animation: mh-bill-live 1.8s ease-in-out infinite;
+}
+
+[data-manager-walkin-motion="tap-to-bill"] .manager-home-cta--walkin .manager-walk-in-cta-chevron {
+  color: #059669;
+}

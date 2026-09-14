@@ -24,9 +24,14 @@ interface WalkInCartPanelProps {
   saving: boolean;
   stylistsRequired: boolean;
   stylistsComplete: boolean;
+  pendingPackagePlanName?: string;
+  pendingPackagePlanPrice?: number;
+  pendingPackageInclusions?: string;
   onRemove: (idx: number) => void;
   onUpdateStaff: (idx: number, staffId: string) => void;
   onEditPrice: (idx: number) => void;
+  onUpdatePackageQuantity?: (idx: number, quantity: number) => void;
+  maxPackageLineQty?: (item: WalkInCartItem) => number;
   onSaveOpen: () => void;
   onProceedToBill: () => void;
   variant: "panel" | "sheet" | "dock-summary";
@@ -47,9 +52,14 @@ export function WalkInCartPanel({
   saving,
   stylistsRequired,
   stylistsComplete,
+  pendingPackagePlanName,
+  pendingPackagePlanPrice,
+  pendingPackageInclusions,
   onRemove,
   onUpdateStaff,
   onEditPrice,
+  onUpdatePackageQuantity,
+  maxPackageLineQty,
   onSaveOpen,
   onProceedToBill,
   variant,
@@ -68,6 +78,12 @@ export function WalkInCartPanel({
   const gstTotal = cgst + sgst;
 
   const totalDisplay = formatMoney(grand, localeKit);
+  const hasPackageSale = !!(pendingPackagePlanName && pendingPackagePlanPrice != null);
+  const canProceed = cart.length > 0 || hasPackageSale;
+  const canSaveOpen = cart.length > 0 || hasPackageSale;
+  const packageOnlyGrand = hasPackageSale ? pendingPackagePlanPrice! : grand;
+  const displayGrand = cart.length === 0 && hasPackageSale ? packageOnlyGrand : grand;
+  const displayGrandFormatted = formatMoney(displayGrand, localeKit);
 
   if (variant === "dock-summary") {
     return null;
@@ -89,8 +105,21 @@ export function WalkInCartPanel({
         )}
       </div>
 
-      {cart.length === 0 ? (
+      {cart.length === 0 && !hasPackageSale ? (
         <p className="text-[var(--text-tertiary)] text-sm text-center py-4">{t("cartEmpty")}</p>
+      ) : cart.length === 0 && hasPackageSale ? (
+        <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3 text-sm dark:border-sky-900 dark:bg-sky-950/30">
+          <p className="font-medium text-[var(--text-primary)]">{pendingPackagePlanName}</p>
+          {pendingPackageInclusions ? (
+            <p className="text-xs text-[var(--text-secondary)] mt-1 break-words whitespace-normal">
+              {t("packageIncludes")} {pendingPackageInclusions}
+            </p>
+          ) : null}
+          <p className="text-[var(--text-secondary)] mt-1">{t("cartPackageOnlyHint")}</p>
+          <p className="mt-2 font-semibold tabular-nums text-[var(--brand-text)]">
+            {formatMoney(pendingPackagePlanPrice!, localeKit)}
+          </p>
+        </div>
       ) : (
         <>
           <div
@@ -104,13 +133,24 @@ export function WalkInCartPanel({
             {cart.map((item, idx) => (
               <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
                 <div className="flex justify-between items-start gap-2">
-                  <p className="font-medium text-sm min-w-0 truncate">{item.serviceName}</p>
+                  <p className="font-medium text-sm min-w-0 truncate">
+                    {item.serviceName}
+                    {item.packageSubscriptionId && (item.quantity ?? 1) > 1
+                      ? ` × ${item.quantity ?? 1}`
+                      : ""}
+                  </p>
                   <div className="flex items-center gap-1 shrink-0">
-                    <WalkInEditablePriceButton
-                      amount={walkInCartLinePrice(item)}
-                      localeKit={localeKit}
-                      onEdit={() => onEditPrice(idx)}
-                    />
+                    {!item.packageSubscriptionId ? (
+                      <WalkInEditablePriceButton
+                        amount={walkInCartLinePrice(item)}
+                        localeKit={localeKit}
+                        onEdit={() => onEditPrice(idx)}
+                      />
+                    ) : (
+                      <span className="text-xs font-semibold text-sky-800 dark:text-sky-200 tabular-nums">
+                        {formatMoney(0, localeKit)}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => onRemove(idx)}
@@ -121,6 +161,41 @@ export function WalkInCartPanel({
                     </button>
                   </div>
                 </div>
+                {item.packageSubscriptionId && onUpdatePackageQuantity && maxPackageLineQty ? (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="font-semibold text-[var(--text-secondary)]">{t("packageRedeemQtyLabel")}</span>
+                    <div className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--surface)]">
+                      <button
+                        type="button"
+                        className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
+                        disabled={(item.quantity ?? 1) <= 1}
+                        aria-label={t("packageCartQtyDecrease")}
+                        onClick={() =>
+                          onUpdatePackageQuantity(idx, Math.max(1, (item.quantity ?? 1) - 1))
+                        }
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[1.75rem] px-1 text-center tabular-nums font-semibold">
+                        {item.quantity ?? 1}
+                      </span>
+                      <button
+                        type="button"
+                        className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
+                        disabled={(item.quantity ?? 1) >= maxPackageLineQty(item)}
+                        aria-label={t("packageCartQtyIncrease")}
+                        onClick={() =>
+                          onUpdatePackageQuantity(
+                            idx,
+                            Math.min(maxPackageLineQty(item), (item.quantity ?? 1) + 1)
+                          )
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 {staff.length > 0 && (
                   <label className="mt-2 block text-xs">
                     <span className="font-semibold text-[var(--text-secondary)]">{t("stylistPerService")}</span>
@@ -177,8 +252,8 @@ export function WalkInCartPanel({
             <div className="pt-1">
               <WalkInMobileCartActions
                 saving={saving}
-                proceedDisabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
-                saveDisabled={cart.length === 0 || saving}
+                proceedDisabled={!canProceed || saving || (cart.length > 0 && stylistsRequired && !stylistsComplete)}
+                saveDisabled={!canSaveOpen || saving || (cart.length > 0 && staff.length === 0)}
                 onProceed={onProceedToBill}
                 onSave={onSaveOpen}
               />
@@ -191,7 +266,7 @@ export function WalkInCartPanel({
               <button
                 type="button"
                 onClick={onProceedToBill}
-                disabled={cart.length === 0 || saving || (stylistsRequired && !stylistsComplete)}
+                disabled={!canProceed || saving || (cart.length > 0 && stylistsRequired && !stylistsComplete)}
                 className={`${btnPrimary} w-full min-h-12`}
               >
                 {saving ? tCommon("processing") : t("continueBill")}
@@ -199,7 +274,7 @@ export function WalkInCartPanel({
               <button
                 type="button"
                 onClick={onSaveOpen}
-                disabled={cart.length === 0 || saving}
+                disabled={!canSaveOpen || saving || (cart.length > 0 && staff.length === 0)}
                 className={`${btnSecondary} w-full min-h-11`}
               >
                 {saving ? tCommon("processing") : t("saveOpenVisit")}
