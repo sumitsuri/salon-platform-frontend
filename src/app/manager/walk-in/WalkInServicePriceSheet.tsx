@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { btnPrimary, btnSecondary, inputClass } from "@/components/ui";
 import { WalkInBottomSheet } from "./WalkInBottomSheet";
-import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
+import { WalkInCartItem, walkInCartLinePrice, walkInCartUnitPrice } from "./walk-in-types";
 
 interface WalkInServicePriceSheetProps {
   open: boolean;
@@ -29,7 +29,7 @@ export function WalkInServicePriceSheet({
 
   useEffect(() => {
     if (!open || !item) return;
-    setRaw(String(walkInCartLinePrice(item)));
+    setRaw(String(walkInCartUnitPrice(item)));
     setError("");
   }, [open, item]);
 
@@ -50,7 +50,10 @@ export function WalkInServicePriceSheet({
   const inner = (
     <div className="space-y-4">
       <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-3">
-        <p className="font-semibold text-[var(--text-primary)]">{item.serviceName}</p>
+        <p className="font-semibold text-[var(--text-primary)]">
+          {item.serviceName}
+          {(item.quantity ?? 1) > 1 ? ` × ${item.quantity ?? 1}` : ""}
+        </p>
         <p className="mt-2 text-xs text-[var(--text-tertiary)] leading-snug">{t("editPriceHint")}</p>
       </div>
 

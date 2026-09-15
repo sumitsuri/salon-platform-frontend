@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { BillPreview, StaffItem } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
 import { formatMoney, cn } from "@/lib/utils";
-import { Card, selectClass, btnPrimary, btnSecondary } from "@/components/ui";
-import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
+import { Card, btnPrimary, btnSecondary } from "@/components/ui";
+import { WalkInCartItem, walkInCartLinePrice, walkInCartServiceCount, walkInCartStaffSlots, walkInCartItemQty } from "./walk-in-types";
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { WalkInMobileCartActions } from "./WalkInMobileCartActions";
 
@@ -28,10 +28,18 @@ interface WalkInCartPanelProps {
   pendingPackagePlanPrice?: number;
   pendingPackageInclusions?: string;
   onRemove: (idx: number) => void;
-  onUpdateStaff: (idx: number, staffId: string) => void;
   onEditPrice: (idx: number) => void;
-  onUpdatePackageQuantity?: (idx: number, quantity: number) => void;
+  onDecreasePaidUnit?: (idx: number) => void;
+  onAddPaidUnit?: (idx: number) => void;
+  onDecreasePackageUnit?: (idx: number) => void;
+  onAddPackageUnit?: (idx: number) => void;
+  onEditStaffSlot?: (idx: number, unitIndex: number) => void;
+  /** Cart line awaiting stylist pick after + (inline, no full-screen gap). */
+  inlineStylistPick?: { cartIdx: number; unitIndex?: number } | null;
+  onPickInlineStylist?: (staffId: string) => void;
+  onCancelInlineStylistPick?: () => void;
   maxPackageLineQty?: (item: WalkInCartItem) => number;
+  maxPaidLineQty?: (item: WalkInCartItem) => number;
   onSaveOpen: () => void;
   onProceedToBill: () => void;
   variant: "panel" | "sheet" | "dock-summary";
@@ -56,10 +64,17 @@ export function WalkInCartPanel({
   pendingPackagePlanPrice,
   pendingPackageInclusions,
   onRemove,
-  onUpdateStaff,
   onEditPrice,
-  onUpdatePackageQuantity,
+  onDecreasePaidUnit,
+  onAddPaidUnit,
+  onDecreasePackageUnit,
+  onAddPackageUnit,
+  onEditStaffSlot,
+  inlineStylistPick,
+  onPickInlineStylist,
+  onCancelInlineStylistPick,
   maxPackageLineQty,
+  maxPaidLineQty,
   onSaveOpen,
   onProceedToBill,
   variant,
@@ -89,11 +104,13 @@ export function WalkInCartPanel({
     return null;
   }
 
+  const cartCount = walkInCartServiceCount(cart);
+
   const inner = (
     <>
       <div className="flex items-center justify-between gap-2">
         <p className="ui-field-label">
-          {t("cart", { count: cart.length })}
+          {t("cart", { count: cartCount })}
         </p>
         {cart.length > 0 && (
           <div className="text-right min-w-0">
@@ -124,20 +141,20 @@ export function WalkInCartPanel({
         <>
           <div
             className={cn(
-              "space-y-2 overflow-y-auto overscroll-contain touch-scroll-y",
-              variant === "panel" ? "max-h-[min(50vh,24rem)]" : "max-h-[min(45vh,20rem)]"
+              "space-y-2 overscroll-contain touch-scroll-y",
+              variant === "panel"
+                ? "max-h-[min(50vh,24rem)] overflow-y-auto"
+                : "overflow-visible"
             )}
             data-testid="walk-in-cart"
-            data-touch-scroll
+            {...(variant === "panel" ? { "data-touch-scroll": true } : {})}
           >
             {cart.map((item, idx) => (
               <div key={idx} className="p-3 bg-[var(--surface-muted)] rounded-xl border border-[var(--border)]">
                 <div className="flex justify-between items-start gap-2">
                   <p className="font-medium text-sm min-w-0 truncate">
                     {item.serviceName}
-                    {item.packageSubscriptionId && (item.quantity ?? 1) > 1
-                      ? ` × ${item.quantity ?? 1}`
-                      : ""}
+                    {(item.quantity ?? 1) > 1 ? ` × ${item.quantity ?? 1}` : ""}
                   </p>
                   <div className="flex items-center gap-1 shrink-0">
                     {!item.packageSubscriptionId ? (
@@ -161,63 +178,130 @@ export function WalkInCartPanel({
                     </button>
                   </div>
                 </div>
-                {item.packageSubscriptionId && onUpdatePackageQuantity && maxPackageLineQty ? (
+                {item.packageSubscriptionId && onDecreasePackageUnit && onAddPackageUnit && maxPackageLineQty ? (
                   <div className="mt-2 flex items-center gap-2 text-xs">
                     <span className="font-semibold text-[var(--text-secondary)]">{t("packageRedeemQtyLabel")}</span>
                     <div className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--surface)]">
                       <button
                         type="button"
                         className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
-                        disabled={(item.quantity ?? 1) <= 1}
+                        disabled={walkInCartItemQty(item) <= 1}
                         aria-label={t("packageCartQtyDecrease")}
-                        onClick={() =>
-                          onUpdatePackageQuantity(idx, Math.max(1, (item.quantity ?? 1) - 1))
-                        }
+                        onClick={() => onDecreasePackageUnit(idx)}
                       >
                         −
                       </button>
                       <span className="min-w-[1.75rem] px-1 text-center tabular-nums font-semibold">
-                        {item.quantity ?? 1}
+                        {walkInCartItemQty(item)}
                       </span>
                       <button
                         type="button"
                         className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
-                        disabled={(item.quantity ?? 1) >= maxPackageLineQty(item)}
-                        aria-label={t("packageCartQtyIncrease")}
-                        onClick={() =>
-                          onUpdatePackageQuantity(
-                            idx,
-                            Math.min(maxPackageLineQty(item), (item.quantity ?? 1) + 1)
-                          )
-                        }
+                        disabled={walkInCartItemQty(item) >= maxPackageLineQty(item)}
+                        aria-label={t("serviceCartQtyIncrease")}
+                        onClick={() => onAddPackageUnit(idx)}
                       >
                         +
                       </button>
                     </div>
                   </div>
                 ) : null}
-                {staff.length > 0 && (
-                  <label className="mt-2 block text-xs">
-                    <span className="font-semibold text-[var(--text-secondary)]">{t("stylistPerService")}</span>
-                    <select
-                      data-testid="walk-in-stylist-select"
-                      value={item.staffId}
-                      onChange={(e) => onUpdateStaff(idx, e.target.value)}
-                      className={`${selectClass} mt-1 py-2.5 min-h-11`}
-                    >
-                      <option value="">{t("selectStylist")}</option>
+                {!item.packageSubscriptionId && onDecreasePaidUnit && onAddPaidUnit && maxPaidLineQty ? (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    <span className="font-semibold text-[var(--text-secondary)]">{t("serviceQtyLabel")}</span>
+                    <div className="inline-flex items-center rounded-md border border-[var(--border)] bg-[var(--surface)]">
+                      <button
+                        type="button"
+                        className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
+                        disabled={walkInCartItemQty(item) <= 1}
+                        aria-label={t("serviceCartQtyDecrease")}
+                        onClick={() => onDecreasePaidUnit(idx)}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[1.75rem] px-1 text-center tabular-nums font-semibold">
+                        {walkInCartItemQty(item)}
+                      </span>
+                      <button
+                        type="button"
+                        className="px-2.5 py-1.5 font-medium touch-manipulation disabled:opacity-40"
+                        disabled={walkInCartItemQty(item) >= maxPaidLineQty(item)}
+                        aria-label={t("serviceCartQtyIncrease")}
+                        onClick={() => onAddPaidUnit(idx)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {staff.length > 0 && onEditStaffSlot ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {walkInCartStaffSlots(item).map((slotStaffId, unitIndex) => {
+                      const qty = walkInCartItemQty(item);
+                      const name = staff.find((st) => st.id === slotStaffId)?.name;
+                      const isActivePick =
+                        inlineStylistPick?.cartIdx === idx &&
+                        inlineStylistPick.unitIndex === unitIndex;
+                      return (
+                        <button
+                          key={unitIndex}
+                          type="button"
+                          onClick={() => onEditStaffSlot(idx, unitIndex)}
+                          className={cn(
+                            "inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1.5 text-xs font-medium touch-manipulation",
+                            isActivePick
+                              ? "border-[var(--brand)] bg-[var(--brand-light)]/50 text-[var(--brand-text)]"
+                              : slotStaffId
+                                ? "border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:border-[var(--brand)]/50"
+                                : "border-amber-300 bg-amber-50/90 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                          )}
+                        >
+                          {qty > 1 ? (
+                            <span className="font-bold tabular-nums">{unitIndex + 1}.</span>
+                          ) : null}
+                          <span className="truncate">{name ?? t("tapToPickStylist")}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {inlineStylistPick?.cartIdx === idx &&
+                onPickInlineStylist &&
+                onCancelInlineStylistPick ? (
+                  <div className="mt-2 rounded-xl border border-[var(--brand)]/35 bg-[var(--brand-light)]/25 p-2.5">
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <p className="text-xs font-semibold text-[var(--text-primary)] leading-snug">
+                        {inlineStylistPick.unitIndex != null
+                          ? t("stylistPickerChangeHint")
+                          : t("stylistPickerHint")}
+                      </p>
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-[var(--text-tertiary)] touch-manipulation shrink-0"
+                        onClick={onCancelInlineStylistPick}
+                      >
+                        {tCommon("cancel")}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
                       {staff.map((st) => (
-                        <option key={st.id} value={st.id}>
+                        <button
+                          key={st.id}
+                          type="button"
+                          data-testid={`walk-in-inline-stylist-${st.id}`}
+                          onClick={() => onPickInlineStylist(st.id)}
+                          className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--text-primary)] touch-manipulation hover:border-[var(--brand)] hover:bg-[var(--brand-light)]/30"
+                        >
                           {st.name}
-                        </option>
+                        </button>
                       ))}
-                    </select>
-                  </label>
-                )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ))}
-            {staff.length > 0 && (
-              <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylistAutoAssigned")}</p>
+            {staff.length > 0 && !inlineStylistPick && (
+              <p className="text-[11px] text-[var(--text-tertiary)]">{t("stylistPickerOnPlusHint")}</p>
             )}
           </div>
 

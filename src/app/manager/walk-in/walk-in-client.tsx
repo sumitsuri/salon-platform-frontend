@@ -24,6 +24,7 @@ import {
 import {
   api,
   BillPreview,
+  BillLinePreview,
   Booking,
   BranchServiceItem,
   CustomerRegistrationCard,
@@ -102,7 +103,7 @@ import { WalkInAppliedAdjustmentsBanner } from "./WalkInAppliedAdjustmentsBanner
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
 import { BillBreakdownRows, membershipFeeServiceLine, packageFeeServiceLine, BillOfferingLineItem } from "@/components/billing/BillBreakdownRows";
-import { WalkInCartItem, walkInCartLinePrice } from "./walk-in-types";
+import { WalkInCartItem, walkInCartLinePrice, walkInCartUnitPrice, WALK_IN_MAX_SERVICE_QTY, walkInCartServiceCount, walkInCartStaffSlots, walkInCartStylistsComplete, walkInCartWithStaffSlots, walkInCartAppendUnit, walkInCartPopUnit, walkInCartEnsureStaffSlots, walkInCartToLinePayload, walkInCartPayloadLineCount, walkInCartFromBookingLines, walkInCartItemQty } from "./walk-in-types";
 import {
   buildWalkInSubCategories,
   filterWalkInServices,
@@ -134,16 +135,20 @@ function normalizeCartItem(
   if (item.price != null && item.basePrice == null && item.priceExtra == null) {
     priceExtra = Math.max(0, item.price - basePrice);
   }
-  return {
-    branchServiceId: item.branchServiceId,
-    serviceName: item.serviceName,
-    basePrice,
-    priceExtra,
-    variablePricing,
-    staffId: item.staffId,
-    packageSubscriptionId: item.packageSubscriptionId,
-    quantity: item.quantity,
-  };
+  return walkInCartEnsureStaffSlots(
+    {
+      branchServiceId: item.branchServiceId,
+      serviceName: item.serviceName,
+      basePrice,
+      priceExtra,
+      variablePricing,
+      staffId: item.staffId,
+      staffIds: item.staffIds,
+      packageSubscriptionId: item.packageSubscriptionId,
+      quantity: item.quantity,
+    },
+    item.staffId || ""
+  );
 }
 
 interface SplitRow {
@@ -256,7 +261,15 @@ export default function WalkInPage() {
   const [draftHandled, setDraftHandled] = useState(false);
   const [draftRestoredNotice, setDraftRestoredNotice] = useState(false);
   const [cartSheetOpen, setCartSheetOpen] = useState(false);
-  const [stylistPickerService, setStylistPickerService] = useState<BranchServiceItem | null>(null);
+  const [stylistPicker, setStylistPicker] = useState<{
+    service: BranchServiceItem;
+    cartIdx?: number;
+    unitIndex?: number;
+  } | null>(null);
+  const [inlineStylistPick, setInlineStylistPick] = useState<{
+    cartIdx: number;
+    unitIndex?: number;
+  } | null>(null);
   const [priceEditIdx, setPriceEditIdx] = useState<number | null>(null);
   const [discountSheetOpen, setDiscountSheetOpen] = useState(false);
   const [discountApplySuccess, setDiscountApplySuccess] = useState(false);
@@ -671,20 +684,13 @@ export default function WalkInPage() {
       setSgstInput("0");
     }
     setCart(
-      (b.lines || []).map((l) => {
+      walkInCartFromBookingLines(b.lines || [], (l) => {
         const svc = servicesById.get(l.branchServiceId);
-        const basePrice = svc?.price ?? l.unitPrice;
-        return {
-          branchServiceId: l.branchServiceId,
-          serviceName: l.serviceName,
-          basePrice,
-          priceExtra: l.packageSubscriptionId ? 0 : Math.max(0, l.unitPrice - basePrice),
-          variablePricing: svc?.variablePricing ?? false,
-          staffId: l.staffId,
-          packageSubscriptionId: l.packageSubscriptionId,
-          quantity: l.quantity ?? 1,
-        };
-      })
+        return svc?.price ?? l.unitPrice;
+      }).map((item) => ({
+        ...item,
+        variablePricing: servicesById.get(item.branchServiceId)?.variablePricing ?? false,
+      }))
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPendingMembershipPlanId(b.pendingMembershipPlanId || "");
@@ -1588,46 +1594,172 @@ export default function WalkInPage() {
     return "";
   }
 
+  function paidServiceLineIdx(branchServiceId: string): number {
+    return cart.findIndex((c) => c.branchServiceId === branchServiceId && !c.packageSubscriptionId);
+  }
+
+  function paidQtyInCart(branchServiceId: string): number {
+    const idx = paidServiceLineIdx(branchServiceId);
+    if (idx < 0) return 0;
+    return cart[idx].quantity ?? 1;
+  }
+
   function addServiceToCart(s: BranchServiceItem, staffId: string) {
     setCart((prev) => {
-      if (prev.some((c) => c.branchServiceId === s.id)) return prev;
+      const idx = prev.findIndex((c) => c.branchServiceId === s.id && !c.packageSubscriptionId);
+      if (idx >= 0) {
+        const current = walkInCartItemQty(prev[idx]);
+        if (current >= WALK_IN_MAX_SERVICE_QTY) return prev;
+        const next = [...prev];
+        next[idx] = walkInCartAppendUnit(prev[idx], staffId);
+        setAddedToast(current + 1 > 1 ? `${s.serviceName} × ${current + 1}` : s.serviceName);
+        return next;
+      }
       pushRecentService(branchId, s.id);
       setRecentServiceIds(getRecentServiceIds(branchId));
       setAddedToast(s.serviceName);
       return [
         ...prev,
-        {
-          branchServiceId: s.id,
-          serviceName: s.serviceName,
-          basePrice: s.price,
-          priceExtra: 0,
-          variablePricing: !!s.variablePricing,
-          staffId,
-        },
+        walkInCartWithStaffSlots(
+          {
+            branchServiceId: s.id,
+            serviceName: s.serviceName,
+            basePrice: s.price,
+            priceExtra: 0,
+            variablePricing: !!s.variablePricing,
+            staffId,
+            quantity: 1,
+          },
+          [staffId]
+        ),
       ];
+    });
+  }
+
+  function decrementPaidServiceInCart(s: BranchServiceItem) {
+    setCart((prev) => {
+      const idx = prev.findIndex((c) => c.branchServiceId === s.id && !c.packageSubscriptionId);
+      if (idx < 0) return prev;
+      const current = walkInCartItemQty(prev[idx]);
+      if (current <= 1) {
+        setRemovedToast(s.serviceName);
+        return prev.filter((_, i) => i !== idx);
+      }
+      const next = [...prev];
+      next[idx] = walkInCartPopUnit(prev[idx]);
+      setRemovedToast(`${s.serviceName} × ${current - 1}`);
+      return next;
     });
   }
 
   function removeServiceFromCartItem(s: BranchServiceItem) {
     setCart((prev) => {
-      const existingIdx = prev.findIndex((c) => c.branchServiceId === s.id);
+      const existingIdx = prev.findIndex((c) => c.branchServiceId === s.id && !c.packageSubscriptionId);
       if (existingIdx < 0) return prev;
       setRemovedToast(s.serviceName);
       return prev.filter((_, i) => i !== existingIdx);
     });
   }
 
+  function branchServiceForCartItem(item: WalkInCartItem): BranchServiceItem | null {
+    return servicesById.get(item.branchServiceId) ?? null;
+  }
+
+  function closeStylistPicker() {
+    setStylistPicker(null);
+  }
+
+  function openAddUnitPicker(service: BranchServiceItem) {
+    if (staff.length === 0) {
+      addServiceToCart(service, defaultStaffId(cart));
+      return;
+    }
+    const idx = paidServiceLineIdx(service.id);
+    setStylistPicker({ service, cartIdx: idx >= 0 ? idx : undefined });
+  }
+
+  function openCartAddUnit(cartIdx: number) {
+    const item = cart[cartIdx];
+    if (!item) return;
+    const service = branchServiceForCartItem(item);
+    if (!service) return;
+    if (staff.length === 0) {
+      setCart((prev) => {
+        const next = [...prev];
+        next[cartIdx] = walkInCartAppendUnit(prev[cartIdx], defaultStaffId(prev));
+        return next;
+      });
+      return;
+    }
+    setInlineStylistPick({ cartIdx });
+  }
+
+  function openEditStaffSlot(cartIdx: number, unitIndex: number) {
+    const item = cart[cartIdx];
+    const service = item ? branchServiceForCartItem(item) : null;
+    if (!service || staff.length === 0) return;
+    setInlineStylistPick({ cartIdx, unitIndex });
+  }
+
+  function cancelInlineStylistPick() {
+    setInlineStylistPick(null);
+  }
+
+  function pickInlineStylist(staffId: string) {
+    if (!inlineStylistPick || !staffId) return;
+    const { cartIdx, unitIndex } = inlineStylistPick;
+    const item = cart[cartIdx];
+    const service = item ? branchServiceForCartItem(item) : null;
+    if (unitIndex != null) {
+      updateStaff(cartIdx, unitIndex, staffId);
+    } else if (service) {
+      setCart((prev) => {
+        const next = [...prev];
+        next[cartIdx] = walkInCartAppendUnit(prev[cartIdx], staffId);
+        const q = walkInCartItemQty(next[cartIdx]);
+        setAddedToast(q > 1 ? `${service.serviceName} × ${q}` : service.serviceName);
+        return next;
+      });
+    }
+    setInlineStylistPick(null);
+  }
+
+  function decreasePaidUnit(cartIdx: number) {
+    setCart((prev) => {
+      const item = prev[cartIdx];
+      if (!item || item.packageSubscriptionId) return prev;
+      if (walkInCartItemQty(item) <= 1) {
+        return prev.filter((_, i) => i !== cartIdx);
+      }
+      const next = [...prev];
+      next[cartIdx] = walkInCartPopUnit(item);
+      return next;
+    });
+  }
+
+  function decreasePackageUnit(cartIdx: number) {
+    setCart((prev) => {
+      const item = prev[cartIdx];
+      if (!item?.packageSubscriptionId) return prev;
+      if (walkInCartItemQty(item) <= 1) {
+        return prev.filter((_, i) => i !== cartIdx);
+      }
+      const next = [...prev];
+      next[cartIdx] = walkInCartPopUnit(item);
+      return next;
+    });
+  }
+
+  function handleCatalogServiceDecrement(s: BranchServiceItem) {
+    decrementPaidServiceInCart(s);
+  }
+
+  function maxPaidLineQty(_item: WalkInCartItem) {
+    return WALK_IN_MAX_SERVICE_QTY;
+  }
+
   function handleCatalogServiceToggle(s: BranchServiceItem) {
-    const inCart = cart.some((c) => c.branchServiceId === s.id);
-    if (inCart) {
-      removeServiceFromCartItem(s);
-      return;
-    }
-    if (isCatalogMobileLayout && staff.length > 0) {
-      setStylistPickerService(s);
-      return;
-    }
-    addServiceToCart(s, defaultStaffId(cart));
+    openAddUnitPicker(s);
   }
 
   function packageQtyInCart(subscriptionId: string, branchServiceId: string): number {
@@ -1658,57 +1790,56 @@ export default function WalkInPage() {
     if (toAdd <= 0) return;
     const svc = servicesById.get(branchServiceId);
     setCart((prev) => {
+      const fill = defaultStaffId(prev);
       const idx = prev.findIndex(
         (c) => c.branchServiceId === branchServiceId && c.packageSubscriptionId === subscriptionId
       );
       if (idx >= 0) {
-        const current = prev[idx].quantity ?? 1;
+        let item = prev[idx];
+        for (let i = 0; i < toAdd; i++) {
+          item = walkInCartAppendUnit(item, fill);
+        }
         const next = [...prev];
-        next[idx] = { ...next[idx], quantity: current + toAdd };
+        next[idx] = item;
         return next;
       }
+      const slots = Array.from({ length: toAdd }, () => fill);
       return [
         ...prev,
-        {
-          branchServiceId,
-          serviceName,
-          basePrice: svc?.price ?? basePrice,
-          priceExtra: 0,
-          variablePricing: !!svc?.variablePricing,
-          staffId: defaultStaffId(prev),
-          packageSubscriptionId: subscriptionId,
-          quantity: toAdd,
-        },
+        walkInCartWithStaffSlots(
+          {
+            branchServiceId,
+            serviceName,
+            basePrice: svc?.price ?? basePrice,
+            priceExtra: 0,
+            variablePricing: !!svc?.variablePricing,
+            staffId: fill,
+            packageSubscriptionId: subscriptionId,
+            quantity: toAdd,
+          },
+          slots
+        ),
       ];
     });
     setAddedToast(toAdd > 1 ? `${serviceName} × ${toAdd}` : serviceName);
   }
 
-  function updatePackageCartQuantity(idx: number, nextQty: number) {
-    setCart((prev) => {
-      const item = prev[idx];
-      if (!item?.packageSubscriptionId) return prev;
-      const svc = servicesById.get(item.branchServiceId);
-      const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
-      const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
-      const maxForLine = ent?.quantityRemaining ?? 0;
-      if (maxForLine <= 0) {
-        return prev.filter((_, i) => i !== idx);
-      }
-      const clamped = Math.max(1, Math.min(nextQty, maxForLine));
-      const next = [...prev];
-      next[idx] = { ...item, quantity: clamped };
-      return next;
-    });
-  }
-
-  function closeStylistPicker() {
-    setStylistPickerService(null);
-  }
-
   function pickStylistForPendingService(staffId: string) {
-    if (!stylistPickerService || !staffId) return;
-    addServiceToCart(stylistPickerService, staffId);
+    if (!stylistPicker || !staffId) return;
+    const { service, cartIdx, unitIndex } = stylistPicker;
+    if (unitIndex != null && cartIdx != null) {
+      updateStaff(cartIdx, unitIndex, staffId);
+    } else if (cartIdx != null) {
+      setCart((prev) => {
+        const next = [...prev];
+        next[cartIdx] = walkInCartAppendUnit(prev[cartIdx], staffId);
+        const q = walkInCartItemQty(next[cartIdx]);
+        setAddedToast(q > 1 ? `${service.serviceName} × ${q}` : service.serviceName);
+        return next;
+      });
+    } else {
+      addServiceToCart(service, staffId);
+    }
     closeStylistPicker();
   }
 
@@ -1720,10 +1851,26 @@ export default function WalkInPage() {
     setCart(cart.filter((_, i) => i !== idx));
   }
 
-  function updateStaff(idx: number, staffId: string) {
-    const next = [...cart];
-    next[idx].staffId = staffId;
-    setCart(next);
+  function updateStaff(idx: number, unitIndex: number, staffId: string) {
+    setCart((prev) => {
+      const item = prev[idx];
+      if (!item) return prev;
+      const slots = walkInCartStaffSlots(item);
+      if (unitIndex < 0 || unitIndex >= slots.length) return prev;
+      slots[unitIndex] = staffId;
+      const next = [...prev];
+      next[idx] = walkInCartWithStaffSlots(item, slots);
+      return next;
+    });
+  }
+
+  function cartIndexForBillLine(line: BillLinePreview): number {
+    return cart.findIndex((c) => {
+      if (c.serviceName !== line.serviceName) return false;
+      if (Math.abs(walkInCartUnitPrice(c) - line.unitPrice) > 0.01) return false;
+      if (line.staffId && !walkInCartStaffSlots(c).includes(line.staffId)) return false;
+      return true;
+    });
   }
 
   async function applyLinePrice(idx: number, finalPrice: number) {
@@ -1749,28 +1896,7 @@ export default function WalkInPage() {
   }
 
   function toLinePayload(items: CartItem[]) {
-    return items.map((c) => {
-      const total = cartLinePrice(c);
-      const payload: {
-        branchServiceId: string;
-        staffId: string;
-        quantity: number;
-        unitPrice?: number;
-        packageSubscriptionId?: string;
-      } = {
-        branchServiceId: c.branchServiceId,
-        staffId: c.staffId,
-        quantity: c.packageSubscriptionId ? Math.max(1, c.quantity ?? 1) : 1,
-      };
-      if (c.packageSubscriptionId) {
-        payload.packageSubscriptionId = c.packageSubscriptionId;
-        return payload;
-      }
-      if (total > c.basePrice) {
-        payload.unitPrice = total;
-      }
-      return payload;
-    });
+    return walkInCartToLinePayload(items);
   }
 
   function discountPayload() {
@@ -1861,11 +1987,10 @@ export default function WalkInPage() {
 
     let workingCart = cart;
     if (workingCart.length > 0) {
-      if (workingCart.some((c) => !c.staffId)) {
-        workingCart = workingCart.map((c) => (c.staffId ? c : { ...c, staffId: defaultStaffId(workingCart) }));
-        setCart(workingCart);
-      }
-      if (workingCart.some((c) => !c.staffId)) {
+      const fill = defaultStaffId(workingCart);
+      workingCart = workingCart.map((c) => walkInCartEnsureStaffSlots(c, fill));
+      setCart(workingCart);
+      if (workingCart.some((c) => !walkInCartStylistsComplete(c))) {
         throw new Error(t("assignStylistError"));
       }
     }
@@ -1991,6 +2116,15 @@ export default function WalkInPage() {
     if (bookingId) applyBillDiscount.mutate({ clearDiscount: true });
   }
 
+  const cartServiceCount = useMemo(() => walkInCartServiceCount(cart), [cart]);
+  const cartPaidQtyByServiceId = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of cart) {
+      if (c.packageSubscriptionId) continue;
+      m[c.branchServiceId] = c.quantity ?? 1;
+    }
+    return m;
+  }, [cart]);
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((s, c) => s + cartLinePrice(c), 0);
     const estimatedTax = gstEffective
@@ -2008,7 +2142,10 @@ export default function WalkInPage() {
       estimatedGrand: subtotal + estimatedTax,
     };
   }, [cart, servicesById, gstEffective]);
-  const cartHasFreshBill = !!billPreview && (billPreview.lines?.length ?? 0) === cart.length;
+  const cartHasFreshBill =
+    !!billPreview &&
+    walkInCartPayloadLineCount(cart) ===
+      (billPreview.lines?.filter((l) => l.lineItemId).length ?? 0);
 
   const promoLocked = !!selectedCouponId || !!selectedOfferId;
   const manualDiscountApplied = (billPreview?.manualDiscountAmount ?? 0) > 0;
@@ -2066,7 +2203,7 @@ export default function WalkInPage() {
   const hasBillDiscount = discountSavings > 0 || manualDiscountApplied || promoLocked;
 
   const stylistsRequired = staff.length > 0;
-  const stylistsComplete = !stylistsRequired || cart.every((c) => !!c.staffId);
+  const stylistsComplete = !stylistsRequired || cart.every((c) => walkInCartStylistsComplete(c));
   const packageSellerComplete =
     !pendingPackagePlanId || !stylistsRequired || !!pendingPackageSoldByStaffId;
   const floorVisitReady = packageSellerComplete && (cart.length === 0 || stylistsComplete);
@@ -2431,7 +2568,7 @@ export default function WalkInPage() {
                         {cartTotalDisplay}
                       </p>
                       <p className="mt-0.5 text-[9px] font-semibold text-[var(--text-tertiary)]">
-                        {t("mobileCartCount", { count: cart.length })}
+                        {t("mobileCartCount", { count: cartServiceCount })}
                       </p>
                     </>
                   ) : (
@@ -2824,7 +2961,7 @@ export default function WalkInPage() {
           )}
 
           <div className="flex flex-col lg:flex-row lg:gap-4 lg:items-start min-w-0">
-            <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:min-h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)] order-1">
+            <div className="flex flex-col min-w-0 lg:flex-1 lg:min-h-0 lg:max-h-[calc(100dvh-10rem)] order-1">
               <WalkInServiceCatalog
                 serviceQuery={serviceQuery}
                 onServiceQueryChange={setServiceQuery}
@@ -2839,9 +2976,11 @@ export default function WalkInPage() {
                 subCategoryGroups={subCategoryGroups}
                 subCategories={subCategories}
                 filteredServices={filteredServices}
-                cartServiceIds={cart.map((c) => c.branchServiceId)}
+                cartPaidQtyByServiceId={cartPaidQtyByServiceId}
                 localeKit={localeKit}
                 onToggleService={handleCatalogServiceToggle}
+                onAddServiceUnit={openAddUnitPicker}
+                onDecrementService={handleCatalogServiceDecrement}
                 onToggleFavorite={toggleFavorite}
               />
             </div>
@@ -2870,9 +3009,16 @@ export default function WalkInPage() {
                 }
                 pendingPackageInclusions={pendingPackagePlanId ? pendingPackageInclusions : undefined}
                 onRemove={removeFromCart}
-                onUpdateStaff={updateStaff}
                 onEditPrice={setPriceEditIdx}
-                onUpdatePackageQuantity={updatePackageCartQuantity}
+                onDecreasePaidUnit={decreasePaidUnit}
+                onAddPaidUnit={openCartAddUnit}
+                onDecreasePackageUnit={decreasePackageUnit}
+                onAddPackageUnit={openCartAddUnit}
+                onEditStaffSlot={openEditStaffSlot}
+                inlineStylistPick={inlineStylistPick}
+                onPickInlineStylist={pickInlineStylist}
+                onCancelInlineStylistPick={cancelInlineStylistPick}
+                maxPaidLineQty={maxPaidLineQty}
                 maxPackageLineQty={(item) =>
                   item.packageSubscriptionId
                     ? (() => {
@@ -2889,16 +3035,26 @@ export default function WalkInPage() {
             </div>
           </div>
 
-          <div className="lg:hidden">
-            <WalkInStylistPickerSheet
-              open={!!stylistPickerService}
-              service={stylistPickerService}
-              staff={staff}
-              onPickStaff={pickStylistForPendingService}
-              onClose={closeStylistPicker}
-              localeKit={localeKit}
-            />
+          <WalkInStylistPickerSheet
+            open={!!stylistPicker}
+            service={stylistPicker?.service ?? null}
+            staff={staff}
+            onPickStaff={pickStylistForPendingService}
+            onClose={closeStylistPicker}
+            localeKit={localeKit}
+            unitNumber={
+              stylistPicker?.unitIndex != null
+                ? stylistPicker.unitIndex + 1
+                : stylistPicker?.cartIdx != null
+                  ? (cart[stylistPicker.cartIdx]
+                      ? walkInCartItemQty(cart[stylistPicker.cartIdx])
+                      : 0) + 1
+                  : 1
+            }
+            variant={stylistPicker?.unitIndex != null ? "change" : "add"}
+          />
 
+          <div className="lg:hidden">
             {cartSheetOpen && (
               <>
                 <button
@@ -2910,7 +3066,7 @@ export default function WalkInPage() {
                 <div className="fixed inset-x-0 bottom-0 z-[150] flex max-h-[min(88dvh,640px)] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--surface)] shadow-2xl pb-[env(safe-area-inset-bottom,0px)]">
                   <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-2.5 shrink-0">
                     <p className="font-bold text-sm text-[var(--text-primary)]">
-                      {t("cartSheetTitle", { count: cart.length })}
+                      {t("cartSheetTitle", { count: cartServiceCount })}
                     </p>
                     <button
                       type="button"
@@ -2921,7 +3077,7 @@ export default function WalkInPage() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <div className="overflow-y-auto overscroll-contain touch-scroll-y px-3 py-3 min-h-0 flex-1" data-touch-scroll>
+                  <div className="overflow-y-auto overscroll-contain touch-scroll-y px-3 py-3 min-h-0 max-h-[min(72dvh,520px)]" data-touch-scroll>
                     <WalkInCartPanel
                       variant="sheet"
                       cart={cart}
@@ -2945,9 +3101,16 @@ export default function WalkInPage() {
                       }
                       pendingPackageInclusions={pendingPackagePlanId ? pendingPackageInclusions : undefined}
                       onRemove={removeFromCart}
-                      onUpdateStaff={updateStaff}
                       onEditPrice={setPriceEditIdx}
-                      onUpdatePackageQuantity={updatePackageCartQuantity}
+                      onDecreasePaidUnit={decreasePaidUnit}
+                      onAddPaidUnit={openCartAddUnit}
+                      onDecreasePackageUnit={decreasePackageUnit}
+                      onAddPackageUnit={openCartAddUnit}
+                      onEditStaffSlot={openEditStaffSlot}
+                      inlineStylistPick={inlineStylistPick}
+                      onPickInlineStylist={pickInlineStylist}
+                      onCancelInlineStylistPick={cancelInlineStylistPick}
+                      maxPaidLineQty={maxPaidLineQty}
                       maxPackageLineQty={(item) =>
                         item.packageSubscriptionId
                           ? (() => {
@@ -2995,7 +3158,7 @@ export default function WalkInPage() {
                     <ShoppingBag className="w-4 h-4 shrink-0 text-[var(--brand-text)]" aria-hidden />
                     <div className="min-w-0 flex-1 text-left">
                       <p className="text-xs font-semibold text-[var(--text-primary)] tabular-nums truncate">
-                        {t("mobileCartSummary", { count: cart.length, total: cartTotalDisplay })}
+                        {t("mobileCartSummary", { count: cartServiceCount, total: cartTotalDisplay })}
                       </p>
                       {stylistsRequired && !stylistsComplete ? (
                         <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 truncate">
@@ -3111,9 +3274,11 @@ export default function WalkInPage() {
                           line.serviceName === membershipFee.name ||
                           /membership/i.test(line.serviceName));
                       const stylist =
-                        !isMembershipRow && cart[idx]?.staffId
-                          ? staff.find((s) => s.id === cart[idx].staffId)?.name
-                          : undefined;
+                        !isMembershipRow && line.staffId
+                          ? staff.find((s) => s.id === line.staffId)?.name
+                          : !isMembershipRow && cart[idx]?.staffId
+                            ? staff.find((s) => s.id === cart[idx].staffId)?.name
+                            : undefined;
                       const qty = line.quantity || 1;
                       const linePrice = line.unitPrice * qty;
                       return (
@@ -3144,7 +3309,10 @@ export default function WalkInPage() {
                               amount={linePrice}
                               localeKit={localeKit}
                               size="md"
-                              onEdit={() => setPriceEditIdx(idx)}
+                              onEdit={() => {
+                                const cartIdx = cartIndexForBillLine(line);
+                                setPriceEditIdx(cartIdx >= 0 ? cartIdx : idx);
+                              }}
                             />
                           ) : (
                             <span className="font-semibold text-[var(--text-primary)] tabular-nums text-sm shrink-0">
@@ -3179,7 +3347,14 @@ export default function WalkInPage() {
                       return (
                         <>
                           {items.map(({ item, idx }) => {
-                            const stylist = staff.find((s) => s.id === item.staffId)?.name;
+                            const slots = walkInCartStaffSlots(item);
+                            const stylistLabels = slots
+                              .map((id) => staff.find((s) => s.id === id)?.name)
+                              .filter(Boolean);
+                            const stylist =
+                              stylistLabels.length > 1
+                                ? stylistLabels.join(" · ")
+                                : stylistLabels[0];
                             return (
                               <li
                                 key={`${item.branchServiceId}-${idx}`}

@@ -1814,6 +1814,7 @@ export interface BookingLine {
 export interface BillLinePreview {
   lineItemId?: string;
   serviceName: string;
+  staffId?: string;
   unitPrice: number;
   quantity: number;
   lineDiscount?: number;

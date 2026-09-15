@@ -25,9 +25,16 @@ interface WalkInServiceCatalogProps {
   subCategoryGroups: WalkInSubCategoryGroup[];
   subCategories: WalkInSubCategory[];
   filteredServices: BranchServiceItem[];
-  cartServiceIds: string[];
+  /** Legacy: treat each id as qty 1 (package plan picker, online booking). */
+  cartServiceIds?: string[];
+  /** Paid walk-in lines: branch service id → quantity in cart. */
+  cartPaidQtyByServiceId?: Record<string, number>;
   localeKit: TenantLocaleKit;
   onToggleService: (s: BranchServiceItem) => void;
+  /** Walk-in: add one unit — opens stylist picker in parent when staff exist. */
+  onAddServiceUnit?: (s: BranchServiceItem) => void;
+  /** Walk-in: decrease paid service qty by one (omit for toggle-only flows). */
+  onDecrementService?: (s: BranchServiceItem) => void;
   onToggleFavorite: (id: string) => void;
   /** Customer online booking — full service names, no favorites. */
   variant?: "walk-in" | "online";
@@ -119,9 +126,12 @@ export function WalkInServiceCatalog({
   subCategoryGroups,
   subCategories,
   filteredServices,
-  cartServiceIds,
+  cartServiceIds = [],
+  cartPaidQtyByServiceId,
   localeKit,
   onToggleService,
+  onAddServiceUnit,
+  onDecrementService,
   onToggleFavorite,
   variant = "walk-in",
   scrollWithParent = false,
@@ -134,39 +144,84 @@ export function WalkInServiceCatalog({
   const inSearchMode = serviceQuery.trim().length > 0;
   const inServiceList = !inSearchMode && !!catalogSub;
   const inBrowseMode = !inSearchMode && !catalogSub;
-  const cartServiceIdSet = new Set(cartServiceIds);
+
+  function paidQtyInCatalog(serviceId: string): number {
+    const fromMap = cartPaidQtyByServiceId?.[serviceId];
+    if (fromMap != null && fromMap > 0) return fromMap;
+    return cartServiceIds.includes(serviceId) ? 1 : 0;
+  }
 
   const activeTop = topCategories.find((c) => c.id === catalogTop);
   const activeSub = subCategories.find((s) => s.id === catalogSub);
 
-  const desktopRecent = recentServices.filter((s) => !cartServiceIdSet.has(s.id));
-  const desktopFavorites = favoriteServices.filter((s) => !cartServiceIdSet.has(s.id));
+  const desktopRecent = recentServices.filter((s) => paidQtyInCatalog(s.id) === 0);
+  const desktopFavorites = favoriteServices.filter((s) => paidQtyInCatalog(s.id) === 0);
 
-  function serviceActionLabel(s: BranchServiceItem, inCart: boolean) {
-    return inCart ? t("removeServiceFromCart", { name: s.serviceName }) : s.serviceName;
-  }
-
-  function serviceActionIcon(inCart: boolean, className?: string) {
-    if (inCart) {
-      return <Minus className={cn("w-4 h-4 text-emerald-700 dark:text-emerald-400", className)} aria-hidden />;
+  function serviceActionLabel(s: BranchServiceItem, qty: number) {
+    if (qty > 0 && onAddServiceUnit) {
+      return t("addAnotherService", { name: s.serviceName });
     }
-    return <Plus className={cn("w-4 h-4 text-[var(--brand-text)]", className)} aria-hidden />;
+    if (qty > 0) {
+      return t("removeServiceFromCart", { name: s.serviceName });
+    }
+    return s.serviceName;
   }
 
-  function serviceChipClass(inCart: boolean) {
+  function serviceQtyControls(s: BranchServiceItem, qty: number, iconClass?: string) {
+    const addUnit = onAddServiceUnit ?? onToggleService;
+    if (qty <= 0) {
+      return <Plus className={cn("w-4 h-4 text-[var(--brand-text)]", iconClass)} aria-hidden />;
+    }
+    if (onDecrementService && !isOnline) {
+      return (
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button
+            type="button"
+            className="p-1 rounded-md hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 touch-manipulation"
+            aria-label={t("serviceCartQtyDecrease")}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onDecrementService(s);
+            }}
+          >
+            <Minus className={cn("w-3.5 h-3.5 text-emerald-800 dark:text-emerald-300", iconClass)} aria-hidden />
+          </button>
+          <span className="min-w-[1.25rem] text-center text-xs font-bold tabular-nums text-emerald-800 dark:text-emerald-200">
+            {qty}
+          </span>
+          <button
+            type="button"
+            className="p-1 rounded-md hover:bg-emerald-100/80 dark:hover:bg-emerald-900/40 touch-manipulation"
+            aria-label={t("serviceCartQtyIncrease")}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              addUnit(s);
+            }}
+          >
+            <Plus className={cn("w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400", iconClass)} aria-hidden />
+          </button>
+        </div>
+      );
+    }
+    return <Minus className={cn("w-4 h-4 text-emerald-700 dark:text-emerald-400", iconClass)} aria-hidden />;
+  }
+
+  function serviceChipClass(qty: number) {
     return cn(
       "shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition touch-manipulation",
-      inCart
+      qty > 0
         ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
         : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--brand)] text-[var(--text-primary)]"
     );
   }
 
-  function serviceCardClass(inCart: boolean) {
+  function serviceCardClass(qty: number) {
     return cn(
       "flex items-center justify-between gap-2 rounded-xl border transition text-left touch-manipulation min-w-0",
       "p-2.5 min-h-[2.75rem] lg:p-3 lg:min-h-[3.25rem]",
-      inCart
+      qty > 0
         ? "border-emerald-300 bg-emerald-50/80 dark:border-emerald-800 dark:bg-emerald-950/30"
         : "border-[var(--border)] hover:border-[var(--brand)] hover:bg-[var(--brand-light)] active:scale-[0.98]"
     );
@@ -201,10 +256,10 @@ export function WalkInServiceCatalog({
     );
   }
 
-  function onlineServiceCardClass(inCart: boolean) {
+  function onlineServiceCardClass(qty: number) {
     return cn(
       "w-full rounded-2xl border p-3.5 text-left touch-manipulation transition",
-      inCart
+      qty > 0
         ? "border-emerald-400/60 bg-emerald-50/90 shadow-sm dark:border-emerald-700 dark:bg-emerald-950/40"
         : "border-[#e8dcc8] bg-white/90 hover:border-[var(--book-accent,#b8956b)] hover:shadow-md active:scale-[0.99]"
     );
@@ -239,8 +294,8 @@ export function WalkInServiceCatalog({
                 key={s.id}
                 type="button"
                 onClick={() => onToggleService(s)}
-                className={cn(serviceChipClass(false), "inline-flex items-center gap-1")}
-                aria-label={serviceActionLabel(s, false)}
+                className={cn(serviceChipClass(0), "inline-flex items-center gap-1")}
+                aria-label={serviceActionLabel(s, 0)}
               >
                 {s.serviceName}
               </button>
@@ -255,8 +310,8 @@ export function WalkInServiceCatalog({
                 key={s.id}
                 type="button"
                 onClick={() => onToggleService(s)}
-                className={cn(serviceChipClass(false), "flex items-center gap-1")}
-                aria-label={serviceActionLabel(s, false)}
+                className={cn(serviceChipClass(0), "flex items-center gap-1")}
+                aria-label={serviceActionLabel(s, 0)}
               >
                 <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                 {s.serviceName}
@@ -431,7 +486,7 @@ export function WalkInServiceCatalog({
             ) : (
               filteredServices.map((s) => {
                 const isFav = favoriteServiceIds.includes(s.id);
-                const inCart = cartServiceIdSet.has(s.id);
+                const qty = paidQtyInCatalog(s.id);
                 const meta = serviceSubtitle(s);
                 if (isOnline) {
                   return (
@@ -440,15 +495,15 @@ export function WalkInServiceCatalog({
                       type="button"
                       data-testid="online-book-service-card"
                       onClick={() => onToggleService(s)}
-                      className={onlineServiceCardClass(inCart)}
-                      aria-pressed={inCart}
-                      aria-label={serviceActionLabel(s, inCart)}
+                      className={onlineServiceCardClass(qty)}
+                      aria-pressed={qty > 0}
+                      aria-label={serviceActionLabel(s, qty)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-semibold text-[15px] leading-snug text-[#1c1917] text-left break-words">
                           {s.serviceName}
                         </p>
-                        <span className="shrink-0 mt-0.5">{serviceActionIcon(inCart, "w-5 h-5")}</span>
+                        <span className="shrink-0 mt-0.5">{serviceQtyControls(s, qty, "w-5 h-5")}</span>
                       </div>
                       {meta ? (
                         <p className="mt-1 text-xs text-[#78716c]">{meta}</p>
@@ -467,9 +522,9 @@ export function WalkInServiceCatalog({
                     type="button"
                     data-testid="walk-in-service-card"
                     onClick={() => onToggleService(s)}
-                    className={serviceCardClass(inCart)}
-                    aria-pressed={inCart}
-                    aria-label={serviceActionLabel(s, inCart)}
+                    className={serviceCardClass(qty)}
+                    aria-pressed={qty > 0}
+                    aria-label={serviceActionLabel(s, qty)}
                   >
                     <div className="min-w-0 flex items-center gap-1.5">
                       <span
@@ -511,7 +566,7 @@ export function WalkInServiceCatalog({
                           ? t("priceFrom", { price: formatCurrency(s.price, localeKit) })
                           : formatCurrency(s.price, localeKit)}
                       </span>
-                      {serviceActionIcon(inCart, "w-3.5 h-3.5")}
+                      {serviceQtyControls(s, qty, "w-3.5 h-3.5")}
                     </div>
                   </button>
                 );

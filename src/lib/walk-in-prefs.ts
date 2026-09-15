@@ -19,8 +19,9 @@ export interface WalkInDraft {
   cart: {
     branchServiceId: string;
     serviceName: string;
-    staffId: string;
-    basePrice?: number;
+  staffId: string;
+  staffIds?: string[];
+  basePrice?: number;
     priceExtra?: number;
     variablePricing?: boolean;
     packageSubscriptionId?: string;
