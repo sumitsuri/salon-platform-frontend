@@ -1223,12 +1223,12 @@
 .manager-home-incentive-cta {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.625rem;
   min-width: 0;
   overflow: hidden;
-  padding: 0.75rem 0.625rem 0.75rem 0.75rem;
-  border-radius: 0.875rem;
+  padding: 0.875rem 0.625rem 0.875rem 0.75rem;
+  border-radius: 1rem;
   border: 1px solid var(--border);
   background: var(--surface);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 80%, transparent);
@@ -1238,13 +1238,193 @@
     transform 0.12s ease;
 }
 
+.manager-home-earn-now-card-shell {
+  position: relative;
+  overflow: visible;
+  padding: 0.25rem 0.45rem;
+}
+
+.manager-home-earn-now-card-shell .manager-home-incentive-cta-pulse-arc {
+  position: absolute;
+  top: 50%;
+  z-index: 0;
+  width: 2.125rem;
+  height: 4.75rem;
+  margin-top: -2.375rem;
+  pointer-events: none;
+  border: 2.5px solid transparent;
+  border-radius: 50%;
+  opacity: 0;
+  animation: incentive-pulse-arc 2.35s ease-out infinite;
+}
+
+.manager-home-earn-now-card-shell .manager-home-incentive-cta-pulse-arc--left {
+  left: 0;
+  border-left-color: color-mix(in srgb, #fbbf24 75%, #f97316);
+}
+
+.manager-home-earn-now-card-shell .manager-home-incentive-cta-pulse-arc--right {
+  right: 0;
+  border-right-color: color-mix(in srgb, #fbbf24 75%, #f97316);
+  animation-delay: 0.45s;
+}
+
+.manager-home-earn-now-card-shell:has([data-earn-motion="earn"]) .manager-home-incentive-cta-pulse-arc--left {
+  border-left-color: color-mix(in srgb, #38bdf8 80%, #0ea5e9);
+}
+
+.manager-home-earn-now-card-shell:has([data-earn-motion="earn"]) .manager-home-incentive-cta-pulse-arc--right {
+  border-right-color: color-mix(in srgb, #38bdf8 80%, #0ea5e9);
+}
+
+.manager-home-earn-now-card-shell .manager-home-incentive-cta--boost {
+  width: 100%;
+}
+
+.manager-home-incentive-cta--boost {
+  display: grid;
+  grid-template-columns: 2.875rem minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  align-items: start;
+  column-gap: 0.625rem;
+  row-gap: 0.25rem;
+  min-height: 7.5rem;
+  padding: 1rem 0.75rem;
+  border-width: 2px;
+  border-radius: 1.25rem;
+  overflow: visible;
+  isolation: isolate;
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.manager-home-incentive-cta--boost > .manager-home-incentive-cta-icon-wrap {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.manager-home-incentive-cta--boost > .manager-home-incentive-cta-body {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.manager-home-incentive-cta--boost > .manager-home-reward-pill-anchor {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.manager-home-incentive-cta--boost.manager-home-incentive-cta--membership {
+  border-color: color-mix(in srgb, #fbbf24 85%, #fde68a);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #ffffff 82%, #fffbeb) 0%,
+    color-mix(in srgb, #ffffff 62%, #fef9c3) 45%,
+    color-mix(in srgb, #ffffff 78%, #fff7ed) 100%
+  );
+  box-shadow:
+    0 8px 28px color-mix(in srgb, #f59e0b 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 90%, transparent);
+}
+
+.manager-home-incentive-cta--boost.manager-home-incentive-cta--package {
+  border-color: color-mix(in srgb, #38bdf8 80%, #7dd3fc);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #ffffff 84%, #f0f9ff) 0%,
+    color-mix(in srgb, #ffffff 64%, #e0f2fe) 48%,
+    color-mix(in srgb, #ffffff 80%, #ecfeff) 100%
+  );
+  box-shadow:
+    0 8px 28px color-mix(in srgb, #0ea5e9 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 92%, transparent);
+}
+
+.manager-home-incentive-cta-glass-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+  background: linear-gradient(
+    125deg,
+    color-mix(in srgb, white 55%, transparent) 0%,
+    transparent 38%,
+    transparent 62%,
+    color-mix(in srgb, white 18%, transparent) 100%
+  );
+}
+
+.manager-home-incentive-cta-sparkle {
+  position: absolute;
+  z-index: 3;
+  width: 0.45rem;
+  height: 0.45rem;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, color-mix(in srgb, white 20%, transparent) 70%);
+  box-shadow: 0 0 8px color-mix(in srgb, white 90%, transparent);
+  animation: incentive-corner-sparkle 2.8s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta-sparkle--tl {
+  top: 0.45rem;
+  left: 0.55rem;
+}
+
+.manager-home-incentive-cta-sparkle--tr {
+  top: 0.4rem;
+  right: 0.55rem;
+  animation-delay: 0.6s;
+}
+
+.manager-home-incentive-cta-sparkle--bl {
+  bottom: 0.45rem;
+  left: 0.55rem;
+  animation-delay: 1.1s;
+}
+
+.manager-home-incentive-cta-sparkle--br {
+  bottom: 0.4rem;
+  right: 0.55rem;
+  animation-delay: 1.7s;
+}
+
+.manager-home-incentive-cta-crown-badge {
+  position: absolute;
+  z-index: 5;
+  top: 0.45rem;
+  right: 5.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fde047 0%, #fbbf24 55%, #f59e0b 100%);
+  box-shadow:
+    0 0 14px color-mix(in srgb, #fbbf24 75%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 55%, transparent);
+  animation: incentive-deco-float 3.2s ease-in-out infinite;
+}
+
 .manager-home-incentive-cta:hover {
   border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
   box-shadow: 0 8px 24px color-mix(in srgb, var(--brand) 8%, transparent);
 }
 
+.manager-home-incentive-cta--boost:hover {
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--brand) 10%, transparent),
+    0 0 0 1px color-mix(in srgb, white 50%, transparent);
+}
+
 .manager-home-incentive-cta:active {
   transform: scale(0.99);
+}
+
+.manager-home-incentive-cta--boost:active {
+  transform: scale(0.985);
 }
 
 .manager-home-incentive-cta:focus-visible {
@@ -1260,6 +1440,240 @@
   width: 3px;
   border-radius: 0.875rem 0 0 0.875rem;
   pointer-events: none;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-accent {
+  display: none;
+}
+
+.manager-home-incentive-cta-glow-border {
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 1.2rem;
+  pointer-events: none;
+  animation: incentive-cta-border-glow 2.2s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta[data-earn-motion="claim"] .manager-home-incentive-cta-glow-border {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fde68a 80%, transparent),
+    0 0 22px color-mix(in srgb, #fbbf24 55%, transparent),
+    0 0 40px color-mix(in srgb, #f59e0b 35%, transparent),
+    0 0 64px color-mix(in srgb, #fde047 22%, transparent);
+}
+
+.manager-home-incentive-cta[data-earn-motion="earn"] .manager-home-incentive-cta-glow-border {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #bae6fd 85%, transparent),
+    0 0 24px color-mix(in srgb, #38bdf8 58%, transparent),
+    0 0 42px color-mix(in srgb, #0ea5e9 38%, transparent),
+    0 0 68px color-mix(in srgb, #22d3ee 24%, transparent);
+}
+
+.manager-home-incentive-cta-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.manager-home-incentive-cta-deco--chart {
+  right: 4.25rem;
+  bottom: 0.15rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  color: #6366f1;
+  opacity: 0.18;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #a78bfa 35%, transparent));
+}
+
+.manager-home-incentive-cta-deco--package-arrow {
+  right: 3.75rem;
+  top: 50%;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-top: -1rem;
+  color: #0ea5e9;
+  opacity: 0.28;
+}
+
+.manager-home-incentive-cta-deco--package-sparkle {
+  top: 0.55rem;
+  right: 5.25rem;
+  width: 1rem;
+  height: 1rem;
+  color: #facc15;
+  opacity: 0.95;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #fde047 80%, transparent));
+  animation: incentive-corner-sparkle 2.4s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta-body {
+  position: relative;
+  z-index: 2;
+  padding-right: 0.25rem;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-body {
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding-right: 0.25rem;
+}
+
+.manager-home-reward-pill-anchor {
+  position: relative;
+  z-index: 6;
+  align-self: center;
+  justify-self: end;
+  pointer-events: none;
+}
+
+.manager-home-reward-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: min(9.75rem, calc(100vw - 5.5rem));
+  min-height: 3.25rem;
+  padding: 0.5rem 0.55rem 0.5rem 0.45rem;
+  border-radius: 9999px;
+  overflow: visible;
+  flex-shrink: 0;
+  animation: incentive-reward-pill-pulse 2.6s ease-in-out infinite;
+}
+
+.manager-home-reward-pill--claim {
+  min-width: 6.625rem;
+  background: linear-gradient(105deg, #fef3c7 0%, #fcd34d 38%, #fbbf24 72%, #f59e0b 100%);
+  border: 1px solid color-mix(in srgb, #d97706 45%, #fcd34d);
+  box-shadow:
+    0 0 20px color-mix(in srgb, #fbbf24 70%, transparent),
+    0 6px 16px color-mix(in srgb, #0f172a 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 70%, transparent);
+}
+
+.manager-home-reward-pill--earn {
+  min-width: 7.875rem;
+  background: linear-gradient(105deg, #0284c7 0%, #0369a1 42%, #075985 100%);
+  border: 1px solid color-mix(in srgb, #0ea5e9 55%, #0369a1);
+  box-shadow:
+    0 0 22px color-mix(in srgb, #38bdf8 68%, transparent),
+    0 6px 16px color-mix(in srgb, #0f172a 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #7dd3fc 35%, transparent);
+}
+
+.manager-home-reward-pill-icon-box {
+  display: flex;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.35rem;
+}
+
+.manager-home-reward-pill-icon-box--claim {
+  background: linear-gradient(145deg, #b45309 0%, #92400e 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 30%, transparent);
+}
+
+.manager-home-reward-pill-icon-circle {
+  display: flex;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, white 92%, #e0f2fe);
+  box-shadow: 0 1px 3px color-mix(in srgb, #0c4a6e 25%, transparent);
+}
+
+.manager-home-reward-pill-icon-circle--earn svg {
+  color: #0369a1;
+}
+
+.manager-home-reward-pill-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: max-content;
+  line-height: 1.08;
+}
+
+.manager-home-reward-pill-lead {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+}
+
+.manager-home-reward-pill-amount {
+  font-size: clamp(0.8125rem, 3.4vw, 0.9375rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.manager-home-reward-pill-icon-box,
+.manager-home-reward-pill-icon-circle,
+.manager-home-reward-pill-chevrons {
+  flex-shrink: 0;
+}
+
+.manager-home-reward-pill--claim .manager-home-reward-pill-lead {
+  color: #78350f;
+  font-weight: 700;
+}
+
+.manager-home-reward-pill--claim .manager-home-reward-pill-amount {
+  color: #7f1d1d;
+  text-shadow: 0 1px 0 color-mix(in srgb, #fef3c7 80%, transparent);
+}
+
+.manager-home-reward-pill--claim .manager-home-reward-pill-chevrons {
+  font-size: 0.5625rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #92400e;
+  letter-spacing: -0.08em;
+  align-self: center;
+  margin-left: 0.05rem;
+}
+
+.manager-home-reward-pill--earn .manager-home-reward-pill-lead {
+  color: #e0f2fe;
+  font-weight: 700;
+  text-shadow: 0 1px 2px color-mix(in srgb, #0c4a6e 65%, transparent);
+}
+
+.manager-home-reward-pill--earn .manager-home-reward-pill-amount {
+  color: #ffffff;
+  text-shadow: 0 1px 3px color-mix(in srgb, #082f49 75%, transparent);
+}
+
+.manager-home-reward-pill--earn .manager-home-reward-pill-chevrons {
+  font-size: 0.5625rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #f0f9ff;
+  letter-spacing: -0.08em;
+  align-self: center;
+  margin-left: 0.05rem;
+  text-shadow: 0 1px 2px color-mix(in srgb, #082f49 60%, transparent);
+}
+
+.manager-home-incentive-cta-footnote {
+  margin-top: 0.3rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-secondary);
 }
 
 .manager-home-incentive-cta--membership .manager-home-incentive-cta-accent {
@@ -1297,34 +1711,90 @@
 }
 
 .manager-home-incentive-cta-icon-wrap {
+  position: relative;
+  z-index: 1;
   display: flex;
   shrink: 0;
   align-items: center;
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  margin-top: 0.125rem;
-  border-radius: 0.625rem;
+  border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
   background: color-mix(in srgb, var(--surface-muted) 50%, var(--surface));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 70%, transparent);
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: 0.125rem;
+  border-radius: 0.8125rem;
+  align-self: start;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 75%, transparent);
+}
+
+.manager-home-incentive-cta--boost.manager-home-incentive-cta--membership .manager-home-incentive-cta-icon-wrap {
+  color: #b45309;
+  background: color-mix(in srgb, #fef9c3 75%, white);
+  border-color: color-mix(in srgb, #fde68a 55%, #fcd34d);
+}
+
+.manager-home-incentive-cta--boost.manager-home-incentive-cta--package .manager-home-incentive-cta-icon-wrap {
+  color: #0284c7;
+  background: color-mix(in srgb, #e0f2fe 80%, white);
+  border-color: color-mix(in srgb, #bae6fd 60%, #7dd3fc);
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-title {
+  color: #0f2744;
+  font-weight: 800;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-spotlight,
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-footnote {
+  color: #5b6b82;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  text-overflow: clip;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-spotlight {
+  font-size: 0.6875rem;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-footnote {
+  font-size: 0.625rem;
+  line-height: 1.4;
+  margin-top: 0.35rem;
+}
+
+.manager-home-incentive-cta--boost .manager-home-incentive-cta-title {
+  white-space: normal;
 }
 
 .manager-home-incentive-cta--membership .manager-home-incentive-cta-icon-wrap {
   color: #b45309;
-  background: color-mix(in srgb, #fef3c7 70%, var(--surface));
-  border-color: color-mix(in srgb, #fcd34d 45%, var(--border));
+  background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+  border-color: color-mix(in srgb, #fcd34d 55%, var(--border));
 }
 
 .manager-home-incentive-cta--package .manager-home-incentive-cta-icon-wrap {
   color: #0369a1;
-  background: color-mix(in srgb, #e0f2fe 75%, var(--surface));
-  border-color: color-mix(in srgb, #7dd3fc 40%, var(--border));
+  background: linear-gradient(145deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: color-mix(in srgb, #7dd3fc 50%, var(--border));
 }
 
 .manager-home-incentive-cta-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   color: var(--text-primary);
 }
 
@@ -1354,12 +1824,110 @@
   box-shadow: 0 1px 0 color-mix(in srgb, #0369a1 20%, transparent);
 }
 
+.manager-home-incentive-cta--animated-card {
+  isolation: isolate;
+  will-change: transform, box-shadow;
+}
+
+.manager-home-incentive-cta-glow-ring {
+  position: absolute;
+  inset: -2px;
+  z-index: 0;
+  border-radius: 1rem;
+  pointer-events: none;
+  opacity: 0.85;
+  animation: incentive-cta-glow-ring 2.5s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta[data-earn-motion="claim"] .manager-home-incentive-cta-glow-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #fbbf24 55%, transparent),
+    0 0 18px color-mix(in srgb, #f59e0b 35%, transparent),
+    inset 0 0 12px color-mix(in srgb, #fde68a 25%, transparent);
+}
+
+.manager-home-incentive-cta[data-earn-motion="earn"] .manager-home-incentive-cta-glow-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #38bdf8 55%, transparent),
+    0 0 20px color-mix(in srgb, #0ea5e9 40%, transparent),
+    inset 0 0 14px color-mix(in srgb, #bae6fd 30%, transparent);
+}
+
+.manager-home-incentive-cta--animated-card .manager-home-incentive-cta-icon-wrap,
+.manager-home-incentive-cta--animated-card .manager-home-incentive-cta-body,
+.manager-home-incentive-cta--animated-card .manager-home-incentive-cta-reward-rail {
+  position: relative;
+  z-index: 1;
+}
+
+.manager-home-incentive-cta-chip--motion {
+  position: relative;
+  overflow: hidden;
+  max-width: min(11.5rem, 46vw);
+  padding-right: 0.35rem;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 40%, transparent),
+    0 2px 8px color-mix(in srgb, #0f172a 12%, transparent);
+  animation: incentive-chip-pop 2.2s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta-chip--claim {
+  background: linear-gradient(
+    110deg,
+    #fde68a 0%,
+    #fcd34d 35%,
+    #fbbf24 70%,
+    #fde68a 100%
+  );
+  background-size: 200% 100%;
+  animation:
+    incentive-chip-pop 2.2s ease-in-out infinite,
+    incentive-chip-shimmer 3s linear infinite;
+}
+
+.manager-home-incentive-cta-chip--earn {
+  background: linear-gradient(
+    110deg,
+    #bae6fd 0%,
+    #7dd3fc 40%,
+    #38bdf8 75%,
+    #bae6fd 100%
+  );
+  background-size: 200% 100%;
+  animation:
+    incentive-chip-pop 2s ease-in-out infinite,
+    incentive-chip-shimmer 2.6s linear infinite;
+}
+
+.manager-home-incentive-cta-chip-spark {
+  animation: incentive-chip-spark 1.4s ease-in-out infinite;
+}
+
+.manager-home-incentive-cta-chip-track {
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  mask-image: linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.manager-home-incentive-cta-chip-scroll {
+  display: inline-flex;
+  gap: 1.75rem;
+  white-space: nowrap;
+  animation: incentive-chip-marquee 7s linear infinite;
+}
+
+.manager-home-incentive-cta-chip-scroll > span {
+  flex-shrink: 0;
+}
+
 .manager-home-incentive-cta-spotlight {
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
   font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--text-secondary) 95%, #334155);
 }
 
 .manager-home-incentive-cta-nudge {
@@ -1417,5 +1985,580 @@
 @media (prefers-reduced-motion: reduce) {
   .manager-home-incentive-cta:hover .manager-home-incentive-cta-chevron {
     transform: none;
+  }
+  .animate-pulse-subtle {
+    animation: none;
+  }
+  .manager-home-incentive-cta-glow-border,
+  .manager-home-incentive-cta-pulse-arc,
+  .manager-home-incentive-cta-sparkle,
+  .manager-home-incentive-cta-crown-badge,
+  .manager-home-incentive-cta-deco,
+  .manager-home-reward-pill,
+  .manager-home-incentive-cta-chip--motion,
+  .manager-home-incentive-cta-chip--claim,
+  .manager-home-incentive-cta-chip--earn,
+  .manager-home-incentive-cta-chip-spark,
+  .manager-home-incentive-cta-chip-scroll,
+  .manager-home-earn-now-title,
+  .manager-home-earn-now-tagline-arrow,
+  .manager-home-earn-now-pulse,
+  .manager-home-earn-now-section {
+    animation: none !important;
+  }
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2.4s ease-in-out infinite;
+}
+
+.manager-home-earn-now-section {
+  transform-origin: center top;
+}
+
+.manager-home-earn-now-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  min-width: 0;
+}
+
+.manager-home-earn-now-title {
+  font-size: 1.3125rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #dc2626;
+  text-shadow: 0 1px 0 color-mix(in srgb, #fecaca 80%, transparent);
+}
+
+.manager-home-earn-now-tagline {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  color: #64748b;
+}
+
+.manager-home-earn-now-tagline-text {
+  font-family: "Segoe Print", "Bradley Hand", "Snell Roundhand", "Apple Chancery", cursive;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.15;
+  color: #7c83db;
+  transform: rotate(-3deg);
+}
+
+.manager-home-earn-now-tagline-arrow {
+  width: 2.75rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  color: #f472b6;
+  animation: earn-now-tagline-arrow-wiggle 2.5s ease-in-out infinite;
+}
+
+.manager-home-earn-now-pulse {
+  transform-origin: center center;
+}
+
+.manager-home-earn-now-pulse .manager-home-earn-now-card-shell .manager-home-incentive-cta--animated-card {
+  animation: earn-now-card-breathe 2.65s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.manager-home-earn-now-pulse .manager-home-earn-now-card-shell:has([data-earn-motion="claim"]) .manager-home-incentive-cta--animated-card {
+  animation-duration: 2.85s;
+}
+
+.manager-home-earn-now-pulse .manager-home-earn-now-card-shell:has([data-earn-motion="earn"]) .manager-home-incentive-cta--animated-card {
+  animation-delay: 0.4s;
+  animation-duration: 2.55s;
+}
+
+@keyframes earn-now-section-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.018);
+  }
+}
+
+@keyframes earn-now-title-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes earn-now-card-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  45% {
+    transform: scale(1.038);
+    filter: brightness(1.03);
+  }
+  55% {
+    transform: scale(1.03);
+  }
+}
+
+.manager-home-earn-now-pulse .manager-home-earn-now-card-shell:has([data-earn-motion="claim"]) .manager-home-incentive-cta--animated-card {
+  animation-name: earn-now-card-breathe-gold;
+}
+
+.manager-home-earn-now-pulse .manager-home-earn-now-card-shell:has([data-earn-motion="earn"]) .manager-home-incentive-cta--animated-card {
+  animation-name: earn-now-card-breathe-cyan;
+}
+
+@keyframes earn-now-card-breathe-gold {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes earn-now-card-breathe-cyan {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes incentive-pulse-arc {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes incentive-reward-pill-slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes incentive-reward-pill-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.06);
+  }
+}
+
+@keyframes incentive-corner-sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes incentive-cta-border-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes incentive-deco-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes incentive-reward-rail-slide {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+
+@keyframes incentive-reward-chevrons-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+}
+
+@keyframes earn-now-tagline-arrow-wiggle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(2px) rotate(2deg);
+  }
+}
+
+@keyframes incentive-chip-marquee-vertical {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(-50% - 0.325rem));
+  }
+}
+
+@keyframes incentive-cta-glow-ring {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes incentive-chip-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes incentive-chip-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes incentive-chip-spark {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.25) rotate(10deg);
+  }
+}
+
+@keyframes incentive-chip-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 0.875rem));
+  }
+}
+
+/* ── Manager home · New Walk-In promo (revenue card) ── */
+
+.manager-home-walkin-promo {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: start;
+  column-gap: 0.75rem;
+  row-gap: 0.625rem;
+  min-width: 0;
+  padding: 1rem 0.875rem;
+  border-radius: 1.125rem;
+  border: 1.5px solid #5eead4;
+  background: linear-gradient(145deg, #ffffff 0%, #f0fdfa 55%, #ffffff 100%);
+  box-shadow:
+    0 6px 22px color-mix(in srgb, #0d9488 10%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 90%, transparent);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
+}
+
+.manager-home-walkin-promo:hover {
+  border-color: #2dd4bf;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, #0d9488 16%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 92%, transparent);
+}
+
+.manager-home-walkin-promo:active {
+  transform: scale(0.992);
+}
+
+.manager-home-walkin-promo:focus-visible {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+.manager-home-walkin-promo-glow {
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 24px color-mix(in srgb, #14b8a6 22%, transparent);
+  animation: manager-home-walkin-promo-glow 2.8s ease-in-out infinite;
+}
+
+.manager-home-walkin-promo-icon-wrap {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.8125rem;
+  color: #0f766e;
+  background: color-mix(in srgb, #ccfbf1 75%, white);
+  border: 1px solid color-mix(in srgb, #99f6e4 65%, #5eead4);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 80%, transparent);
+}
+
+.manager-home-walkin-promo-copy {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 1;
+  padding-top: 0.0625rem;
+}
+
+.manager-home-walkin-promo-title {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #0f2744;
+}
+
+.manager-home-walkin-promo-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #5b7289;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.manager-home-walkin-promo-kicker {
+  position: relative;
+  z-index: 1;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  max-width: 5.75rem;
+  margin: 0;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: right;
+  color: #0d9488;
+}
+
+.manager-home-walkin-promo-tags {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.125rem;
+  min-width: 0;
+}
+
+.manager-home-walkin-promo-tags-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.manager-home-walkin-promo-tag-dot {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: #14b8a6;
+  flex-shrink: 0;
+}
+
+.manager-home-walkin-promo-tag {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #0f766e;
+  background: color-mix(in srgb, #ccfbf1 70%, white);
+  border: 1px solid color-mix(in srgb, #99f6e4 50%, transparent);
+  white-space: nowrap;
+}
+
+.manager-home-walkin-promo-quick-bill {
+  position: relative;
+  z-index: 1;
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.625rem;
+  padding: 0.45rem 0.65rem 0.45rem 0.55rem;
+  border-radius: 9999px;
+  color: #ffffff;
+  background: linear-gradient(105deg, #2dd4bf 0%, #0d9488 45%, #0f766e 100%);
+  border: 1px solid color-mix(in srgb, #5eead4 55%, #0f766e);
+  box-shadow:
+    0 0 18px color-mix(in srgb, #14b8a6 55%, transparent),
+    0 5px 14px color-mix(in srgb, #0f172a 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 35%, transparent);
+  animation: manager-home-walkin-quick-bill-pulse 2.6s ease-in-out infinite;
+}
+
+.manager-home-walkin-promo-quick-bill-icon {
+  color: #ffffff;
+  filter: drop-shadow(0 1px 1px color-mix(in srgb, #042f2e 35%, transparent));
+}
+
+.manager-home-walkin-promo-quick-bill-label {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px color-mix(in srgb, #042f2e 40%, transparent);
+}
+
+.manager-home-walkin-promo-quick-bill-chevrons {
+  font-size: 0.625rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  opacity: 0.95;
+}
+
+@keyframes manager-home-walkin-promo-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes manager-home-walkin-quick-bill-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.04);
+    filter: brightness(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manager-home-walkin-promo-glow,
+  .manager-home-walkin-promo-quick-bill {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .manager-home-walkin-promo {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .manager-home-walkin-promo-kicker {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    max-width: none;
+    text-align: left;
+  }
+
+  .manager-home-walkin-promo-tags {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .manager-home-walkin-promo-quick-bill {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    justify-self: stretch;
+    justify-content: center;
   }
 }

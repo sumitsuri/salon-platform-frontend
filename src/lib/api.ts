@@ -514,10 +514,13 @@ export const api = {
   reopenBooking: (id: string) =>
     request<Booking>(`/api/v1/bookings/${id}/reopen`, { method: "POST" }),
 
-  setPendingMembershipPlan: (id: string, planId: string | null) =>
+  setPendingMembershipPlan: (id: string, planId: string | null, soldByStaffId?: string | null) =>
     request<Booking>(`/api/v1/bookings/${id}/pending-membership`, {
       method: "POST",
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({
+        planId,
+        soldByStaffId: soldByStaffId || undefined,
+      }),
     }),
 
   setPendingPackagePlan: (id: string, planId: string | null, soldByStaffId?: string | null) =>
@@ -746,6 +749,14 @@ export const api = {
     opts?.branchIds?.forEach((id) => params.append("branchIds", id));
     const q = params.toString() ? `?${params.toString()}` : "";
     return request<StaffSalesPerformanceResponse>(`/api/v1/analytics/staff-sales${q}`);
+  },
+
+  getStaffPromoSales: (opts?: { date?: string; branchIds?: string[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.date) params.set("date", opts.date);
+    opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<StaffPromoSalesResponse>(`/api/v1/analytics/staff-promo-sales${q}`);
   },
 
   getAttendanceDashboard: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
@@ -1865,6 +1876,7 @@ export interface Booking {
   pendingMembershipPlanId?: string;
   pendingPackagePlanId?: string;
   pendingPackageSoldByStaffId?: string;
+  pendingMembershipSoldByStaffId?: string;
   billPreview?: BillPreview;
   invoiceId?: string;
   receiptQueued?: boolean;
@@ -2041,6 +2053,7 @@ export interface SellMembershipRequest {
   customerId: string;
   planId: string;
   branchId: string;
+  soldByStaffId: string;
   paymentMode: "CASH" | "UPI" | "CARD";
   paymentReference?: string;
   amount?: number;
@@ -2403,6 +2416,27 @@ export interface StaffSalesPerformanceRow {
 
 export interface StaffSalesPerformanceResponse {
   staff: StaffSalesPerformanceRow[];
+}
+
+export interface StaffPromoSalesRow {
+  staffId: string;
+  staffName: string;
+  membershipCountToday: number;
+  packageCountToday: number;
+  membershipCountTotal: number;
+  packageCountTotal: number;
+  membershipTodayEarnings: number;
+  membershipTotalEarnings: number;
+  packageTodayEarnings: number;
+  packageTotalEarnings: number;
+  todayEarnings: number;
+  totalEarnings: number;
+}
+
+export interface StaffPromoSalesResponse {
+  membershipIncentivePerSale: number;
+  packageIncentivePercent: number;
+  staff: StaffPromoSalesRow[];
 }
 
 export type GeoStatus = "IN_GEOFENCE" | "OUT_OF_GEOFENCE" | "GPS_UNAVAILABLE";

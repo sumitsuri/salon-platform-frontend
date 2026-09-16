@@ -87,6 +87,7 @@ import { WalkInReviewInvitePanel } from "./WalkInReviewInvitePanel";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
 import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
+import { PromoStaffSellerPicker } from "@/components/manager/PromoStaffSellerPicker";
 import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInCustomerPackagesPanel } from "./WalkInCustomerPackagesPanel";
 import { WalkInPendingPackageSaleBanner } from "./WalkInPendingPackageSaleBanner";
@@ -278,6 +279,7 @@ export default function WalkInPage() {
   const [addedToast, setAddedToast] = useState<string | null>(null);
   const [removedToast, setRemovedToast] = useState<string | null>(null);
   const [pendingMembershipPlanId, setPendingMembershipPlanId] = useState("");
+  const [pendingMembershipSoldByStaffId, setPendingMembershipSoldByStaffId] = useState("");
   const [pendingPackagePlanId, setPendingPackagePlanId] = useState("");
   const [pendingPackageSoldByStaffId, setPendingPackageSoldByStaffId] = useState("");
 
@@ -552,6 +554,7 @@ export default function WalkInPage() {
     if (!customerId) {
       setMembership(null);
       setPendingMembershipPlanId("");
+      setPendingMembershipSoldByStaffId("");
       return;
     }
     api
@@ -562,6 +565,11 @@ export default function WalkInPage() {
       })
       .catch(() => setMembership(null));
   }, [customerId]);
+
+  useEffect(() => {
+    if (pendingMembershipSoldByStaffId || staff.length === 0) return;
+    setPendingMembershipSoldByStaffId(staff[0].id);
+  }, [staff, pendingMembershipSoldByStaffId]);
 
   const { data: customerPackages = [] } = useQuery({
     queryKey: ["customer-packages", customerId],
@@ -601,7 +609,11 @@ export default function WalkInPage() {
     const delay = step === 3 ? 200 : 400;
     const handle = setTimeout(() => {
       void api
-        .setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null)
+        .setPendingMembershipPlan(
+          bookingId,
+          pendingMembershipPlanId || null,
+          pendingMembershipPlanId ? pendingMembershipSoldByStaffId || null : null
+        )
         .then((b) => {
           setBillPreview(b.billPreview ?? null);
           setBookingStatus(b.status);
@@ -609,7 +621,7 @@ export default function WalkInPage() {
         .catch((e) => setError(e instanceof Error ? e.message : tCommon("failed")));
     }, delay);
     return () => clearTimeout(handle);
-  }, [pendingMembershipPlanId, bookingId, billingLocked, screen, step, tCommon]);
+  }, [pendingMembershipPlanId, pendingMembershipSoldByStaffId, bookingId, billingLocked, screen, step, tCommon]);
 
   useEffect(() => {
     if (!bookingId || billingLocked || screen !== "flow") return;
@@ -694,6 +706,7 @@ export default function WalkInPage() {
     );
     setPaidInvoiceId(b.invoiceId && b.status === "COMPLETED" ? b.invoiceId : "");
     setPendingMembershipPlanId(b.pendingMembershipPlanId || "");
+    setPendingMembershipSoldByStaffId(b.pendingMembershipSoldByStaffId || "");
     setPendingPackagePlanId(b.pendingPackagePlanId || "");
     setPendingPackageSoldByStaffId(b.pendingPackageSoldByStaffId || "");
     setPaymentSuccess("");
@@ -1122,6 +1135,7 @@ export default function WalkInPage() {
       clearWalkInDraft(branchId);
       void queryClient.invalidateQueries({ queryKey: ["open-visits", branchId] });
       void queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      void queryClient.invalidateQueries({ queryKey: ["staff-promo-sales"] });
       if (customerId) {
         void queryClient.invalidateQueries({ queryKey: ["customer-packages", customerId] });
       }
@@ -1999,7 +2013,11 @@ export default function WalkInPage() {
       if (workingCart.length > 0) {
         await api.updateBookingLines(bookingId, toLinePayload(workingCart));
       }
-      await api.setPendingMembershipPlan(bookingId, pendingMembershipPlanId || null);
+      await api.setPendingMembershipPlan(
+        bookingId,
+        pendingMembershipPlanId || null,
+        pendingMembershipPlanId ? pendingMembershipSoldByStaffId || null : null
+      );
       const synced = await api.setPendingPackagePlan(
         bookingId,
         pendingPackagePlanId || null,
@@ -3236,13 +3254,31 @@ export default function WalkInPage() {
                   {t("membershipBillRowLabel")}
                 </span>
               </div>
+              {staff.length > 0 ? (
+                <div className="mb-3 rounded-lg border border-emerald-200/70 bg-emerald-50/35 px-2.5 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                  <PromoStaffSellerPicker
+                    staff={staff}
+                    value={pendingMembershipSoldByStaffId}
+                    onChange={setPendingMembershipSoldByStaffId}
+                    disabled={!bookingId || saving}
+                    kind="membership"
+                  />
+                </div>
+              ) : null}
               <WalkInMembershipPicker
                 value={pendingMembershipPlanId}
                 onChange={(id) => {
                   setPendingMembershipPlanId(id);
-                  if (id) setPendingPackagePlanId("");
+                  if (id) {
+                    setPendingPackagePlanId("");
+                    if (!pendingMembershipSoldByStaffId && staff.length > 0) {
+                      setPendingMembershipSoldByStaffId(staff[0].id);
+                    }
+                  } else {
+                    setPendingMembershipSoldByStaffId("");
+                  }
                 }}
-                disabled={!bookingId || saving}
+                disabled={!bookingId || saving || (staff.length > 0 && !pendingMembershipSoldByStaffId)}
               />
             </div>
           )}

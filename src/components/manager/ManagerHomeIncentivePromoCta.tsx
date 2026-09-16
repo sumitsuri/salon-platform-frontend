@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  BarChart3,
+  CreditCard,
+  Crown,
+  Gift,
+  Sparkles,
+  TrendingUp,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ManagerHomePromoSlot } from "./ManagerHomePromoCta";
 
@@ -12,16 +21,55 @@ export type ManagerHomeIncentivePromoProps = {
   slot: Exclude<ManagerHomePromoSlot, "walkin">;
   testId?: string;
   className?: string;
-  /** Primary motivator — e.g. “Up to ₹150 incentive credit” */
-  incentiveChip: string;
-  /** Plan spotlight — price + guest value */
+  /** @deprecated Use incentiveActionLead + incentiveActionAmount */
+  incentiveChip?: string;
+  incentiveActionLead?: string;
+  incentiveActionAmount?: string;
   spotlight: string;
-  /** Secondary nudge — target, streak, footnote */
+  footnote?: string;
   nudge?: string;
-  /** Optional progress 0–100 for “push toward target” micro-bar */
   momentumPercent?: number;
   momentumLabel?: string;
+  motion?: "claim" | "earn";
 };
+
+function StaticRewardPill({
+  lead,
+  amount,
+  motion,
+}: {
+  lead: string;
+  amount: string;
+  motion: "claim" | "earn";
+}) {
+  const RewardIcon = motion === "claim" ? Gift : Zap;
+  return (
+    <div
+      className={cn(
+        "manager-home-reward-pill",
+        motion === "claim" && "manager-home-reward-pill--claim",
+        motion === "earn" && "manager-home-reward-pill--earn"
+      )}
+    >
+      {motion === "claim" ? (
+        <span className="manager-home-reward-pill-icon-box manager-home-reward-pill-icon-box--claim" aria-hidden>
+          <RewardIcon className="h-3.5 w-3.5 text-white" strokeWidth={2.25} />
+        </span>
+      ) : (
+        <span className="manager-home-reward-pill-icon-circle manager-home-reward-pill-icon-circle--earn" aria-hidden>
+          <RewardIcon className="h-3.5 w-3.5 text-sky-950" strokeWidth={2.5} />
+        </span>
+      )}
+      <span className="manager-home-reward-pill-copy">
+        <span className="manager-home-reward-pill-lead">{lead}</span>
+        <span className="manager-home-reward-pill-amount">{amount}</span>
+      </span>
+      <span className="manager-home-reward-pill-chevrons" aria-hidden>
+        &gt;&gt;
+      </span>
+    </div>
+  );
+}
 
 export function ManagerHomeIncentivePromoCta({
   href,
@@ -31,40 +79,69 @@ export function ManagerHomeIncentivePromoCta({
   testId,
   className,
   incentiveChip,
+  incentiveActionLead,
+  incentiveActionAmount,
   spotlight,
+  footnote,
   nudge,
   momentumPercent,
   momentumLabel,
+  motion,
 }: ManagerHomeIncentivePromoProps) {
   const showMomentum =
     momentumPercent != null && Number.isFinite(momentumPercent) && momentumLabel && momentumPercent > 0;
+  const animated = motion === "claim" || motion === "earn";
+  const DisplayIcon = slot === "membership" && animated ? CreditCard : Icon;
+  const showSplitPill =
+    animated && motion && incentiveActionLead != null && incentiveActionAmount != null;
 
-  return (
+  const card = (
     <Link
       href={href}
       data-testid={testId}
       data-manager-cta-slot={slot}
+      data-earn-motion={motion}
       className={cn(
         "manager-home-incentive-cta group touch-manipulation",
         `manager-home-incentive-cta--${slot}`,
+        animated && "manager-home-incentive-cta--animated-card manager-home-incentive-cta--boost",
         className
       )}
     >
-      <span className="manager-home-incentive-cta-accent" aria-hidden />
+      {animated ? (
+        <>
+          <span className="manager-home-incentive-cta-glass-shine" aria-hidden />
+          <span className="manager-home-incentive-cta-glow-border" aria-hidden />
+          <span className="manager-home-incentive-cta-sparkle manager-home-incentive-cta-sparkle--tl" aria-hidden />
+          <span className="manager-home-incentive-cta-sparkle manager-home-incentive-cta-sparkle--tr" aria-hidden />
+          <span className="manager-home-incentive-cta-sparkle manager-home-incentive-cta-sparkle--bl" aria-hidden />
+          <span className="manager-home-incentive-cta-sparkle manager-home-incentive-cta-sparkle--br" aria-hidden />
+        </>
+      ) : null}
+
+      {slot === "membership" && animated ? (
+        <>
+          <span className="manager-home-incentive-cta-crown-badge" aria-hidden>
+            <Crown className="h-3.5 w-3.5 text-amber-950" strokeWidth={2.25} />
+          </span>
+          <BarChart3 className="manager-home-incentive-cta-deco manager-home-incentive-cta-deco--chart" aria-hidden />
+        </>
+      ) : null}
+      {slot === "package" && animated ? (
+        <>
+          <TrendingUp className="manager-home-incentive-cta-deco manager-home-incentive-cta-deco--package-arrow" aria-hidden />
+          <Sparkles className="manager-home-incentive-cta-deco manager-home-incentive-cta-deco--package-sparkle" aria-hidden />
+        </>
+      ) : null}
 
       <span className="manager-home-incentive-cta-icon-wrap" aria-hidden>
-        <Icon className="h-5 w-5" strokeWidth={2.25} />
+        <DisplayIcon className="h-6 w-6" strokeWidth={2} />
       </span>
 
-      <div className="min-w-0 flex-1 text-left">
-        <div className="flex items-start gap-2 min-w-0">
-          <p className="manager-home-incentive-cta-title min-w-0 flex-1 truncate">{title}</p>
-          <span className="manager-home-incentive-cta-chip shrink-0">
-            <Sparkles className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-            <span className="max-w-[9.5rem] truncate sm:max-w-[11rem]">{incentiveChip}</span>
-          </span>
-        </div>
+      <div className="manager-home-incentive-cta-body min-w-0 flex-1 text-left">
+        <p className="manager-home-incentive-cta-title">{title}</p>
         <p className="manager-home-incentive-cta-spotlight">{spotlight}</p>
+        {footnote ? <p className="manager-home-incentive-cta-footnote">{footnote}</p> : null}
         {nudge ? <p className="manager-home-incentive-cta-nudge">{nudge}</p> : null}
         {showMomentum ? (
           <div className="manager-home-incentive-cta-momentum" aria-hidden>
@@ -79,7 +156,27 @@ export function ManagerHomeIncentivePromoCta({
         ) : null}
       </div>
 
-      <ChevronRight className="manager-home-incentive-cta-chevron h-5 w-5 shrink-0" aria-hidden />
+      {showSplitPill ? (
+        <div className="manager-home-reward-pill-anchor">
+          <StaticRewardPill
+            lead={incentiveActionLead}
+            amount={incentiveActionAmount}
+            motion={motion}
+          />
+        </div>
+      ) : incentiveChip ? (
+        <span className="manager-home-incentive-cta-chip manager-home-incentive-cta-chip--static">{incentiveChip}</span>
+      ) : null}
     </Link>
+  );
+
+  if (!animated) return card;
+
+  return (
+    <div className="manager-home-earn-now-card-shell">
+      <span className="manager-home-incentive-cta-pulse-arc manager-home-incentive-cta-pulse-arc--left" aria-hidden />
+      <span className="manager-home-incentive-cta-pulse-arc manager-home-incentive-cta-pulse-arc--right" aria-hidden />
+      {card}
+    </div>
   );
 }

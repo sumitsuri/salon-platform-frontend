@@ -26,6 +26,7 @@ import { staffSalesRowsFromAnalytics } from "@/lib/staff-sales-rows";
 import { InsightsTeaser } from "@/components/InsightsTeaser";
 import { ServiceContributionTeaser } from "@/components/ServiceContributionTeaser";
 import { ServiceSalesTeaser } from "@/components/ServiceSalesTeaser";
+import { StaffPromoSalesTeaser } from "@/components/StaffPromoSalesTeaser";
 import { ManagerHomeFloorActions } from "@/components/manager/ManagerHomeFloorActions";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
@@ -221,6 +222,16 @@ export default function ManagerHomePage() {
     enabled: !!branchId,
   });
 
+  const { data: staffPromoSales, isLoading: staffPromoLoading } = useQuery({
+    queryKey: ["staff-promo-sales", branchId, today],
+    queryFn: () =>
+      api.getStaffPromoSales({
+        date: today,
+        branchIds: branchFilter,
+      }),
+    enabled: !!branchId,
+  });
+
   const todayBookings = todayData?.content ?? [];
   const completed = todayBookings.filter((b) => b.status === "COMPLETED");
   const inProgress = todayBookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
@@ -372,6 +383,8 @@ export default function ManagerHomePage() {
             staffHref={() => "/manager/attendance"}
           />
         </DashboardWidgetCard>
+
+        <StaffPromoSalesTeaser data={staffPromoSales} loading={staffPromoLoading} />
 
         <ServiceSalesTeaser
           data={todayServiceContribution}

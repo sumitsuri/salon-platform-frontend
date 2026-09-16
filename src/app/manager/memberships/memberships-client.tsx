@@ -194,6 +194,7 @@ export default function ManagerMembershipsPage() {
     setError("");
     setSellOpen(false);
     void queryClient.invalidateQueries({ queryKey: ["active-memberships"] });
+    void queryClient.invalidateQueries({ queryKey: ["staff-promo-sales"] });
   }
 
   const sellButton = (

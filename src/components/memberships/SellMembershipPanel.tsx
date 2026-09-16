@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CreditCard, Sparkles } from "lucide-react";
 import { api, MembershipPlan, MembershipSubscription } from "@/lib/api";
-import { isValidIndianMobile, normalizeIndianMobile } from "@/lib/phone";
 import { bumpLookupGeneration, isLookupGenerationStale } from "@/lib/customer-lookup-session";
+import { isValidIndianMobile, normalizeIndianMobile } from "@/lib/phone";
 import { cn, formatCurrency } from "@/lib/utils";
+import { PromoStaffSellerPicker } from "@/components/manager/PromoStaffSellerPicker";
 import { SegmentedControl, inputClass, btnPrimary, btnSecondary, Callout } from "@/components/ui";
 
 type PaymentMode = "CASH" | "UPI" | "CARD";
+type LookupStatus = "idle" | "loading" | "found" | "not_found";
 
 export type SellMembershipPanelProps = {
   branchId: string;
@@ -49,14 +51,16 @@ export function SellMembershipPanel({
   const [phone, setPhone] = useState(phoneProp);
   const [customerId, setCustomerId] = useState(customerIdProp);
   const [customerName, setCustomerName] = useState(customerNameProp);
+  const [newGuestName, setNewGuestName] = useState("");
   const [planId, setPlanId] = useState("");
+  const [soldByStaffId, setSoldByStaffId] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("CASH");
   const [reference, setReference] = useState("");
-  const [lookupState, setLookupState] = useState<"idle" | "loading" | "done">(
-    customerIdProp ? "done" : "idle"
-  );
+  const [lookupStatus, setLookupStatus] = useState<LookupStatus>(customerIdProp ? "found" : "idle");
   const lookupPhoneRef = useRef(customerIdProp ? normalizeIndianMobile(phoneProp) || phoneProp : "");
   const phoneLookupGenerationRef = useRef(0);
+  const lookupStatusRef = useRef<LookupStatus>(lookupStatus);
+  lookupStatusRef.current = lookupStatus;
 
   useEffect(() => {
     setPhone(phoneProp);
@@ -67,9 +71,22 @@ export function SellMembershipPanel({
       setCustomerId(customerIdProp);
       setCustomerName(customerNameProp);
       lookupPhoneRef.current = normalizeIndianMobile(phoneProp) || phoneProp;
-      setLookupState("done");
+      setLookupStatus("found");
     }
   }, [customerIdProp, customerNameProp, phoneProp]);
+
+  const { data: branchStaff = [] } = useQuery({
+    queryKey: ["branch-staff-sell-membership", branchId],
+    queryFn: () => api.getStaff(branchId),
+    enabled: Boolean(branchId),
+  });
+
+  const activeStaff = branchStaff;
+
+  useEffect(() => {
+    if (soldByStaffId || activeStaff.length === 0) return;
+    setSoldByStaffId(activeStaff[0].id);
+  }, [activeStaff, soldByStaffId]);
 
   const { data: plans = [] } = useQuery({
     queryKey: ["active-membership-plans"],
@@ -87,52 +104,79 @@ export function SellMembershipPanel({
   const selectedPlan = useMemo(() => plans.find((p) => p.id === planId), [plans, planId]);
   const needsReference = paymentMode !== "CASH";
 
-  useEffect(() => {
-    if (embed || customerIdProp) return;
+  const runPhoneLookup = useCallback(
+    (rawPhone: string) => {
+      if (embed || customerIdProp) return;
 
-    const normalized = normalizeIndianMobile(phone);
-    if (!normalized || !isValidIndianMobile(phone)) {
-      setLookupState("idle");
-      return;
-    }
-    if (lookupPhoneRef.current === normalized && lookupState === "done" && customerId) {
-      return;
-    }
-
-    lookupPhoneRef.current = normalized;
-    const generationAtStart = phoneLookupGenerationRef.current;
-    setLookupState("loading");
-    onError?.("");
-
-    let cancelled = false;
-    void api
-      .findCustomerByPhone(normalized, branchId)
-      .then((c) => {
-        if (cancelled || isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
-        if (lookupPhoneRef.current !== normalized) return;
-        setCustomerId(c.id);
-        setCustomerName(c.name);
-        setLookupState("done");
-        onCustomerResolved?.({ id: c.id, name: c.name, phone: normalized });
-      })
-      .catch(() => {
-        if (cancelled || isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
-        if (lookupPhoneRef.current !== normalized) return;
+      const normalized = normalizeIndianMobile(rawPhone);
+      if (!normalized || !isValidIndianMobile(rawPhone)) {
+        setLookupStatus("idle");
         setCustomerId("");
         setCustomerName("");
-        setLookupState("done");
-        onError?.(t("customerNotFound"));
-      });
+        return;
+      }
+      if (lookupPhoneRef.current === normalized && lookupStatusRef.current !== "idle" && lookupStatusRef.current !== "loading") {
+        return;
+      }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [phone, embed, customerIdProp, customerId, lookupState, onCustomerResolved, onError, t]);
+      lookupPhoneRef.current = normalized;
+      const generationAtStart = phoneLookupGenerationRef.current;
+      setLookupStatus("loading");
+      onError?.("");
+
+      void api
+        .findCustomerByPhone(normalized, branchId)
+        .then((c) => {
+          if (isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
+          if (lookupPhoneRef.current !== normalized) return;
+          setCustomerId(c.id);
+          setCustomerName(c.name);
+          setNewGuestName(c.name);
+          setLookupStatus("found");
+          onCustomerResolved?.({ id: c.id, name: c.name, phone: normalized });
+        })
+        .catch(() => {
+          if (isLookupGenerationStale(phoneLookupGenerationRef, generationAtStart)) return;
+          if (lookupPhoneRef.current !== normalized) return;
+          setCustomerId("");
+          setCustomerName("");
+          setLookupStatus("not_found");
+        });
+    },
+    [embed, customerIdProp, branchId, onCustomerResolved, onError]
+  );
+
+  useEffect(() => {
+    runPhoneLookup(phone);
+  }, [phone, runPhoneLookup]);
+
+  const registerGuest = useMutation({
+    mutationFn: async () => {
+      const normalized = normalizeIndianMobile(phone);
+      if (!normalized || !newGuestName.trim()) {
+        throw new Error(tWalkIn("nameRequired"));
+      }
+      return api.createCustomer({
+        name: newGuestName.trim(),
+        phone: normalized,
+        branchId,
+      });
+    },
+    onSuccess: (c) => {
+      const normalized = normalizeIndianMobile(phone) || phone;
+      setCustomerId(c.id);
+      setCustomerName(c.name);
+      setLookupStatus("found");
+      onCustomerResolved?.({ id: c.id, name: c.name, phone: normalized });
+      onError?.("");
+    },
+    onError: (e: Error) => onError?.(e.message),
+  });
 
   const sell = useMutation({
     mutationFn: () => {
-      if (!customerId || !planId || !branchId) {
-        throw new Error(t("customerNotFound"));
+      if (!customerId || !planId || !branchId || !soldByStaffId) {
+        throw new Error(t("assignSeller"));
       }
       if (needsReference && !reference.trim()) {
         throw new Error(t("txnReference"));
@@ -141,6 +185,7 @@ export function SellMembershipPanel({
         customerId,
         planId,
         branchId,
+        soldByStaffId,
         paymentMode,
         paymentReference: reference.trim() || undefined,
       });
@@ -153,7 +198,7 @@ export function SellMembershipPanel({
   });
 
   const canSell =
-    Boolean(customerId && planId && branchId) &&
+    Boolean(customerId && planId && branchId && soldByStaffId) &&
     !isAlreadyMember &&
     (!needsReference || reference.trim().length > 0) &&
     !sell.isPending;
@@ -183,6 +228,16 @@ export function SellMembershipPanel({
       ) : null}
 
       {!embed && (
+        <div
+          className="rounded-xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/95 to-[var(--brand-light)]/40 px-3 py-2.5 dark:border-emerald-900/50 dark:from-emerald-950/40 dark:to-indigo-950/20 manager-home-incentive-cta--membership animate-pulse-subtle"
+          role="note"
+        >
+          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{t("incentiveBannerTitle")}</p>
+          <p className="text-xs text-emerald-800/90 dark:text-emerald-200/90 mt-0.5">{t("incentiveBannerBody")}</p>
+        </div>
+      )}
+
+      {!embed && (
         <div className="space-y-2">
           <input
             placeholder={t("phonePlaceholder")}
@@ -193,21 +248,44 @@ export function SellMembershipPanel({
               setPhone(next);
               setCustomerId("");
               setCustomerName("");
+              setNewGuestName("");
               setPlanId("");
               lookupPhoneRef.current = "";
-              setLookupState("idle");
+              setLookupStatus("idle");
               onError?.("");
             }}
             className={inputClass}
             inputMode="tel"
             autoComplete="tel"
           />
-          {lookupState === "loading" && (
+          {lookupStatus === "loading" && (
             <p className="text-xs text-[var(--text-tertiary)]">{tCommon("loading")}</p>
           )}
-          {phone.length > 0 && !phoneValid && lookupState !== "loading" && (
+          {phone.length > 0 && !phoneValid && lookupStatus !== "loading" && (
             <p className="text-xs text-amber-700 dark:text-amber-400">{tWalkIn("phoneInvalid")}</p>
           )}
+        </div>
+      )}
+
+      {!embed && lookupStatus === "not_found" && phoneValid && (
+        <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("newGuestTitle")}</p>
+          <p className="text-xs text-[var(--text-secondary)]">{t("newGuestHint")}</p>
+          <input
+            placeholder={tWalkIn("namePlaceholder")}
+            value={newGuestName}
+            onChange={(e) => setNewGuestName(e.target.value)}
+            className={inputClass}
+            autoComplete="name"
+          />
+          <button
+            type="button"
+            disabled={!newGuestName.trim() || registerGuest.isPending}
+            onClick={() => registerGuest.mutate()}
+            className={cn(btnPrimary, "w-full min-h-11")}
+          >
+            {registerGuest.isPending ? tCommon("processing") : t("registerAndContinue")}
+          </button>
         </div>
       )}
 
@@ -224,8 +302,16 @@ export function SellMembershipPanel({
         </div>
       )}
 
-      {!embed && !customerReady && phoneValid && lookupState === "done" && (
-        <p className="text-sm text-[var(--text-secondary)]">{t("registerOnWalkIn")}</p>
+      {customerReady && !membershipLoading && !isAlreadyMember && activeStaff.length > 0 && (
+        <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/25">
+          <PromoStaffSellerPicker
+            staff={activeStaff}
+            value={soldByStaffId}
+            onChange={setSoldByStaffId}
+            disabled={sell.isPending}
+            kind="membership"
+          />
+        </div>
       )}
 
       {customerReady && membershipLoading && (

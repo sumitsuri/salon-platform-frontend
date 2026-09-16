@@ -2,6 +2,19 @@ import type { MembershipPlan, ServicePackagePlan } from "@/lib/api";
 
 export const MANAGER_HOME_INCENTIVE_RATE_PERCENT = 5;
 
+/** Flat floor incentive credited to staff per membership sold (INR). */
+export const STAFF_MEMBERSHIP_SALE_INCENTIVE_INR = 50;
+/** Percent of package sale price credited to staff (e.g. 3%). */
+export const STAFF_PACKAGE_SALE_INCENTIVE_PERCENT = 3;
+/** Marketing / cap for “earn up to” on high-value packages (INR). */
+export const STAFF_PACKAGE_SALE_INCENTIVE_MAX_INR = 500;
+
+export function packageSaleIncentiveFromAmount(saleAmount: number): number {
+  if (!Number.isFinite(saleAmount) || saleAmount <= 0) return 0;
+  const raw = Math.round((saleAmount * STAFF_PACKAGE_SALE_INCENTIVE_PERCENT) / 100);
+  return Math.min(raw, STAFF_PACKAGE_SALE_INCENTIVE_MAX_INR);
+}
+
 export type SellSpotlightMembership = {
   plan: MembershipPlan;
   saleAmount: number;
@@ -32,7 +45,7 @@ export function pickMembershipSpotlight(plans: MembershipPlan[]): SellSpotlightM
   return {
     plan,
     saleAmount: plan.feeAmount,
-    illustrativeIncentive: illustrativeIncentiveFromSale(plan.feeAmount),
+    illustrativeIncentive: STAFF_MEMBERSHIP_SALE_INCENTIVE_INR,
   };
 }
 
@@ -52,7 +65,7 @@ export function pickPackageSpotlight(plans: ServicePackagePlan[]): SellSpotlight
     plan,
     saleAmount: plan.packagePrice,
     guestSavings: guestSavings != null && guestSavings > 0 ? guestSavings : null,
-    illustrativeIncentive: illustrativeIncentiveFromSale(plan.packagePrice),
+    illustrativeIncentive: packageSaleIncentiveFromAmount(plan.packagePrice),
   };
 }
 

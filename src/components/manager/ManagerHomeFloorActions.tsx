@@ -3,18 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { CreditCard, Gift, UserPlus } from "lucide-react";
+import { Gift } from "lucide-react";
 import { selectClass } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { todayIsoDate } from "@/lib/date-range";
-import { formatMoney } from "@/lib/utils";
+import { formatCurrency, formatMoney } from "@/lib/utils";
 import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import {
   countTodayPromoSales,
-  MANAGER_HOME_INCENTIVE_RATE_PERCENT,
-  pickMembershipSpotlight,
   pickPackageSpotlight,
+  STAFF_MEMBERSHIP_SALE_INCENTIVE_INR,
+  STAFF_PACKAGE_SALE_INCENTIVE_MAX_INR,
+  STAFF_PACKAGE_SALE_INCENTIVE_PERCENT,
 } from "@/lib/manager-home-sell-incentives";
 import {
   DEFAULT_MANAGER_HOME_WALKIN_MOTION,
@@ -26,7 +27,7 @@ import {
   type ManagerHomeWalkInMotionId,
 } from "@/lib/manager-home-walkin-motion";
 import { ManagerHomeIncentivePromoCta } from "./ManagerHomeIncentivePromoCta";
-import { ManagerHomePromoCta } from "./ManagerHomePromoCta";
+import { ManagerHomeWalkInPromoCta } from "./ManagerHomeWalkInPromoCta";
 
 export function ManagerHomeFloorActions() {
   const t = useTranslations("manager.home");
@@ -65,12 +66,6 @@ export function ManagerHomeFloorActions() {
     }
   }
 
-  const { data: membershipPlans = [] } = useQuery({
-    queryKey: ["manager-home-membership-plans"],
-    queryFn: () => api.getActiveMembershipPlans(),
-    staleTime: 60_000,
-  });
-
   const { data: packagePlans = [] } = useQuery({
     queryKey: ["manager-home-package-plans", branchId],
     queryFn: () => api.getActivePackagePlans(branchId),
@@ -98,61 +93,37 @@ export function ManagerHomeFloorActions() {
   );
   const todayPromo = useMemo(() => countTodayPromoSales(todayCompleted), [todayCompleted]);
 
-  const membershipSpotlight = useMemo(() => pickMembershipSpotlight(membershipPlans), [membershipPlans]);
   const packageSpotlight = useMemo(() => pickPackageSpotlight(packagePlans), [packagePlans]);
 
   const activeMotion = MANAGER_HOME_WALKIN_MOTIONS.find((x) => x.id === walkInMotion);
 
-  const membershipIncentiveChip = membershipSpotlight?.illustrativeIncentive
-    ? t("incentiveChipCredit", {
-        amount: formatMoney(membershipSpotlight.illustrativeIncentive, localeKit),
-      })
-    : t("incentiveChipBoost");
+  const membershipActionLead = t("incentiveChipClaimYourLead");
+  const membershipActionAmount = formatCurrency(STAFF_MEMBERSHIP_SALE_INCENTIVE_INR, localeKit);
 
-  const membershipSpotlightLine = membershipSpotlight
-    ? t("incentiveMembershipSpotlight", {
-        plan: membershipSpotlight.plan.name,
-        price: formatMoney(membershipSpotlight.saleAmount, localeKit),
-        percent: Math.round(membershipSpotlight.plan.benefitPercent),
-      })
-    : t("actionSellMembershipDesc");
+  const membershipSpotlightLine = t("incentiveMembershipStaffDesc");
 
-  const membershipNudge = membershipSpotlight
-    ? todayPromo.memberships > 0
+  const membershipFootnote = t("incentiveMembershipNudge", {
+    amount: formatMoney(STAFF_MEMBERSHIP_SALE_INCENTIVE_INR, localeKit),
+  });
+
+  const membershipNudge =
+    todayPromo.memberships > 0
       ? t("incentiveTodayMembership", { count: todayPromo.memberships })
-      : t("incentiveMembershipNudge", {
-          amount: formatMoney(membershipSpotlight.saleAmount, localeKit),
-          rate: MANAGER_HOME_INCENTIVE_RATE_PERCENT,
-        })
-    : t("incentiveFootnoteGeneric");
+      : undefined;
 
-  const packageIncentiveChip = packageSpotlight?.illustrativeIncentive
-    ? t("incentiveChipGrab", {
-        amount: formatMoney(packageSpotlight.illustrativeIncentive, localeKit),
-      })
-    : t("incentiveChipBoost");
+  const packageActionLead = t("incentiveChipEarnUptoLead");
+  const packageActionAmount = formatCurrency(STAFF_PACKAGE_SALE_INCENTIVE_MAX_INR, localeKit);
 
-  const packageSpotlightLine = packageSpotlight
-    ? packageSpotlight.guestSavings != null && packageSpotlight.guestSavings > 0
-      ? t("incentivePackageSpotlightSave", {
-          plan: packageSpotlight.plan.name,
-          price: formatMoney(packageSpotlight.saleAmount, localeKit),
-          save: formatMoney(packageSpotlight.guestSavings, localeKit),
-        })
-      : t("incentivePackageSpotlight", {
-          plan: packageSpotlight.plan.name,
-          price: formatMoney(packageSpotlight.saleAmount, localeKit),
-        })
-    : tPkg("upsellSubtitleHome");
+  const packageSpotlightLine = t("incentivePackageStaffDesc", {
+    percent: STAFF_PACKAGE_SALE_INCENTIVE_PERCENT,
+    max: formatMoney(STAFF_PACKAGE_SALE_INCENTIVE_MAX_INR, localeKit),
+  });
 
   const packageNudge = packageSpotlight
     ? todayPromo.packages > 0
       ? t("incentiveTodayPackage", { count: todayPromo.packages })
-      : t("incentivePackageNudge", {
-          amount: formatMoney(packageSpotlight.saleAmount, localeKit),
-          rate: MANAGER_HOME_INCENTIVE_RATE_PERCENT,
-        })
-    : t("incentiveFootnoteGeneric");
+      : undefined
+    : undefined;
 
   return (
     <div
@@ -186,41 +157,56 @@ export function ManagerHomeFloorActions() {
         </div>
       </details>
 
-      <ManagerHomePromoCta
-        slot="walkin"
-        href="/manager/walk-in?new=1"
-        testId="manager-primary-walk-in-cta"
-        title={t("newWalkIn")}
-        subtitle={t("primaryWalkInSubtitle")}
-        icon={UserPlus}
-      />
+      <ManagerHomeWalkInPromoCta />
 
-      <section aria-labelledby="manager-quick-actions" className="min-w-0 space-y-2">
-        <div>
-          <h2 id="manager-quick-actions" className="section-label">
-            {t("quickActions")}
+      <section aria-labelledby="manager-earn-now" className="min-w-0 space-y-2.5 manager-home-earn-now-section">
+        <div className="manager-home-earn-now-header">
+          <h2 id="manager-earn-now" className="manager-home-earn-now-title">
+            {t("earnNow")}
           </h2>
-          <p className="mt-0.5 text-[11px] leading-snug text-[var(--text-tertiary)]">{t("quickActionsIncentiveHint")}</p>
+          <p className="manager-home-earn-now-tagline">
+            <span className="manager-home-earn-now-tagline-text">{t("earnNowTagline")}</span>
+            <svg className="manager-home-earn-now-tagline-arrow" viewBox="0 0 56 28" fill="none" aria-hidden>
+              <path
+                d="M2 20 C 12 8, 26 6, 52 12"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+              />
+              <path
+                d="M46 8 L54 12 L48 20"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </p>
         </div>
-        <div className="grid grid-cols-1 gap-2.5">
+        <div className="grid grid-cols-1 gap-3.5 manager-home-earn-now-pulse">
           <ManagerHomeIncentivePromoCta
             slot="membership"
             href="/manager/memberships?sell=1"
             title={t("actionSellMembership")}
-            incentiveChip={membershipIncentiveChip}
+            incentiveActionLead={membershipActionLead}
+            incentiveActionAmount={membershipActionAmount}
             spotlight={membershipSpotlightLine}
+            footnote={membershipFootnote}
             nudge={membershipNudge}
-            icon={CreditCard}
+            icon={Gift}
+            motion="claim"
           />
           <ManagerHomeIncentivePromoCta
             slot="package"
             href="/manager/packages"
             testId="manager-package-upsell-cta"
             title={tPkg("upsellTitle")}
-            incentiveChip={packageIncentiveChip}
+            incentiveActionLead={packageActionLead}
+            incentiveActionAmount={packageActionAmount}
             spotlight={packageSpotlightLine}
             nudge={packageNudge}
             icon={Gift}
+            motion="earn"
           />
         </div>
       </section>
