@@ -343,23 +343,24 @@
       "walkInMotionSelect": "Perimeter arc preset",
       "actionAddInventory": "Add Inventory",
       "actionAddInventoryDesc": "Log restock, usage, or retail sale",
-      "actionExpenditure": "Expenditure",
-      "actionExpenditureDesc": "Record rent, utilities, or other branch costs",
+      "actionExpenditure": "Daily expense",
+      "actionExpenditureDesc": "Log petty cash, utilities, or other day-to-day branch costs",
       "recentVisits": "Today's queue",
       "recentVisitsHint": "Open visits first, then completed — tap to continue billing",
       "noVisitsTitle": "No visits yet today",
       "noVisitsDesc": "Start your first walk-in to see activity here"
     },
     "expenditure": {
-      "title": "Expenditure",
+      "title": "Daily expenses",
       "subtitle": "{branch} · {month}",
       "thisMonth": "This month",
-      "thisMonthHint": "Costs recorded for your branch — newest and largest first",
-      "emptyTitle": "No expenditure this month",
-      "emptyDesc": "Log rent, salaries, or other costs to keep branch P&L accurate",
-      "descriptionPlaceholder": "Optional note (e.g. shop rent)",
+      "thisMonthHint": "Only costs you log here — rent and payroll stay in admin finance",
+      "emptyTitle": "No daily expenses this month",
+      "emptyDesc": "Add utilities, petty cash, or other same-day branch costs",
+      "descriptionPlaceholder": "What was this for? (e.g. tea supplies, courier)",
+      "dailyExpenseDefaultTitle": "Daily expense",
       "recordedOn": "Date",
-      "recordedOnHint": "Counted in {month} P&L (today’s month)"
+      "recordedOnHint": "Counted in {month} branch ledger"
     },
     "stockHub": {
       "title": "Stock",

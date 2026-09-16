@@ -5,12 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Plus, Receipt } from "lucide-react";
-import {
-  api,
-  CreateExpenditureRequest,
-  ExpenditureCategory,
-  ExpenditureItem,
-} from "@/lib/api";
+import { api, CreateExpenditureRequest, ExpenditureItem } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
 import { currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
@@ -23,18 +18,9 @@ import {
   AlertBanner,
   SideSheet,
   inputClass,
-  selectClass,
   btnPrimary,
   DetailField,
 } from "@/components/ui";
-
-const CATEGORIES: ExpenditureCategory[] = [
-  "RENT",
-  "EMPLOYEE_SALARY",
-  "PRODUCT_COST",
-  "EMPLOYEE_ACCOMMODATION_RENT",
-  "MISCELLANEOUS",
-];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -48,7 +34,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export default function ManagerExpenditurePage() {
   const t = useTranslations("manager.expenditure");
   const tFinance = useTranslations("admin.finance");
-  const tInv = useTranslations("admin.inventory");
   const tCommon = useTranslations("common");
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
@@ -61,7 +46,6 @@ export default function ManagerExpenditurePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [error, setError] = useState("");
 
-  const [category, setCategory] = useState<ExpenditureCategory>("MISCELLANEOUS");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
 
@@ -81,7 +65,12 @@ export default function ManagerExpenditurePage() {
   });
 
   const sorted = useMemo(
-    () => [...items].sort((a, b) => b.amount - a.amount),
+    () =>
+      [...items].sort((a, b) => {
+        const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return tb - ta;
+      }),
     [items],
   );
 
@@ -98,7 +87,6 @@ export default function ManagerExpenditurePage() {
   });
 
   function openCreate() {
-    setCategory("MISCELLANEOUS");
     setAmount("");
     setDescription("");
     setError("");
@@ -111,7 +99,7 @@ export default function ManagerExpenditurePage() {
     if (!branchId || Number.isNaN(parsed)) return;
     createMutation.mutate({
       branchId,
-      category,
+      category: "MISCELLANEOUS",
       expenseMonth: currentMonthIso(),
       amount: parsed,
       description: description || undefined,
@@ -158,8 +146,8 @@ export default function ManagerExpenditurePage() {
             {sorted.map((item: ExpenditureItem) => (
               <ListRow
                 key={item.id}
-                title={tFinance(`categories.${item.category}`)}
-                subtitle={item.description || monthLabel}
+                title={item.description || t("dailyExpenseDefaultTitle")}
+                subtitle={formatDateRangeLabel(item.createdAt?.slice(0, 10) ?? todayIso, item.createdAt?.slice(0, 10) ?? todayIso)}
                 trailing={
                   <span className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
                     {formatCurrency(item.amount)}
@@ -182,15 +170,6 @@ export default function ManagerExpenditurePage() {
         }
       >
         <form id="manager-expenditure-form" onSubmit={handleSubmit} className="space-y-4">
-          <Field label={tInv("category")}>
-            <select value={category} onChange={(e) => setCategory(e.target.value as ExpenditureCategory)} className={selectClass}>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {tFinance(`categories.${c}`)}
-                </option>
-              ))}
-            </select>
-          </Field>
           <DetailField label={t("recordedOn")} value={todayLabel} />
           <p className="text-xs text-[var(--text-secondary)]">{t("recordedOnHint", { month: monthLabel })}</p>
           <Field label={tCommon("amount")}>
