@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import {
   TrendingUp,
   Users,
-  Clock,
   Fingerprint,
   ClipboardList,
   CalendarClock,
@@ -17,7 +16,6 @@ import {
   Sparkles,
   ChevronRight,
   Warehouse,
-  type LucideIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -28,24 +26,16 @@ import { ServiceContributionTeaser } from "@/components/ServiceContributionTease
 import { ServiceSalesTeaser } from "@/components/ServiceSalesTeaser";
 import { StaffPromoSalesTeaser } from "@/components/StaffPromoSalesTeaser";
 import { ManagerHomeFloorActions } from "@/components/manager/ManagerHomeFloorActions";
+import { ManagerHomeGlanceSection } from "@/components/manager/ManagerHomeGlanceSection";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
   getLast30DaysRange,
   todayIsoDate,
-  formatDateRangeLabel,
   type ProductDateRange,
 } from "@/lib/date-range";
 import { Card } from "@/components/ui";
 import { DashboardEmployeeSales, DashboardWidgetCard } from "@/components/enterprise-ui";
-
-function useGreeting() {
-  const t = useTranslations("manager.home");
-  const h = new Date().getHours();
-  if (h < 12) return t("goodMorning");
-  if (h < 17) return t("goodAfternoon");
-  return t("goodEvening");
-}
 
 function managerDateRange(): ProductDateRange {
   return { preset: "last_30_days", ...getLast30DaysRange() };
@@ -90,70 +80,6 @@ function PeriodMetricCell({
   );
 }
 
-function ManagerTodayMetric({
-  icon: Icon,
-  label,
-  value,
-  accent,
-  loading,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string | number;
-  accent: "emerald" | "brand" | "amber";
-  loading?: boolean;
-}) {
-  const styles = {
-    emerald: {
-      panel: "bg-emerald-50/80 dark:bg-emerald-950/35",
-      top: "border-emerald-500",
-      icon: "bg-emerald-600 text-white",
-      label: "text-emerald-900/80 dark:text-emerald-300",
-      value: "text-emerald-950 dark:text-emerald-50",
-    },
-    brand: {
-      panel: "bg-[var(--brand-light)]/50 dark:bg-[color-mix(in_srgb,var(--brand)_14%,transparent)]",
-      top: "border-[var(--brand)]",
-      icon: "bg-[var(--brand)] text-[var(--brand-on-brand)]",
-      label: "text-[var(--brand-text)]",
-      value: "text-[var(--text-primary)]",
-    },
-    amber: {
-      panel: "bg-amber-50/90 dark:bg-amber-950/35",
-      top: "border-amber-500",
-      icon: "bg-amber-600 text-white",
-      label: "text-amber-950/80 dark:text-amber-300",
-      value: "text-amber-950 dark:text-amber-50",
-    },
-  } as const;
-  const s = styles[accent];
-
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col items-center justify-center border-t-[3px] px-1 py-2 text-center sm:px-2 sm:py-2.5",
-        s.panel,
-        s.top,
-      )}
-    >
-      <div className={cn("mb-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md shadow-sm", s.icon)}>
-        <Icon className="h-3 w-3" aria-hidden />
-      </div>
-      <p
-        className={cn(
-          "w-full truncate text-sm font-bold tabular-nums leading-none tracking-tight sm:text-base",
-          s.value,
-          loading && "animate-pulse opacity-70",
-        )}
-        title={loading ? undefined : String(value)}
-      >
-        {loading ? "…" : value}
-      </p>
-      <p className={cn("mt-1 w-full truncate text-[10px] font-semibold leading-none heading-case", s.label)}>{label}</p>
-    </div>
-  );
-}
-
 function QuickNavChip({
   href,
   icon: Icon,
@@ -178,11 +104,9 @@ export default function ManagerHomePage() {
   const t = useTranslations("manager.home");
   const tNav = useTranslations("manager.nav");
   const tDash = useTranslations("admin.dashboard");
-  const greeting = useGreeting();
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
   const today = todayIsoDate();
-  const todayLabel = formatDateRangeLabel(today, today);
   const todayRange = useMemo(() => ({ startDate: today, endDate: today }), [today]);
 
   const [dateRange, setDateRange] = useState<ProductDateRange>(managerDateRange);
@@ -233,9 +157,7 @@ export default function ManagerHomePage() {
   });
 
   const todayBookings = todayData?.content ?? [];
-  const completed = todayBookings.filter((b) => b.status === "COMPLETED");
   const inProgress = todayBookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
-  const todayRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
 
   const {
     data: periodDashboard,
@@ -272,7 +194,6 @@ export default function ManagerHomePage() {
     enabled: !!branchId,
   });
 
-  const firstName = user?.name?.split(" ")[0] || t("manager");
   const todayEmployeeSales = useMemo(
     () => staffSalesRowsFromAnalytics(todayStaffSales?.staff ?? []),
     [todayStaffSales]
@@ -282,57 +203,8 @@ export default function ManagerHomePage() {
   const periodSummaryLoading = (periodLoading || periodFetching) && !periodDashboard;
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-3">
-      <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-md ring-1 ring-[var(--border)]">
-        <div className="hero-banner relative rounded-none px-3 py-3 shadow-none sm:px-4 sm:py-3.5">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <div className="min-w-0 flex-1">
-              <p className="hero-muted truncate text-[11px] font-medium">
-                {greeting} · {todayLabel}
-              </p>
-              <h1 className="mt-0.5 truncate text-sm font-semibold leading-snug text-white max-lg:sr-only">
-                {user?.branchName || firstName}
-              </h1>
-              {user?.branchName && user?.name ? (
-                <p className="hero-subtitle mt-0.5 truncate text-[10px] font-normal opacity-90 max-lg:hidden">
-                  {user.name}
-                </p>
-              ) : null}
-              {inProgress.length > 0 && (
-                <span className="inline-flex shrink-0 items-center rounded-full border border-amber-200/40 bg-amber-400/90 px-2 py-0.5 text-[10px] font-semibold text-amber-950 shadow-sm">
-                  {t("openVisitsBadge", { count: inProgress.length })}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div
-          className="grid grid-cols-3 divide-x divide-[var(--border)] border-t border-[var(--border)]"
-          aria-label={t("todaySection")}
-        >
-          <ManagerTodayMetric
-            accent="emerald"
-            icon={TrendingUp}
-            label={t("todayRevenueShort")}
-            value={formatCurrency(todayRevenue)}
-            loading={todayLoading}
-          />
-          <ManagerTodayMetric
-            accent="brand"
-            icon={Users}
-            label={t("completedShort")}
-            value={completed.length}
-            loading={todayLoading}
-          />
-          <ManagerTodayMetric
-            accent="amber"
-            icon={Clock}
-            label={t("inProgressShort")}
-            value={inProgress.length}
-            loading={todayLoading}
-          />
-        </div>
-      </section>
+    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-3 overflow-x-clip">
+      {branchId ? <ManagerHomeGlanceSection branchId={branchId} /> : null}
 
       <ManagerHomeFloorActions />
 
@@ -364,7 +236,7 @@ export default function ManagerHomePage() {
         <QuickNavChip href="/manager/insights" icon={Sparkles} label={tNav("tips")} />
       </div>
 
-      <div className="space-y-3 min-w-0">
+      <div id="team-performance" className="space-y-3 min-w-0 scroll-mt-20">
         <DashboardWidgetCard>
           <DashboardEmployeeSales
             loading={todayStaffSalesLoading}

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./manager-home-cta-themes.css";
+@import "./manager-home-glance.css";
 @import "./manager-home-walkin-motions.css";
 
 :root,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { UserPlus, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ManagerHomePromoFeatureTags } from "./ManagerHomePromoCompactParts";
 
 type Props = {
   href?: string;
@@ -19,46 +20,37 @@ export function ManagerHomeWalkInPromoCta({
     t("walkInPromoTagCheckout"),
     t("walkInPromoTagServices"),
     t("walkInPromoTagBill"),
-  ] as const;
+  ];
 
   return (
     <Link
       href={href}
       data-testid={testId}
       data-manager-cta-slot="walkin"
-      className="manager-home-walkin-promo group touch-manipulation"
+      className="manager-home-promo-compact manager-home-promo-compact--walkin group touch-manipulation"
     >
-      <span className="manager-home-walkin-promo-glow" aria-hidden />
+      <span className="manager-home-promo-compact-glow" aria-hidden />
 
-      <span className="manager-home-walkin-promo-icon-wrap" aria-hidden>
-        <UserPlus className="h-6 w-6" strokeWidth={2.1} />
+      <span className="manager-home-promo-compact-icon" aria-hidden>
+        <UserPlus className="h-5 w-5" strokeWidth={2.1} />
       </span>
 
-      <div className="manager-home-walkin-promo-copy min-w-0">
-        <p className="manager-home-walkin-promo-title">{t("newWalkIn")}</p>
-        <p className="manager-home-walkin-promo-subtitle">{t("walkInPromoSubtitle")}</p>
+      <div className="manager-home-promo-compact-body min-w-0">
+        <p className="manager-home-promo-compact-title">{t("newWalkIn")}</p>
+        <p className="manager-home-promo-compact-subtitle">{t("walkInPromoSubtitle")}</p>
+        <ManagerHomePromoFeatureTags slot="walkin" labels={tags} />
       </div>
 
-      <p className="manager-home-walkin-promo-kicker" aria-hidden>
-        {t("walkInPromoKicker")}
-      </p>
-
-      <div className="manager-home-walkin-promo-tags">
-        {tags.map((label, index) => (
-          <span key={label} className="manager-home-walkin-promo-tags-group">
-            {index > 0 ? <span className="manager-home-walkin-promo-tag-dot" aria-hidden /> : null}
-            <span className="manager-home-walkin-promo-tag">{label}</span>
+      <div className="manager-home-promo-compact-rail">
+        <p className="manager-home-promo-compact-kicker">{t("walkInPromoKicker")}</p>
+        <span className="manager-home-promo-compact-pill manager-home-promo-compact-pill--walkin">
+          <Zap className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="manager-home-promo-compact-pill-label">{t("walkInPromoQuickBill")}</span>
+          <span className="manager-home-promo-compact-pill-chevrons" aria-hidden>
+            &gt;&gt;
           </span>
-        ))}
-      </div>
-
-      <span className="manager-home-walkin-promo-quick-bill">
-        <Zap className="manager-home-walkin-promo-quick-bill-icon h-4 w-4 shrink-0" aria-hidden />
-        <span className="manager-home-walkin-promo-quick-bill-label">{t("walkInPromoQuickBill")}</span>
-        <span className="manager-home-walkin-promo-quick-bill-chevrons" aria-hidden>
-          &gt;&gt;
         </span>
-      </span>
+      </div>
     </Link>
   );
 }
