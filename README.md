@@ -32,3 +32,7 @@ Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_API_URL` to your backen
 | `npm run lint` | ESLint |
 
 Backend: [salon-platform-backend](https://github.com/sumitsuri/salon-platform-backend)
+
+## Product context
+
+Feature surfaces, deploy flow, and engineering conventions live in the backend repo: [`PRODUCT_CONTEXT.md`](https://github.com/sumitsuri/salon-platform-backend/blob/main/PRODUCT_CONTEXT.md) (manager home target chip, walk-in scratch + payment success, branch `scratchCardEnabled`, admin scratch campaigns).
