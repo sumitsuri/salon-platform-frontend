@@ -112,6 +112,7 @@ export function AdminHomeBrandPulse({
   periodLoading,
   periodKpis,
   section = "full",
+  hidePeriodHeading = false,
 }: {
   mtdLoading: boolean;
   brandTarget: BrandTargetAggregate;
@@ -124,6 +125,8 @@ export function AdminHomeBrandPulse({
   periodKpis: PeriodKpi[];
   /** full: CEO overview; mtd: header + target + spend; period: selected-range KPI grid */
   section?: AdminHomeBrandPulseSection;
+  /** When a parent section already titles the block (mobile scope area). */
+  hidePeriodHeading?: boolean;
 }) {
   const t = useTranslations("admin.dashboard");
   const showMtd = section === "full" || section === "mtd";
@@ -176,9 +179,15 @@ export function AdminHomeBrandPulse({
 
       {showPeriod ? (
         <>
-          <p id="admin-ceo-period-heading" className="admin-ceo-period-label">
-            {t("keyMetricsPeriodShort")}
-          </p>
+          {!hidePeriodHeading ? (
+            <p id="admin-ceo-period-heading" className="admin-ceo-period-label">
+              {t("keyMetricsPeriodShort")}
+            </p>
+          ) : (
+            <span id="admin-ceo-period-heading" className="sr-only">
+              {t("keyMetricsPeriodShort")}
+            </span>
+          )}
           <div className="manager-home-glance-metrics">
             {periodKpis.map((item) => (
               <PeriodMetricCell

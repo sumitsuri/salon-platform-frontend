@@ -320,8 +320,19 @@ export default function AdminDashboardPage() {
         ) : (
           <>
             <AdminHomeBrandPulse {...brandPulseProps} section="mtd" />
-            {scopeFiltersSurface}
-            <AdminHomeBrandPulse {...brandPulseProps} section="period" />
+            <section
+              className="admin-ceo-scope-section min-w-0"
+              aria-labelledby="admin-ceo-scope-title"
+            >
+              <div className="admin-ceo-section-head">
+                <h2 id="admin-ceo-scope-title" className="manager-home-glance-title text-base sm:text-[1.0625rem]">
+                  {t("keyMetricsLabel")}
+                </h2>
+                <p className="manager-home-glance-tagline">{t("keyMetricsHint")}</p>
+              </div>
+              {scopeFiltersSurface}
+              <AdminHomeBrandPulse {...brandPulseProps} section="period" hidePeriodHeading />
+            </section>
             {actionRail}
           </>
         )}
