@@ -7,9 +7,7 @@ import { useTranslations } from "next-intl";
 import {
   BarChart3,
   BadgePercent,
-  ChevronRight,
   FileText,
-  Target,
   TrendingDown,
   TrendingUp,
   Users,
@@ -18,8 +16,9 @@ import {
 import { api, type Dashboard, type TrendPoint } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { ManagerHomeDateSelector } from "./ManagerHomeDateSelector";
+import { ManagerHomeTargetChip } from "./ManagerHomeTargetChip";
 import {
-  getManagerCurrentMonthRange,
+  branchTargetTrackingRange,
   getManagerHomeDefaultRange,
   percentChange,
   previousComparisonRange,
@@ -129,13 +128,12 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
   const resolved = resolveManagerHomeRange(dateRange);
   const compareRange = previousComparisonRange(resolved.from, resolved.to);
   const branchFilter = branchId ? [branchId] : undefined;
+  const targetRange = branchTargetTrackingRange(resolved);
 
   const compareLabel =
     dateRange.preset === "today" ? t("comparePreviousDay") : t("comparePreviousPeriod");
   const compareShortLabel =
     dateRange.preset === "today" ? t("comparePreviousDayShort") : t("comparePreviousPeriodShort");
-
-  const monthRange = getManagerCurrentMonthRange();
 
   const { data: current, isLoading: currentLoading } = useQuery({
     queryKey: ["manager-glance", branchId, resolved.from, resolved.to],
@@ -160,11 +158,11 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
   });
 
   const { data: targetPerf, isLoading: targetLoading } = useQuery({
-    queryKey: ["manager-glance-target", branchId, monthRange.from, monthRange.to],
+    queryKey: ["manager-glance-target", branchId, targetRange.from, targetRange.to],
     queryFn: () =>
       api.getBranchTargetPerformance({
-        startDate: monthRange.from,
-        endDate: monthRange.to,
+        startDate: targetRange.from,
+        endDate: targetRange.to,
         branchIds: branchFilter,
       }),
     enabled: !!branchId,
@@ -201,9 +199,12 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
   }, [current, previous, trendPoints]);
 
   const targetBranch = targetPerf?.branches.find((b) => b.branchId === branchId) ?? targetPerf?.branches[0];
-  const targetPct = Math.min(100, Math.max(0, Math.round(targetBranch?.achievementPercent ?? 0)));
   const targetActual = targetBranch?.actualSales ?? 0;
   const targetGoal = targetBranch?.monthlySalesTarget ?? 0;
+  const catchUp = targetBranch?.catchUpDailyAverage ?? 0;
+  const dailyActual = targetBranch?.dailyAverageActual ?? 0;
+  const dailyExpected = targetBranch?.dailyAverageExpected ?? 0;
+  const achievementRaw = targetBranch?.achievementPercent ?? 0;
 
   return (
     <section className="manager-home-glance" aria-labelledby="manager-home-glance-title">
@@ -214,8 +215,20 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
           </h2>
           <p className="manager-home-glance-tagline">{t("glanceTagline")}</p>
         </div>
-        <ManagerHomeDateSelector value={dateRange} onChange={setDateRange} className="w-full sm:max-w-[11.5rem] shrink-0" />
       </div>
+
+      <ManagerHomeDateSelector value={dateRange} onChange={setDateRange} className="w-full" />
+
+      <ManagerHomeTargetChip
+        loading={targetLoading}
+        monthlyTarget={targetGoal}
+        actualSales={targetActual}
+        achievementPercent={achievementRaw}
+        catchUpDaily={catchUp}
+        dailyAverageActual={dailyActual}
+        dailyAverageExpected={dailyExpected}
+        periodLabel={targetPerf?.periodLabel}
+      />
 
       <div className="manager-home-glance-metrics">
         <GlanceMetricCard
@@ -263,30 +276,6 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
           loading={loading}
         />
       </div>
-
-      <Link href="/manager/insights" className="manager-home-glance-target touch-manipulation">
-        <span className="manager-home-glance-target-icon" aria-hidden>
-          <Target className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="manager-home-glance-target-copy">
-            {targetLoading
-              ? t("glanceTargetLoading")
-              : targetGoal > 0
-                ? t("glanceTargetProgress", { percent: targetPct })
-                : t("glanceTargetUnset")}
-          </p>
-          <div className="manager-home-glance-target-bar" aria-hidden>
-            <div className="manager-home-glance-target-fill" style={{ width: `${targetPct}%` }} />
-          </div>
-        </div>
-        <div className="manager-home-glance-target-amounts shrink-0 text-right">
-          <p className="text-xs font-bold tabular-nums text-emerald-900 dark:text-emerald-100">
-            {targetLoading ? "…" : `${formatCurrency(targetActual)} / ${formatCurrency(targetGoal)}`}
-          </p>
-          <ChevronRight className="ml-auto h-4 w-4 text-emerald-800/70" aria-hidden />
-        </div>
-      </Link>
     </section>
   );
 }

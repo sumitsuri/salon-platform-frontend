@@ -24,6 +24,7 @@ interface WalkInDiscountSheetProps {
   billDiscountType: DiscountKind;
   billDiscountValue: string;
   promoLocked: boolean;
+  couponOrOfferSelected?: boolean;
   manualDiscountApplied: boolean;
   manualDiscountAmount?: number;
   manualDiscountLabel?: string;
@@ -34,6 +35,9 @@ interface WalkInDiscountSheetProps {
   onBillDiscountTypeChange: (v: DiscountKind) => void;
   onBillDiscountValueChange: (v: string) => void;
   onClearManualDiscount: () => void;
+  bookingId?: string;
+  scratchRedeemPending?: boolean;
+  onScratchRedeem?: (code: string) => void;
 }
 
 function DiscountSuccessView({

@@ -204,9 +204,9 @@ export default function ManagerHomePage() {
 
   return (
     <div className="mx-auto min-w-0 w-full max-w-6xl space-y-3 overflow-x-clip">
-      {branchId ? <ManagerHomeGlanceSection branchId={branchId} /> : null}
-
       <ManagerHomeFloorActions />
+
+      {branchId ? <ManagerHomeGlanceSection branchId={branchId} /> : null}
 
       {inProgress.length > 0 ? (
         <Link

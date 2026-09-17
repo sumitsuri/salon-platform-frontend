@@ -102,3 +102,14 @@ export function percentChange(current: number, previous: number): number | null 
   if (previous === 0) return current === 0 ? 0 : 100;
   return ((current - previous) / previous) * 100;
 }
+
+/** Month-to-date range for branch target tracking aligned with the selected glance date. */
+export function branchTargetTrackingRange(resolved: ManagerHomeDateRange): { from: string; to: string } {
+  if (resolved.preset === "last_month" || resolved.preset === "current_month") {
+    return { from: resolved.from, to: resolved.to };
+  }
+  const to = resolved.to;
+  const d = new Date(`${to}T12:00:00`);
+  const from = toIsoDate(new Date(d.getFullYear(), d.getMonth(), 1));
+  return { from, to };
+}

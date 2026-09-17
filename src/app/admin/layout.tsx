@@ -17,6 +17,7 @@ import {
   Megaphone,
   TrendingUp,
   BadgePercent,
+  Gift,
   ScanSearch,
   MessageSquareHeart,
   MessageCircle,
@@ -75,6 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
           { href: "/admin/whatsapp-templates", label: t("nav.whatsappTemplates"), shortLabel: t("nav.wa"), icon: MessageCircle },
           { href: "/admin/promotions", label: t("nav.promotions"), shortLabel: t("nav.deals"), icon: BadgePercent },
+          { href: "/admin/scratch-cards", label: t("nav.scratchCards"), shortLabel: t("nav.scratch"), icon: Gift },
         ],
       },
       {

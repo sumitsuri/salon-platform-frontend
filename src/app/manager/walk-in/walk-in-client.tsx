@@ -82,13 +82,10 @@ import {
 import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { BookingsHistoryPanel } from "@/components/manager/BookingsHistoryPanel";
-import { WalkInPaymentSuccess } from "./WalkInPaymentSuccess";
-import { WalkInReviewInvitePanel } from "./WalkInReviewInvitePanel";
+import { WalkInPaymentCompleteModal } from "./WalkInPaymentCompleteModal";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { WalkInCompactSteps } from "./WalkInCompactSteps";
 import { WalkInVisitPassBanner } from "./WalkInVisitPassBanner";
-import { PromoStaffSellerPicker } from "@/components/manager/PromoStaffSellerPicker";
-import { WalkInMembershipPicker } from "./WalkInMembershipPicker";
 import { WalkInCustomerPackagesPanel } from "./WalkInCustomerPackagesPanel";
 import { WalkInPendingPackageSaleBanner } from "./WalkInPendingPackageSaleBanner";
 import { WalkInMembershipSavingsBanner } from "./WalkInMembershipSavingsBanner";
@@ -100,6 +97,8 @@ import { WalkInMobilePaymentActions } from "./WalkInMobilePaymentActions";
 import { WalkInCartPanel } from "./WalkInCartPanel";
 import { WalkInServicePriceSheet } from "./WalkInServicePriceSheet";
 import { WalkInDiscountSheet } from "./WalkInDiscountSheet";
+import { WalkInScratchBilling, type ScratchRedeemPayload } from "./WalkInScratchPanel";
+import { WalkInMembershipBillSection } from "./WalkInMembershipBillSection";
 import { WalkInAppliedAdjustmentsBanner } from "./WalkInAppliedAdjustmentsBanner";
 import { WalkInEditablePriceButton } from "./WalkInEditablePriceButton";
 import { RegistrationCardPanel } from "@/components/customer/RegistrationCardPanel";
@@ -240,6 +239,7 @@ export default function WalkInPage() {
   const [billDiscountType, setBillDiscountType] = useState<DiscountKind>("");
   const [billDiscountValue, setBillDiscountValue] = useState("");
   const [paidInvoiceId, setPaidInvoiceId] = useState("");
+  const [scratchRewardOnBill, setScratchRewardOnBill] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [receiptDeliveryStatus, setReceiptDeliveryStatus] = useState<
     "SENT" | "SKIPPED" | "FAILED" | "PENDING" | undefined
@@ -516,6 +516,7 @@ export default function WalkInPage() {
   });
 
   const phoneNumberRequired = branch?.phoneNumberRequired !== false;
+  const scratchCardEnabled = branch?.scratchCardEnabled === true;
   const gstEffective = branch?.gstEffective === true;
 
   const { data: applicablePromos = [] } = useQuery({
@@ -721,6 +722,7 @@ export default function WalkInPage() {
     setTaxAdvanced(false);
     setTaxOverridden(false);
     setError("");
+    setScratchRewardOnBill(false);
     setRegistrationCard(null);
     if (b.customerId) {
       void api.getCustomer(b.customerId).then((c) => {
@@ -1050,6 +1052,25 @@ export default function WalkInPage() {
       setError("");
       const promoApplied = (b.billPreview?.promoDiscountAmount ?? 0) > 0;
       if (promoApplied && (b.couponId || b.offerId)) {
+        showDiscountAppliedSuccess(b.billPreview);
+      }
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const redeemScratch = useMutation({
+    mutationFn: (payload: ScratchRedeemPayload) =>
+      api.redeemScratchCardOnBooking({ bookingId, ...payload }),
+    onSuccess: (b) => {
+      setScratchRewardOnBill(true);
+      void queryClient.invalidateQueries({ queryKey: ["scratch-card-booking", bookingId] });
+      setBillPreview(b.billPreview ?? null);
+      setBookingStatus(b.status);
+      setSelectedCouponId(b.couponId || "");
+      setSelectedOfferId(b.offerId || "");
+      setError("");
+      const promoApplied = (b.billPreview?.promoDiscountAmount ?? 0) > 0;
+      if (promoApplied && b.couponId) {
         showDiscountAppliedSuccess(b.billPreview);
       }
     },
@@ -2117,8 +2138,6 @@ export default function WalkInPage() {
       if (!silent) setError(t("manualDiscountInvalid"));
       return false;
     }
-    setSelectedCouponId("");
-    setSelectedOfferId("");
     if (!bookingId) return false;
     applyBillDiscount.mutate({
       billDiscountType: billDiscountType as "FLAT" | "PERCENT",
@@ -2165,11 +2184,11 @@ export default function WalkInPage() {
     walkInCartPayloadLineCount(cart) ===
       (billPreview.lines?.filter((l) => l.lineItemId).length ?? 0);
 
-  const promoLocked = !!selectedCouponId || !!selectedOfferId;
+  const couponOrOfferSelected = !!selectedCouponId || !!selectedOfferId;
   const manualDiscountApplied = (billPreview?.manualDiscountAmount ?? 0) > 0;
 
   useEffect(() => {
-    if (!bookingId || billingLocked || promoLocked || applyBillDiscount.isPending) return;
+    if (!bookingId || billingLocked || applyBillDiscount.isPending) return;
 
     const trimmed = billDiscountValue.trim();
     const value = Number(trimmed);
@@ -2196,7 +2215,7 @@ export default function WalkInPage() {
     }, 650);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced apply from discount draft
-  }, [billDiscountType, billDiscountValue, bookingId, billingLocked, promoLocked, manualDiscountApplied]);
+  }, [billDiscountType, billDiscountValue, bookingId, billingLocked, manualDiscountApplied]);
 
   const adjustmentSummary = useMemo(() => {
     const parts: string[] = [];
@@ -2218,7 +2237,7 @@ export default function WalkInPage() {
 
   const discountSavings =
     (billPreview?.manualDiscountAmount ?? 0) + (billPreview?.promoDiscountAmount ?? 0);
-  const hasBillDiscount = discountSavings > 0 || manualDiscountApplied || promoLocked;
+  const hasBillDiscount = discountSavings > 0 || manualDiscountApplied || couponOrOfferSelected;
 
   const stylistsRequired = staff.length > 0;
   const stylistsComplete = !stylistsRequired || cart.every((c) => walkInCartStylistsComplete(c));
@@ -2428,7 +2447,8 @@ export default function WalkInPage() {
   ) : null;
 
   const stepSelectHandler = billingLocked ? undefined : goToStep;
-  const showFlowChrome = step === 2 || step === 3;
+  const paymentCompleteOpen = !!paymentSuccess && !!paidInvoiceId;
+  const showFlowChrome = (step === 2 || step === 3) && !paymentCompleteOpen;
 
   return (
     <div
@@ -3214,8 +3234,14 @@ export default function WalkInPage() {
         </div>
       )}
 
-      {step === 3 && (
-        <div className="space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+      {step === 3 && !paymentCompleteOpen && (
+        <div
+          className={cn(
+            "space-y-2 max-w-3xl xl:max-w-4xl mx-auto w-full min-w-0",
+            !billingLocked && "pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-6",
+            billingLocked && "pb-3 lg:pb-6"
+          )}
+        >
           {pendingPackagePlanId ? (
             <WalkInPendingPackageSaleBanner
               plan={pendingPackagePlan}
@@ -3228,68 +3254,49 @@ export default function WalkInPage() {
             />
           ) : null}
 
-          {paymentSuccess && reviewInvitationUrl ? (
-            <WalkInReviewInvitePanel
-              reviewUrl={reviewInvitationUrl}
-              reviewSubmittedRating={reviewSubmittedRating}
-              onError={setError}
-              prominent
+          {!billingLocked && customerId ? (
+            <WalkInMembershipBillSection
+              customerId={customerId}
+              membership={membership}
+              staff={staff}
+              bookingId={bookingId}
+              saving={saving}
+              pendingMembershipPlanId={pendingMembershipPlanId}
+              pendingMembershipSoldByStaffId={pendingMembershipSoldByStaffId}
+              onPlanChange={(id) => {
+                setPendingMembershipPlanId(id);
+                if (id) {
+                  setPendingPackagePlanId("");
+                  if (!pendingMembershipSoldByStaffId && staff.length > 0) {
+                    setPendingMembershipSoldByStaffId(staff[0].id);
+                  }
+                } else {
+                  setPendingMembershipSoldByStaffId("");
+                }
+              }}
+              onSoldByChange={setPendingMembershipSoldByStaffId}
             />
           ) : null}
 
-          {membership && (
-            <div className="flex items-center gap-2 rounded-lg border border-violet-200/90 bg-violet-50/50 px-3 py-2 text-xs dark:border-violet-900/50 dark:bg-violet-950/25">
-              <Sparkles className="h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
-              <span className="font-semibold text-violet-900 dark:text-violet-200">
-                {t("memberCardActiveTitle")} · {membership.planName || "Member"} ({membership.benefitPercent ?? 10}% off)
-              </span>
-            </div>
-          )}
+          {scratchCardEnabled && !billingLocked && bookingId ? (
+            <WalkInScratchBilling
+              branchId={branchId}
+              bookingId={bookingId}
+              disabled={billingLocked}
+              scratchRewardApplied={scratchRewardOnBill}
+              redeemPending={redeemScratch.isPending}
+              redeemError={redeemScratch.isError ? redeemScratch.error.message : undefined}
+              onRedeem={(payload) => redeemScratch.mutate(payload)}
+            />
+          ) : null}
 
-          {!billingLocked && !membership && customerId && (
-            <div className="rounded-lg border border-violet-200/90 bg-violet-50/40 px-3 py-2 dark:border-violet-900/50 dark:bg-violet-950/20">
-              <div className="mb-2 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
-                <span className="text-[11px] font-semibold text-violet-800 dark:text-violet-300">
-                  {t("membershipBillRowLabel")}
-                </span>
-              </div>
-              {staff.length > 0 ? (
-                <div className="mb-3 rounded-lg border border-emerald-200/70 bg-emerald-50/35 px-2.5 py-2 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                  <PromoStaffSellerPicker
-                    staff={staff}
-                    value={pendingMembershipSoldByStaffId}
-                    onChange={setPendingMembershipSoldByStaffId}
-                    disabled={!bookingId || saving}
-                    kind="membership"
-                  />
-                </div>
-              ) : null}
-              <WalkInMembershipPicker
-                value={pendingMembershipPlanId}
-                onChange={(id) => {
-                  setPendingMembershipPlanId(id);
-                  if (id) {
-                    setPendingPackagePlanId("");
-                    if (!pendingMembershipSoldByStaffId && staff.length > 0) {
-                      setPendingMembershipSoldByStaffId(staff[0].id);
-                    }
-                  } else {
-                    setPendingMembershipSoldByStaffId("");
-                  }
-                }}
-                disabled={!bookingId || saving || (staff.length > 0 && !pendingMembershipSoldByStaffId)}
-              />
-            </div>
-          )}
-
-          {!billingLocked && !pendingPackagePlanId && customerId && (
+          {!billingLocked && !paymentSuccess && !pendingPackagePlanId && customerId && (
             <div className="rounded-lg border border-sky-200/90 bg-sky-50/40 px-3 py-2 dark:border-sky-900/50 dark:bg-sky-950/20">
               <p className="text-xs text-[var(--text-secondary)]">{t("packageSellFromCatalogHint")}</p>
             </div>
           )}
 
-          {billPreview ? (
+          {billPreview && !paymentSuccess ? (
           <Card className="p-3 sm:p-4 space-y-3">
             <div className="rounded-lg border border-[var(--border)]/80 bg-[var(--surface-muted)]/25 p-2">
               <div className="mb-1.5 flex items-center gap-1.5">
@@ -3444,7 +3451,7 @@ export default function WalkInPage() {
                 billPreview={billPreview}
                 localeKit={localeKit}
                 manualDiscountApplied={manualDiscountApplied}
-                promoLocked={promoLocked}
+                promoLocked={false}
                 onEdit={() => setDiscountSheetOpen(true)}
               />
             )}
@@ -3644,26 +3651,6 @@ export default function WalkInPage() {
               </details>
             )}
 
-          {paymentSuccess && paidInvoiceId && (
-            <WalkInPaymentSuccess
-              invoiceId={paidInvoiceId}
-              shareBillMessage={t("shareBillMessage", { name: customerName || "Customer" })}
-              customerName={customerName}
-              customerPhone={phone}
-              receiptDeliveryStatus={receiptDeliveryStatus}
-              receiptDeliveryError={receiptDeliveryError || undefined}
-              registrationCard={registrationCard}
-              processingLabel={tCommon("processing")}
-              onError={setError}
-              onDone={finishVisitGoToday}
-              onViewHistory={() =>
-                router.push(
-                  urlCustomerId ? customerDetailPath("manager", urlCustomerId) : buildWalkInUrl({ tab: "history" })
-                )
-              }
-            />
-          )}
-
           {billingLocked && !paymentSuccess ? (
             <div className="space-y-2">
               {paidInvoiceId && (
@@ -3707,6 +3694,7 @@ export default function WalkInPage() {
                     !taxValid ||
                     payBooking.isPending ||
                     applyPromo.isPending ||
+                    redeemScratch.isPending ||
                     applyBillDiscount.isPending ||
                     (paymentMode === "SPLIT" && !splitValid)
                   }
@@ -3718,7 +3706,7 @@ export default function WalkInPage() {
             </>
           ) : null}
         </Card>
-          ) : (
+          ) : !paymentSuccess ? (
             <Card className="space-y-3 p-4">
               <div className="h-24 rounded-xl bg-[var(--surface-muted)] animate-pulse" aria-hidden />
               <p className="text-sm text-[var(--text-secondary)]">{t("billPreviewLoading")}</p>
@@ -3726,17 +3714,17 @@ export default function WalkInPage() {
                 {t("addMoreServices")}
               </button>
             </Card>
-          )}
+          ) : null}
 
-          {billPreview && !billingLocked && (
-            <div className="lg:hidden">
-              <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">
+          {billPreview && !billingLocked && !paymentSuccess && (
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)]">
                 <WalkInMobilePaymentActions
                   saving={payBooking.isPending}
                   payDisabled={
                     !taxValid ||
                     payBooking.isPending ||
                     applyPromo.isPending ||
+                    redeemScratch.isPending ||
                     applyBillDiscount.isPending ||
                     (paymentMode === "SPLIT" && !splitValid)
                   }
@@ -3747,12 +3735,26 @@ export default function WalkInPage() {
                   onDiscount={() => setDiscountSheetOpen(true)}
                   onPay={submitPayment}
                 />
-              </div>
-              <div className="h-[calc(4.25rem+env(safe-area-inset-bottom))]" aria-hidden />
             </div>
           )}
         </div>
       )}
+
+      <WalkInPaymentCompleteModal
+        open={paymentCompleteOpen}
+        invoiceId={paidInvoiceId}
+        amountPaidLabel={formatMoney(displayGrandTotal, localeKit)}
+        reviewUrl={reviewInvitationUrl || undefined}
+        reviewSubmittedRating={reviewSubmittedRating}
+        shareBillMessage={t("shareBillMessage", { name: customerName || "Customer" })}
+        customerName={customerName}
+        customerPhone={phone}
+        receiptDeliveryStatus={receiptDeliveryStatus}
+        receiptDeliveryError={receiptDeliveryError || undefined}
+        processingLabel={tCommon("processing")}
+        onError={setError}
+        onDone={finishVisitGoToday}
+      />
 
       <WalkInServicePriceSheet
         open={priceEditIdx != null}
@@ -3777,7 +3779,8 @@ export default function WalkInPage() {
         selectedOfferId={selectedOfferId}
         billDiscountType={billDiscountType}
         billDiscountValue={billDiscountValue}
-        promoLocked={promoLocked}
+        promoLocked={false}
+        couponOrOfferSelected={couponOrOfferSelected}
         manualDiscountApplied={manualDiscountApplied}
         manualDiscountAmount={billPreview?.manualDiscountAmount}
         manualDiscountLabel={billPreview?.manualDiscountLabel}
@@ -3788,6 +3791,11 @@ export default function WalkInPage() {
         onBillDiscountTypeChange={setBillDiscountType}
         onBillDiscountValueChange={setBillDiscountValue}
         onClearManualDiscount={clearManualDiscount}
+        bookingId={scratchCardEnabled ? bookingId : undefined}
+        scratchRedeemPending={redeemScratch.isPending}
+        onScratchRedeem={
+          scratchCardEnabled ? (code) => redeemScratch.mutate({ redemptionCode: code }) : undefined
+        }
       />
     </div>
   );

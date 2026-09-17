@@ -598,6 +598,10 @@ function BranchDetailView({
           value={branch.phoneNumberRequired !== false ? t("yes") : t("no")}
         />
         <DetailField
+          label={t("scratchCardEnabled")}
+          value={branch.scratchCardEnabled ? t("yes") : t("no")}
+        />
+        <DetailField
           label={t("gstEffective")}
           value={branch.gstEffective ? t("gstPolicyEnabled") : t("gstPolicyDisabled")}
         />
@@ -871,6 +875,7 @@ function BranchForm({
   const [closeTime, setCloseTime] = useState(initial?.closeTime ?? "21:00");
   const [businessType, setBusinessType] = useState<BranchBusinessType>(initial?.businessType ?? "SALON");
   const [phoneNumberRequired, setPhoneNumberRequired] = useState(initial?.phoneNumberRequired !== false);
+  const [scratchCardEnabled, setScratchCardEnabled] = useState(initial?.scratchCardEnabled === true);
   const [gstPolicy, setGstPolicy] = useState<"INHERIT" | "ENABLED" | "DISABLED">(
     initial?.gstEnabled === true ? "ENABLED" : initial?.gstEnabled === false ? "DISABLED" : "INHERIT"
   );
@@ -895,6 +900,7 @@ function BranchForm({
           monthlySalesTarget: monthlySalesTarget ? Number(monthlySalesTarget) : undefined,
           businessType,
           phoneNumberRequired,
+          scratchCardEnabled,
           gstPolicy: initial ? gstPolicy : undefined,
           ...(initial
             ? {
@@ -973,6 +979,20 @@ function BranchForm({
             <span>
               <span className="block text-sm font-semibold text-[var(--text-primary)]">{t("phoneNumberRequiredLabel")}</span>
               <span className="block text-xs text-[var(--text-tertiary)] mt-0.5">{t("phoneNumberRequiredHint")}</span>
+            </span>
+          </label>
+        </Field>
+        <Field label={t("scratchCardEnabled")} className="sm:col-span-2">
+          <label className="flex items-start gap-3 rounded-xl border border-[var(--border)] px-3 py-3 cursor-pointer touch-manipulation">
+            <input
+              type="checkbox"
+              checked={scratchCardEnabled}
+              onChange={(e) => setScratchCardEnabled(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-[var(--text-primary)]">{t("scratchCardEnabledLabel")}</span>
+              <span className="block text-xs text-[var(--text-tertiary)] mt-0.5">{t("scratchCardEnabledHint")}</span>
             </span>
           </label>
         </Field>

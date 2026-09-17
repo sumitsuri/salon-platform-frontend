@@ -630,6 +630,38 @@ export const api = {
   getApplicablePromos: (branchId: string) =>
     request<ApplicablePromo[]>(`/api/v1/promotions/applicable?branchId=${branchId}`),
 
+  getScratchCampaigns: () => request<ScratchCampaign[]>("/api/v1/scratch-campaigns"),
+  getActiveScratchCampaigns: (branchId: string) =>
+    request<ScratchCampaign[]>(`/api/v1/scratch-campaigns/active?branchId=${branchId}`),
+  createScratchCampaign: (data: CreateScratchCampaignRequest) =>
+    request<ScratchCampaign>("/api/v1/scratch-campaigns", { method: "POST", body: JSON.stringify(data) }),
+  updateScratchCampaignStatus: (id: string, status: PromoStatus) =>
+    request<ScratchCampaign>(`/api/v1/scratch-campaigns/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  getScratchCardForBooking: (bookingId: string) =>
+    request<IssueScratchCardResponse | null>(`/api/v1/scratch-cards/by-booking/${bookingId}`),
+  issueScratchCard: (data: { campaignId: string; branchId: string; bookingId?: string }) =>
+    request<IssueScratchCardResponse>("/api/v1/scratch-cards/issue", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  redeemScratchCardOnBooking: (data: { bookingId: string; redemptionCode?: string; cardId?: string }) =>
+    request<Booking>("/api/v1/scratch-cards/redeem", { method: "POST", body: JSON.stringify(data) }),
+  getPublicScratchCard: (token: string) =>
+    publicRequest<PublicScratchCard>(`/api/v1/public/scratch/${encodeURIComponent(token)}`),
+  scratchPublicCard: (token: string) =>
+    publicRequest<PublicScratchCard>(`/api/v1/public/scratch/${encodeURIComponent(token)}/scratch`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  captureScratchContact: (token: string, data: { phone: string; name?: string }) =>
+    publicRequest<PublicScratchCard>(`/api/v1/public/scratch/${encodeURIComponent(token)}/contact`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   getMembershipPlans: () => request<MembershipPlan[]>("/api/v1/memberships/plans"),
   getActiveMembershipPlans: () => request<MembershipPlan[]>("/api/v1/memberships/plans/active"),
   createMembershipPlan: (data: CreateMembershipPlanRequest) =>
@@ -1978,6 +2010,71 @@ export interface CreateOfferRequest {
   maxRedemptionsTotal?: number;
 }
 
+export type ScratchPrizeKind = "PERCENT_OFF" | "FLAT_OFF" | "COMPLIMENTARY_SERVICE" | "TRY_AGAIN";
+export type ScratchCardStatus = "ISSUED" | "SCRATCHED" | "UNLOCKED" | "REDEEMED" | "EXPIRED";
+
+export interface ScratchCampaignPrize {
+  id?: string;
+  label: string;
+  prizeKind: ScratchPrizeKind;
+  discountType?: DiscountType;
+  discountValue?: number;
+  serviceScope?: ServiceScopeType;
+  scopeIds?: string[];
+  weight?: number;
+  sortOrder?: number;
+}
+
+export interface ScratchCampaign {
+  id: string;
+  name: string;
+  description?: string;
+  status: PromoStatus;
+  startsAt: string;
+  endsAt: string;
+  cardsValidDays?: number;
+  prizes: ScratchCampaignPrize[];
+  createdAt?: string;
+  cardsIssued?: number;
+  cardsRedeemed?: number;
+}
+
+export interface CreateScratchCampaignRequest {
+  name: string;
+  description?: string;
+  startsAt: string;
+  endsAt: string;
+  cardsValidDays?: number;
+  status?: PromoStatus;
+  prizes: ScratchCampaignPrize[];
+}
+
+export interface IssueScratchCardResponse {
+  cardId: string;
+  publicToken: string;
+  scratchUrl: string;
+  campaignName: string;
+  status?: ScratchCardStatus;
+}
+
+export interface PublicScratchCard {
+  tenantName?: string;
+  tenantLogoUrl?: string;
+  primaryColor?: string;
+  branchName?: string;
+  campaignName: string;
+  campaignDescription?: string;
+  status: ScratchCardStatus;
+  scratched: boolean;
+  contactRequired: boolean;
+  redeemable: boolean;
+  prizeLabel?: string;
+  prizeKind?: ScratchPrizeKind;
+  prizeHeadline?: string;
+  redemptionCode?: string;
+  expiresAt?: string;
+}
+
 export interface ApplicablePromo {
   id: string;
   kind: "COUPON" | "OFFER";
@@ -2154,6 +2251,7 @@ export interface Branch {
   status?: string;
   businessType?: BranchBusinessType;
   phoneNumberRequired?: boolean;
+  scratchCardEnabled?: boolean;
   gstEnabled?: boolean | null;
   gstEffective?: boolean;
   createdAt?: string;
@@ -2213,6 +2311,7 @@ export interface CreateBranchRequest {
   status?: string;
   businessType?: BranchBusinessType;
   phoneNumberRequired?: boolean;
+  scratchCardEnabled?: boolean;
 }
 
 export interface UpdateBranchRequest {
@@ -2228,6 +2327,7 @@ export interface UpdateBranchRequest {
   status?: string;
   businessType?: BranchBusinessType;
   phoneNumberRequired?: boolean;
+  scratchCardEnabled?: boolean;
   gstPolicy?: "INHERIT" | "ENABLED" | "DISABLED";
   onlineBookingEnabled?: boolean;
   onlineBookingBrandEnabled?: boolean;
@@ -2245,6 +2345,13 @@ export interface BranchTargetPerformanceItem {
   achievementPercent: number;
   meetingTarget: boolean;
   onTrack: boolean;
+  expectedSalesSoFar?: number;
+  gapVsExpected?: number;
+  dailyAverageActual?: number;
+  dailyAverageExpected?: number;
+  daysElapsed?: number;
+  daysInMonth?: number;
+  catchUpDailyAverage?: number;
 }
 
 export interface BranchTargetPerformance {

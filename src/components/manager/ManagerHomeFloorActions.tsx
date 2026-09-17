@@ -39,18 +39,20 @@ export function ManagerHomeFloorActions() {
 
   return (
     <section
-      className="min-w-0 space-y-2"
+      className="manager-home-glance min-w-0"
       data-manager-cta-theme={MANAGER_HOME_QUICK_ACTIONS_THEME}
       aria-labelledby="manager-earnings-actions"
     >
-      <div className="manager-home-earnings-header">
-        <h2 id="manager-earnings-actions" className="manager-home-earnings-title">
-          {t("earningsWalkAwayTitle")} <span aria-hidden>🏃</span>
-        </h2>
-        <Link href="#team-performance" className="manager-home-earnings-view-all touch-manipulation">
-          {t("viewPerformance")}
-          <span aria-hidden>&gt;</span>
-        </Link>
+      <div className="manager-home-glance-head">
+        <div className="min-w-0 flex-1">
+          <h2 id="manager-earnings-actions" className="manager-home-glance-title">
+            {t("earningsWalkAwayTitle")} <span aria-hidden>🏃</span>
+          </h2>
+          <Link href="#team-performance" className="manager-home-glance-tagline-link touch-manipulation">
+            {t("viewPerformance")}
+            <span aria-hidden>&gt;</span>
+          </Link>
+        </div>
       </div>
 
       <ManagerHomeWalkInPromoCta />

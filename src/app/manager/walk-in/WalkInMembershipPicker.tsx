@@ -19,10 +19,12 @@ export function WalkInMembershipPicker({
   value,
   onChange,
   disabled,
+  hideHeader,
 }: {
   value: string;
   onChange: (planId: string) => void;
   disabled?: boolean;
+  hideHeader?: boolean;
 }) {
   const t = useTranslations("manager.walkIn");
   const { data: plans = [] } = useQuery({
@@ -35,24 +37,30 @@ export function WalkInMembershipPicker({
   if (plans.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-      <div className="min-w-0 sm:flex-1">
-        <p className="text-sm font-semibold text-[var(--text-primary)]">{t("membershipBillRowLabel")}</p>
-        <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
-          {selectedPlan
-            ? t("membershipBillRowSelected", {
-                amount: formatCurrency(selectedPlan.feeAmount),
-                percent: selectedPlan.benefitPercent,
-              })
-            : t("membershipBillRowNone")}
-        </p>
-      </div>
+    <div className={cn("flex flex-col gap-2", !hideHeader && "sm:flex-row sm:items-center sm:gap-3")}>
+      {!hideHeader ? (
+        <div className="min-w-0 sm:flex-1">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">{t("membershipBillRowLabel")}</p>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5 truncate">
+            {selectedPlan
+              ? t("membershipBillRowSelected", {
+                  amount: formatCurrency(selectedPlan.feeAmount),
+                  percent: selectedPlan.benefitPercent,
+                })
+              : t("membershipBillRowNone")}
+          </p>
+        </div>
+      ) : null}
       <select
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         aria-label={t("membershipBillRowLabel")}
-        className={cn(selectClass, "w-full sm:w-auto sm:min-w-[min(100%,18rem)] min-h-11 shrink-0")}
+        className={cn(
+          selectClass,
+          "w-full min-h-11 shrink-0",
+          !hideHeader && "sm:w-auto sm:min-w-[min(100%,18rem)]"
+        )}
       >
         <option value="">{t("membershipNone")}</option>
         {plans.map((plan) => (

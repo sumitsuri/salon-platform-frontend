@@ -6,6 +6,7 @@ import { ApplicablePromo } from "@/lib/api";
 import { TenantLocaleKit } from "@/lib/tenant-locale";
 import { formatCurrency, cn } from "@/lib/utils";
 import { inputClass, selectClass } from "@/components/ui";
+import { WalkInScratchRedeem } from "./WalkInScratchPanel";
 
 type DiscountKind = "" | "FLAT" | "PERCENT";
 
@@ -18,6 +19,7 @@ interface WalkInPromoAdjustmentsProps {
   billDiscountType: DiscountKind;
   billDiscountValue: string;
   promoLocked: boolean;
+  couponOrOfferSelected?: boolean;
   manualDiscountApplied: boolean;
   manualDiscountAmount?: number;
   manualDiscountLabel?: string;
@@ -28,6 +30,9 @@ interface WalkInPromoAdjustmentsProps {
   onBillDiscountValueChange: (v: string) => void;
   onClearManualDiscount: () => void;
   applyPending?: boolean;
+  bookingId?: string;
+  scratchRedeemPending?: boolean;
+  onScratchRedeem?: (code: string) => void;
 }
 
 function DiscountTypeToggle({
@@ -79,7 +84,8 @@ export function WalkInPromoAdjustments({
   selectedOfferId,
   billDiscountType,
   billDiscountValue,
-  promoLocked,
+  promoLocked: _promoLocked,
+  couponOrOfferSelected = false,
   manualDiscountApplied,
   manualDiscountAmount,
   disabled,
@@ -89,6 +95,9 @@ export function WalkInPromoAdjustments({
   onBillDiscountValueChange,
   onClearManualDiscount,
   applyPending,
+  bookingId,
+  scratchRedeemPending,
+  onScratchRedeem,
 }: WalkInPromoAdjustmentsProps) {
   const t = useTranslations("manager.walkIn");
   const currencySymbol = localeKit.currency === "INR" ? "₹" : localeKit.currency;
@@ -122,54 +131,51 @@ export function WalkInPromoAdjustments({
           </span>
         </div>
 
-        {promoLocked ? (
-          <p className="text-[11px] text-[var(--text-tertiary)] leading-snug rounded-md border border-[var(--border)] bg-[var(--surface-muted)]/40 px-2.5 py-2">
-            {t("promoBlocksManual")}
-          </p>
-        ) : (
-          <div
+        {couponOrOfferSelected ? (
+          <p className="text-[11px] text-[var(--text-tertiary)] leading-snug">{t("manualStacksWithPromo")}</p>
+        ) : null}
+        <div
+          className={cn(
+            "flex items-center gap-1.5 min-w-0 rounded-lg border bg-[var(--surface)] transition-colors",
+            manualDiscountApplied
+              ? "border-emerald-300 dark:border-emerald-800"
+              : "border-[var(--border)]"
+          )}
+        >
+          <DiscountTypeToggle
+            value={billDiscountType}
+            currencySymbol={currencySymbol}
+            disabled={disabled}
+            onChange={onTypeChange}
+          />
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
+            placeholder={effectiveType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
+            value={billDiscountValue}
+            onChange={(e) => onValueChange(e.target.value)}
             className={cn(
-              "flex items-center gap-1.5 min-w-0 rounded-lg border bg-[var(--surface)] transition-colors",
-              manualDiscountApplied
-                ? "border-emerald-300 dark:border-emerald-800"
-                : "border-[var(--border)]"
+              inputClass,
+              "flex-1 min-w-0 border-0 bg-transparent py-2 px-1 shadow-none focus:ring-0 rounded-none",
+              manualDiscountApplied && "font-semibold text-emerald-900 dark:text-emerald-100"
             )}
-          >
-            <DiscountTypeToggle
-              value={billDiscountType}
-              currencySymbol={currencySymbol}
-              disabled={disabled}
-              onChange={onTypeChange}
-            />
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0.01"
-              step="0.01"
-              placeholder={effectiveType === "PERCENT" ? t("percentPlaceholder") : t("amountPlaceholder")}
-              value={billDiscountValue}
-              onChange={(e) => onValueChange(e.target.value)}
-              className={cn(
-                inputClass,
-                "flex-1 min-w-0 border-0 bg-transparent py-2 px-1 shadow-none focus:ring-0 rounded-none",
-                manualDiscountApplied && "font-semibold text-emerald-900 dark:text-emerald-100"
-              )}
-              disabled={disabled}
-              aria-label={t("manualDiscount")}
-            />
-            {manualDiscountApplied ? (
-              <button
-                type="button"
-                onClick={onClearManualDiscount}
-                disabled={disabled || applyPending}
-                className="inline-flex shrink-0 min-h-9 min-w-9 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--surface-muted)] hover:text-emerald-700 touch-manipulation mr-0.5"
-                aria-label={t("clearDiscount")}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            ) : null}
-          </div>
-        )}
+            disabled={disabled}
+            aria-label={t("manualDiscount")}
+          />
+          {manualDiscountApplied ? (
+            <button
+              type="button"
+              onClick={onClearManualDiscount}
+              disabled={disabled || applyPending}
+              className="inline-flex shrink-0 min-h-9 min-w-9 items-center justify-center rounded-md text-[var(--text-tertiary)] hover:bg-[var(--surface-muted)] hover:text-emerald-700 touch-manipulation mr-0.5"
+              aria-label={t("clearDiscount")}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
       </label>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -210,6 +216,15 @@ export function WalkInPromoAdjustments({
       </div>
 
       <p className="text-[11px] text-[var(--text-tertiary)] leading-snug">{t("xorHint")}</p>
+
+      {bookingId && onScratchRedeem ? (
+        <WalkInScratchRedeem
+          bookingId={bookingId}
+          disabled={disabled || manualDiscountApplied}
+          pending={scratchRedeemPending}
+          onRedeem={onScratchRedeem}
+        />
+      ) : null}
     </div>
   );
 }

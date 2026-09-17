@@ -17,6 +17,8 @@ type Props = {
   disabled?: boolean;
   kind?: "membership" | "package";
   variant?: "chips" | "select";
+  /** Walk-in billing: staff chips only, no earnings copy. */
+  compact?: boolean;
   /** Used for package % incentive hint when kind is package. */
   packageSaleAmount?: number;
 };
@@ -28,6 +30,7 @@ export function PromoStaffSellerPicker({
   disabled,
   kind = "membership",
   variant = "chips",
+  compact = false,
   packageSaleAmount,
 }: Props) {
   const t = useTranslations("manager.memberships");
@@ -46,10 +49,14 @@ export function PromoStaffSellerPicker({
 
   return (
     <div className="space-y-2">
-      <div>
-        <p className="text-xs font-semibold text-[var(--text-primary)]">{t("sellerLabel")}</p>
-        <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{t("sellerTableHint")}</p>
-      </div>
+      {!compact ? (
+        <div>
+          <p className="text-xs font-semibold text-[var(--text-primary)]">{t("sellerLabel")}</p>
+          <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{t("sellerTableHint")}</p>
+        </div>
+      ) : (
+        <p className="text-[11px] font-semibold text-[var(--text-secondary)]">{tWalkIn("soldByShort")}</p>
+      )}
 
       {variant === "select" ? (
         <select
@@ -88,7 +95,9 @@ export function PromoStaffSellerPicker({
         </div>
       )}
 
-      <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">{incentiveHint}</p>
+      {!compact ? (
+        <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">{incentiveHint}</p>
+      ) : null}
     </div>
   );
 }
