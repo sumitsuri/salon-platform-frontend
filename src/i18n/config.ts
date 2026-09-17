@@ -18,6 +18,9 @@ export type AppLocale = (typeof locales)[number];
 
 export const defaultLocale: AppLocale = "en-IN";
 
+/** Salon platform default — Indian business calendars and branch ops. */
+export const appTimeZone = "Asia/Kolkata";
+
 /** Locales that use Indic script fonts (not Latin-only). */
 export const indicLocales: readonly AppLocale[] = locales.filter((l) => l !== "en-IN");
 

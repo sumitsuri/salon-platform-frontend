@@ -25,6 +25,7 @@ export function PaymentMixTeaser({ paymentMix, loading, panelVariant = "default"
       icon={Wallet}
       accent="emerald"
       variant={panelVariant}
+      padding={panelVariant === "dashboard"}
     >
       {loading ? (
         <p className="text-sm text-[var(--text-secondary)]">{tCommon("loading")}</p>

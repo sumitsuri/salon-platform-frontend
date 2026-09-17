@@ -814,7 +814,7 @@ export function DashboardEmployeeCheckIn({
   const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
   const headerRowClass = cn(
     CHECKIN_TABLE_GRID,
-    "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
+    "ui-table-head border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
   );
   const bodyRowClass = cn(CHECKIN_TABLE_GRID, "min-h-[2.75rem] px-3 py-2 sm:px-4");
 
@@ -826,10 +826,11 @@ export function DashboardEmployeeCheckIn({
 
       <div
         className={cn(
-          "dashboard-branch-performance-scroll-wrap",
+          "dashboard-branch-performance-scroll-wrap dashboard-table-scroll-x",
           hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
         )}
       >
+        <div className="dashboard-table-min-w">
         <div className={headerRowClass} role="row">
           <DashboardSortHeader
             label={labels.staff}
@@ -911,6 +912,7 @@ export function DashboardEmployeeCheckIn({
             })
           )}
         </div>
+        </div>
       </div>
     </div>
   );
@@ -990,7 +992,7 @@ export function DashboardEmployeeSales({
   const hasMoreRows = !loading && sortedStaff.length > BRANCH_PERFORMANCE_VISIBLE_ROWS;
   const headerRowClass = cn(
     showDiscountColumns ? SALES_TABLE_GRID : SALES_TABLE_GRID_LEGACY,
-    "border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
+    "ui-table-head border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 sm:px-4",
   );
   const bodyRowClass = cn(showDiscountColumns ? SALES_TABLE_GRID : SALES_TABLE_GRID_LEGACY, "min-h-[2.75rem] px-3 py-2 sm:px-4");
 
@@ -1002,10 +1004,11 @@ export function DashboardEmployeeSales({
 
       <div
         className={cn(
-          "dashboard-branch-performance-scroll-wrap",
+          "dashboard-branch-performance-scroll-wrap dashboard-table-scroll-x",
           hasMoreRows && "dashboard-branch-performance-scroll-wrap--more",
         )}
       >
+        <div className={cn("dashboard-table-min-w", showDiscountColumns && "dashboard-table-min-w--wide")}>
         <div className={headerRowClass} role="row">
           <DashboardSortHeader
             label={labels.name}
@@ -1115,6 +1118,7 @@ export function DashboardEmployeeSales({
               );
             })
           )}
+        </div>
         </div>
       </div>
     </div>

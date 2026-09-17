@@ -21,6 +21,7 @@ import {
   UserRole,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   Card,
@@ -181,7 +182,7 @@ export default function AdminBranchesPage() {
   const managerFormLoading = createManagerMutation.isPending || updateManagerMutation.isPending;
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell width="wide">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -417,7 +418,7 @@ export default function AdminBranchesPage() {
         onBackToView={() => setBrandDrawer({ mode: "view" })}
         onSave={(data) => updateTenantMutation.mutate(data)}
       />
-    </div>
+    </AdminPageShell>
   );
 }
 

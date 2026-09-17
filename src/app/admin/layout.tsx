@@ -21,11 +21,17 @@ import {
   ScanSearch,
   MessageSquareHeart,
   MessageCircle,
+  Briefcase,
 } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
-import { isNavActive, AppNavSection, MOBILE_MAIN_PADDING } from "@/components/app-nav";
+import {
+  isNavActive,
+  AppNavSection,
+  MOBILE_MAIN_PADDING_BOTTOM_TABS,
+  type MobileBottomNavConfig,
+} from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -90,6 +96,111 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ];
   }, [t]);
 
+  const mobileBottomNav = useMemo((): MobileBottomNavConfig => {
+    return {
+      moreTabLabel: t("nav.tabMore"),
+      menuTitle: t("nav.moreMenuTitle"),
+      moreActivePrefixes: [
+        "/admin/market-pulse",
+        "/admin/local-spotlight",
+        "/admin/insights",
+        "/admin/guest-voice",
+        "/admin/leads",
+        "/admin/campaigns",
+        "/admin/whatsapp-templates",
+        "/admin/promotions",
+        "/admin/scratch-cards",
+      ],
+      tabs: [
+        { id: "home", href: "/admin", label: t("nav.tabHome"), icon: LayoutDashboard, exact: true },
+        {
+          id: "ops",
+          href: "/admin/ops",
+          label: t("nav.tabOps"),
+          icon: Briefcase,
+          activePrefixes: [
+            "/admin/ops",
+            "/admin/bookings",
+            "/admin/customers",
+            "/admin/services",
+            "/admin/inventory",
+            "/admin/employees",
+          ],
+        },
+        { id: "finance", href: "/admin/finance", label: t("nav.tabFinance"), icon: IndianRupee },
+        { id: "org", href: "/admin/branches", label: t("nav.tabOrg"), icon: Building2 },
+      ],
+      moreSections: [
+        {
+          id: "intelligence",
+          label: t("nav.sectionIntelligence"),
+          links: [
+            {
+              href: "/admin/market-pulse",
+              label: t("nav.marketPulse"),
+              icon: TrendingUp,
+              description: t("nav.morePulseHint"),
+            },
+            {
+              href: "/admin/local-spotlight",
+              label: t("nav.localSpotlight"),
+              icon: ScanSearch,
+              description: t("nav.moreSpotlightHint"),
+            },
+            {
+              href: "/admin/insights",
+              label: t("nav.insights"),
+              icon: Sparkles,
+              description: t("nav.moreInsightsHint"),
+            },
+            {
+              href: "/admin/guest-voice",
+              label: t("nav.guestVoice"),
+              icon: MessageSquareHeart,
+              description: t("nav.moreGuestVoiceHint"),
+            },
+          ],
+        },
+        {
+          id: "growth",
+          label: t("nav.sectionGrowth"),
+          links: [
+            {
+              href: "/admin/leads",
+              label: t("nav.leads"),
+              icon: UserPlus,
+              description: t("nav.moreLeadsHint"),
+            },
+            {
+              href: "/admin/campaigns",
+              label: t("nav.campaigns"),
+              icon: Megaphone,
+              description: t("nav.moreCampaignsHint"),
+            },
+            {
+              href: "/admin/whatsapp-templates",
+              label: t("nav.whatsappTemplates"),
+              icon: MessageCircle,
+              description: t("nav.moreWhatsAppHint"),
+            },
+            {
+              href: "/admin/promotions",
+              label: t("nav.promotions"),
+              icon: BadgePercent,
+              description: t("nav.morePromotionsHint"),
+            },
+            {
+              href: "/admin/scratch-cards",
+              label: t("nav.scratchCards"),
+              icon: Gift,
+              description: t("nav.moreScratchHint"),
+            },
+          ],
+        },
+      ],
+    };
+  }, [t]);
+
   useEffect(() => {
     if (!hydrated) return;
     if (!user) router.replace("/login");
@@ -123,7 +234,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.push("/login");
       }}
       logoutLabel={tCommon("logout")}
-      mobileMainPadding={MOBILE_MAIN_PADDING}
+      mobileMainPadding={MOBILE_MAIN_PADDING_BOTTOM_TABS}
+      mobileNavFabColor={brandColor}
+      mobileBottomNav={mobileBottomNav}
     >
       {children}
     </EnterpriseAppShell>

@@ -23,6 +23,7 @@ import {
   DetailField,
   DEFAULT_PAGE_SIZE,
 } from "@/components/ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 
 type Filters = {
   name: string;
@@ -170,7 +171,7 @@ function AdminLeadsPageContent() {
   ];
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={`${t("subtitle", { count: totalElements })}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
@@ -276,6 +277,6 @@ function AdminLeadsPageContent() {
           </div>
         )}
       </SideSheet>
-    </div>
+    </AdminPageShell>
   );
 }

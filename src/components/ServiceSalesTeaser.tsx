@@ -54,7 +54,8 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
       ) : preview.length === 0 ? (
         <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
       ) : (
-        <>
+        <div className="dashboard-table-scroll-x">
+          <div className="dashboard-table-min-w dashboard-table-min-w--wide">
           <div
             className={cn(
               "ui-table-head border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-2 grid sm:px-4",
@@ -103,7 +104,8 @@ export function ServiceSalesTeaser({ data, loading, href, panelVariant = "defaul
               );
             })}
           </div>
-        </>
+          </div>
+        </div>
       )}
     </PanelShell>
   );

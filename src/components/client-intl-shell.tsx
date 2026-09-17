@@ -2,7 +2,7 @@
 
 import { NextIntlClientProvider } from "next-intl";
 import { useEffect, useState } from "react";
-import { defaultLocale, localeFontVariable, resolveLocale, type AppLocale } from "@/i18n/config";
+import { appTimeZone, defaultLocale, localeFontVariable, resolveLocale, type AppLocale } from "@/i18n/config";
 import { getLocaleCookie } from "@/lib/locale-client";
 import enMessages from "../../messages/en-IN.json";
 
@@ -65,7 +65,7 @@ export function ClientIntlShell({
   }, [locale]);
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider locale={locale} messages={messages} timeZone={appTimeZone}>
       {children}
     </NextIntlClientProvider>
   );

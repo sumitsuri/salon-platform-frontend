@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { adminMtdSalesRange, aggregateBrandTargetMetrics } from "@/lib/admin-mtd-range";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { BadgePercent, Building2, ClipboardList, IndianRupee, Trophy, Users } from "lucide-react";
@@ -24,7 +25,6 @@ import { staffSalesRowsFromTargetPerformance } from "@/lib/staff-sales-rows";
 import { deriveOverviewActions } from "@/lib/dashboard-overview-actions";
 import {
   DashboardCommandBar,
-  DashboardKpiStrip,
   DashboardBranchPerformance,
   DashboardEmployeeCheckIn,
   DashboardEmployeeSales,
@@ -32,6 +32,8 @@ import {
   DashboardOverviewShell,
   DashboardActionRail,
 } from "@/components/enterprise-ui";
+import { AdminHomeBrandPulse } from "@/components/admin/AdminHomeBrandPulse";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 
 export default function AdminDashboardPage() {
   const t = useTranslations("admin.dashboard");
@@ -53,6 +55,7 @@ export default function AdminDashboardPage() {
   } = useAdminBranchSelection();
 
   const apiRange = insightPeriodToRange(dateRange);
+  const mtdRange = useMemo(() => adminMtdSalesRange(dateRange), [dateRange]);
 
   const { data: dashboard, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -87,6 +90,33 @@ export default function AdminDashboardPage() {
     queryFn: () => api.getRecommendations({ ...apiRange, branchIds: branchIdsFilter }),
     enabled: branchesSelected,
   });
+
+  const { data: brandMtdTargets, isLoading: brandMtdLoading } = useQuery({
+    queryKey: ["admin-brand-mtd-targets", branchIdsFilter, mtdRange.from, mtdRange.to],
+    queryFn: () =>
+      api.getBranchTargetPerformance({
+        startDate: mtdRange.from,
+        endDate: mtdRange.to,
+        branchIds: branchIdsFilter,
+      }),
+    enabled: branchesSelected,
+  });
+
+  const { data: brandMtdPl, isLoading: brandMtdPlLoading } = useQuery({
+    queryKey: ["admin-brand-mtd-pl", branchIdsFilter, mtdRange.from, mtdRange.to],
+    queryFn: () =>
+      api.getPlSummary({
+        startDate: mtdRange.from,
+        endDate: mtdRange.to,
+        branchIds: branchIdsFilter,
+      }),
+    enabled: branchesSelected,
+  });
+
+  const brandTargetAggregate = useMemo(
+    () => aggregateBrandTargetMetrics(brandMtdTargets?.branches ?? []),
+    [brandMtdTargets],
+  );
 
   const monthRange = dashboardSecondaryRange(dateRange);
 
@@ -238,48 +268,94 @@ export default function AdminDashboardPage() {
     [dashboardLoading, dashboard, resolvedDateRange, t]
   );
 
-  return (
-    <div className="dashboard-page-flow">
-      <DashboardOverviewShell>
-        <DashboardCommandBar
-          eyebrow={t("overviewEyebrow")}
-          title={t("title")}
-          subtitle={periodSubtitle}
-          scopeFilters={
-            <ScopeFilterBar
-              variant="hero"
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
-              dateTestId="admin-dashboard-date-range"
-              branches={branches}
-              selectedBranches={selectedBranches}
-              onBranchesChange={setSelectedBranches}
-            />
-          }
-        />
+  const scopeFiltersSurface = (
+    <ScopeFilterBar
+      variant="surface"
+      layout="card"
+      dateRange={dateRange}
+      onDateRangeChange={setDateRange}
+      dateTestId="admin-dashboard-date-range"
+      branches={branches}
+      selectedBranches={selectedBranches}
+      onBranchesChange={setSelectedBranches}
+    />
+  );
 
-        {selectedBranches.length > 0 ? (
-          <div className="dashboard-overview-modules dashboard-overview-modules--nested">
-            <DashboardKpiStrip
-              loading={dashboardLoading}
-              headerLabel={t("keyMetricsLabel")}
-              headerHint={t("keyMetricsHint")}
-              items={kpiItems}
-            />
-            {(dashboardLoading || recommendationsLoading || overviewActions.length > 0) ? (
-              <DashboardActionRail
-                title={t("actionsTitle")}
-                revealHint={t("actionsRevealHint")}
-                loading={dashboardLoading || recommendationsLoading}
-                actions={overviewActions}
+  const brandPulseProps = {
+    mtdLoading: brandMtdLoading,
+    brandTarget: brandTargetAggregate,
+    targetPeriodLabel: brandMtdTargets?.periodLabel,
+    plLoading: brandMtdPlLoading,
+    mtdExpenses: brandMtdPl?.brand.totalExpenses ?? 0,
+    mtdSales: brandTargetAggregate.actualSales,
+    periodLoading: dashboardLoading,
+    periodKpis: kpiItems,
+  };
+
+  const actionRail =
+    dashboardLoading || recommendationsLoading || overviewActions.length > 0 ? (
+      <DashboardActionRail
+        title={t("actionsTitle")}
+        revealHint={t("actionsRevealHint")}
+        loading={dashboardLoading || recommendationsLoading}
+        actions={overviewActions}
+      />
+    ) : null;
+
+  const brandPulseModules = (
+    <>
+      <AdminHomeBrandPulse {...brandPulseProps} />
+      {actionRail}
+    </>
+  );
+
+  return (
+    <AdminPageShell className="pb-4 md:pb-6">
+      <div className="md:hidden min-w-0 space-y-3">
+        {selectedBranches.length === 0 ? (
+          <>
+            {scopeFiltersSurface}
+            <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} icon={Building2} />
+          </>
+        ) : (
+          <>
+            <AdminHomeBrandPulse {...brandPulseProps} section="mtd" />
+            {scopeFiltersSurface}
+            <AdminHomeBrandPulse {...brandPulseProps} section="period" />
+            {actionRail}
+          </>
+        )}
+      </div>
+
+      <div className="hidden md:block min-w-0">
+        <DashboardOverviewShell>
+          <DashboardCommandBar
+            eyebrow={t("overviewEyebrow")}
+            title={t("title")}
+            subtitle={periodSubtitle}
+            scopeFilters={
+              <ScopeFilterBar
+                variant="hero"
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                dateTestId="admin-dashboard-date-range"
+                branches={branches}
+                selectedBranches={selectedBranches}
+                onBranchesChange={setSelectedBranches}
               />
-            ) : null}
-          </div>
-        ) : null}
-      </DashboardOverviewShell>
+            }
+          />
+
+          {selectedBranches.length > 0 ? (
+            <div className="dashboard-overview-modules dashboard-overview-modules--nested">{brandPulseModules}</div>
+          ) : null}
+        </DashboardOverviewShell>
+      </div>
 
       {selectedBranches.length === 0 ? (
-        <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} icon={Building2} />
+        <div className="hidden md:block">
+          <EmptyState title={tAdmin("selectBranch")} description={tAdmin("chooseBranches")} icon={Building2} />
+        </div>
       ) : (
         <div className="dashboard-widgets-section">
           {showBranchPerformance ? (
@@ -426,6 +502,6 @@ export default function AdminDashboardPage() {
           )}
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

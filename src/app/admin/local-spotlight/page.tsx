@@ -32,6 +32,7 @@ import {
   SpotlightActionPlan,
 } from "@/components/local-spotlight/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   EmptyState,
@@ -169,7 +170,7 @@ export default function LocalSpotlightPage() {
   }
 
   return (
-    <div className="page-stack space-y-6 pb-8">
+    <AdminPageShell width="wide">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle")}
@@ -498,6 +499,6 @@ export default function LocalSpotlightPage() {
           <button type="submit" className={btnPrimary} disabled={addRival.isPending}>{t("addRival")}</button>
         </form>
       </SideSheet>
-    </div>
+    </AdminPageShell>
   );
 }

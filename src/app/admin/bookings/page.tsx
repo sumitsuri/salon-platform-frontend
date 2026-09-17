@@ -17,6 +17,7 @@ import { buildPathWithSearch, useUrlQueryParam } from "@/lib/use-url-query-param
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
 import { BreadcrumbItem } from "@/components/Breadcrumbs";
 import { ActiveFilterChip, DataListPanel } from "@/components/DataListPanel";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   StatusBadge,
@@ -491,7 +492,7 @@ function AdminBookingsPageContent() {
   }, [debounced, branchScopeId]);
 
   return (
-    <div className="space-y-3 md:space-y-4">
+    <AdminPageShell>
       <PageHeader
         title={isBranchScoped && branchDisplayName ? branchDisplayName : isScoped && customer?.name ? customer.name : t("title")}
         subtitle={
@@ -638,7 +639,7 @@ function AdminBookingsPageContent() {
         useSecondaryButton
         downloadTestId="admin-download-invoice"
       />
-    </div>
+    </AdminPageShell>
   );
 }
 

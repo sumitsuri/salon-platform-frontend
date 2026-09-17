@@ -30,6 +30,7 @@ import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import {
   PageHeader,
@@ -181,7 +182,7 @@ export default function AdminEmployeesPage() {
   const formLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <div className="dashboard-page-flow pb-8">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={`${tPeriods(dateRange.preset)} · ${t("subtitle")}`}
@@ -427,7 +428,7 @@ export default function AdminEmployeesPage() {
         onCreate={(data) => createMutation.mutate(data)}
         onUpdate={(id, data) => updateMutation.mutate({ id, data })}
       />
-    </div>
+    </AdminPageShell>
   );
 }
 

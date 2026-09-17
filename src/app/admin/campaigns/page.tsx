@@ -13,6 +13,7 @@ import { CampaignListSection } from "@/components/campaign/CampaignListSection";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { PageHeader, SideSheet } from "@/components/ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 
 type View = "hub" | "create";
 
@@ -87,7 +88,7 @@ export default function AdminCampaignsPage() {
   }, []);
 
   return (
-    <div className="dashboard-page-flow pb-8">
+    <AdminPageShell>
       <PageHeader title={t("title")} subtitle={t("heroDescription")} />
 
       {messaging ? (
@@ -242,6 +243,6 @@ export default function AdminCampaignsPage() {
           />
         ) : null}
       </SideSheet>
-    </div>
+    </AdminPageShell>
   );
 }

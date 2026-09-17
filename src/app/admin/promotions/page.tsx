@@ -7,6 +7,7 @@ import { CreditCard, Percent, Plus, Sparkles, Ticket } from "lucide-react";
 import { api, type Coupon, type Offer } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { DiscountCreateSheet } from "@/components/promotions/DiscountCreateSheet";
 import { MembershipCreateSheet } from "@/components/promotions/MembershipCreateSheet";
@@ -186,7 +187,7 @@ export default function AdminPromotionsPage() {
   };
 
   return (
-    <div className="dashboard-page-flow dashboard-page-flow--tight pb-8">
+    <AdminPageShell>
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <DashboardOverviewShell>
@@ -365,6 +366,6 @@ export default function AdminPromotionsPage() {
 
       <DiscountCreateSheet open={discountSheetOpen} onClose={() => setDiscountSheetOpen(false)} />
       <MembershipCreateSheet open={membershipSheetOpen} onClose={() => setMembershipSheetOpen(false)} />
-    </div>
+    </AdminPageShell>
   );
 }

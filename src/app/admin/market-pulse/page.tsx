@@ -27,6 +27,7 @@ import {
   PulseStatCard,
 } from "@/components/market-pulse/ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   EmptyState,
@@ -104,7 +105,7 @@ export default function MarketPulsePage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={`${data?.brandName ?? ""} · ${data?.periodLabel ?? tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
@@ -405,6 +406,6 @@ export default function MarketPulsePage() {
           )}
         </>
       ) : null}
-    </div>
+    </AdminPageShell>
   );
 }

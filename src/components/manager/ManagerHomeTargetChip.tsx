@@ -23,6 +23,12 @@ type Props = {
   dailyAverageActual: number;
   dailyAverageExpected: number;
   periodLabel?: string;
+  insightsHref?: string;
+  /** Defaults to manager.home */
+  messagesNamespace?: string;
+  insightsHint?: string;
+  /** Single-line footer — manager-style density for CEO dashboard */
+  compact?: boolean;
 };
 
 export function ManagerHomeTargetChip({
@@ -34,8 +40,12 @@ export function ManagerHomeTargetChip({
   dailyAverageActual,
   dailyAverageExpected,
   periodLabel,
+  insightsHref = "/manager/insights",
+  messagesNamespace = "manager.home",
+  insightsHint,
+  compact,
 }: Props) {
-  const t = useTranslations("manager.home");
+  const t = useTranslations(messagesNamespace);
   const displayPct = Math.round(achievementPercent);
   const barPct = Math.min(100, Math.max(0, displayPct));
   const band = targetTrafficBand(achievementPercent);
@@ -65,7 +75,7 @@ export function ManagerHomeTargetChip({
 
   if (monthlyTarget <= 0) {
     return (
-      <Link href="/manager/insights" className="manager-target-chip manager-target-chip--unset touch-manipulation">
+      <Link href={insightsHref} className="manager-target-chip manager-target-chip--unset touch-manipulation">
         <p className="text-xs font-semibold text-[var(--text-secondary)]">{t("glanceTargetUnset")}</p>
         <ChevronRight className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
       </Link>
@@ -74,8 +84,12 @@ export function ManagerHomeTargetChip({
 
   return (
     <Link
-      href="/manager/insights"
-      className={cn("manager-target-chip touch-manipulation", `manager-target-chip--${band}`)}
+      href={insightsHref}
+      className={cn(
+        "manager-target-chip touch-manipulation",
+        `manager-target-chip--${band}`,
+        compact && "manager-target-chip--compact",
+      )}
       aria-label={`${t("glanceTargetMonthLabel")}, ${displayPct} percent, ${formatCurrency(actualSales)} of ${formatCurrency(monthlyTarget)}`}
     >
       <div
@@ -110,14 +124,33 @@ export function ManagerHomeTargetChip({
           {band === "red" ? <div className="manager-target-bar-marker" style={{ left: "90%" }} /> : null}
         </div>
 
-        <p className="manager-target-action">{actionLine}</p>
-        <p className="manager-target-pace">
-          {t("glanceTargetPaceLine", {
-            actual: formatCurrency(dailyAverageActual),
-            expected: formatCurrency(dailyAverageExpected),
-          })}
-          <span className="manager-target-insights-hint"> · {t("glanceTargetInsightsHint")}</span>
-        </p>
+        {compact ? (
+          <p className="manager-target-action line-clamp-2 leading-snug">
+            {actionLine}
+            <span className="font-semibold opacity-75">
+              {" "}
+              ·{" "}
+              {t("glanceTargetPaceLine", {
+                actual: formatCurrency(dailyAverageActual),
+                expected: formatCurrency(dailyAverageExpected),
+              })}
+            </span>
+          </p>
+        ) : (
+          <>
+            <p className="manager-target-action">{actionLine}</p>
+            <p className="manager-target-pace">
+              {t("glanceTargetPaceLine", {
+                actual: formatCurrency(dailyAverageActual),
+                expected: formatCurrency(dailyAverageExpected),
+              })}
+              <span className="manager-target-insights-hint">
+                {" "}
+                · {insightsHint ?? t("glanceTargetInsightsHint")}
+              </span>
+            </p>
+          </>
+        )}
       </div>
 
       <ChevronRight className="manager-target-chevron h-4 w-4 shrink-0" aria-hidden />

@@ -26,6 +26,7 @@ export function InventoryTeaser({ data, loading, href, panelVariant = "default" 
       icon={Package}
       accent="amber"
       variant={panelVariant}
+      padding={panelVariant === "dashboard"}
       action={
         <PanelLink href={href} variant={panelVariant}>
           {t("manage")}

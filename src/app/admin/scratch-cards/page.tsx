@@ -13,6 +13,7 @@ import {
 import { cn, formatCurrency } from "@/lib/utils";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   EmptyState,
@@ -121,7 +122,7 @@ export default function AdminScratchCardsPage() {
   if (isLoading) return <PageLoader />;
 
   return (
-    <div className="dashboard-page-flow space-y-4">
+    <AdminPageShell>
       <DashboardOverviewShell>
         <PageHeader
           title={t("title")}
@@ -223,7 +224,7 @@ export default function AdminScratchCardsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }
 

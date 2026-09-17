@@ -24,6 +24,7 @@ import {
   StatusBadge,
   btnSecondarySm,
 } from "@/components/ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 
 type Filters = {
   search: string;
@@ -139,7 +140,7 @@ export default function AdminWhatsAppTemplatesPage() {
   );
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell>
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <Card className="text-sm space-y-2">
@@ -285,6 +286,6 @@ export default function AdminWhatsAppTemplatesPage() {
       </Card>
 
       <WhatsAppTemplatePreviewSheet template={previewTemplate} onClose={() => setPreviewTemplate(null)} />
-    </div>
+    </AdminPageShell>
   );
 }

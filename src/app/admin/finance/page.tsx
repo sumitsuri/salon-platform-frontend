@@ -34,6 +34,7 @@ import {
   toMonthIso,
 } from "@/components/MonthYearPicker";
 import { FinanceTrends } from "@/components/FinanceTrends";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   Card,
@@ -256,7 +257,7 @@ export default function AdminFinancePage() {
   const monthsWithDataCount = monthlySummaries.filter((m) => m.lineCount > 0).length;
 
   return (
-    <div className="space-y-5">
+    <AdminPageShell width="wide">
       <PageHeader
         title={t("title")}
         subtitle={
@@ -630,7 +631,7 @@ export default function AdminFinancePage() {
           deleting={deleteMutation.isPending}
         />
       )}
-    </div>
+    </AdminPageShell>
   );
 }
 

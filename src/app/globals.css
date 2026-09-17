@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./manager-home-cta-themes.css";
 @import "./manager-home-glance.css";
+@import "./admin-home-glance.css";
 @import "./manager-home-walkin-motions.css";
 
 :root,
@@ -178,6 +179,69 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Bottom-tab mobile (admin + manager): compact inset — no negative-margin bleed (avoids clipped tables) */
+@media (max-width: 767px) {
+  .app-shell-main--flush-x .page-stack {
+    gap: 0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-widgets-section {
+    gap: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-command-bar-header--compact {
+    padding: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-command-bar-title {
+    font-size: 1.0625rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-widget-card {
+    overflow-x: auto;
+    overflow-y: visible;
+    border-radius: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-shell-main--flush-x .dashboard-widget-header,
+  .app-shell-main--flush-x .dashboard-branch-performance-header {
+    padding-inline: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-table-scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-shell-main--flush-x .dashboard-table-scroll-x .dashboard-table-min-w {
+    min-width: 17.5rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-table-scroll-x .dashboard-table-min-w--wide {
+    min-width: 20.5rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-branch-performance-scroll-wrap .ui-table-head,
+  .app-shell-main--flush-x .dashboard-branch-performance-row-item > .grid,
+  .app-shell-main--flush-x .service-sales-scroll .grid {
+    padding-inline: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-branch-performance-row-item.block.px-3 {
+    padding-inline: 0.75rem;
+  }
+
+  .app-shell-main--flush-x .dashboard-action-rail {
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-brand);
+    background: var(--surface);
+    overflow: hidden;
+  }
 }
 
 .page-route-enter {

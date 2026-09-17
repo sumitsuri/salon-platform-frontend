@@ -29,6 +29,7 @@ export function PlTeaser({ data, loading, href, panelVariant = "default" }: PlTe
       icon={IndianRupee}
       accent="emerald"
       variant={panelVariant}
+      padding={panelVariant === "dashboard"}
       action={
         <PanelLink href={href} variant={panelVariant}>
           {t("viewFinance")}

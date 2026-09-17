@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { MessageSquareHeart } from "lucide-react";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { PageHeader } from "@/components/ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { AdminDataSkeleton } from "@/components/admin/AdminDataSkeleton";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
@@ -88,7 +89,7 @@ export default function AdminGuestVoicePage() {
   const reviewItems = data?.reviews ?? [];
 
   return (
-    <div className="dashboard-page-flow pb-8">
+    <AdminPageShell>
       <PageHeader title={t("title")} subtitle={t("heroDescription")} />
 
       <ScopeFilterBar
@@ -212,6 +213,6 @@ export default function AdminGuestVoicePage() {
           )}
         </>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

@@ -12,6 +12,7 @@ import { WeekdayBoostPanel } from "@/components/WeekdayBoostPanel";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { countInsights, insightPeriodToRange } from "@/lib/insights-utils";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 
@@ -46,7 +47,7 @@ export default function AdminInsightsPage() {
     .filter((item) => item.severity === "MEDIUM").length;
 
   return (
-    <div className="dashboard-page-flow">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={`${tPeriods(dateRange.preset)}${isFetching && !isLoading ? tAdmin("updatingSuffix") : ""}`}
@@ -111,6 +112,6 @@ export default function AdminInsightsPage() {
           </div>
         </DashboardOverviewShell>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

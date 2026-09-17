@@ -24,6 +24,7 @@ import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { MonthYearPicker, currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
 import { InventoryTrends } from "@/components/InventoryTrends";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import {
   PageHeader,
   Card,
@@ -288,7 +289,7 @@ export default function AdminInventoryPage() {
     createMovement.isPending;
 
   return (
-    <div className="space-y-5">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={tab === "overview" ? formatMonthYear(selectedMonth) : t("subtitleOverview")}
@@ -595,7 +596,7 @@ export default function AdminInventoryPage() {
           }}
         />
       )}
-    </div>
+    </AdminPageShell>
   );
 }
 

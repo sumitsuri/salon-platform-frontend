@@ -28,6 +28,7 @@ import {
 } from "@/components/ui";
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 
@@ -541,7 +542,7 @@ export default function AdminServicesPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell>
       <PageHeader
         title={t("title")}
         subtitle={tab === "catalog" ? t("catalogSubtitle") : t("performanceSubtitle")}
@@ -866,6 +867,6 @@ export default function AdminServicesPage() {
           </label>
         </div>
       </SideSheet>
-    </div>
+    </AdminPageShell>
   );
 }
