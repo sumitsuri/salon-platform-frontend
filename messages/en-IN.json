@@ -1986,7 +1986,7 @@
       "editReasonPlaceholder": "e.g. Wrong service price entered at checkout",
       "currentGrandTotal": "Current total: {amount}",
       "deleteBillTitle": "Delete this bill?",
-      "deleteBillConfirm": "This removes the invoice and payment record and reopens the visit for billing. Customer visit count and spend are adjusted. Cannot be undone if a package was used or membership was sold on this bill."
+      "deleteBillConfirm": "This voids the bill and removes it from bookings and finance lists. Payment records are cleared and customer visit count and spend are adjusted. The visit stays in the system for audit only. Not allowed if membership was sold or a scratch reward was redeemed on this bill."
     },
     "inventory": {
       "title": "Inventory",

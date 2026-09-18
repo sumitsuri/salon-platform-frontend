@@ -297,7 +297,12 @@ function AdminBookingsPageContent() {
     staleTime: 30_000,
   });
 
-  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+  const { booking: detailBooking } = useResolvedBooking(
+    detailParam.value,
+    bookings,
+    true,
+    detailParam.isSet
+  );
 
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
     if (!detailParam.isSet) return null;

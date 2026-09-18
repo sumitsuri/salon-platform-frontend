@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { FileText, Pencil, Trash2 } from "lucide-react";
+import { FileText } from "lucide-react";
 import { AdminBillEditSheet } from "@/components/booking/AdminBillEditSheet";
+import { BookingBillActionBar } from "@/components/booking/BookingBillActionBar";
 import {
   BillBreakdownRows,
   membershipFeeServiceLine,
   packageFeeServiceLine,
   type BillBreakdownPreview,
 } from "@/components/billing/BillBreakdownRows";
-import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
@@ -19,9 +19,6 @@ import {
   SideSheet,
   AlertBanner,
   btnPrimary,
-  btnSecondary,
-  btnSecondarySm,
-  btnDangerSm,
   ConfirmDialog,
 } from "@/components/ui";
 
@@ -96,19 +93,35 @@ export function BookingDetailSheet({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
+  const bookingId = booking?.id;
+  const bookingStatus = booking?.status;
+  const bookingInvoiceId = booking?.invoiceId;
+
   useEffect(() => {
-    if (!open || !booking || booking.status !== "COMPLETED") {
+    if (!open || !bookingId || bookingStatus !== "COMPLETED") {
       setInvoice(null);
       setInvoiceError("");
+      setInvoiceLoading(false);
       return;
     }
     let cancelled = false;
     setInvoiceLoading(true);
     setInvoiceError("");
-    const load = booking.invoiceId
-      ? api.getInvoice(booking.invoiceId)
-      : api.getInvoiceByBooking(booking.id);
-    load
+    setInvoice(null);
+
+    const id = bookingId;
+    async function loadInvoice() {
+      if (bookingInvoiceId) {
+        try {
+          return await api.getInvoice(bookingInvoiceId);
+        } catch {
+          return await api.getInvoiceByBooking(id);
+        }
+      }
+      return await api.getInvoiceByBooking(id);
+    }
+
+    loadInvoice()
       .then((inv) => {
         if (!cancelled) setInvoice(inv);
       })
@@ -124,9 +137,7 @@ export function BookingDetailSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, booking, t]);
-
-  const secondaryBtn = useSecondaryButton ? btnSecondarySm : btnSecondary;
+  }, [open, bookingId, bookingStatus, bookingInvoiceId, t]);
 
   async function handleVoidBill() {
     if (!invoice) return;
@@ -153,41 +164,66 @@ export function BookingDetailSheet({
     }
   }
 
-  const adminFooter =
-    adminBillTools && booking?.status === "COMPLETED" && invoice ? (
-      <div className="flex flex-col gap-2 w-full">
-        <InvoicePdfButtons
+  function renderFooter() {
+    if (!booking) return undefined;
+    if (visitActionHref && isOpenStatus(booking.status)) {
+      return (
+        <Link
+          href={visitActionHref(booking)}
+          className={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
+          onClick={onClose}
+        >
+          {booking.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
+        </Link>
+      );
+    }
+    if (booking.status !== "COMPLETED") return undefined;
+    if (invoiceLoading) {
+      return (
+        <p className="w-full text-center text-xs text-[var(--text-tertiary)] py-2 min-h-11 flex items-center justify-center">
+          {tCommon("loading")}
+        </p>
+      );
+    }
+    if (!invoice) return undefined;
+
+    const shareText = t("shareBillMessage", {
+      name: shareCustomerName ?? booking.customerName ?? "Customer",
+    });
+    const filename = `invoice-${invoice.invoiceNumber}.pdf`;
+
+    if (adminBillTools) {
+      return (
+        <BookingBillActionBar
           invoiceId={invoice.id}
-          filename={`invoice-${invoice.invoiceNumber}.pdf`}
-          shareText={t("shareBillMessage", { name: shareCustomerName ?? booking.customerName ?? "Customer" })}
+          filename={filename}
+          shareText={shareText}
           shareLabel={t("shareBill")}
           downloadLabel={t("downloadBill")}
           processingLabel={tCommon("processing")}
-          primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
-          secondaryClassName={`${secondaryBtn} w-full min-h-11 justify-center touch-manipulation`}
-          downloadTestId={downloadTestId}
+          editLabel={tAdmin("editBill")}
+          deleteLabel={tAdmin("deleteBill")}
+          onEdit={() => setEditOpen(true)}
+          onDelete={() => setDeleteOpen(true)}
           onError={setInvoiceError}
+          downloadTestId={downloadTestId}
         />
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className={`${btnSecondary} min-h-11 justify-center gap-1.5`}
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-            {tAdmin("editBill")}
-          </button>
-          <button
-            type="button"
-            className={`${btnDangerSm} min-h-11 justify-center gap-1.5 w-full`}
-            onClick={() => setDeleteOpen(true)}
-          >
-            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-            {tAdmin("deleteBill")}
-          </button>
-        </div>
-      </div>
-    ) : null;
+      );
+    }
+
+    return (
+      <BookingBillActionBar
+        invoiceId={invoice.id}
+        filename={filename}
+        shareText={shareText}
+        shareLabel={t("shareBill")}
+        downloadLabel={t("downloadBill")}
+        processingLabel={tCommon("processing")}
+        onError={setInvoiceError}
+        downloadTestId={downloadTestId}
+      />
+    );
+  }
 
   return (
     <>
@@ -196,31 +232,7 @@ export function BookingDetailSheet({
       onClose={onClose}
       title={title ?? booking?.customerName ?? t("billingDetails")}
       subtitle={subtitle ?? (booking ? `${booking.customerPhone} · ${booking.status}` : undefined)}
-      footer={
-        adminFooter ??
-        (booking?.status === "COMPLETED" && invoice ? (
-          <InvoicePdfButtons
-            invoiceId={invoice.id}
-            filename={`invoice-${invoice.invoiceNumber}.pdf`}
-            shareText={t("shareBillMessage", { name: shareCustomerName ?? booking.customerName ?? "Customer" })}
-            shareLabel={t("shareBill")}
-            downloadLabel={t("downloadBill")}
-            processingLabel={tCommon("processing")}
-            primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
-            secondaryClassName={`${secondaryBtn} w-full min-h-11 justify-center touch-manipulation`}
-            downloadTestId={downloadTestId}
-            onError={setInvoiceError}
-          />
-        ) : booking && visitActionHref && isOpenStatus(booking.status) ? (
-          <Link
-            href={visitActionHref(booking)}
-            className={`${btnPrimary} w-full min-h-12 justify-center`}
-            onClick={onClose}
-          >
-            {booking.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
-          </Link>
-        ) : undefined)
-      }
+      footer={renderFooter()}
     >
       {booking && (
         <div className="space-y-4 p-4">
@@ -326,19 +338,20 @@ export function BookingDetailSheet({
   );
 }
 
-/** Resolve booking from list cache or fetch by id for deep-linked detail views. */
+/** Resolve booking for detail sheet — list row for instant open, refresh by id whenever the sheet opens. */
 export function useResolvedBooking(
   bookingId: string | null,
   bookings: Booking[],
-  enabled = true
+  enabled = true,
+  detailOpen = false
 ): { booking: Booking | null; loading: boolean } {
   const fromList = bookingId ? bookings.find((b) => b.id === bookingId) ?? null : null;
   const [fetched, setFetched] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!enabled || !bookingId || fromList) {
-      setFetched(null);
+    if (!enabled || !bookingId || !detailOpen) {
+      if (!detailOpen) setFetched(null);
       setLoading(false);
       return;
     }
@@ -350,7 +363,7 @@ export function useResolvedBooking(
         if (!cancelled) setFetched(b);
       })
       .catch(() => {
-        if (!cancelled) setFetched(null);
+        if (!cancelled) setFetched(fromList);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -358,7 +371,7 @@ export function useResolvedBooking(
     return () => {
       cancelled = true;
     };
-  }, [bookingId, enabled, fromList]);
+  }, [bookingId, enabled, detailOpen, fromList]);
 
-  return { booking: fromList ?? fetched, loading: loading && !fromList };
+  return { booking: fetched ?? fromList, loading: loading && !fetched && !fromList };
 }

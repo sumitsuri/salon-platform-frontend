@@ -160,7 +160,12 @@ export function BookingsHistoryPanel({
   const active = bookings.filter((b) => b.status !== "COMPLETED" && b.status !== "CANCELLED");
   const totalRevenue = completed.reduce((s, b) => s + (b.billPreview?.grandTotal || 0), 0);
 
-  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+  const { booking: detailBooking } = useResolvedBooking(
+    detailParam.value,
+    bookings,
+    true,
+    detailParam.isSet
+  );
   const listLabel = embedded ? historyTabLabel : t("title");
 
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {

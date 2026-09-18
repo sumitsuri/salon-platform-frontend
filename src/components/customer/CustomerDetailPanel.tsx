@@ -163,7 +163,12 @@ export function CustomerDetailPanel({ scope, customerId }: { scope: AppScope; cu
     updateNameMutation.mutate(trimmed);
   }
 
-  const { booking: detailBooking } = useResolvedBooking(detailParam.value, bookings);
+  const { booking: detailBooking } = useResolvedBooking(
+    detailParam.value,
+    bookings,
+    true,
+    detailParam.isSet
+  );
 
   const detailBreadcrumbs = useMemo((): BreadcrumbItem[] | null => {
     if (!detailParam.isSet) return null;
