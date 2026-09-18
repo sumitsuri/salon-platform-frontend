@@ -1,5 +1,16 @@
-import { ServicePackagePlan, ServicePackagePlanItem } from "@/lib/api";
+import type { ServicePackagePlan, ServicePackagePlanItem } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+
+export function formatPlanIncludes(
+  plan: Pick<ServicePackagePlan, "planType" | "creditValue" | "listPriceTotal" | "items">
+): string {
+  if (plan.planType === "VALUE_CREDIT") {
+    const credit = plan.creditValue ?? plan.listPriceTotal;
+    if (credit == null || !Number.isFinite(credit)) return "";
+    return `${formatCurrency(credit)} credit`;
+  }
+  return formatPackageInclusions(plan.items);
+}
 
 export function formatPackageInclusions(items: ServicePackagePlanItem[] | undefined): string {
   if (!items?.length) return "";

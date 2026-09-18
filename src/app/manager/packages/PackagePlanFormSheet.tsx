@@ -12,10 +12,13 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { SideSheet, btnPrimary, btnSecondary, inputClass } from "@/components/ui";
 import { PackageServiceCatalogPicker } from "./PackageServiceCatalogPicker";
+import type { PackagePlanType } from "@/lib/api";
 import type { PackagePlanItemDraft } from "./package-plan-types";
 
 export type PackagePlanFormValues = {
   name: string;
+  planType: PackagePlanType;
+  creditValue: number;
   validityDays: number;
   singleVisit: boolean;
   discountPercent: number;
@@ -45,6 +48,8 @@ export function PackagePlanFormSheet({
   const t = useTranslations("manager.packages");
   const tCommon = useTranslations("common");
   const [name, setName] = useState(initial.name);
+  const [planType, setPlanType] = useState<PackagePlanType>(initial.planType);
+  const [creditValue, setCreditValue] = useState(String(initial.creditValue));
   const [validityDays, setValidityDays] = useState(String(initial.validityDays));
   const [singleVisit, setSingleVisit] = useState(initial.singleVisit);
   const [discountPercent, setDiscountPercent] = useState(String(initial.discountPercent));
@@ -56,6 +61,8 @@ export function PackagePlanFormSheet({
   useEffect(() => {
     if (!open) return;
     setName(initial.name);
+    setPlanType(initial.planType);
+    setCreditValue(String(initial.creditValue));
     setValidityDays(String(initial.validityDays));
     setSingleVisit(initial.singleVisit);
     setDiscountPercent(String(initial.discountPercent));
@@ -77,10 +84,15 @@ export function PackagePlanFormSheet({
     return map;
   }, [branchServices]);
 
-  const listTotal = useMemo(
-    () => packageListTotal(items, priceByServiceId),
-    [items, priceByServiceId]
-  );
+  const isValueCredit = planType === "VALUE_CREDIT";
+
+  const listTotal = useMemo(() => {
+    if (isValueCredit) {
+      const credit = Number(creditValue);
+      return Number.isFinite(credit) && credit > 0 ? credit : 0;
+    }
+    return packageListTotal(items, priceByServiceId);
+  }, [isValueCredit, creditValue, items, priceByServiceId]);
 
   useEffect(() => {
     if (priceTouched || listTotal <= 0) return;
@@ -115,11 +127,21 @@ export function PackagePlanFormSheet({
       setFormError(t("validityDaysInvalid"));
       return;
     }
-    if (items.length === 0) {
+    if (!isValueCredit && items.length === 0) {
       setFormError(t("itemsRequired"));
       return;
     }
-    if (listTotal <= 0) {
+    if (isValueCredit) {
+      const credit = Number(creditValue);
+      if (!Number.isFinite(credit) || credit <= 0) {
+        setFormError(t("creditValueInvalid"));
+        return;
+      }
+      if (price > credit) {
+        setFormError(t("salePriceExceedsCredit"));
+        return;
+      }
+    } else if (listTotal <= 0) {
       setFormError(t("itemsPricingLoading"));
       return;
     }
@@ -130,20 +152,22 @@ export function PackagePlanFormSheet({
     setFormError("");
     onSubmit({
       name: name.trim(),
+      planType,
+      creditValue: isValueCredit ? Number(creditValue) : 0,
       validityDays: days,
-      singleVisit,
+      singleVisit: isValueCredit ? false : singleVisit,
       discountPercent: Number.isFinite(discount) ? discount : 0,
       packagePrice: price,
-      items,
+      items: isValueCredit ? [] : items,
     });
   }
 
   const canSave =
     !!name.trim() &&
-    items.length > 0 &&
     listTotal > 0 &&
     Number(packagePrice) > 0 &&
-    Number(validityDays) >= 1;
+    Number(validityDays) >= 1 &&
+    (isValueCredit || items.length > 0);
 
   return (
     <SideSheet
@@ -168,6 +192,50 @@ export function PackagePlanFormSheet({
             {formError}
           </p>
         ) : null}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label
+            className={cn(
+              "flex flex-col gap-1 rounded-lg border p-3 cursor-pointer touch-manipulation",
+              planType === "SERVICE_BUNDLE"
+                ? "border-[var(--brand)] bg-[var(--brand-light)]/40"
+                : "border-[var(--border)]"
+            )}
+          >
+            <input
+              type="radio"
+              name="pkg-type"
+              className="sr-only"
+              checked={planType === "SERVICE_BUNDLE"}
+              onChange={() => setPlanType("SERVICE_BUNDLE")}
+              disabled={saving}
+            />
+            <span className="text-sm font-medium">{t("planTypeBundle")}</span>
+            <span className="text-[11px] text-[var(--text-tertiary)]">{t("planTypeBundleHint")}</span>
+          </label>
+          <label
+            className={cn(
+              "flex flex-col gap-1 rounded-lg border p-3 cursor-pointer touch-manipulation",
+              planType === "VALUE_CREDIT"
+                ? "border-[var(--brand)] bg-[var(--brand-light)]/40"
+                : "border-[var(--border)]"
+            )}
+          >
+            <input
+              type="radio"
+              name="pkg-type"
+              className="sr-only"
+              checked={planType === "VALUE_CREDIT"}
+              onChange={() => {
+                setPlanType("VALUE_CREDIT");
+                setSingleVisit(false);
+              }}
+              disabled={saving}
+            />
+            <span className="text-sm font-medium">{t("planTypeValueCredit")}</span>
+            <span className="text-[11px] text-[var(--text-tertiary)]">{t("planTypeValueCreditHint")}</span>
+          </label>
+        </div>
+
         <div>
           <label className="ui-field-label block mb-1" htmlFor="pkg-name">
             {t("planName")}
@@ -181,7 +249,7 @@ export function PackagePlanFormSheet({
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={cn("grid gap-3", !isValueCredit && "sm:grid-cols-2")}>
           <div>
             <label className="ui-field-label block mb-1" htmlFor="pkg-validity">
               {t("validityDaysLabel")}
@@ -196,32 +264,56 @@ export function PackagePlanFormSheet({
             />
             <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("validityDaysHint")}</p>
           </div>
-          <label
-            className={cn(
-              "flex items-start gap-2 rounded-lg border p-3 cursor-pointer touch-manipulation transition-colors",
-              !singleVisit
-                ? "border-[var(--brand)] bg-[var(--brand-light)]/40"
-                : "border-[var(--border)] bg-[var(--surface)]"
-            )}
-          >
+          {!isValueCredit ? (
+            <label
+              className={cn(
+                "flex items-start gap-2 rounded-lg border p-3 cursor-pointer touch-manipulation transition-colors",
+                !singleVisit
+                  ? "border-[var(--brand)] bg-[var(--brand-light)]/40"
+                  : "border-[var(--border)] bg-[var(--surface)]"
+              )}
+            >
+              <input
+                id="pkg-multi-visit"
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-[var(--brand)]"
+                checked={!singleVisit}
+                onChange={(e) => setSingleVisit(!e.target.checked)}
+                disabled={saving}
+              />
+              <span className="text-sm">
+                <span className="font-medium text-[var(--text-primary)]">{t("multiVisitCheckbox")}</span>
+                <span className="block text-[11px] text-[var(--text-tertiary)] mt-0.5">{t("multiVisitHint")}</span>
+              </span>
+            </label>
+          ) : null}
+        </div>
+
+        {isValueCredit ? (
+          <div>
+            <label className="ui-field-label block mb-1" htmlFor="pkg-credit">
+              {t("creditValueLabel")}
+            </label>
             <input
-              id="pkg-multi-visit"
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 accent-[var(--brand)]"
-              checked={!singleVisit}
-              onChange={(e) => setSingleVisit(!e.target.checked)}
+              id="pkg-credit"
+              className={inputClass}
+              inputMode="decimal"
+              value={creditValue}
+              onChange={(e) => {
+                setCreditValue(e.target.value);
+                setPriceTouched(false);
+              }}
               disabled={saving}
             />
-            <span className="text-sm">
-              <span className="font-medium text-[var(--text-primary)]">{t("multiVisitCheckbox")}</span>
-              <span className="block text-[11px] text-[var(--text-tertiary)] mt-0.5">{t("multiVisitHint")}</span>
-            </span>
-          </label>
-        </div>
+            <p className="mt-1 text-[11px] text-[var(--text-tertiary)]">{t("creditValueHint")}</p>
+          </div>
+        ) : null}
 
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-3 space-y-2">
           <p className="text-xs font-semibold text-[var(--text-secondary)]">
-            {t("servicesListValue", { amount: formatCurrency(listTotal) })}
+            {isValueCredit
+              ? t("creditListValue", { amount: formatCurrency(listTotal) })
+              : t("servicesListValue", { amount: formatCurrency(listTotal) })}
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             <div>
@@ -253,15 +345,17 @@ export function PackagePlanFormSheet({
           </div>
         </div>
 
-        <div>
-          <p className="ui-field-label block mb-2">{t("pickServicesTitle")}</p>
-          <PackageServiceCatalogPicker
-            branchId={branchId}
-            items={items}
-            onChange={setItems}
-            disabled={saving}
-          />
-        </div>
+        {!isValueCredit ? (
+          <div>
+            <p className="ui-field-label block mb-2">{t("pickServicesTitle")}</p>
+            <PackageServiceCatalogPicker
+              branchId={branchId}
+              items={items}
+              onChange={setItems}
+              disabled={saving}
+            />
+          </div>
+        ) : null}
       </div>
     </SideSheet>
   );

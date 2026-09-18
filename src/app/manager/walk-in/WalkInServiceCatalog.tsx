@@ -431,7 +431,7 @@ export function WalkInServiceCatalog({
 
       <div
         className={cn(
-          "p-1.5 sm:p-2 lg:p-2.5",
+          "p-1.5 sm:p-2 lg:p-2.5 max-lg:pb-8",
           !scrollWithParent &&
             "lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:touch-scroll-y"
         )}

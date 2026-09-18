@@ -18,6 +18,8 @@ export type BillBreakdownPreview = {
   membershipFeeLabel?: string;
   packageFeeAmount?: number;
   packageFeeLabel?: string;
+  packageValueCreditAmount?: number;
+  packageValueCreditLabel?: string;
   cgstAmount: number;
   sgstAmount?: number;
   grandTotal: number;
@@ -118,6 +120,19 @@ export function BillBreakdownRows({
           </span>
         </div>
       )}
+      {(preview.packageValueCreditAmount ?? 0) > 0 && (
+        <div className="flex justify-between gap-2">
+          <span
+            className="min-w-0 truncate text-[var(--text-secondary)]"
+            title={preview.packageValueCreditLabel || tWalkIn("packageValueCredit")}
+          >
+            {preview.packageValueCreditLabel || tWalkIn("packageValueCredit")}
+          </span>
+          <span className="shrink-0 font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
+            -{fmt(preview.packageValueCreditAmount ?? 0)}
+          </span>
+        </div>
+      )}
       {!hideGrandTotal && (
         <div className="flex justify-between font-bold text-base pt-2 border-t border-[var(--border)]">
           <span>{tCommon("grandTotal")}</span>
@@ -132,10 +147,14 @@ export function BillBreakdownRows({
 export function membershipFeeServiceLine(preview?: {
   membershipFeeAmount?: number;
   membershipFeeLabel?: string;
+  packageFeeAmount?: number;
 } | null) {
   if (!preview || (preview.membershipFeeAmount ?? 0) <= 0) return null;
+  if ((preview.packageFeeAmount ?? 0) > 0) return null;
+  const label = preview.membershipFeeLabel || "Membership card";
+  if (/^package\b/i.test(label)) return null;
   return {
-    name: preview.membershipFeeLabel || "Membership card",
+    name: label,
     amount: preview.membershipFeeAmount ?? 0,
   };
 }

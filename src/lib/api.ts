@@ -1888,6 +1888,9 @@ export interface BillPreview {
   membershipFeeLabel?: string;
   packageFeeAmount?: number;
   packageFeeLabel?: string;
+  packageValueCreditAmount?: number;
+  packageValueCreditLabel?: string;
+  packageValueCreditShortfall?: number;
 }
 
 export interface Booking {
@@ -2157,6 +2160,7 @@ export interface SellMembershipRequest {
 }
 
 export type PackageRedemptionMode = "SINGLE_VISIT" | "MULTI_VISIT";
+export type PackagePlanType = "SERVICE_BUNDLE" | "VALUE_CREDIT";
 export type PackageSubscriptionStatus = "ACTIVE" | "COMPLETED" | "EXPIRED" | "CANCELLED";
 
 export interface ServicePackagePlanItem {
@@ -2174,6 +2178,8 @@ export interface ServicePackagePlan {
   description?: string;
   listPriceTotal: number;
   packagePrice: number;
+  planType?: PackagePlanType;
+  creditValue?: number;
   validityDays: number;
   redemptionMode: PackageRedemptionMode;
   branchIds: string[];
@@ -2187,11 +2193,13 @@ export interface CreateServicePackagePlanRequest {
   name: string;
   description?: string;
   packagePrice: number;
+  planType?: PackagePlanType;
+  creditValue?: number;
   validityDays?: number;
   redemptionMode?: PackageRedemptionMode;
   branchIds?: string[];
   status?: PromoStatus;
-  items: { serviceId: string; quantity: number; sortOrder?: number }[];
+  items?: { serviceId: string; quantity: number; sortOrder?: number }[];
 }
 
 export interface UpdateServicePackagePlanRequest extends CreateServicePackagePlanRequest {}
@@ -2213,6 +2221,9 @@ export interface CustomerPackageSubscription {
   branchName?: string;
   planId: string;
   planName: string;
+  planType?: PackagePlanType;
+  creditTotal?: number;
+  creditRemaining?: number;
   redemptionMode: PackageRedemptionMode;
   amountPaid: number;
   purchasedOn: string;
@@ -2711,6 +2722,8 @@ export interface InvoiceDetail {
   promoLabel?: string;
   membershipFeeAmount?: number;
   membershipFeeLabel?: string;
+  packageFeeAmount?: number;
+  packageFeeLabel?: string;
   taxableAmount: number;
   cgstAmount: number;
   sgstAmount: number;

@@ -13,7 +13,7 @@ import {
 } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { formatCurrency, cn } from "@/lib/utils";
-import { formatPackageInclusions } from "@/lib/package-inclusions";
+import { formatPlanIncludes } from "@/lib/package-inclusions";
 import { discountPercentFromPrice } from "@/lib/package-pricing";
 import {
   getExpiringThisMonthRange,
@@ -75,8 +75,12 @@ function draftsFromPlan(plan: ServicePackagePlan): PackagePlanItemDraft[] {
 }
 
 function formFromPlan(plan: ServicePackagePlan): PackagePlanFormValues {
+  const planType = plan.planType ?? "SERVICE_BUNDLE";
+  const creditBase = plan.creditValue ?? plan.listPriceTotal;
   return {
     name: plan.name,
+    planType,
+    creditValue: creditBase,
     validityDays: plan.validityDays,
     singleVisit: plan.redemptionMode === "SINGLE_VISIT",
     discountPercent: discountPercentFromPrice(plan.listPriceTotal, plan.packagePrice),
@@ -87,6 +91,8 @@ function formFromPlan(plan: ServicePackagePlan): PackagePlanFormValues {
 
 const emptyForm: PackagePlanFormValues = {
   name: "",
+  planType: "SERVICE_BUNDLE",
+  creditValue: 10000,
   validityDays: 90,
   singleVisit: false,
   discountPercent: 15,
@@ -249,23 +255,28 @@ export default function ManagerPackagesClient() {
   }
 
   function buildRequest(values: PackagePlanFormValues): CreateServicePackagePlanRequest {
+    const isValueCredit = values.planType === "VALUE_CREDIT";
     return {
       name: values.name,
+      planType: values.planType,
+      creditValue: isValueCredit ? values.creditValue : undefined,
       packagePrice: values.packagePrice,
       validityDays: values.validityDays,
-      redemptionMode: values.singleVisit ? "SINGLE_VISIT" : "MULTI_VISIT",
+      redemptionMode: isValueCredit ? "MULTI_VISIT" : values.singleVisit ? "SINGLE_VISIT" : "MULTI_VISIT",
       branchIds: branchId ? [branchId] : [],
-      items: values.items.map((item, idx) => ({
-        serviceId: item.serviceId,
-        quantity: item.quantity,
-        sortOrder: idx,
-      })),
+      items: isValueCredit
+        ? []
+        : values.items.map((item, idx) => ({
+            serviceId: item.serviceId,
+            quantity: item.quantity,
+            sortOrder: idx,
+          })),
     };
   }
 
   function handleFormSubmit(values: PackagePlanFormValues) {
     setError("");
-    if (values.items.length === 0) {
+    if (values.planType !== "VALUE_CREDIT" && values.items.length === 0) {
       setError(t("itemsRequired"));
       return;
     }
@@ -417,7 +428,7 @@ export default function ManagerPackagesClient() {
                         {plan.redemptionMode === "SINGLE_VISIT" ? t("singleVisitShort") : t("multiVisitShort")}
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--text-secondary)] max-w-[12rem] line-clamp-2">
-                        {formatPackageInclusions(plan.items) || "—"}
+                        {formatPlanIncludes(plan) || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <PlanActions plan={plan} t={t} onEdit={() => openEdit(plan)} />
@@ -554,10 +565,10 @@ function PlanMobileRow({
           </span>
           {" · "}
           {t("validityDaysShort", { days: plan.validityDays })}
-          {formatPackageInclusions(plan.items) ? (
+          {formatPlanIncludes(plan) ? (
             <>
               {" · "}
-              <span className="text-[var(--text-tertiary)]">{formatPackageInclusions(plan.items)}</span>
+              <span className="text-[var(--text-tertiary)]">{formatPlanIncludes(plan)}</span>
             </>
           ) : null}
         </p>

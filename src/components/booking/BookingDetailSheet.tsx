@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
-import { BillBreakdownRows, membershipFeeServiceLine, type BillBreakdownPreview } from "@/components/billing/BillBreakdownRows";
+import {
+  BillBreakdownRows,
+  membershipFeeServiceLine,
+  packageFeeServiceLine,
+  type BillBreakdownPreview,
+} from "@/components/billing/BillBreakdownRows";
 import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
@@ -25,6 +30,8 @@ function resolveBillPreview(booking: Booking, inv: InvoiceDetail | null): BillBr
       promoLabel: inv.promoLabel,
       membershipFeeAmount: inv.membershipFeeAmount,
       membershipFeeLabel: inv.membershipFeeLabel,
+      packageFeeAmount: inv.packageFeeAmount,
+      packageFeeLabel: inv.packageFeeLabel,
       cgstAmount: inv.cgstAmount,
       sgstAmount: inv.sgstAmount,
       grandTotal: inv.grandTotal,
@@ -153,13 +160,24 @@ export function BookingDetailSheet({
                 </li>
               ))}
               {(() => {
-                const fee = membershipFeeServiceLine(invoice ?? booking.billPreview);
-                if (!fee) return null;
+                const preview = invoice ?? booking.billPreview;
+                const fee = membershipFeeServiceLine(preview);
+                const pkg = packageFeeServiceLine(preview);
                 return (
-                  <li className="flex justify-between gap-2">
-                    <span>{fee.name}</span>
-                    <span className="font-medium">{formatCurrency(fee.amount)}</span>
-                  </li>
+                  <>
+                    {fee ? (
+                      <li className="flex justify-between gap-2">
+                        <span>{fee.name}</span>
+                        <span className="font-medium">{formatCurrency(fee.amount)}</span>
+                      </li>
+                    ) : null}
+                    {pkg ? (
+                      <li className="flex justify-between gap-2">
+                        <span>{pkg.name}</span>
+                        <span className="font-medium">{formatCurrency(pkg.amount)}</span>
+                      </li>
+                    ) : null}
+                  </>
                 );
               })()}
             </ul>

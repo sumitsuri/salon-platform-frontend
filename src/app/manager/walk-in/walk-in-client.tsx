@@ -20,6 +20,7 @@ import {
   Scissors,
   Sparkles,
   Tag,
+  Gift,
 } from "lucide-react";
 import {
   api,
@@ -52,7 +53,11 @@ import {
   type RecentCustomer,
   type WalkInDraft,
 } from "@/lib/walk-in-prefs";
-import { formatPackageInclusions } from "@/lib/package-inclusions";
+import { formatPlanIncludes } from "@/lib/package-inclusions";
+import {
+  isValueCreditSubscription,
+  pickAutoValueCreditSubscription,
+} from "@/lib/package-subscription-utils";
 import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { formatBookingVisitAt } from "@/lib/booking-display";
 import { buildWalkInUrl, customerDetailPath } from "@/lib/navigation-scope";
@@ -78,6 +83,7 @@ import {
   selectClass,
   btnPrimary,
   btnSecondary,
+  ConfirmDialog,
 } from "@/components/ui";
 import { WizardSteps } from "@/components/enterprise-ui";
 import { MissionStrip } from "@/components/brand/MissionStrip";
@@ -120,7 +126,11 @@ type PaymentMode = "CASH" | "UPI" | "CARD" | "SPLIT";
 
 interface CartItem extends WalkInCartItem {}
 
-function cartLinePrice(c: CartItem) {
+function cartLinePrice(c: CartItem, isValueCredit?: (subId: string) => boolean) {
+  if (c.packageSubscriptionId && isValueCredit?.(c.packageSubscriptionId)) {
+    const unit = c.basePrice + (c.priceExtra || 0);
+    return unit * walkInCartItemQty(c);
+  }
   return walkInCartLinePrice(c);
 }
 
@@ -578,6 +588,19 @@ export default function WalkInPage() {
     enabled: !!customerId && screen === "flow",
   });
 
+  const autoValueCreditSub = useMemo(
+    () => pickAutoValueCreditSubscription(customerPackages),
+    [customerPackages]
+  );
+
+  const isValueCreditSubId = useCallback(
+    (subId: string) => {
+      const sub = customerPackages.find((s) => s.id === subId);
+      return sub ? isValueCreditSubscription(sub) : false;
+    },
+    [customerPackages]
+  );
+
   const { data: sellablePackagePlans = [] } = useQuery({
     queryKey: ["active-package-plans", branchId],
     queryFn: () => api.getActivePackagePlans(branchId),
@@ -590,7 +613,7 @@ export default function WalkInPage() {
   );
 
   const pendingPackageInclusions = useMemo(
-    () => formatPackageInclusions(pendingPackagePlan?.items),
+    () => (pendingPackagePlan ? formatPlanIncludes(pendingPackagePlan) : ""),
     [pendingPackagePlan]
   );
 
@@ -1119,10 +1142,13 @@ export default function WalkInPage() {
       return billPreview.grandTotal ?? 0;
     }
     const fee = billPreview.membershipFeeAmount ?? 0;
+    const pkgFee = billPreview.packageFeeAmount ?? 0;
+    const valueCredit = billPreview.packageValueCreditAmount ?? 0;
     const cgst = Number.isFinite(cgstNum) && cgstNum >= 0 ? cgstNum : 0;
     const sgst = Number.isFinite(sgstNum) && sgstNum >= 0 ? sgstNum : 0;
     const taxable = billPreview.taxableAmount ?? 0;
-    return Math.round((taxable + cgst + sgst + fee) * 100) / 100;
+    const manual = billPreview.manualDiscountAmount ?? 0;
+    return Math.round((taxable + cgst + sgst + fee + pkgFee - manual - valueCredit) * 100) / 100;
   }, [billPreview, cgstNum, sgstNum, taxOverridden]);
 
   const splitSum = useMemo(
@@ -1639,7 +1665,16 @@ export default function WalkInPage() {
     return cart[idx].quantity ?? 1;
   }
 
+  function activeValueCreditSubscription() {
+    return autoValueCreditSub;
+  }
+
   function addServiceToCart(s: BranchServiceItem, staffId: string) {
+    const valueSub = activeValueCreditSubscription();
+    if (valueSub) {
+      redeemPackageToCart(s.id, s.serviceName, s.price, valueSub.id, 1, staffId);
+      return;
+    }
     setCart((prev) => {
       const idx = prev.findIndex((c) => c.branchServiceId === s.id && !c.packageSubscriptionId);
       if (idx >= 0) {
@@ -1806,9 +1841,13 @@ export default function WalkInPage() {
   }
 
   function maxPackageRedeemQty(subscriptionId: string, branchServiceId: string): number {
+    const sub = customerPackages.find((s) => s.id === subscriptionId);
+    if (sub && isValueCreditSubscription(sub)) {
+      if ((sub.creditRemaining ?? 0) <= 0) return 0;
+      return Math.max(0, WALK_IN_MAX_SERVICE_QTY - packageQtyInCart(subscriptionId, branchServiceId));
+    }
     const svc = servicesById.get(branchServiceId);
     if (!svc) return 0;
-    const sub = customerPackages.find((s) => s.id === subscriptionId);
     const ent = sub?.entitlements.find((e) => e.serviceId === svc.serviceId);
     if (!ent) return 0;
     return Math.max(0, ent.quantityRemaining - packageQtyInCart(subscriptionId, branchServiceId));
@@ -1819,13 +1858,14 @@ export default function WalkInPage() {
     serviceName: string,
     basePrice: number,
     subscriptionId: string,
-    quantity: number
+    quantity: number,
+    staffId?: string
   ) {
     const toAdd = Math.min(Math.max(1, Math.floor(quantity)), maxPackageRedeemQty(subscriptionId, branchServiceId));
     if (toAdd <= 0) return;
     const svc = servicesById.get(branchServiceId);
     setCart((prev) => {
-      const fill = defaultStaffId(prev);
+      const fill = staffId || defaultStaffId(prev);
       const idx = prev.findIndex(
         (c) => c.branchServiceId === branchServiceId && c.packageSubscriptionId === subscriptionId
       );
@@ -2090,17 +2130,63 @@ export default function WalkInPage() {
     }
   }
 
-  async function proceedToBill() {
+  const pendingProceedBookingRef = useRef<Booking | null>(null);
+  const [partialCreditConfirm, setPartialCreditConfirm] = useState<{
+    creditApplied: number;
+    shortfall: number;
+    amountDue: number;
+  } | null>(null);
+
+  const partialCreditBillHint = useMemo(() => {
+    const shortfall = billPreview?.packageValueCreditShortfall ?? 0;
+    if (shortfall <= 0.009) return null;
+    return {
+      creditApplied: billPreview?.packageValueCreditAmount ?? 0,
+      shortfall,
+      amountDue: billPreview?.grandTotal ?? 0,
+    };
+  }, [billPreview]);
+
+  async function proceedToBill(acknowledgedPartialCredit = false) {
     setError("");
     setSaving(true);
     try {
       const b = await persistServices(false);
+      const shortfall = b.billPreview?.packageValueCreditShortfall ?? 0;
+      const creditApplied = b.billPreview?.packageValueCreditAmount ?? 0;
+      if (!acknowledgedPartialCredit && shortfall > 0.009 && creditApplied > 0) {
+        pendingProceedBookingRef.current = b;
+        setPartialCreditConfirm({
+          creditApplied,
+          shortfall,
+          amountDue: b.billPreview?.grandTotal ?? 0,
+        });
+        return;
+      }
+      pendingProceedBookingRef.current = null;
+      setPartialCreditConfirm(null);
       hydrateFromBooking(b);
       clearWalkInDraft(branchId);
       setStep(3);
       router.push(`/manager/walk-in?bookingId=${b.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : tCommon("failed"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function confirmPartialCreditProceed() {
+    const b = pendingProceedBookingRef.current;
+    setPartialCreditConfirm(null);
+    if (!b) return;
+    pendingProceedBookingRef.current = null;
+    setSaving(true);
+    try {
+      hydrateFromBooking(b);
+      clearWalkInDraft(branchId);
+      setStep(3);
+      router.push(`/manager/walk-in?bookingId=${b.id}`);
     } finally {
       setSaving(false);
     }
@@ -2157,17 +2243,23 @@ export default function WalkInPage() {
   const cartPaidQtyByServiceId = useMemo(() => {
     const m: Record<string, number> = {};
     for (const c of cart) {
-      if (c.packageSubscriptionId) continue;
-      m[c.branchServiceId] = c.quantity ?? 1;
+      const qty = c.quantity ?? 1;
+      if (c.packageSubscriptionId) {
+        if (isValueCreditSubId(c.packageSubscriptionId)) {
+          m[c.branchServiceId] = (m[c.branchServiceId] ?? 0) + qty;
+        }
+        continue;
+      }
+      m[c.branchServiceId] = (m[c.branchServiceId] ?? 0) + qty;
     }
     return m;
-  }, [cart]);
+  }, [cart, isValueCreditSubId]);
   const cartTotals = useMemo(() => {
-    const subtotal = cart.reduce((s, c) => s + cartLinePrice(c), 0);
+    const subtotal = cart.reduce((s, c) => s + cartLinePrice(c, isValueCreditSubId), 0);
     const estimatedTax = gstEffective
       ? cart.reduce((s, c) => {
           const rate = servicesById.get(c.branchServiceId)?.gstRate ?? 0;
-          return s + (cartLinePrice(c) * rate) / 100;
+          return s + (cartLinePrice(c, isValueCreditSubId) * rate) / 100;
         }, 0)
       : 0;
     const half = estimatedTax / 2;
@@ -2178,7 +2270,7 @@ export default function WalkInPage() {
       estimatedSgst: half,
       estimatedGrand: subtotal + estimatedTax,
     };
-  }, [cart, servicesById, gstEffective]);
+  }, [cart, servicesById, gstEffective, isValueCreditSubId]);
   const cartHasFreshBill =
     !!billPreview &&
     walkInCartPayloadLineCount(cart) ===
@@ -2664,6 +2756,15 @@ export default function WalkInPage() {
       )}
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+      {step === 2 && partialCreditBillHint ? (
+        <Callout variant="warning" title={t("partialPackageCreditTitle")}>
+          {t("partialPackageCreditBody", {
+            credit: formatMoney(partialCreditBillHint.creditApplied, localeKit),
+            extra: formatMoney(partialCreditBillHint.shortfall, localeKit),
+            due: formatMoney(partialCreditBillHint.amountDue, localeKit),
+          })}
+        </Callout>
+      ) : null}
       {draftRestoredNotice && step === 1 && (
         <AlertBanner variant="info">{t("draftRestored")}</AlertBanner>
       )}
@@ -2939,8 +3040,12 @@ export default function WalkInPage() {
           className={cn(
             "min-w-0 space-y-2",
             cart.length === 0
-              ? "max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
-              : "max-lg:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
+              ? customerPackages.length > 0
+                ? "max-lg:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))]"
+                : "max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))]"
+              : customerPackages.length > 0
+                ? "max-lg:pb-[calc(7.25rem+env(safe-area-inset-bottom,0px))]"
+                : "max-lg:pb-[calc(5.75rem+env(safe-area-inset-bottom,0px))]"
           )}
         >
           {addedToast && (
@@ -3059,12 +3164,7 @@ export default function WalkInPage() {
                 maxPaidLineQty={maxPaidLineQty}
                 maxPackageLineQty={(item) =>
                   item.packageSubscriptionId
-                    ? (() => {
-                        const svc = servicesById.get(item.branchServiceId);
-                        const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
-                        const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
-                        return ent?.quantityRemaining ?? 1;
-                      })()
+                    ? maxPackageRedeemQty(item.packageSubscriptionId, item.branchServiceId)
                     : 1
                 }
                 onSaveOpen={() => void saveOpenVisit()}
@@ -3151,12 +3251,7 @@ export default function WalkInPage() {
                       maxPaidLineQty={maxPaidLineQty}
                       maxPackageLineQty={(item) =>
                         item.packageSubscriptionId
-                          ? (() => {
-                              const svc = servicesById.get(item.branchServiceId);
-                              const sub = customerPackages.find((s) => s.id === item.packageSubscriptionId);
-                              const ent = sub?.entitlements.find((e) => e.serviceId === svc?.serviceId);
-                              return ent?.quantityRemaining ?? 1;
-                            })()
+                          ? maxPackageRedeemQty(item.packageSubscriptionId, item.branchServiceId)
                           : 1
                       }
                       onSaveOpen={() => void saveOpenVisit()}
@@ -3311,15 +3406,21 @@ export default function WalkInPage() {
                     <>
                     {billPreview.lines.map((line, idx) => {
                       const membershipFee = membershipFeeServiceLine(billPreview);
+                      const packageFee = packageFeeServiceLine(billPreview);
+                      const isPackageRow =
+                        !!packageFee &&
+                        (line.serviceName === packageFee.name ||
+                          /^package\b/i.test(line.serviceName ?? ""));
                       const isMembershipRow =
                         !!membershipFee &&
-                        (idx >= cart.length ||
-                          line.serviceName === membershipFee.name ||
-                          /membership/i.test(line.serviceName));
+                        !isPackageRow &&
+                        (line.serviceName === membershipFee.name ||
+                          (/membership/i.test(line.serviceName ?? "") &&
+                            !/^package\b/i.test(line.serviceName ?? "")));
                       const stylist =
-                        !isMembershipRow && line.staffId
+                        !isMembershipRow && !isPackageRow && line.staffId
                           ? staff.find((s) => s.id === line.staffId)?.name
-                          : !isMembershipRow && cart[idx]?.staffId
+                          : !isMembershipRow && !isPackageRow && cart[idx]?.staffId
                             ? staff.find((s) => s.id === cart[idx].staffId)?.name
                             : undefined;
                       const qty = line.quantity || 1;
@@ -3330,12 +3431,16 @@ export default function WalkInPage() {
                           className={cn(
                             "flex justify-between gap-2 items-start py-1.5 first:pt-0 last:pb-0",
                             isMembershipRow &&
-                              "rounded-md border-l-2 border-violet-400 bg-violet-50/50 pl-2 dark:border-violet-600 dark:bg-violet-950/20"
+                              "rounded-md border-l-2 border-violet-400 bg-violet-50/50 pl-2 dark:border-violet-600 dark:bg-violet-950/20",
+                            isPackageRow &&
+                              "rounded-md border-l-2 border-sky-400 bg-sky-50/50 pl-2 dark:border-sky-600 dark:bg-sky-950/20"
                           )}
                         >
                           <div className="min-w-0 flex items-start gap-1.5">
                             {isMembershipRow ? (
                               <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600 dark:text-violet-400" aria-hidden />
+                            ) : isPackageRow ? (
+                              <Gift className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
                             ) : null}
                             <div className="min-w-0">
                               <p className="font-medium text-[var(--text-primary)] truncate text-sm">
@@ -3347,7 +3452,7 @@ export default function WalkInPage() {
                               )}
                             </div>
                           </div>
-                          {!isMembershipRow && !billingLocked ? (
+                          {!isMembershipRow && !isPackageRow && !billingLocked ? (
                             <WalkInEditablePriceButton
                               amount={linePrice}
                               localeKit={localeKit}
@@ -3411,14 +3516,14 @@ export default function WalkInPage() {
                                 </div>
                                 {!billingLocked ? (
                                   <WalkInEditablePriceButton
-                                    amount={cartLinePrice(item)}
+                                    amount={cartLinePrice(item, isValueCreditSubId)}
                                     localeKit={localeKit}
                                     size="md"
                                     onEdit={() => setPriceEditIdx(idx)}
                                   />
                                 ) : (
                                   <span className="font-semibold text-sm text-[var(--text-primary)] tabular-nums shrink-0">
-                                    {formatMoney(cartLinePrice(item), localeKit)}
+                                    {formatMoney(cartLinePrice(item, isValueCreditSubId), localeKit)}
                                   </span>
                                 )}
                               </li>
@@ -3739,6 +3844,31 @@ export default function WalkInPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={partialCreditConfirm != null}
+        onClose={() => {
+          if (saving) return;
+          setPartialCreditConfirm(null);
+          pendingProceedBookingRef.current = null;
+        }}
+        onConfirm={confirmPartialCreditProceed}
+        title={t("partialPackageCreditTitle")}
+        description={
+          partialCreditConfirm ? (
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              {t("partialPackageCreditBody", {
+                credit: formatMoney(partialCreditConfirm.creditApplied, localeKit),
+                extra: formatMoney(partialCreditConfirm.shortfall, localeKit),
+                due: formatMoney(partialCreditConfirm.amountDue, localeKit),
+              })}
+            </p>
+          ) : null
+        }
+        confirmLabel={t("partialPackageCreditConfirm")}
+        cancelLabel={tCommon("cancel")}
+        confirmPending={saving}
+      />
 
       <WalkInPaymentCompleteModal
         open={paymentCompleteOpen}
