@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CalendarDays } from "lucide-react";
 import { api, Booking } from "@/lib/api";
@@ -95,6 +95,7 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
 }
 
 function AdminBookingsPageContent() {
+  const queryClient = useQueryClient();
   const t = useTranslations("admin.bookings");
   const tMgr = useTranslations("manager.bookings");
   const tCustomers = useTranslations("customers");
@@ -638,6 +639,13 @@ function AdminBookingsPageContent() {
         }
         useSecondaryButton
         downloadTestId="admin-download-invoice"
+        adminBillTools
+        onBillMutated={() => {
+          void queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
+          if (detailBooking?.id) {
+            void queryClient.invalidateQueries({ queryKey: ["booking", detailBooking.id] });
+          }
+        }}
       />
     </AdminPageShell>
   );

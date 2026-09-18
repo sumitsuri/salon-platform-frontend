@@ -1972,7 +1972,21 @@
       "emptyDesc": "Try adjusting your filters",
       "branchBookingsSubtitle": "All visits at this branch",
       "dateTo": "To",
-      "completeToDownload": "Invoice PDF is available after the visit is completed and paid."
+      "completeToDownload": "Invoice PDF is available after the visit is completed and paid.",
+      "editBill": "Edit bill",
+      "deleteBill": "Delete bill",
+      "editBillTitle": "Edit bill",
+      "editBillHint": "Adjust line prices or quantities. Totals, tax, and payment amount are recalculated. Package redemption lines cannot be edited here.",
+      "editBillNoLines": "This bill has no service lines — only fees on the invoice. Use delete bill to void and re-bill from walk-in.",
+      "saveBillChanges": "Save & recalculate",
+      "lineQty": "Qty",
+      "linePrice": "Unit price (₹)",
+      "packageLineLocked": "Package redemption — price is set by the package.",
+      "editReasonLabel": "Reason (optional, for audit log)",
+      "editReasonPlaceholder": "e.g. Wrong service price entered at checkout",
+      "currentGrandTotal": "Current total: {amount}",
+      "deleteBillTitle": "Delete this bill?",
+      "deleteBillConfirm": "This removes the invoice and payment record and reopens the visit for billing. Customer visit count and spend are adjusted. Cannot be undone if a package was used or membership was sold on this bill."
     },
     "inventory": {
       "title": "Inventory",

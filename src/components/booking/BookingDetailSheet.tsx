@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { FileText } from "lucide-react";
+import { FileText, Pencil, Trash2 } from "lucide-react";
+import { AdminBillEditSheet } from "@/components/booking/AdminBillEditSheet";
 import {
   BillBreakdownRows,
   membershipFeeServiceLine,
@@ -14,7 +15,15 @@ import { InvoicePdfButtons } from "@/components/billing/InvoicePdfButtons";
 import { BookingReviewInviteSection } from "@/components/reviews/BookingReviewInviteSection";
 import { api, Booking, InvoiceDetail } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
-import { SideSheet, AlertBanner, btnPrimary, btnSecondary, btnSecondarySm } from "@/components/ui";
+import {
+  SideSheet,
+  AlertBanner,
+  btnPrimary,
+  btnSecondary,
+  btnSecondarySm,
+  btnDangerSm,
+  ConfirmDialog,
+} from "@/components/ui";
 
 function isOpenStatus(status: string) {
   return status === "IN_PROGRESS" || status === "READY_FOR_BILLING" || status === "DRAFT";
@@ -59,6 +68,9 @@ export type BookingDetailSheetProps = {
   subtitle?: string;
   useSecondaryButton?: boolean;
   downloadTestId?: string;
+  /** CEO / brand admin: edit or void completed bills */
+  adminBillTools?: boolean;
+  onBillMutated?: () => void;
 };
 
 export function BookingDetailSheet({
@@ -71,12 +83,18 @@ export function BookingDetailSheet({
   subtitle,
   useSecondaryButton = false,
   downloadTestId,
+  adminBillTools = false,
+  onBillMutated,
 }: BookingDetailSheetProps) {
   const t = useTranslations("manager.bookings");
+  const tAdmin = useTranslations("admin.bookings");
   const tCommon = useTranslations("common");
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   useEffect(() => {
     if (!open || !booking || booking.status !== "COMPLETED") {
@@ -110,14 +128,77 @@ export function BookingDetailSheet({
 
   const secondaryBtn = useSecondaryButton ? btnSecondarySm : btnSecondary;
 
+  async function handleVoidBill() {
+    if (!invoice) return;
+    setDeleteBusy(true);
+    setInvoiceError("");
+    try {
+      await api.voidInvoice(invoice.id);
+      setDeleteOpen(false);
+      onBillMutated?.();
+      onClose();
+    } catch (e) {
+      setInvoiceError(e instanceof Error ? e.message : tCommon("failed"));
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
+  function handleBillSaved() {
+    onBillMutated?.();
+    if (booking?.invoiceId) {
+      void api.getInvoice(booking.invoiceId).then(setInvoice).catch(() => {});
+    } else if (booking) {
+      void api.getInvoiceByBooking(booking.id).then(setInvoice).catch(() => {});
+    }
+  }
+
+  const adminFooter =
+    adminBillTools && booking?.status === "COMPLETED" && invoice ? (
+      <div className="flex flex-col gap-2 w-full">
+        <InvoicePdfButtons
+          invoiceId={invoice.id}
+          filename={`invoice-${invoice.invoiceNumber}.pdf`}
+          shareText={t("shareBillMessage", { name: shareCustomerName ?? booking.customerName ?? "Customer" })}
+          shareLabel={t("shareBill")}
+          downloadLabel={t("downloadBill")}
+          processingLabel={tCommon("processing")}
+          primaryClassName={`${btnPrimary} w-full min-h-12 justify-center touch-manipulation`}
+          secondaryClassName={`${secondaryBtn} w-full min-h-11 justify-center touch-manipulation`}
+          downloadTestId={downloadTestId}
+          onError={setInvoiceError}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className={`${btnSecondary} min-h-11 justify-center gap-1.5`}
+            onClick={() => setEditOpen(true)}
+          >
+            <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+            {tAdmin("editBill")}
+          </button>
+          <button
+            type="button"
+            className={`${btnDangerSm} min-h-11 justify-center gap-1.5 w-full`}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+            {tAdmin("deleteBill")}
+          </button>
+        </div>
+      </div>
+    ) : null;
+
   return (
+    <>
     <SideSheet
       open={open && !!booking}
       onClose={onClose}
       title={title ?? booking?.customerName ?? t("billingDetails")}
       subtitle={subtitle ?? (booking ? `${booking.customerPhone} · ${booking.status}` : undefined)}
       footer={
-        booking?.status === "COMPLETED" && invoice ? (
+        adminFooter ??
+        (booking?.status === "COMPLETED" && invoice ? (
           <InvoicePdfButtons
             invoiceId={invoice.id}
             filename={`invoice-${invoice.invoiceNumber}.pdf`}
@@ -138,7 +219,7 @@ export function BookingDetailSheet({
           >
             {booking.status === "READY_FOR_BILLING" ? t("billVisit") : t("continueVisit")}
           </Link>
-        ) : undefined
+        ) : undefined)
       }
     >
       {booking && (
@@ -222,6 +303,26 @@ export function BookingDetailSheet({
         </div>
       )}
     </SideSheet>
+    {booking && adminBillTools ? (
+      <AdminBillEditSheet
+        booking={booking}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSaved={handleBillSaved}
+      />
+    ) : null}
+    <ConfirmDialog
+      open={deleteOpen}
+      onClose={() => setDeleteOpen(false)}
+      title={tAdmin("deleteBillTitle")}
+      description={tAdmin("deleteBillConfirm")}
+      confirmLabel={tAdmin("deleteBill")}
+      cancelLabel={tCommon("cancel")}
+      confirmPending={deleteBusy}
+      error={deleteBusy ? undefined : invoiceError || undefined}
+      onConfirm={() => void handleVoidBill()}
+    />
+    </>
   );
 }
 

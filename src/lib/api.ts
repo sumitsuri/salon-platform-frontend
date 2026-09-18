@@ -1150,6 +1150,33 @@ export const api = {
 
   getInvoice: (invoiceId: string) => request<InvoiceDetail>(`/api/v1/invoices/${invoiceId}`),
 
+  adminUpdateBill: (
+    bookingId: string,
+    body: {
+      lines?: {
+        branchServiceId: string;
+        staffId: string;
+        quantity?: number;
+        unitPrice?: number;
+        packageSubscriptionId?: string;
+      }[];
+      reason?: string;
+    }
+  ) =>
+    request<InvoiceDetail>(`/api/v1/bookings/${bookingId}/admin/bill`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  voidInvoice: (invoiceId: string, reason?: string) =>
+    request<void>(`/api/v1/invoices/${invoiceId}`, {
+      method: "DELETE",
+      body: JSON.stringify(reason ? { reason } : {}),
+    }),
+
+  recalculateInvoice: (invoiceId: string) =>
+    request<InvoiceDetail>(`/api/v1/invoices/${invoiceId}/recalculate`, { method: "POST" }),
+
   getInvoicePdfUrl: (invoiceId: string) => `${apiBase()}/api/v1/invoices/${invoiceId}/pdf`,
 
   fetchInvoicePdfBlob: async (invoiceId: string, filename?: string) => {
