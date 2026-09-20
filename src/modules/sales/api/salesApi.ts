@@ -1,4 +1,5 @@
 import { authRequest } from "@/lib/api";
+import { getStoredUser } from "@/lib/auth-session";
 import { resolveClientApiBase, resolveServerApiBase } from "@/lib/client-api-base";
 
 function apiBase(): string {
@@ -42,8 +43,29 @@ export type LeadStage =
   | "LOST";
 
 export type LeadType = "SHOP" | "BRAND" | "CHANNEL_PARTNER";
-export type LeadSource = "FIELD" | "MARKETING_WEB" | "REFERRAL" | "INBOUND_CALL" | "OTHER";
-export type ActivityType = "VISIT" | "CALL" | "EMAIL" | "WHATSAPP" | "NOTE" | "PITCH" | "DEMO";
+export type LeadSource =
+  | "FIELD"
+  | "MARKETING_WEB"
+  | "REFERRAL"
+  | "INBOUND_CALL"
+  | "MAP_DISCOVERY"
+  | "OTHER";
+export type ActivityType =
+  | "VISIT"
+  | "CALL"
+  | "EMAIL"
+  | "WHATSAPP"
+  | "NOTE"
+  | "PITCH"
+  | "DEMO"
+  | "FOLLOW_UP";
+
+export type LeadClaimStatus =
+  | "OPEN"
+  | "UNCLAIMED"
+  | "CLAIMED_BY_ME"
+  | "CLAIMED_BY_OTHER"
+  | "CLAIM_EXPIRED";
 
 export type BillingPeriod = "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "YEARLY";
 
@@ -77,6 +99,9 @@ export interface SalesLead {
   trialIntentAt?: string;
   convertedAt?: string;
   nextFollowUpAt?: string;
+  claimedByRepId?: string;
+  claimedByRepName?: string;
+  claimExpiresAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -128,6 +153,67 @@ export interface SalesLocality {
   id: string;
   name: string;
   zone?: string;
+  latitude?: number;
+  longitude?: number;
+  mappable?: boolean;
+}
+
+export interface DiscoveredSalonPreview {
+  googlePlaceId: string;
+  businessName: string;
+  address?: string;
+  phone?: string;
+  rating?: number;
+  reviewCount?: number;
+  googleMapsUrl?: string;
+  websiteUrl?: string;
+  category?: string;
+  photoRef?: string;
+  photoCount?: number;
+  openNow?: boolean;
+  hoursSummary?: string;
+  distanceKm?: number;
+  alreadyLead: boolean;
+  leadId?: string;
+  leadStage?: LeadStage;
+  claimStatus?: LeadClaimStatus;
+  claimedByRepId?: string;
+  claimedByRepName?: string;
+  claimExpiresAt?: string;
+  claimable?: boolean;
+}
+
+export interface DiscoverSalonsResponse {
+  areaName: string;
+  radiusKm: number;
+  placesFound: number;
+  imported: number;
+  skippedDuplicate: number;
+  previews: DiscoveredSalonPreview[];
+  fromCrm?: boolean;
+  lastSyncedAt?: string;
+  activeSyncJobId?: string;
+}
+
+export type MapSyncStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+
+export interface MapSyncJob {
+  id: string;
+  status: MapSyncStatus;
+  allAreas: boolean;
+  localityId?: string;
+  localityName?: string;
+  radiusKm: number;
+  totalAreas: number;
+  completedAreas: number;
+  currentAreaName?: string;
+  leadsInserted: number;
+  leadsSkippedDuplicate: number;
+  areaErrors: number;
+  errorMessage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  progressPercent: number;
 }
 
 export interface PlatformOverview {
@@ -275,6 +361,68 @@ export const salesApi = {
     }),
 
   listLocalities: () => salesRequest<SalesLocality[]>("/api/v1/platform/sales/localities"),
+
+  previewDiscoverSalons: (body: { localityId: string; radiusKm: number; assignRepId?: string }) =>
+    salesRequest<DiscoverSalonsResponse>("/api/v1/platform/sales/leads/discover/preview", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  startMapSync: (body: { allAreas: boolean; localityId?: string; radiusKm?: number }) =>
+    salesRequest<MapSyncJob>("/api/v1/platform/sales/leads/discover/sync", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  getActiveMapSync: () =>
+    salesRequest<MapSyncJob | null>("/api/v1/platform/sales/leads/discover/sync/active"),
+
+  getMapSyncJob: (jobId: string) =>
+    salesRequest<MapSyncJob>(`/api/v1/platform/sales/leads/discover/sync/${jobId}`),
+
+  importDiscoverSalons: (body: { localityId: string; radiusKm: number; assignRepId?: string }) =>
+    salesRequest<DiscoverSalonsResponse>("/api/v1/platform/sales/leads/discover/import", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  claimDiscoverSalon: (body: {
+    googlePlaceId: string;
+    localityId?: string;
+    radiusKm?: number;
+    businessName?: string;
+    address?: string;
+    phone?: string;
+    googleMapsUrl?: string;
+  }) =>
+    salesRequest<SalesLead>("/api/v1/platform/sales/leads/discover/claim", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  claimLead: (leadId: string) =>
+    salesRequest<SalesLead>(`/api/v1/platform/sales/leads/${leadId}/claim`, { method: "POST" }),
+
+  scheduleFollowUp: (leadId: string, body: { followUpAt: string; notes?: string }) =>
+    salesRequest<SalesActivity>(`/api/v1/platform/sales/leads/${leadId}/follow-up`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  fetchDiscoverPlacePhoto: async (photoRef: string, maxHeight = 120): Promise<Blob> => {
+    const token = getStoredUser()?.accessToken;
+    if (!token) {
+      throw new Error("Not signed in");
+    }
+    const q = new URLSearchParams({ ref: photoRef, maxHeight: String(maxHeight) });
+    const res = await fetch(`${apiBase()}/api/v1/platform/sales/places/photo?${q}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error("Photo unavailable");
+    }
+    return res.blob();
+  },
 
   listReps: (includeInactive?: boolean) => {
     const q = includeInactive ? "?includeInactive=true" : "";

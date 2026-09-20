@@ -19,6 +19,7 @@ import {
 import {
   EMPTY_FILTERS,
 } from "@/modules/sales/components/SalesLeadFilters";
+import { SalesLeadDiscoveryPanel } from "@/modules/sales/components/SalesLeadDiscoveryPanel";
 import { SalesPipelineToolbar } from "@/modules/sales/components/SalesPipelineToolbar";
 import { SalesPipelineSummaryWidgets } from "@/modules/sales/components/SalesPipelineSummaryWidgets";
 import { SalesLeadsListSection } from "@/modules/sales/components/SalesLeadsListSection";
@@ -191,6 +192,8 @@ export default function SalesPipelinePage() {
   });
 
   const periodLabel = formatDateRangeLabel(dateRange.from, dateRange.to);
+  const showDiscoveryDefault =
+    !isAdmin && !listLoading && listTotalElements === 0 && boardLeads.length === 0;
   const repScopeLabel =
     isAdmin && selectedRepIds.length > 0
       ? reps
@@ -236,6 +239,19 @@ export default function SalesPipelinePage() {
       )}
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+
+      <SalesLeadDiscoveryPanel
+        localities={localities}
+        isAdmin={isAdmin}
+        reps={reps}
+        defaultExpanded={showDiscoveryDefault}
+        onImported={async () => {
+          await invalidateSalesLeadLists(queryClient);
+          await queryClient.invalidateQueries({
+            queryKey: [...salesQueryKeys.pipelineSummary(dateRange.from, dateRange.to, repIdsForQuery)],
+          });
+        }}
+      />
 
       {/* Board section — date range only, no column filters */}
       <section data-testid="pipeline-board-section">

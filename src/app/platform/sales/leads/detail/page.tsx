@@ -298,6 +298,18 @@ export default function SalesLeadDetailPage() {
               value={new Date(lead.trialIntentAt).toLocaleString()}
             />
           )}
+          {lead.claimExpiresAt && (
+            <DetailField
+              label="Map claim until"
+              value={new Date(lead.claimExpiresAt).toLocaleDateString()}
+            />
+          )}
+          {lead.nextFollowUpAt && (
+            <DetailField
+              label="Next follow-up"
+              value={new Date(lead.nextFollowUpAt).toLocaleString()}
+            />
+          )}
           {lead.lostReason && <DetailField label="Lost reason" value={lead.lostReason} />}
           {lead.notes && <DetailField label="Notes" value={lead.notes} />}
         </Card>
@@ -357,6 +369,7 @@ export default function SalesLeadDetailPage() {
             <option value="PITCH">Pitch</option>
             <option value="DEMO">Demo</option>
             <option value="NOTE">Note</option>
+            <option value="FOLLOW_UP">Follow-up task</option>
           </select>
           <input
             className={`${inputClass} min-w-[200px] flex-1`}

@@ -104,6 +104,7 @@ export function SalesLeadFilters({
           <option value="MARKETING_WEB">Marketing Web</option>
           <option value="REFERRAL">Referral</option>
           <option value="INBOUND_CALL">Inbound call</option>
+          <option value="MAP_DISCOVERY">Map discovery</option>
           <option value="OTHER">Other</option>
         </select>
       </label>

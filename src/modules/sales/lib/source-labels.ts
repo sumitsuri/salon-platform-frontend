@@ -5,6 +5,7 @@ const SOURCE_LABELS: Record<LeadSource, string> = {
   MARKETING_WEB: "Marketing Web",
   REFERRAL: "Referral",
   INBOUND_CALL: "Inbound Call",
+  MAP_DISCOVERY: "Map discovery",
   OTHER: "Other",
 };
 
