@@ -48,6 +48,12 @@ const ACCENT_STYLES = {
     icon: "bg-amber-500",
     glow: "shadow-amber-500/20",
   },
+  rose: {
+    ring: "ring-rose-200 dark:ring-rose-900",
+    bar: "from-rose-500 to-rose-600",
+    icon: "bg-rose-500",
+    glow: "shadow-rose-500/20",
+  },
 } as const;
 
 export type AccentColor = keyof typeof ACCENT_STYLES;
@@ -1197,6 +1203,7 @@ export function PanelShell({
     emerald: "from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20",
     violet: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     amber: "from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
+    rose: "from-rose-50/80 to-red-50/50 dark:from-rose-950/30 dark:to-red-950/20",
   };
 
   if (variant === "dashboard") {
@@ -1349,6 +1356,7 @@ export function EnterpriseTableShell({
     emerald: "from-emerald-50/80 to-teal-50/50 dark:from-emerald-950/30 dark:to-teal-950/20",
     violet: "from-[var(--brand-light)] to-[var(--surface-muted)]",
     amber: "from-amber-50/80 to-orange-50/50 dark:from-amber-950/30 dark:to-orange-950/20",
+    rose: "from-rose-50/80 to-red-50/50 dark:from-rose-950/30 dark:to-red-950/20",
   };
 
   return (

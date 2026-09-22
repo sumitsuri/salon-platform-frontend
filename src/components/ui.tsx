@@ -442,7 +442,7 @@ export function StatCard({
   label: string;
   value: string | number;
   icon: LucideIcon;
-  accent?: "brand" | "emerald" | "amber" | "violet";
+  accent?: "brand" | "emerald" | "amber" | "violet" | "rose";
   trend?: string;
   className?: string;
 }) {
@@ -1008,11 +1008,11 @@ export function ConfirmDialog({
 
 export function DetailField({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="ui-field-label mb-1">
         {label}
       </p>
-      <p className="text-sm text-[var(--text-primary)]">{value ?? "—"}</p>
+      <p className="text-sm text-[var(--text-primary)] break-words">{value ?? "—"}</p>
     </div>
   );
 }

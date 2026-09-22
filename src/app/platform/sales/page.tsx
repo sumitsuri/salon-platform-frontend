@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { CalendarCheck, LayoutGrid, List as ListIcon, Plus } from "lucide-react";
 import {
   salesApi,
   LeadStage,
@@ -19,7 +19,8 @@ import {
 import {
   EMPTY_FILTERS,
 } from "@/modules/sales/components/SalesLeadFilters";
-import { SalesLeadDiscoveryPanel } from "@/modules/sales/components/SalesLeadDiscoveryPanel";
+import { SalesMyDayView } from "@/modules/sales/components/SalesMyDayView";
+import { SalesDiscoveryCta } from "@/modules/sales/components/SalesDiscoveryCta";
 import { SalesPipelineToolbar } from "@/modules/sales/components/SalesPipelineToolbar";
 import { SalesPipelineSummaryWidgets } from "@/modules/sales/components/SalesPipelineSummaryWidgets";
 import { SalesLeadsListSection } from "@/modules/sales/components/SalesLeadsListSection";
@@ -38,8 +39,7 @@ import {
   salesQueryKeys,
 } from "@/modules/sales/lib/query-keys";
 import { useAutoCompleteInfiniteList } from "@/lib/use-auto-complete-infinite-list";
-import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
-import { DEFAULT_PAGE_SIZE, InfiniteScrollFooter, PageHeader, Card, AlertBanner, SideSheet, inputClass, selectClass, btnPrimary, btnSecondary, EmptyState } from "@/components/ui";
+import { DEFAULT_PAGE_SIZE, PageHeader, Card, AlertBanner, SideSheet, inputClass, selectClass, btnPrimary, btnPrimarySm, btnSecondary, EmptyState, SegmentedControl } from "@/components/ui";
 import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +66,9 @@ export default function SalesPipelinePage() {
     useSalesPipelineParams();
   const [error, setError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [view, setView] = useState<"myday" | "board" | "list">("myday");
+  const [listPage, setListPage] = useState(0);
+  const [listPageSize, setListPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [mobileBoardStage, setMobileBoardStage] = useState<LeadStage>(PIPELINE_STAGES[0]);
   const [selectedUseCases, setSelectedUseCases] = useState<string[]>([]);
   const [customUseCases, setCustomUseCases] = useState("");
@@ -87,9 +90,18 @@ export default function SalesPipelinePage() {
     () => buildLeadListParams(EMPTY_FILTERS, dateRange, repIdsForQuery),
     [dateRange, repIdsForQuery]
   );
+  // Real server-side pagination — no nested scroll container, whole-page scroll stays uniform.
+  // Reset to page 0 whenever filters/date/rep scope change (adjust state during render, not in an effect).
+  const listParamsKey = JSON.stringify({ filters, dateRange, repIdsForQuery });
+  const [prevListParamsKey, setPrevListParamsKey] = useState(listParamsKey);
+  if (listParamsKey !== prevListParamsKey) {
+    setPrevListParamsKey(listParamsKey);
+    setListPage(0);
+  }
+
   const listParams = useMemo(
-    () => buildLeadListParams(filters, dateRange, repIdsForQuery),
-    [filters, dateRange, repIdsForQuery]
+    () => buildLeadListParams(filters, dateRange, repIdsForQuery, listPage, listPageSize),
+    [filters, dateRange, repIdsForQuery, listPage, listPageSize]
   );
 
   const {
@@ -102,18 +114,14 @@ export default function SalesPipelinePage() {
     pageSize: DEFAULT_PAGE_SIZE,
   });
 
-  const {
-    items: listLeads,
-    totalElements: listTotalElements,
-    hasMore: listHasMore,
-    isLoading: listLoading,
-    isFetchingNextPage: listFetchingNext,
-    fetchNextPage: fetchNextListPage,
-  } = useInfinitePagedList<SalesLead>({
+  const { data: listPageResult, isLoading: listLoading } = useQuery({
     queryKey: [...salesQueryKeys.leadsList(listParams)],
-    queryFn: (page) => salesApi.listLeads(buildLeadListParams(filters, dateRange, repIdsForQuery, page)),
-    pageSize: DEFAULT_PAGE_SIZE,
+    queryFn: () => salesApi.listLeads(listParams),
+    placeholderData: keepPreviousData,
   });
+  const listLeads = listPageResult?.content ?? [];
+  const listTotalElements = listPageResult?.totalElements ?? 0;
+  const listTotalPages = listPageResult?.totalPages ?? 0;
 
   const { data: localities = [] } = useQuery({
     queryKey: ["sales-localities"],
@@ -141,8 +149,22 @@ export default function SalesPipelinePage() {
       }),
   });
 
+  // "My Day" needs every open lead regardless of the board/list date-range filter —
+  // a follow-up or an expiring claim matters today no matter when the lead was created.
+  const { data: myDayLeads = [], isLoading: myDayLoading } = useQuery({
+    queryKey: ["sales-leads", "myday", repIdsForQuery],
+    queryFn: async () => {
+      const result = await salesApi.listLeads({
+        page: 0,
+        size: 200,
+        assignedRepIds: repIdsForQuery,
+      });
+      return result.content;
+    },
+    enabled: view === "myday",
+  });
+
   const boardLeadsForStage = boardLeads;
-  const listLeadsForView = listLeads;
 
   const byStage = useMemo(() => {
     const map: Record<LeadStage, SalesLead[]> = Object.fromEntries(
@@ -204,21 +226,19 @@ export default function SalesPipelinePage() {
         ? "All reps"
         : undefined;
 
+  const addLeadButton = (
+    <button type="button" className={btnPrimarySm} onClick={() => setDrawerOpen(true)}>
+      <Plus className="h-3.5 w-3.5" />
+      Add lead
+    </button>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <PageHeader
         title={isAdmin ? "Sales Pipeline" : "My Pipeline"}
-        subtitle={
-          isAdmin
-            ? "All reps — Bangalore field sales"
-            : `Hi ${user?.name?.split(" ")[0] ?? "there"} — tap a lead to see your next step`
-        }
-        action={
-          <button type="button" className={btnPrimary} onClick={() => setDrawerOpen(true)}>
-            <Plus className="mr-2 inline h-4 w-4" />
-            Add lead
-          </button>
-        }
+        subtitle={isAdmin ? "All reps — Bangalore field sales" : `Hi ${user?.name?.split(" ")[0] ?? "there"}`}
+        action={view === "myday" ? undefined : addLeadButton}
       />
 
       <SalesPipelineToolbar
@@ -235,25 +255,47 @@ export default function SalesPipelinePage() {
           summary={summary}
           periodLabel={periodLabel}
           repLabel={repScopeLabel}
+          onSelectStage={(stage) => {
+            setFilters({ ...filters, stage: stage ?? "" });
+            setView("list");
+          }}
         />
       )}
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 
-      <SalesLeadDiscoveryPanel
-        localities={localities}
-        isAdmin={isAdmin}
-        reps={reps}
-        defaultExpanded={showDiscoveryDefault}
-        onImported={async () => {
-          await invalidateSalesLeadLists(queryClient);
-          await queryClient.invalidateQueries({
-            queryKey: [...salesQueryKeys.pipelineSummary(dateRange.from, dateRange.to, repIdsForQuery)],
-          });
-        }}
+      {view === "myday" && (
+        <SalesDiscoveryCta
+          localities={localities}
+          isAdmin={isAdmin}
+          reps={reps}
+          defaultOpen={showDiscoveryDefault}
+          onImported={async () => {
+            await invalidateSalesLeadLists(queryClient);
+            await queryClient.invalidateQueries({
+              queryKey: [...salesQueryKeys.pipelineSummary(dateRange.from, dateRange.to, repIdsForQuery)],
+            });
+            await queryClient.invalidateQueries({ queryKey: ["sales-leads", "myday"] });
+          }}
+        />
+      )}
+
+      <SegmentedControl
+        options={[
+          { id: "myday", label: "My Day", icon: CalendarCheck },
+          { id: "board", label: "Board", icon: LayoutGrid },
+          { id: "list", label: "List", icon: ListIcon },
+        ]}
+        value={view}
+        onChange={setView}
       />
 
+      {view === "myday" && (
+        <SalesMyDayView leads={myDayLeads} isLoading={myDayLoading} onAddLead={() => setDrawerOpen(true)} />
+      )}
+
       {/* Board section — date range only, no column filters */}
+      {view === "board" && (
       <section data-testid="pipeline-board-section">
         <SectionHeader
           title="Board view"
@@ -371,22 +413,30 @@ export default function SalesPipelinePage() {
           </>
         )}
       </section>
+      )}
 
-      <SalesLeadsListSection
-        leads={listLeads}
-        filters={filters}
-        onFiltersChange={setFilters}
-        localities={localities}
-        isLoading={listLoading}
-        periodLabel={periodLabel}
-        boardLeadCount={boardLeads.length}
-        infiniteScroll={{
-          totalElements: listTotalElements,
-          hasMore: listHasMore,
-          isFetchingNextPage: listFetchingNext,
-          onLoadMore: () => void fetchNextListPage(),
-        }}
-      />
+      {view === "list" && (
+        <SalesLeadsListSection
+          leads={listLeads}
+          filters={filters}
+          onFiltersChange={setFilters}
+          localities={localities}
+          isLoading={listLoading}
+          periodLabel={periodLabel}
+          boardLeadCount={boardLeads.length}
+          pagination={{
+            page: listPage,
+            size: listPageSize,
+            totalPages: listTotalPages,
+            totalElements: listTotalElements,
+            onPageChange: setListPage,
+            onSizeChange: (size) => {
+              setListPageSize(size);
+              setListPage(0);
+            },
+          }}
+        />
+      )}
 
       <SideSheet
         open={drawerOpen}

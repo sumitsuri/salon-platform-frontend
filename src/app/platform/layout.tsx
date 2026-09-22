@@ -3,12 +3,12 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { BarChart3, Building2, Kanban } from "lucide-react";
+import { BarChart3, Building2, Inbox, Kanban, TrendingUp, Users } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
-import { isNavActive } from "@/components/app-nav";
+import { isNavActive, MOBILE_MAIN_PADDING_BOTTOM_TABS, type MobileBottomNavConfig } from "@/components/app-nav";
 
 const PLATFORM_ROLES = new Set(["PLATFORM_SUPER_ADMIN", "SALES_EXECUTIVE"]);
 
@@ -54,6 +54,52 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       },
     ];
   }, [t, isAdmin]);
+
+  const mobileBottomNav = useMemo((): MobileBottomNavConfig => {
+    if (isAdmin) {
+      return {
+        moreTabLabel: "More",
+        menuTitle: "More",
+        tabs: [
+          { id: "overview", href: "/platform/overview", label: "Overview", icon: BarChart3, exact: true },
+          { id: "tenants", href: "/platform", label: t("tenants"), icon: Building2, exact: true },
+          {
+            id: "sales",
+            href: "/platform/sales",
+            label: "Sales",
+            icon: Kanban,
+            activePrefixes: ["/platform/sales"],
+          },
+        ],
+        moreSections: [
+          {
+            id: "sales",
+            label: "Sales",
+            links: [
+              { href: "/platform/sales/incoming", label: "Incoming leads", icon: Inbox, description: "Leads from the marketing site" },
+              { href: "/platform/sales/team", label: "Team", icon: Users, description: "Reps, targets & incentives" },
+            ],
+          },
+        ],
+      };
+    }
+    return {
+      moreTabLabel: "More",
+      menuTitle: "More",
+      tabs: [
+        {
+          id: "pipeline",
+          href: "/platform/sales",
+          label: "Pipeline",
+          icon: Kanban,
+          exact: true,
+          activePrefixes: ["/platform/sales/leads"],
+        },
+        { id: "progress", href: "/platform/sales/growth", label: "Progress", icon: TrendingUp },
+      ],
+      moreSections: [],
+    };
+  }, [isAdmin, t]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -105,6 +151,9 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         router.push("/login");
       }}
       logoutLabel={tCommon("logout")}
+      mobileMainPadding={MOBILE_MAIN_PADDING_BOTTOM_TABS}
+      mobileNavFabColor={brandColor}
+      mobileBottomNav={mobileBottomNav}
     >
       {children}
     </EnterpriseAppShell>

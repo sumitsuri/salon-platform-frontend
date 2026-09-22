@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type CompactStatAccent = "violet" | "sky" | "emerald" | "amber";
+export type CompactStatAccent = "violet" | "sky" | "emerald" | "amber" | "rose";
 
 export type CompactStatItem = {
   id: string;
@@ -24,25 +24,33 @@ export function CompactStatsStrip({
   className,
   testId = "compact-stats-strip",
   loading,
+  dense3,
 }: {
   items: CompactStatItem[];
   className?: string;
   testId?: string;
   loading?: boolean;
+  /** Fixed 3-per-row layout with tighter padding — for screens where vertical space is tight. */
+  dense3?: boolean;
 }) {
-  const gridCountClass =
-    items.length === 3
+  const gridCountClass = dense3
+    ? "compact-stats-grid--dense-3"
+    : items.length === 3
       ? "compact-stats-grid--count-3"
       : items.length === 2
         ? "compact-stats-grid--count-2"
         : undefined;
+  // Dense-3 rows are computed here (not via nth-child CSS) so the bottom border on the
+  // true last row is correct for any item count, including a partially-filled final row.
+  const lastRowStart = dense3 ? items.length - (items.length % 3 || 3) : -1;
 
   if (loading) {
+    const skeletonCount = dense3 ? 6 : items.length === 3 ? 3 : 4;
     return (
       <div className={cn("compact-stats-strip", className)} data-testid={testId}>
         <div className={cn("compact-stats-grid", gridCountClass)}>
-          {Array.from({ length: items.length === 3 ? 3 : Math.max(items.length, 4) })
-            .slice(0, items.length === 3 ? 3 : 4)
+          {Array.from({ length: skeletonCount })
+            .slice(0, skeletonCount)
             .map((_, index) => (
             <div
               key={index}
@@ -66,7 +74,8 @@ export function CompactStatsStrip({
             `compact-stat-cell--${accent}`,
             item.featured && "compact-stat-cell--featured",
             item.pulse && "compact-stat-cell--pulse",
-            (item.href || item.onClick) && "compact-stat-cell--interactive"
+            (item.href || item.onClick) && "compact-stat-cell--interactive",
+            dense3 && index >= lastRowStart && "compact-stat-cell--no-bottom-border"
           );
           const content = (
             <>

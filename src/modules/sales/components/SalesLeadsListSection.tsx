@@ -7,7 +7,7 @@ import {
   hasActiveFilters,
 } from "@/modules/sales/components/SalesLeadFilters";
 import { SalesLeadsTable } from "@/modules/sales/components/SalesLeadsTable";
-import { Card, InfiniteScrollFooter, InfiniteScrollViewport } from "@/components/ui";
+import { Card, TablePagination } from "@/components/ui";
 
 interface SalesLeadsListSectionProps {
   leads: SalesLead[];
@@ -22,11 +22,13 @@ interface SalesLeadsListSectionProps {
   emptyMessage?: string;
   title?: string;
   subtitle?: string;
-  infiniteScroll?: {
+  pagination?: {
+    page: number;
+    size: number;
+    totalPages: number;
     totalElements: number;
-    hasMore: boolean;
-    isFetchingNextPage: boolean;
-    onLoadMore: () => void;
+    onPageChange: (page: number) => void;
+    onSizeChange: (size: number) => void;
   };
 }
 
@@ -42,7 +44,7 @@ export function SalesLeadsListSection({
   emptyMessage,
   title = "List view",
   subtitle,
-  infiniteScroll,
+  pagination,
 }: SalesLeadsListSectionProps) {
   const filterIgnore = hideSourceFilter ? (["source"] as const) : [];
   const filteredEmpty =
@@ -83,31 +85,31 @@ export function SalesLeadsListSection({
       {isLoading ? (
         <Card className="p-8 text-center text-sm text-[var(--ink-muted)]">Loading list…</Card>
       ) : (
-        <>
-          <InfiniteScrollViewport>
-            <SalesLeadsTable
-              leads={leads}
-              emptyMessage={
-                emptyMessage ??
-                (hasActiveFilters(filters, [...filterIgnore])
-                  ? boardHasMore
-                    ? "No leads match your filters — clear filters to see all leads in this period"
-                    : "No leads match your filters for this period"
-                  : "No leads created in this date range")
-              }
-            />
-            {infiniteScroll && leads.length > 0 && (
-              <InfiniteScrollFooter
-                totalElements={infiniteScroll.totalElements}
-                loadedCount={leads.length}
-                hasMore={infiniteScroll.hasMore}
-                isFetchingNextPage={infiniteScroll.isFetchingNextPage}
-                isLoading={isLoading}
-                onLoadMore={infiniteScroll.onLoadMore}
+        <div className="space-y-2">
+          <SalesLeadsTable
+            leads={leads}
+            emptyMessage={
+              emptyMessage ??
+              (hasActiveFilters(filters, [...filterIgnore])
+                ? boardHasMore
+                  ? "No leads match your filters — clear filters to see all leads in this period"
+                  : "No leads match your filters for this period"
+                : "No leads created in this date range")
+            }
+          />
+          {pagination && leads.length > 0 && (
+            <Card padding={false}>
+              <TablePagination
+                page={pagination.page}
+                size={pagination.size}
+                totalPages={pagination.totalPages}
+                totalElements={pagination.totalElements}
+                onPageChange={pagination.onPageChange}
+                onSizeChange={pagination.onSizeChange}
               />
-            )}
-          </InfiniteScrollViewport>
-        </>
+            </Card>
+          )}
+        </div>
       )}
     </section>
   );

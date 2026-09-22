@@ -9,6 +9,7 @@ import { salesApi, ActivityType, LeadStage } from "@/modules/sales/api/salesApi"
 import { PipelineStepper } from "@/modules/sales/components/PipelineStepper";
 import { StageActionPanel } from "@/modules/sales/components/StageActionPanel";
 import { LeadPricingSection } from "@/modules/sales/components/LeadPricingSection";
+import { SkuLineItemSelector } from "@/modules/sales/components/SkuLineItemSelector";
 import { UseCaseMultiSelect } from "@/modules/sales/components/UseCaseMultiSelect";
 import { ACTIVITY_SUGGESTIONS, STAGE_LABELS, isTerminalStage } from "@/modules/sales/lib/stage-utils";
 import {
@@ -219,6 +220,7 @@ export default function SalesLeadDetailPage() {
           <DetailField label="Type" value={lead.leadType.replace("_", " ")} />
           <DetailField label="Source" value={formatLeadSource(lead.source)} />
           <DetailField label="Locality" value={lead.localityName || "—"} />
+          <SkuLineItemSelector lead={lead} updateLeadMutation={updateLeadMutation} />
           <LeadPricingSection lead={lead} updateLeadMutation={updateLeadMutation} />
           <div>
             <div className="mb-1 flex items-center justify-between">

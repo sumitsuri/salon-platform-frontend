@@ -15,7 +15,8 @@ import {
 } from "@/modules/sales/lib/pipeline-search-params";
 import { EMPTY_FILTERS } from "@/modules/sales/components/SalesLeadFilters";
 import { formatDateRangeLabel } from "@/modules/sales/lib/date-range";
-import { PageHeader, Card, StatCard } from "@/components/ui";
+import { PageHeader, Card } from "@/components/ui";
+import { CompactStatsStrip, CompactStatItem } from "@/components/CompactStatsStrip";
 import { useAuthStore } from "@/lib/auth-store";
 import {
   TrendingUp,
@@ -24,6 +25,8 @@ import {
   IndianRupee,
   ArrowRight,
   CheckCircle2,
+  FlaskConical,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -136,52 +139,38 @@ function RepProgressPage() {
         dateTestId="progress-date-range"
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Leads added"
-          value={perf?.leadsAdded ?? 0}
-          icon={Users}
-          accent="brand"
-          trend={periodLabel}
-        />
-        <StatCard label="Visits" value={perf?.visits ?? 0} icon={Target} />
-        <StatCard label="Pitches" value={perf?.pitches ?? 0} icon={TrendingUp} accent="amber" />
-        <StatCard
-          label="Incentive earned"
-          value={`₹${Math.round(perf?.incentiveEarned ?? 0).toLocaleString("en-IN")}`}
-          icon={IndianRupee}
-          accent="emerald"
-        />
-      </div>
-
-      <Card className="space-y-4 p-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold">Activity summary</h3>
           <span className="text-xs text-[var(--ink-muted)]">{periodLabel}</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          <div className="rounded-lg bg-[var(--surface-muted)] p-3 text-center">
-            <p className="text-xs text-[var(--ink-muted)]">Leads</p>
-            <p className="text-xl font-bold">{perf?.leadsAdded ?? 0}</p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-muted)] p-3 text-center">
-            <p className="text-xs text-[var(--ink-muted)]">Visits</p>
-            <p className="text-xl font-bold">{perf?.visits ?? 0}</p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-muted)] p-3 text-center">
-            <p className="text-xs text-[var(--ink-muted)]">Pitches</p>
-            <p className="text-xl font-bold">{perf?.pitches ?? 0}</p>
-          </div>
-          <div className="rounded-lg bg-[var(--surface-muted)] p-3 text-center">
-            <p className="text-xs text-[var(--ink-muted)]">Trials</p>
-            <p className="text-xl font-bold">{perf?.trials ?? 0}</p>
-          </div>
-          <div className="rounded-lg bg-emerald-50 p-3 text-center">
-            <p className="text-xs text-[var(--ink-muted)]">Wins</p>
-            <p className="text-xl font-bold text-emerald-700">{perf?.conversions ?? 0}</p>
-          </div>
-        </div>
-      </Card>
+        <CompactStatsStrip
+          items={
+            [
+              { id: "leads", label: "Leads added", value: String(perf?.leadsAdded ?? 0), icon: Users, accent: "violet" },
+              { id: "visits", label: "Visits", value: String(perf?.visits ?? 0), icon: Target, accent: "sky" },
+              { id: "pitches", label: "Pitches", value: String(perf?.pitches ?? 0), icon: TrendingUp, accent: "amber" },
+              {
+                id: "trials",
+                label: "Trials",
+                value: String(perf?.trials ?? 0),
+                icon: FlaskConical,
+                accent: "amber",
+                // Trials are near-won deals — pulse nudges the rep to go close them.
+                pulse: (perf?.trials ?? 0) > 0,
+              },
+              { id: "wins", label: "Wins", value: String(perf?.conversions ?? 0), icon: Trophy, accent: "emerald" },
+              {
+                id: "incentive",
+                label: "Incentive earned",
+                value: `₹${Math.round(perf?.incentiveEarned ?? 0).toLocaleString("en-IN")}`,
+                icon: IndianRupee,
+                accent: "emerald",
+              },
+            ] satisfies CompactStatItem[]
+          }
+        />
+      </div>
 
       {target && (
         <Card className="space-y-4 p-4">

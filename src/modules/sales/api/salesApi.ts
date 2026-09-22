@@ -90,6 +90,8 @@ export interface SalesLead {
   convertedTenantId?: string;
   projectedMrr?: number;
   planTier?: string;
+  /** JSON snapshot of the SKU picker state behind quotedAmount — see sku-catalog.ts. */
+  quotedSkuSelection?: string;
   quotedAmount?: number;
   billingPeriod?: BillingPeriod;
   discountPercent?: number;

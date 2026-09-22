@@ -19,7 +19,7 @@ function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function monthsInPeriod(period?: BillingPeriod | null): number {
+export function monthsInPeriod(period?: BillingPeriod | null): number {
   switch (period) {
     case "YEARLY":
       return 12;

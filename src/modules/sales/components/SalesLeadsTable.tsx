@@ -24,7 +24,7 @@ function formatDate(iso?: string): string {
   });
 }
 
-function StagePill({ stage }: { stage: SalesLead["stage"] }) {
+export function StagePill({ stage }: { stage: SalesLead["stage"] }) {
   return (
     <span
       className={cn(

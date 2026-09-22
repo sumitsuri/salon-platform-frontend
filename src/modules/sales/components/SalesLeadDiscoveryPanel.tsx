@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, MapPin, RefreshCw, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, RefreshCw } from "lucide-react";
 import {
   DiscoverSalonsResponse,
   DiscoveredSalonPreview,
@@ -11,6 +11,7 @@ import {
   salesApi,
 } from "@/modules/sales/api/salesApi";
 import { DiscoveredSalonListingCard } from "@/modules/sales/components/DiscoveredSalonListingCard";
+import { ClaimQuoteSheet, type ClaimedLeadSummary } from "@/modules/sales/components/ClaimQuoteSheet";
 import { invalidateSalesLeadLists } from "@/modules/sales/lib/query-keys";
 import { AlertBanner, btnPrimary, btnSecondary, Card, inputClass, selectClass } from "@/components/ui";
 const RADIUS_KM_OPTIONS = [1, 2, 3, 5, 7, 10, 15];
@@ -20,15 +21,14 @@ type SalesLeadDiscoveryPanelProps = {
   localities: SalesLocality[];
   isAdmin: boolean;
   reps?: SalesRep[];
-  defaultExpanded?: boolean;
   onImported?: () => void;
 };
 
+/** Show/hide is owned by the parent's discovery CTA — mount this only when expanded. */
 export function SalesLeadDiscoveryPanel({
   localities,
   isAdmin,
   reps = [],
-  defaultExpanded = false,
   onImported,
 }: SalesLeadDiscoveryPanelProps) {
   const mappable = useMemo(
@@ -36,7 +36,6 @@ export function SalesLeadDiscoveryPanel({
     [localities]
   );
 
-  const [expanded, setExpanded] = useState(defaultExpanded);
   const [localityId, setLocalityId] = useState("");
   const [radiusKm, setRadiusKm] = useState(3);
   const [assignRepId, setAssignRepId] = useState("");
@@ -47,6 +46,7 @@ export function SalesLeadDiscoveryPanel({
   const [followUpAt, setFollowUpAt] = useState("");
   const [followUpNotes, setFollowUpNotes] = useState("");
   const [syncJobId, setSyncJobId] = useState<string | null>(null);
+  const [claimedLead, setClaimedLead] = useState<ClaimedLeadSummary | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -54,12 +54,6 @@ export function SalesLeadDiscoveryPanel({
       setLocalityId(mappable[0].id);
     }
   }, [localityId, mappable]);
-
-  useEffect(() => {
-    if (defaultExpanded) {
-      setExpanded(true);
-    }
-  }, [defaultExpanded]);
 
   const previewMutation = useMutation({
     mutationFn: () =>
@@ -80,11 +74,11 @@ export function SalesLeadDiscoveryPanel({
   });
 
   useEffect(() => {
-    if (expanded && localityId) {
+    if (localityId) {
       previewMutation.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload CRM list when filters change
-  }, [expanded, localityId, radiusKm]);
+  }, [localityId, radiusKm]);
 
   const { data: syncJob } = useQuery({
     queryKey: ["sales-map-sync", syncJobId ?? "active"],
@@ -92,9 +86,8 @@ export function SalesLeadDiscoveryPanel({
       if (syncJobId) {
         return salesApi.getMapSyncJob(syncJobId);
       }
-      return (await salesApi.getActiveMapSync()) ?? undefined;
+      return (await salesApi.getActiveMapSync()) ?? null;
     },
-    enabled: expanded,
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       return status === "QUEUED" || status === "RUNNING" ? 2500 : false;
@@ -141,11 +134,12 @@ export function SalesLeadDiscoveryPanel({
         phone: place.phone,
         googleMapsUrl: place.googleMapsUrl,
       }),
-    onSuccess: async () => {
+    onSuccess: async (lead) => {
       setError("");
       await invalidateSalesLeadLists(queryClient);
       onImported?.();
       previewMutation.mutate();
+      setClaimedLead({ id: lead.id, businessName: lead.businessName, expectedBranches: lead.expectedBranches });
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -203,27 +197,8 @@ export function SalesLeadDiscoveryPanel({
 
   return (
     <Card className="border-[var(--brand-ring)]/60 bg-gradient-to-br from-[var(--brand-light)]/30 to-[var(--surface)] p-4">
-      <button
-        type="button"
-        className="flex w-full items-start justify-between gap-3 text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div>
-          <p className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
-            <Sparkles className="h-4 w-4 text-[var(--brand)]" />
-            Find salon leads on the map
-          </p>
-          <p className="mt-1 text-xs text-[var(--ink-muted)]">
-            Leads are stored in CRM (synced from Google every 6h). Pick area + radius to browse saved leads, or
-            refresh from Google in the background.
-          </p>
-        </div>
-        <span className="text-xs font-medium text-[var(--brand-text)]">{expanded ? "Hide" : "Show"}</span>
-      </button>
-
-      {expanded ? (
-        <div className="mt-4 space-y-3 border-t border-[var(--border)] pt-4">
-          {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
+      <div className="space-y-3">
+        {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
 
           {syncJob && (syncRunning || syncJob.status === "FAILED") ? (
             <div
@@ -468,8 +443,9 @@ export function SalesLeadDiscoveryPanel({
               </div>
             </div>
           ) : null}
-        </div>
-      ) : null}
+      </div>
+
+      <ClaimQuoteSheet lead={claimedLead} onClose={() => setClaimedLead(null)} />
     </Card>
   );
 }
