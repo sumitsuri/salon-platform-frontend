@@ -202,9 +202,12 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
   const targetActual = targetBranch?.actualSales ?? 0;
   const targetGoal = targetBranch?.monthlySalesTarget ?? 0;
   const catchUp = targetBranch?.catchUpDailyAverage ?? 0;
-  const dailyActual = targetBranch?.dailyAverageActual ?? 0;
   const dailyExpected = targetBranch?.dailyAverageExpected ?? 0;
   const achievementRaw = targetBranch?.achievementPercent ?? 0;
+  const targetDaysRemaining =
+    targetBranch?.daysInMonth != null && targetBranch?.daysElapsed != null
+      ? Math.max(0, targetBranch.daysInMonth - targetBranch.daysElapsed)
+      : undefined;
 
   return (
     <section className="manager-home-glance" aria-labelledby="manager-home-glance-title">
@@ -225,8 +228,8 @@ export function ManagerHomeGlanceSection({ branchId }: Props) {
         actualSales={targetActual}
         achievementPercent={achievementRaw}
         catchUpDaily={catchUp}
-        dailyAverageActual={dailyActual}
         dailyAverageExpected={dailyExpected}
+        daysRemaining={targetDaysRemaining}
         periodLabel={targetPerf?.periodLabel}
       />
 

@@ -16,6 +16,18 @@ export function formatCurrency(amount: number | string, kit: TenantLocaleKit = D
   }).format(n);
 }
 
+/** Lakh/crore-abbreviated money ("₹1.2L", "₹23L") — for tight, glanceable spaces. */
+export function formatCurrencyCompact(amount: number | string, kit: TenantLocaleKit = DEFAULT_TENANT_LOCALE) {
+  const n = typeof amount === "string" ? parseFloat(amount) : amount;
+  return new Intl.NumberFormat(kit.locale, {
+    style: "currency",
+    currency: kit.currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+    trailingZeroDisplay: "stripIfInteger",
+  }).format(n);
+}
+
 /** Precise money for bills / payments (paise-safe rounding display). */
 export function formatMoney(amount: number | string, kit: TenantLocaleKit = DEFAULT_TENANT_LOCALE) {
   const n = typeof amount === "string" ? parseFloat(amount) : amount;

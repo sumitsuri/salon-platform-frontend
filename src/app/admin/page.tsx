@@ -284,6 +284,7 @@ export default function AdminDashboardPage() {
   const brandPulseProps = {
     mtdLoading: brandMtdLoading,
     brandTarget: brandTargetAggregate,
+    brandBranches: brandMtdTargets?.branches ?? [],
     targetPeriodLabel: brandMtdTargets?.periodLabel,
     plLoading: brandMtdPlLoading,
     mtdExpenses: brandMtdPl?.brand.totalExpenses ?? 0,

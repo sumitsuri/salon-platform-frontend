@@ -922,6 +922,89 @@ export function SideSheet({
   );
 }
 
+/** Centered popup — a floating card over a dimmed, blurred backdrop, for detail views that shouldn't take over the whole screen like SideSheet does. */
+export function CenterModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+  wide,
+  className,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  wide?: boolean;
+  className?: string;
+}) {
+  const t = useTranslations("components.ui");
+
+  useScrollLock(open);
+
+  useEffect(() => {
+    if (open) return;
+    repairOrphanedScrollLock();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const dialog = (
+    <div
+      className={cn(
+        "fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-[2px]",
+        className,
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onClick={onClose}
+    >
+      <div
+        className={cn(
+          "relative w-full bg-[var(--surface)] border border-[var(--border)] shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] rounded-t-2xl sm:rounded-2xl",
+          wide ? "max-w-xl" : "max-w-md",
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)] shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-[var(--text-primary)] truncate text-sm sm:text-base">{title}</h2>
+            {subtitle ? (
+              <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] mt-0.5 truncate">{subtitle}</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2.5 rounded-xl text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] shrink-0 touch-manipulation min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+            aria-label={t("close")}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 overscroll-contain touch-scroll-y min-h-0" data-touch-scroll>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === "undefined") return dialog;
+  return createPortal(dialog, document.body);
+}
+
 /** Centered confirmation modal — replaces native browser confirm for in-app flows. */
 export function ConfirmDialog({
   open,

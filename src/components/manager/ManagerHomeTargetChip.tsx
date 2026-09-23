@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Flame, PartyPopper, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -14,19 +14,21 @@ export function targetTrafficBand(achievementPercent: number): TargetTrafficBand
   return "red";
 }
 
+const BAND_ICON = { red: Flame, amber: Zap, green: PartyPopper } as const;
+
 type Props = {
   loading?: boolean;
   monthlyTarget: number;
   actualSales: number;
   achievementPercent: number;
   catchUpDaily: number;
-  dailyAverageActual: number;
   dailyAverageExpected: number;
+  /** Days left in the period — lets the action line say "for the next N days". */
+  daysRemaining?: number;
   periodLabel?: string;
   insightsHref?: string;
   /** Defaults to manager.home */
   messagesNamespace?: string;
-  insightsHint?: string;
   /** Single-line footer — manager-style density for CEO dashboard */
   compact?: boolean;
 };
@@ -37,12 +39,11 @@ export function ManagerHomeTargetChip({
   actualSales,
   achievementPercent,
   catchUpDaily,
-  dailyAverageActual,
   dailyAverageExpected,
+  daysRemaining,
   periodLabel,
   insightsHref = "/manager/insights",
   messagesNamespace = "manager.home",
-  insightsHint,
   compact,
 }: Props) {
   const t = useTranslations(messagesNamespace);
@@ -50,15 +51,19 @@ export function ManagerHomeTargetChip({
   const barPct = Math.min(100, Math.max(0, displayPct));
   const band = targetTrafficBand(achievementPercent);
   const remaining = Math.max(0, monthlyTarget - actualSales);
+  const catchUpAmount = catchUpDaily > 0 ? catchUpDaily : dailyAverageExpected;
+  const BandIcon = BAND_ICON[band];
 
   const actionLine =
     band === "green"
       ? t("glanceTargetActionGreen")
       : band === "amber"
-        ? t("glanceTargetActionAmber", { remaining: formatCurrency(remaining) })
-        : catchUpDaily > 0
-          ? t("glanceTargetActionRed", { catchUp: formatCurrency(catchUpDaily) })
-          : t("glanceTargetActionRed", { catchUp: formatCurrency(dailyAverageExpected) });
+        ? daysRemaining
+          ? t("glanceTargetActionAmberWithDays", { remaining: formatCurrency(remaining), days: daysRemaining })
+          : t("glanceTargetActionAmber", { remaining: formatCurrency(remaining) })
+        : daysRemaining
+          ? t("glanceTargetActionRedWithDays", { catchUp: formatCurrency(catchUpAmount), days: daysRemaining })
+          : t("glanceTargetActionRed", { catchUp: formatCurrency(catchUpAmount) });
 
   if (loading) {
     return (
@@ -90,70 +95,45 @@ export function ManagerHomeTargetChip({
         `manager-target-chip--${band}`,
         compact && "manager-target-chip--compact",
       )}
-      aria-label={`${t("glanceTargetMonthLabel")}, ${displayPct} percent, ${formatCurrency(actualSales)} of ${formatCurrency(monthlyTarget)}`}
+      aria-label={`${t("glanceTargetMonthLabel")}: ${formatCurrency(actualSales)} so far of ${formatCurrency(monthlyTarget)} target, ${displayPct} percent`}
     >
-      <div
-        className="manager-target-ring"
-        style={{ ["--ring-pct" as string]: barPct }}
-        aria-hidden
-      >
-        <div className="manager-target-ring-inner">
-          <span className="tabular-nums">{displayPct}%</span>
+      <div className="manager-target-top">
+        <div className="manager-target-ring" style={{ ["--ring-pct" as string]: barPct }} aria-hidden>
+          {band === "red" ? <span className="manager-target-ring-pulse" aria-hidden /> : null}
+          <div className="manager-target-ring-inner">
+            <span className="tabular-nums">{displayPct}%</span>
+          </div>
         </div>
-      </div>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-[11px] font-bold leading-tight">
+        <div className="min-w-0 flex-1">
+          <p className="manager-target-title truncate">
             {t("glanceTargetMonthLabel")}
-            {periodLabel ? (
-              <span className="hidden font-semibold opacity-75 sm:inline"> · {periodLabel}</span>
-            ) : null}
+            {periodLabel ? <span className="manager-target-period"> · {periodLabel}</span> : null}
           </p>
-          <p className="shrink-0 text-[11px] font-bold tabular-nums leading-tight">
-            {formatCurrency(actualSales)}
-            <span className="font-semibold opacity-60"> / {formatCurrency(monthlyTarget)}</span>
-          </p>
-        </div>
 
-        <div className="manager-target-bar" aria-hidden>
-          <div
-            className="manager-target-bar-fill"
-            style={{ ["--target-pct" as string]: `${barPct}%` }}
-          />
-          {band === "red" ? <div className="manager-target-bar-marker" style={{ left: "90%" }} /> : null}
-        </div>
-
-        {compact ? (
-          <p className="manager-target-action line-clamp-2 leading-snug">
-            {actionLine}
-            <span className="font-semibold opacity-75">
-              {" "}
-              ·{" "}
-              {t("glanceTargetPaceLine", {
-                actual: formatCurrency(dailyAverageActual),
-                expected: formatCurrency(dailyAverageExpected),
-              })}
-            </span>
+          <p className="manager-target-progress-line tabular-nums">
+            <span className="manager-target-progress-actual">{formatCurrency(actualSales)}</span>
+            <span className="manager-target-progress-of"> {t("glanceTargetOfLabel")} </span>
+            <span className="manager-target-progress-goal">{formatCurrency(monthlyTarget)}</span>
           </p>
-        ) : (
-          <>
-            <p className="manager-target-action">{actionLine}</p>
-            <p className="manager-target-pace">
-              {t("glanceTargetPaceLine", {
-                actual: formatCurrency(dailyAverageActual),
-                expected: formatCurrency(dailyAverageExpected),
-              })}
-              <span className="manager-target-insights-hint">
-                {" "}
-                · {insightsHint ?? t("glanceTargetInsightsHint")}
-              </span>
-            </p>
-          </>
-        )}
+
+          <div className="manager-target-bar" aria-hidden>
+            <div className="manager-target-bar-fill" style={{ ["--target-pct" as string]: `${barPct}%` }} />
+            {band === "red" ? <div className="manager-target-bar-marker" style={{ left: "90%" }} /> : null}
+          </div>
+        </div>
       </div>
 
-      <ChevronRight className="manager-target-chevron h-4 w-4 shrink-0" aria-hidden />
+      <div className="manager-target-foot">
+        <p className="manager-target-action line-clamp-2 leading-snug">
+          <BandIcon className="manager-target-action-icon h-3 w-3 shrink-0" aria-hidden />
+          {actionLine}
+        </p>
+        <span className="manager-target-cta shrink-0">
+          {t("glanceTargetCta")}
+          <ChevronRight className="h-3 w-3 shrink-0" aria-hidden />
+        </span>
+      </div>
     </Link>
   );
 }
