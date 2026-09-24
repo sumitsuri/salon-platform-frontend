@@ -13,7 +13,13 @@ import { PageHeader } from "@/components/ui";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { AdminDataSkeleton } from "@/components/admin/AdminDataSkeleton";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
-import { ProductDateRange, resolvePresetRange, toIsoDateTimeRange } from "@/lib/date-range";
+import {
+  ProductDateRange,
+  resolvePresetRange,
+  reviveStoredProductDateRange,
+  toIsoDateTimeRange,
+} from "@/lib/date-range";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { GuestVoiceStatsStrip } from "@/components/reviews/GuestVoiceStatsStrip";
 import { GuestVoiceInsightsPanel } from "@/components/reviews/GuestVoiceInsightsPanel";
 import {
@@ -30,11 +36,18 @@ import {
 
 export default function AdminGuestVoicePage() {
   const t = useTranslations("admin.guestVoice");
-  const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
-    preset: "last_30_days",
-    ...resolvePresetRange("last_30_days"),
-  }));
-  const [listFilters, setListFilters] = useState<ReviewListFilters>(EMPTY_REVIEW_FILTERS);
+  const [dateRange, setDateRange] = usePersistentState(
+    "admin-dashboard:dateRange",
+    (): ProductDateRange => ({
+      preset: "last_30_days",
+      ...resolvePresetRange("last_30_days"),
+    }),
+    reviveStoredProductDateRange,
+  );
+  const [listFilters, setListFilters] = usePersistentState(
+    "admin-guest-voice:listFilters",
+    EMPTY_REVIEW_FILTERS,
+  );
   const [sortKey, setSortKey] = useState<ReviewSortKey>("dateDesc");
   const tableRef = useRef<HTMLDivElement>(null);
   const apiRange = useMemo(() => toIsoDateTimeRange(dateRange), [dateRange]);

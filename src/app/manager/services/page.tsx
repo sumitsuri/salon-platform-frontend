@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useTranslations } from "next-intl";
 import { Scissors, Hash, IndianRupee } from "lucide-react";
 import { api } from "@/lib/api";
@@ -11,7 +12,7 @@ import { PageHeader, StatCard, EmptyState, DEFAULT_PAGE_SIZE } from "@/component
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { insightPeriodToRange } from "@/lib/insights-utils";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
 import { formatCurrency } from "@/lib/utils";
 
 export default function ManagerServicesPage() {
@@ -19,7 +20,11 @@ export default function ManagerServicesPage() {
   const tPeriods = useTranslations("components.dateRange.periods");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "manager-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const [serviceFilter, setServiceFilter] = useState("");
   const apiRange = insightPeriodToRange(dateRange);
 

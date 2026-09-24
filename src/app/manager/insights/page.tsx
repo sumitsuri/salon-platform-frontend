@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
@@ -13,14 +13,18 @@ import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { PageHeader } from "@/components/ui";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { countInsights, insightPeriodToRange } from "@/lib/insights-utils";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
 
 export default function ManagerInsightsPage() {
   const t = useTranslations("manager.insights");
   const tPeriods = useTranslations("components.dateRange.periods");
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "manager-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const apiRange = insightPeriodToRange(dateRange);
 
   const { data, isLoading, isFetching } = useQuery({

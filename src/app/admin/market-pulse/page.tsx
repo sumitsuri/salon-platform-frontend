@@ -39,7 +39,8 @@ import {
   MobileStatGrid,
   ResponsiveTableShell,
 } from "@/components/ui";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 
 type Tab = "overview" | "branches" | "peers" | "local" | "playbook";
@@ -52,7 +53,11 @@ export default function MarketPulsePage() {
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("overview");
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "admin-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const [showAddCompetitor, setShowAddCompetitor] = useState(false);
   const [compForm, setCompForm] = useState<UpsertLocalCompetitorRequest>({
     name: "",

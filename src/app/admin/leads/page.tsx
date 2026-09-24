@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
 import { api, Lead } from "@/lib/api";
@@ -51,7 +52,7 @@ function AdminLeadsPageContent() {
   const t = useTranslations("admin.leads");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("admin-leads:filters", emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const leadParam = useUrlQueryParam("leadId");

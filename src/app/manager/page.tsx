@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -31,6 +32,7 @@ import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import {
   getLast30DaysRange,
+  reviveStoredProductDateRange,
   todayIsoDate,
   type ProductDateRange,
 } from "@/lib/date-range";
@@ -109,7 +111,11 @@ export default function ManagerHomePage() {
   const today = todayIsoDate();
   const todayRange = useMemo(() => ({ startDate: today, endDate: today }), [today]);
 
-  const [dateRange, setDateRange] = useState<ProductDateRange>(managerDateRange);
+  const [dateRange, setDateRange] = usePersistentState<ProductDateRange>(
+    "manager-dashboard:dateRange",
+    managerDateRange,
+    reviveStoredProductDateRange,
+  );
   const apiRange = insightPeriodToRange(dateRange);
   const branchFilter = branchId ? [branchId] : undefined;
 

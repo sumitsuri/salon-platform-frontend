@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -41,7 +42,7 @@ export default function AdminWhatsAppTemplatesPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("admin-whatsapp-templates:filters", emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WhatsAppTemplate | null>(null);

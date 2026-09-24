@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -74,7 +75,7 @@ export default function ManagerMembershipsPage() {
   const queryClient = useQueryClient();
   const localeKit = getTenantLocaleKit();
 
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("manager-memberships:filters", emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState("");

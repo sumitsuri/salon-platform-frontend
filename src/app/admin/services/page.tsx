@@ -29,7 +29,8 @@ import {
 import { formatCurrency, cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 
 type Tab = "catalog" | "performance";
@@ -335,7 +336,11 @@ export default function AdminServicesPage() {
   const [showInactive, setShowInactive] = useState(false);
 
   // Performance tab state
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "admin-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const [serviceFilter, setServiceFilter] = useState("");
 
   const { branches, selectedBranches, setSelectedBranches, branchesSelected } = useAdminBranchSelection();

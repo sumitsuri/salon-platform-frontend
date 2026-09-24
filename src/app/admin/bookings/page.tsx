@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CalendarDays } from "lucide-react";
@@ -105,7 +106,9 @@ function AdminBookingsPageContent() {
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const localeKit = getTenantLocaleKit();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("admin-bookings:filters", emptyFilters, undefined, {
+    skipRestoreIf: () => !!readUrlDateFilters() || !!readUrlBranchScope()?.branchId,
+  });
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState("");
   const [branchScopeId, setBranchScopeId] = useState("");

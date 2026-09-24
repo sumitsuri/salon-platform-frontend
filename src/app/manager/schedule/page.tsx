@@ -34,6 +34,7 @@ import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
 import { OnlineAppointmentsList, collectOnlineAppointments } from "@/components/book/OnlineAppointmentsList";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useDetailBreadcrumbs } from "@/lib/use-detail-breadcrumbs";
 import { managerSchedulePath } from "@/lib/navigation-scope";
 
@@ -434,8 +435,15 @@ function ManagerSchedulePageContent() {
   const user = useAuthStore((s) => s.user);
   const branchId = user?.branchId || "";
   const searchParams = useSearchParams();
-  const initialDate = searchParams.get("date") || todayIso();
-  const [date, setDate] = useState(initialDate);
+  const urlDate = searchParams.get("date");
+  const [persistedDate, setPersistedDate] = usePersistentState("manager-schedule:date", todayIso);
+  const date = urlDate ?? persistedDate;
+  const setDate = (value: string | ((prev: string) => string)) => {
+    setPersistedDate((prev) => {
+      const base = urlDate ?? prev;
+      return typeof value === "function" ? value(base) : value;
+    });
+  };
   const bookingParam = useUrlQueryParam("bookingId");
   const scale = useBoardScale();
 

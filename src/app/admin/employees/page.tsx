@@ -31,7 +31,8 @@ import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import {
   PageHeader,
   ListRow,
@@ -79,7 +80,11 @@ export default function AdminEmployeesPage() {
   const tCommon = useTranslations("common");
   const tPeriods = useTranslations("components.dateRange.periods");
   const queryClient = useQueryClient();
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "admin-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const [sectionTab, setSectionTab] = useState<SectionTab>("attendance");
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");

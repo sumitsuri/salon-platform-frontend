@@ -146,6 +146,11 @@ export function resolvePresetRange(preset: DateRangePreset): Pick<ProductDateRan
   }
 }
 
+/** Recompute rolling preset bounds after reading from sessionStorage. */
+export function reviveStoredProductDateRange(range: ProductDateRange): ProductDateRange {
+  return resolveProductDateRange(range);
+}
+
 export function resolveProductDateRange(range: ProductDateRange): ProductDateRange {
   if (range.preset === "custom") {
     return range;

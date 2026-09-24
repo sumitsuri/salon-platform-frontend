@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { usePersistentState } from "@/lib/use-persistent-state";
 
 export type AdminBranchSelectionMode = "all" | "pilot";
 
@@ -18,7 +19,10 @@ export function useAdminBranchSelection(mode: AdminBranchSelectionMode = "all") 
     staleTime: 300_000,
   });
 
-  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [selectedBranches, setSelectedBranches] = usePersistentState<string[]>(
+    `admin-branch-selection:${mode}`,
+    []
+  );
 
   useEffect(() => {
     if (branchesLoading || selectedBranches.length > 0 || branches.length === 0) return;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -22,8 +23,8 @@ import {
   getManagerHomeDefaultRange,
   percentChange,
   previousComparisonRange,
+  reviveStoredManagerHomeRange,
   resolveManagerHomeRange,
-  type ManagerHomeDateRange,
 } from "@/lib/manager-home-date-range";
 
 function MiniSparkline({ points, stroke }: { points: number[]; stroke: string }) {
@@ -124,7 +125,11 @@ type Props = {
 
 export function ManagerHomeGlanceSection({ branchId }: Props) {
   const t = useTranslations("manager.home");
-  const [dateRange, setDateRange] = useState<ManagerHomeDateRange>(() => getManagerHomeDefaultRange());
+  const [dateRange, setDateRange] = usePersistentState(
+    "manager-home-glance:dateRange",
+    getManagerHomeDefaultRange,
+    reviveStoredManagerHomeRange,
+  );
   const resolved = resolveManagerHomeRange(dateRange);
   const compareRange = previousComparisonRange(resolved.from, resolved.to);
   const branchFilter = branchId ? [branchId] : undefined;

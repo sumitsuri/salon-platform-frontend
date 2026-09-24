@@ -60,6 +60,11 @@ export function managerHomeSelectableMaxDate(): string {
   return todayIsoDate();
 }
 
+/** Recompute rolling preset bounds after reading from sessionStorage. */
+export function reviveStoredManagerHomeRange(range: ManagerHomeDateRange): ManagerHomeDateRange {
+  return resolveManagerHomeRange(range);
+}
+
 export function resolveManagerHomeRange(range: ManagerHomeDateRange): ManagerHomeDateRange {
   if (range.preset === "today") {
     return { preset: "today", ...getTodayRange() };

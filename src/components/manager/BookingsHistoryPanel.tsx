@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -89,7 +90,7 @@ export function BookingsHistoryPanel({
   const tStatus = useTranslations("components.status");
   const branchId = useAuthStore((s) => s.user?.branchId) || "";
   const localeKit = getTenantLocaleKit();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("manager-bookings-history:filters", emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [customerIdFilter, setCustomerIdFilter] = useState(initialCustomerId || "");
   const detailParam = useUrlQueryParam("detailBookingId");

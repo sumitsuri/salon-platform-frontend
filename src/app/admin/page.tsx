@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { adminMtdSalesRange, aggregateBrandTargetMetrics } from "@/lib/admin-mtd-range";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -17,7 +18,13 @@ import { PaymentMixTeaser } from "@/components/PaymentMixTeaser";
 import { PlTeaser } from "@/components/PlTeaser";
 import { InventoryTeaser } from "@/components/InventoryTeaser";
 import { ListRow, EmptyState } from "@/components/ui";
-import { ProductDateRange, dashboardSecondaryRange, getTodayRange, resolveProductDateRange } from "@/lib/date-range";
+import {
+  ProductDateRange,
+  dashboardSecondaryRange,
+  getTodayRange,
+  resolveProductDateRange,
+  reviveStoredProductDateRange,
+} from "@/lib/date-range";
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
@@ -40,10 +47,14 @@ export default function AdminDashboardPage() {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const tAtt = useTranslations("components.attendanceDashboard");
-  const [dateRange, setDateRange] = useState<ProductDateRange>(() => ({
-    preset: "today",
-    ...getTodayRange(),
-  }));
+  const [dateRange, setDateRange] = usePersistentState<ProductDateRange>(
+    "admin-dashboard:dateRange",
+    () => ({
+      preset: "today",
+      ...getTodayRange(),
+    }),
+    reviveStoredProductDateRange,
+  );
 
   const {
     branches,

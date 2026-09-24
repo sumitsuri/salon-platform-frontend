@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Filter } from "lucide-react";
@@ -41,7 +42,7 @@ export function CampaignHistoryPanel({ refreshKey }: { refreshKey?: number }) {
   const tCommon = useTranslations("common");
   const tStatus = useTranslations("components.status");
   const localeKit = getTenantLocaleKit();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>("admin-campaigns:filters", emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Campaign | null>(null);

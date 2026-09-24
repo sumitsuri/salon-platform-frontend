@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Users } from "lucide-react";
@@ -55,7 +56,7 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
   const localeKit = getTenantLocaleKit();
-  const [filters, setFilters] = useState<Filters>(emptyFilters);
+  const [filters, setFilters] = usePersistentState<Filters>(`${scope}-customers:filters`, emptyFilters);
   const [debounced, setDebounced] = useState<Filters>(emptyFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [zeroBookingNotice, setZeroBookingNotice] = useState<string | null>(null);

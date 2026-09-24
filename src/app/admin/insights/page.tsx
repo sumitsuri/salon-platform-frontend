@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { usePersistentState } from "@/lib/use-persistent-state";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
@@ -14,13 +14,17 @@ import { PageHeader, EmptyState } from "@/components/ui";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { countInsights, insightPeriodToRange } from "@/lib/insights-utils";
-import { ProductDateRange, getDefaultDateRange } from "@/lib/date-range";
+import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
 
 export default function AdminInsightsPage() {
   const t = useTranslations("admin.insights");
   const tAdmin = useTranslations("admin.common");
   const tPeriods = useTranslations("components.dateRange.periods");
-  const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
+  const [dateRange, setDateRange] = usePersistentState(
+    "admin-dashboard:dateRange",
+    getDefaultDateRange,
+    reviveStoredProductDateRange,
+  );
   const apiRange = insightPeriodToRange(dateRange);
 
   const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
