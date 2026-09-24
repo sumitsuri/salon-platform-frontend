@@ -151,6 +151,8 @@
       "memberBadge": "{plan} · {percent}% off",
       "validUntil": "Valid until {date}",
       "sellMembership": "Sell membership card",
+      "membershipActivateAmount": "Activate for {amount}",
+      "membershipSkip": "Skip for now",
       "memberAutoApply": "Membership active — {percent}% off will apply automatically on eligible services",
       "applyPromo": "Coupon / Offer",
       "noCoupon": "No coupon",

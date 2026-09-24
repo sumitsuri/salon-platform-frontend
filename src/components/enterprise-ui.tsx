@@ -940,6 +940,7 @@ export function DashboardEmployeeSales({
   staff,
   loading,
   headerLabel,
+  subtitle,
   emptyLabel,
   labels,
   formatValue,
@@ -949,6 +950,7 @@ export function DashboardEmployeeSales({
   staff: EmployeeSalesRow[];
   loading?: boolean;
   headerLabel: string;
+  subtitle?: string;
   emptyLabel: string;
   labels: {
     name: string;
@@ -1006,6 +1008,7 @@ export function DashboardEmployeeSales({
     <div className={cn("dashboard-branch-performance min-w-0 max-w-full", className)}>
       <div className="dashboard-branch-performance-header dashboard-widget-header px-4 py-3">
         <h2 className="dashboard-widget-title">{headerLabel}</h2>
+        {subtitle && <p className="dashboard-widget-subtitle">{subtitle}</p>}
       </div>
 
       <div

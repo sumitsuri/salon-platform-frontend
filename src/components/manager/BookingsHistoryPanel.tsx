@@ -13,6 +13,7 @@ import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { NavigationScopeBanner } from "@/components/NavigationScopeBanner";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
+import { PromoSaleBadges } from "@/components/booking/PromoSaleBadges";
 import { AppScope, buildWalkInUrl } from "@/lib/navigation-scope";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
@@ -367,6 +368,7 @@ export function BookingsHistoryPanel({
                             {l.serviceName}
                           </span>
                         ))}
+                        <PromoSaleBadges billPreview={b.billPreview} />
                       </div>
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
@@ -416,6 +418,9 @@ export function BookingsHistoryPanel({
                         {" · "}
                         {b.lines?.map((l) => l.serviceName).join(", ")}
                       </p>
+                      <div className="col-span-2 flex flex-wrap gap-1">
+                        <PromoSaleBadges billPreview={b.billPreview} />
+                      </div>
                       <div className="col-span-2 flex items-center justify-between">
                         <span className="text-[10px] text-[var(--text-tertiary)]">
                           {b.lines?.map((l) => l.staffName).filter(Boolean).join(", ")}

@@ -241,6 +241,7 @@ export default function ManagerHomePage() {
           <DashboardEmployeeSales
             loading={todayStaffSalesLoading}
             headerLabel={t("employeePerformanceToday")}
+            subtitle={t("employeePerformanceSubtitle")}
             emptyLabel={tDash("noEmployeeSales")}
             staff={todayEmployeeSales}
             labels={{

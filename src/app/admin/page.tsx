@@ -425,6 +425,7 @@ export default function AdminDashboardPage() {
               <DashboardEmployeeSales
                 loading={staffPerfLoading}
                 headerLabel={t("employeeSales")}
+                subtitle={t("employeeSalesSubtitle")}
                 emptyLabel={t("noEmployeeSales")}
                 staff={staffSalesRowsFromTargetPerformance(staffPerformance?.staff ?? [])}
                 labels={employeeSalesLabels}

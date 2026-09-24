@@ -4,12 +4,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { CalendarDays } from "lucide-react";
-import { api, Booking, BillPreview } from "@/lib/api";
+import { api, Booking } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { formatBookingVisitAt } from "@/lib/booking-display";
 import { getTenantLocaleKit } from "@/lib/tenant-locale";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
 import { BookingDetailSheet, useResolvedBooking } from "@/components/booking/BookingDetailSheet";
+import { PromoSaleBadges } from "@/components/booking/PromoSaleBadges";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { parseDateRangeFromSearchParams } from "@/lib/date-range";
 import { useCustomerScopeNavigation } from "@/lib/use-customer-scope-navigation";
@@ -92,44 +93,6 @@ function parseAmount(value: string): { minAmount?: number; maxAmount?: number } 
   const num = Number(trimmed.replace(/[₹,\s]/g, ""));
   if (Number.isNaN(num)) return {};
   return { minAmount: num, maxAmount: num };
-}
-
-/**
- * A visit can include a membership/package sale with zero (or unrelated) service lines — the
- * grand total already accounts for it (via billPreview), but nothing on the row said so, making
- * these sales look missing when scanning a branch's booking list.
- */
-function PromoSaleBadges({ billPreview }: { billPreview?: BillPreview }) {
-  if (!billPreview) return null;
-  const badges: { key: string; label: string; amount: number }[] = [];
-  if (billPreview.membershipFeeAmount && billPreview.membershipFeeAmount > 0) {
-    badges.push({
-      key: "membership",
-      label: billPreview.membershipFeeLabel || "Membership sold",
-      amount: billPreview.membershipFeeAmount,
-    });
-  }
-  if (billPreview.packageFeeAmount && billPreview.packageFeeAmount > 0) {
-    badges.push({
-      key: "package",
-      label: billPreview.packageFeeLabel || "Package sold",
-      amount: billPreview.packageFeeAmount,
-    });
-  }
-  if (badges.length === 0) return null;
-  return (
-    <>
-      {badges.map((badge) => (
-        <span
-          key={badge.key}
-          className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-          title={formatCurrency(badge.amount)}
-        >
-          {badge.label}
-        </span>
-      ))}
-    </>
-  );
 }
 
 function AdminBookingsPageContent() {
