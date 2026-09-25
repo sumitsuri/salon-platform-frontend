@@ -299,6 +299,16 @@ export interface ActiveFieldRep {
   secondsSinceLastPing?: number;
 }
 
+const FIELD_ACTIVE_SECONDS = 6 * 60;
+
+function normalizeFieldRep(row: ActiveFieldRep): ActiveFieldRep {
+  const hasLocation = row.hasLocation ?? (row.latitude != null && row.longitude != null);
+  const seconds = row.secondsSinceLastPing;
+  const active =
+    row.active ?? (seconds != null && seconds < FIELD_ACTIVE_SECONDS);
+  return { ...row, hasLocation, active };
+}
+
 export interface FieldLocationPing {
   latitude: number;
   longitude: number;
@@ -541,8 +551,10 @@ export const salesApi = {
       body: JSON.stringify(data),
     }),
 
-  listActiveFieldReps: () =>
-    salesRequest<ActiveFieldRep[]>("/api/v1/platform/sales/field-tracking/active"),
+  listActiveFieldReps: async () => {
+    const rows = await salesRequest<ActiveFieldRep[]>("/api/v1/platform/sales/field-tracking/active");
+    return rows.map(normalizeFieldRep);
+  },
 
   getFieldTrail: (repId: string, date?: string) => {
     const q = date ? `?date=${date}` : "";
