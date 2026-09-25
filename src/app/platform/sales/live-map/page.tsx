@@ -1,7 +1,7 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type L from "leaflet";
 import { Navigation } from "lucide-react";
@@ -35,6 +35,16 @@ function formatAgo(seconds: number): string {
   return `${minutes} min ago`;
 }
 
+function repMarkerHtml(rep: ActiveFieldRep, selected: boolean): string {
+  const color = colorForRep(rep.repId);
+  const ring = selected ? "box-shadow:0 0 0 3px #f59e0b, 0 2px 8px rgba(0,0,0,0.4);transform:scale(1.08);" : "box-shadow:0 1px 4px rgba(0,0,0,0.35);";
+  return `<div style="
+      background:${color};color:#fff;width:32px;height:32px;border-radius:9999px;
+      display:flex;align-items:center;justify-content:center;font:600 11px sans-serif;
+      border:2px solid white;${ring}
+    ">${initials(rep.repName)}</div>`;
+}
+
 export default function SalesLiveMapPage() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -54,7 +64,7 @@ export default function SalesLiveMapPage() {
     [activeReps, selectedRepId]
   );
 
-  const { data: trail = [] } = useQuery({
+  const { data: trail = [], isFetched: trailFetched } = useQuery({
     queryKey: ["sales-field-tracking-trail", selectedRepId],
     queryFn: () => salesApi.getFieldTrail(selectedRepId as string),
     enabled: !!selectedRepId,
@@ -92,14 +102,10 @@ export default function SalesLiveMapPage() {
 
       activeReps.forEach((rep: ActiveFieldRep) => {
         seen.add(rep.repId);
-        const color = colorForRep(rep.repId);
+        const selected = selectedRepId === rep.repId;
         const icon = leaflet.divIcon({
           className: "",
-          html: `<div style="
-              background:${color};color:#fff;width:32px;height:32px;border-radius:9999px;
-              display:flex;align-items:center;justify-content:center;font:600 11px sans-serif;
-              border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35);
-            ">${initials(rep.repName)}</div>`,
+          html: repMarkerHtml(rep, selected),
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         });
@@ -108,9 +114,10 @@ export default function SalesLiveMapPage() {
         if (existing) {
           existing.setLatLng([rep.latitude, rep.longitude]);
           existing.setIcon(icon);
+          existing.setZIndexOffset(selected ? 1000 : 0);
         } else {
           const marker = leaflet
-            .marker([rep.latitude, rep.longitude], { icon })
+            .marker([rep.latitude, rep.longitude], { icon, zIndexOffset: selected ? 1000 : 0 })
             .addTo(map)
             .on("click", () => setSelectedRepId(rep.repId));
           markersRef.current.set(rep.repId, marker);
@@ -124,23 +131,38 @@ export default function SalesLiveMapPage() {
         }
       });
     });
-  }, [activeReps, mapReady]);
+  }, [activeReps, mapReady, selectedRepId]);
+
+  useLayoutEffect(() => {
+    trailLineRef.current?.remove();
+    trailLineRef.current = null;
+  }, [selectedRepId]);
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current) return;
+    if (!mapReady || !mapRef.current || !selectedRep || !trailFetched) return;
     import("leaflet").then((leaflet) => {
       const map = mapRef.current;
       if (!map) return;
       trailLineRef.current?.remove();
       trailLineRef.current = null;
-      if (!selectedRepId || trail.length < 2) return;
-      const points: [number, number][] = trail.map((p) => [p.latitude, p.longitude]);
-      trailLineRef.current = leaflet
-        .polyline(points, { color: colorForRep(selectedRepId), weight: 3, opacity: 0.7 })
-        .addTo(map);
-      map.fitBounds(trailLineRef.current.getBounds(), { padding: [40, 40] });
+
+      if (trail.length >= 2) {
+        const points: [number, number][] = trail.map((p) => [p.latitude, p.longitude]);
+        trailLineRef.current = leaflet
+          .polyline(points, { color: colorForRep(selectedRep.repId), weight: 3, opacity: 0.7 })
+          .addTo(map);
+      }
+
+      const boundsPoints: [number, number][] = [[selectedRep.latitude, selectedRep.longitude]];
+      for (const p of trail) boundsPoints.push([p.latitude, p.longitude]);
+
+      if (boundsPoints.length === 1) {
+        map.setView(boundsPoints[0], Math.max(map.getZoom(), 14));
+        return;
+      }
+      map.fitBounds(leaflet.latLngBounds(boundsPoints), { padding: [48, 48], maxZoom: 16 });
     });
-  }, [trail, selectedRepId, mapReady]);
+  }, [trail, selectedRep, trailFetched, mapReady]);
 
   return (
     <div className="space-y-3">
@@ -166,10 +188,7 @@ export default function SalesLiveMapPage() {
               <button
                 key={rep.repId}
                 type="button"
-                onClick={() => {
-                  setSelectedRepId(rep.repId);
-                  mapRef.current?.setView([rep.latitude, rep.longitude], 14);
-                }}
+                onClick={() => setSelectedRepId(rep.repId)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg border p-2.5 text-left transition",
                   selectedRepId === rep.repId
