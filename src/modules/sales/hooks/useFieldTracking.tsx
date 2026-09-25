@@ -5,7 +5,8 @@ import { useAuthStore } from "@/lib/auth-store";
 import { acquireLocation, geolocationErrorKey, isLikelyMobileDevice } from "@/lib/attendance-punch-media";
 import { salesApi } from "@/modules/sales/api/salesApi";
 
-const PING_INTERVAL_MS = 45_000;
+import { FIELD_LOCATION_PING_INTERVAL_MS } from "@/modules/sales/lib/field-tracking-constants";
+
 const STORAGE_KEY = "sales:field-mode-active";
 
 function fieldLocationErrorMessage(err: unknown): string {
@@ -101,7 +102,7 @@ export function FieldTrackingProvider({ children }: { children: React.ReactNode 
     } else {
       void sendPing();
     }
-    intervalRef.current = setInterval(sendPing, PING_INTERVAL_MS);
+    intervalRef.current = setInterval(sendPing, FIELD_LOCATION_PING_INTERVAL_MS);
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);

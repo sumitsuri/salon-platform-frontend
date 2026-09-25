@@ -4,13 +4,15 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type L from "leaflet";
-import { Navigation } from "lucide-react";
+import { MapPin, Navigation } from "lucide-react";
 import { ActiveFieldRep, salesApi } from "@/modules/sales/api/salesApi";
+import {
+  FIELD_REP_LOCATIONS_POLL_MS,
+  FIELD_TRAIL_POLL_MS,
+} from "@/modules/sales/lib/field-tracking-constants";
 import { PageHeader, Card, EmptyState } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-const ACTIVE_REPS_POLL_MS = 15_000;
-const TRAIL_POLL_MS = 20_000;
 const BANGALORE_CENTER: [number, number] = [12.9716, 77.5946];
 const MARKER_COLORS = ["#7c3aed", "#0891b2", "#d97706", "#dc2626", "#16a34a", "#2563eb", "#db2777", "#0d9488"];
 
@@ -29,19 +31,28 @@ function initials(name: string): string {
     .join("");
 }
 
-function formatAgo(seconds: number): string {
+function formatAgo(seconds: number | undefined): string {
+  if (seconds == null) return "No location yet";
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.round(seconds / 60);
-  return `${minutes} min ago`;
+  if (minutes < 120) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return `${hours} hr ago`;
 }
 
 function repMarkerHtml(rep: ActiveFieldRep, selected: boolean): string {
   const color = colorForRep(rep.repId);
-  const ring = selected ? "box-shadow:0 0 0 3px #f59e0b, 0 2px 8px rgba(0,0,0,0.4);transform:scale(1.08);" : "box-shadow:0 1px 4px rgba(0,0,0,0.35);";
+  const inactive = !rep.active;
+  const opacity = inactive ? "0.55" : "1";
+  const ring = selected
+    ? "box-shadow:0 0 0 3px #f59e0b, 0 2px 8px rgba(0,0,0,0.4);transform:scale(1.08);"
+    : inactive
+      ? "box-shadow:0 1px 3px rgba(0,0,0,0.25);border-style:dashed;"
+      : "box-shadow:0 1px 4px rgba(0,0,0,0.35);";
   return `<div style="
       background:${color};color:#fff;width:32px;height:32px;border-radius:9999px;
       display:flex;align-items:center;justify-content:center;font:600 11px sans-serif;
-      border:2px solid white;${ring}
+      border:2px solid white;opacity:${opacity};${ring}
     ">${initials(rep.repName)}</div>`;
 }
 
@@ -53,22 +64,38 @@ export default function SalesLiveMapPage() {
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const { data: activeReps = [], isLoading } = useQuery({
+  const { data: fieldReps = [], isLoading } = useQuery({
     queryKey: ["sales-field-tracking-active"],
     queryFn: () => salesApi.listActiveFieldReps(),
-    refetchInterval: ACTIVE_REPS_POLL_MS,
+    refetchInterval: FIELD_REP_LOCATIONS_POLL_MS,
   });
 
+  const repsWithLocation = useMemo(
+    () => fieldReps.filter((r) => r.hasLocation && r.latitude != null && r.longitude != null),
+    [fieldReps]
+  );
+
+  const activeCount = useMemo(() => fieldReps.filter((r) => r.active).length, [fieldReps]);
+
+  const sortedReps = useMemo(() => {
+    return [...fieldReps].sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      const aSec = a.secondsSinceLastPing ?? Number.MAX_SAFE_INTEGER;
+      const bSec = b.secondsSinceLastPing ?? Number.MAX_SAFE_INTEGER;
+      return aSec - bSec;
+    });
+  }, [fieldReps]);
+
   const selectedRep = useMemo(
-    () => activeReps.find((r) => r.repId === selectedRepId) ?? null,
-    [activeReps, selectedRepId]
+    () => fieldReps.find((r) => r.repId === selectedRepId) ?? null,
+    [fieldReps, selectedRepId]
   );
 
   const { data: trail = [], isFetched: trailFetched } = useQuery({
     queryKey: ["sales-field-tracking-trail", selectedRepId],
     queryFn: () => salesApi.getFieldTrail(selectedRepId as string),
     enabled: !!selectedRepId,
-    refetchInterval: selectedRepId ? TRAIL_POLL_MS : false,
+    refetchInterval: selectedRepId ? FIELD_TRAIL_POLL_MS : false,
   });
 
   useEffect(() => {
@@ -100,7 +127,7 @@ export default function SalesLiveMapPage() {
       if (!map) return;
       const seen = new Set<string>();
 
-      activeReps.forEach((rep: ActiveFieldRep) => {
+      repsWithLocation.forEach((rep: ActiveFieldRep) => {
         seen.add(rep.repId);
         const selected = selectedRepId === rep.repId;
         const icon = leaflet.divIcon({
@@ -110,14 +137,17 @@ export default function SalesLiveMapPage() {
           iconAnchor: [16, 16],
         });
 
+        const lat = rep.latitude!;
+        const lng = rep.longitude!;
+
         const existing = markersRef.current.get(rep.repId);
         if (existing) {
-          existing.setLatLng([rep.latitude, rep.longitude]);
+          existing.setLatLng([lat, lng]);
           existing.setIcon(icon);
-          existing.setZIndexOffset(selected ? 1000 : 0);
+          existing.setZIndexOffset(selected ? 1000 : rep.active ? 100 : 0);
         } else {
           const marker = leaflet
-            .marker([rep.latitude, rep.longitude], { icon, zIndexOffset: selected ? 1000 : 0 })
+            .marker([lat, lng], { icon, zIndexOffset: selected ? 1000 : rep.active ? 100 : 0 })
             .addTo(map)
             .on("click", () => setSelectedRepId(rep.repId));
           markersRef.current.set(rep.repId, marker);
@@ -131,7 +161,7 @@ export default function SalesLiveMapPage() {
         }
       });
     });
-  }, [activeReps, mapReady, selectedRepId]);
+  }, [repsWithLocation, mapReady, selectedRepId]);
 
   useLayoutEffect(() => {
     trailLineRef.current?.remove();
@@ -139,7 +169,11 @@ export default function SalesLiveMapPage() {
   }, [selectedRepId]);
 
   useEffect(() => {
-    if (!mapReady || !mapRef.current || !selectedRep || !trailFetched) return;
+    if (!mapReady || !mapRef.current || !selectedRep?.hasLocation || !trailFetched) return;
+    const lat = selectedRep.latitude;
+    const lng = selectedRep.longitude;
+    if (lat == null || lng == null) return;
+
     import("leaflet").then((leaflet) => {
       const map = mapRef.current;
       if (!map) return;
@@ -153,7 +187,7 @@ export default function SalesLiveMapPage() {
           .addTo(map);
       }
 
-      const boundsPoints: [number, number][] = [[selectedRep.latitude, selectedRep.longitude]];
+      const boundsPoints: [number, number][] = [[lat, lng]];
       for (const p of trail) boundsPoints.push([p.latitude, p.longitude]);
 
       if (boundsPoints.length === 1) {
@@ -166,7 +200,10 @@ export default function SalesLiveMapPage() {
 
   return (
     <div className="space-y-3">
-      <PageHeader title="Live map" subtitle="Reps currently in field mode, updating every 15s" />
+      <PageHeader
+        title="Live map"
+        subtitle={`All sales reps · last known location · ${activeCount} active in field mode · refreshes every 5 min`}
+      />
 
       <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
         <Card className="overflow-hidden p-0">
@@ -175,16 +212,16 @@ export default function SalesLiveMapPage() {
 
         <Card className="max-h-[70vh] overflow-y-auto p-3">
           <h3 className="mb-2 text-sm font-semibold text-[var(--text-primary)]">
-            Active now · {activeReps.length}
+            Sales team · {fieldReps.length}
+            {activeCount > 0 ? (
+              <span className="ml-1.5 font-normal text-emerald-700 dark:text-emerald-400">({activeCount} active)</span>
+            ) : null}
           </h3>
-          {!isLoading && activeReps.length === 0 && (
-            <EmptyState
-              title="No one's in field mode"
-              description="Reps show up here once they turn on field mode from My Pipeline."
-            />
+          {!isLoading && fieldReps.length === 0 && (
+            <EmptyState title="No sales reps" description="Add sales executives from the Team page." />
           )}
           <div className="space-y-1.5">
-            {activeReps.map((rep) => (
+            {sortedReps.map((rep) => (
               <button
                 key={rep.repId}
                 type="button"
@@ -193,20 +230,45 @@ export default function SalesLiveMapPage() {
                   "flex w-full items-center gap-2.5 rounded-lg border p-2.5 text-left transition",
                   selectedRepId === rep.repId
                     ? "border-[var(--brand)] bg-[var(--brand-light)]/40"
-                    : "border-[var(--border)] hover:bg-[var(--surface-muted)]"
+                    : "border-[var(--border)] hover:bg-[var(--surface-muted)]",
+                  !rep.hasLocation && "opacity-80"
                 )}
               >
                 <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                  className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white",
+                    !rep.active && "opacity-60"
+                  )}
                   style={{ backgroundColor: colorForRep(rep.repId) }}
                 >
                   {initials(rep.repName)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{rep.repName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-medium text-[var(--text-primary)]">{rep.repName}</p>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                        rep.active
+                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                          : "bg-[var(--surface-muted)] text-[var(--ink-muted)]"
+                      )}
+                    >
+                      {rep.active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
                   <p className="flex items-center gap-1 text-xs text-[var(--ink-muted)]">
-                    <Navigation className="h-3 w-3" aria-hidden />
-                    {formatAgo(rep.secondsSinceLastPing)}
+                    {rep.hasLocation ? (
+                      <>
+                        <Navigation className="h-3 w-3 shrink-0" aria-hidden />
+                        Last seen {formatAgo(rep.secondsSinceLastPing)}
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                        No location shared yet
+                      </>
+                    )}
                   </p>
                 </div>
               </button>
@@ -215,7 +277,15 @@ export default function SalesLiveMapPage() {
 
           {selectedRep && (
             <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs text-[var(--ink-muted)]">
-              Showing {selectedRep.repName}&rsquo;s trail for today ({trail.length} point{trail.length === 1 ? "" : "s"})
+              {selectedRep.hasLocation ? (
+                <>
+                  Showing {selectedRep.repName}&rsquo;s trail for today ({trail.length} point
+                  {trail.length === 1 ? "" : "s"})
+                  {!selectedRep.active ? " · last known position (not in field mode now)" : null}
+                </>
+              ) : (
+                <>Select a rep with a shared location to see them on the map.</>
+              )}
             </p>
           )}
         </Card>

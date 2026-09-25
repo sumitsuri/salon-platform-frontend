@@ -39,9 +39,9 @@ export function FieldModeToggle() {
               ? lastError
               : isTracking
                 ? lastPingAt
-                  ? `Sharing location · last ping ${secondsAgo(lastPingAt)}s ago`
+                  ? `Sharing every 5 min · last ping ${secondsAgo(lastPingAt)}s ago`
                   : "Getting a location fix…"
-                : "Turn on so your manager can see where you are today"}
+                : "Turn on to share your location with your manager every 5 minutes"}
           </p>
         </div>
       </div>

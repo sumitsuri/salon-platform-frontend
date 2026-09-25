@@ -290,11 +290,13 @@ export interface RepPerformance {
 export interface ActiveFieldRep {
   repId: string;
   repName: string;
-  latitude: number;
-  longitude: number;
+  active: boolean;
+  hasLocation: boolean;
+  latitude?: number;
+  longitude?: number;
   accuracyMeters?: number;
-  capturedAt: string;
-  secondsSinceLastPing: number;
+  capturedAt?: string;
+  secondsSinceLastPing?: number;
 }
 
 export interface FieldLocationPing {
