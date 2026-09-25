@@ -20,6 +20,7 @@ import {
   EMPTY_FILTERS,
 } from "@/modules/sales/components/SalesLeadFilters";
 import { SalesMyDayView } from "@/modules/sales/components/SalesMyDayView";
+import { FieldModeToggle } from "@/modules/sales/components/FieldModeToggle";
 import { SalesDiscoveryCta } from "@/modules/sales/components/SalesDiscoveryCta";
 import { SalesPipelineToolbar } from "@/modules/sales/components/SalesPipelineToolbar";
 import { SalesPipelineSummaryWidgets } from "@/modules/sales/components/SalesPipelineSummaryWidgets";
@@ -240,6 +241,8 @@ export default function SalesPipelinePage() {
         subtitle={isAdmin ? "All reps — Bangalore field sales" : `Hi ${user?.name?.split(" ")[0] ?? "there"}`}
         action={view === "myday" ? undefined : addLeadButton}
       />
+
+      {!isAdmin && <FieldModeToggle />}
 
       <SalesPipelineToolbar
         dateRange={dateRange}

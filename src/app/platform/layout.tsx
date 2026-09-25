@@ -3,12 +3,13 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { BarChart3, Building2, Inbox, Kanban, TrendingUp, Users } from "lucide-react";
+import { BarChart3, Building2, Inbox, Kanban, MapPin, TrendingUp, Users } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { isNavActive, MOBILE_MAIN_PADDING_BOTTOM_TABS, type MobileBottomNavConfig } from "@/components/app-nav";
+import { FieldTrackingProvider } from "@/modules/sales/hooks/useFieldTracking";
 
 const PLATFORM_ROLES = new Set(["PLATFORM_SUPER_ADMIN", "SALES_EXECUTIVE"]);
 
@@ -38,6 +39,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
             { href: "/platform/sales", label: "Pipeline", exact: true },
             { href: "/platform/sales/incoming", label: "Incoming leads" },
             { href: "/platform/sales/team", label: "Team" },
+            { href: "/platform/sales/live-map", label: "Live map" },
           ],
         },
       ];
@@ -78,6 +80,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
             links: [
               { href: "/platform/sales/incoming", label: "Incoming leads", icon: Inbox, description: "Leads from the marketing site" },
               { href: "/platform/sales/team", label: "Team", icon: Users, description: "Reps, targets & incentives" },
+              { href: "/platform/sales/live-map", label: "Live map", icon: MapPin, description: "Where reps are right now" },
             ],
           },
         ],
@@ -119,6 +122,9 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform/sales/incoming")) {
       router.replace("/platform/sales");
     }
+    if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform/sales/live-map")) {
+      router.replace("/platform/sales");
+    }
   }, [user, router, hydrated, pathname]);
 
   if (!hydrated) {
@@ -155,7 +161,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       mobileNavFabColor={brandColor}
       mobileBottomNav={mobileBottomNav}
     >
-      {children}
+      <FieldTrackingProvider>{children}</FieldTrackingProvider>
     </EnterpriseAppShell>
   );
 }

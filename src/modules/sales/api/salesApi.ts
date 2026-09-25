@@ -287,6 +287,23 @@ export interface RepPerformance {
   underperforming: boolean;
 }
 
+export interface ActiveFieldRep {
+  repId: string;
+  repName: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  capturedAt: string;
+  secondsSinceLastPing: number;
+}
+
+export interface FieldLocationPing {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number;
+  capturedAt: string;
+}
+
 export const STAGES: LeadStage[] = [
   "NEW",
   "CONTACTED",
@@ -515,4 +532,18 @@ export const salesApi = {
     branches?: string;
     notes?: string;
   }) => publicSalesRequest<SalesLead>("/api/v1/public/sales-leads", data),
+
+  recordFieldPing: (data: { latitude: number; longitude: number; accuracyMeters?: number; capturedAt: string }) =>
+    salesRequest<void>("/api/v1/platform/sales/field-tracking/ping", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  listActiveFieldReps: () =>
+    salesRequest<ActiveFieldRep[]>("/api/v1/platform/sales/field-tracking/active"),
+
+  getFieldTrail: (repId: string, date?: string) => {
+    const q = date ? `?date=${date}` : "";
+    return salesRequest<FieldLocationPing[]>(`/api/v1/platform/sales/field-tracking/${repId}/trail${q}`);
+  },
 };
