@@ -2,10 +2,34 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/lib/auth-store";
+import { acquireLocation, geolocationErrorKey, isLikelyMobileDevice } from "@/lib/attendance-punch-media";
 import { salesApi } from "@/modules/sales/api/salesApi";
 
 const PING_INTERVAL_MS = 45_000;
 const STORAGE_KEY = "sales:field-mode-active";
+
+function fieldLocationErrorMessage(err: unknown): string {
+  switch (geolocationErrorKey(err)) {
+    case "gpsPermissionDenied":
+      return "Location permission denied — enable it in your browser settings to keep tracking.";
+    case "gpsTimeout":
+      return isLikelyMobileDevice()
+        ? "GPS timed out — try again near a window with clear sky view."
+        : "Location timed out — allow location for this site (laptops use Wi‑Fi positioning, not GPS).";
+    case "gpsUnavailable":
+      return "Location unavailable — turn on system location services and try again.";
+    default:
+      break;
+  }
+  if (err instanceof Error && err.message && err.message !== "GPS_FAILED" && err.message !== "GPS_UNSUPPORTED") {
+    return err.message;
+  }
+  return "Couldn't get a location fix";
+}
+
+function isGeoPermissionDenied(err: unknown): boolean {
+  return geolocationErrorKey(err) === "gpsPermissionDenied";
+}
 
 type FieldTrackingState = {
   isTracking: boolean;
@@ -16,20 +40,6 @@ type FieldTrackingState = {
 };
 
 const FieldTrackingContext = createContext<FieldTrackingState | null>(null);
-
-function getPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Location is not available on this device"));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 20_000,
-      maximumAge: 10_000,
-    });
-  });
-}
 
 export function FieldTrackingProvider({ children }: { children: React.ReactNode }) {
   const role = useAuthStore((s) => s.user?.role);
@@ -46,25 +56,27 @@ export function FieldTrackingProvider({ children }: { children: React.ReactNode 
   const [lastPingAt, setLastPingAt] = useState<Date | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Avoid double ping when start() already fired sendPing on the user gesture. */
+  const skipNextEffectPingRef = useRef(false);
 
   const sendPing = useCallback(async () => {
     try {
-      const position = await getPosition();
+      const fix = await acquireLocation();
       await salesApi.recordFieldPing({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracyMeters: position.coords.accuracy ?? undefined,
-        capturedAt: new Date(position.timestamp).toISOString(),
+        latitude: fix.latitude,
+        longitude: fix.longitude,
+        accuracyMeters: fix.accuracyMeters,
+        capturedAt: new Date().toISOString(),
       });
       setLastPingAt(new Date());
       setLastError(null);
     } catch (err) {
-      if (err instanceof GeolocationPositionError && err.code === err.PERMISSION_DENIED) {
-        setLastError("Location permission denied — enable it in your browser settings to keep tracking.");
+      if (isGeoPermissionDenied(err)) {
+        setLastError(fieldLocationErrorMessage(err));
         setIsTracking(false);
         return;
       }
-      setLastError(err instanceof Error ? err.message : "Couldn't get a location fix");
+      setLastError(fieldLocationErrorMessage(err));
     }
   }, []);
 
@@ -84,7 +96,11 @@ export function FieldTrackingProvider({ children }: { children: React.ReactNode 
       return;
     }
 
-    sendPing();
+    if (skipNextEffectPingRef.current) {
+      skipNextEffectPingRef.current = false;
+    } else {
+      void sendPing();
+    }
     intervalRef.current = setInterval(sendPing, PING_INTERVAL_MS);
     return () => {
       if (intervalRef.current) {
@@ -96,8 +112,11 @@ export function FieldTrackingProvider({ children }: { children: React.ReactNode 
 
   const start = useCallback(() => {
     setLastError(null);
+    skipNextEffectPingRef.current = true;
     setIsTracking(true);
-  }, []);
+    // Must run while the Start tap/click is still a user gesture (Safari / mobile Chrome).
+    void sendPing();
+  }, [sendPing]);
 
   const stop = useCallback(() => setIsTracking(false), []);
 
