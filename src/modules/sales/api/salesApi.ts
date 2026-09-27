@@ -171,6 +171,8 @@ export interface DiscoveredSalonPreview {
   websiteUrl?: string;
   category?: string;
   photoRef?: string;
+  /** Up to three Google Places photo resource names for gallery UI. */
+  photoRefs?: string[];
   photoCount?: number;
   openNow?: boolean;
   hoursSummary?: string;

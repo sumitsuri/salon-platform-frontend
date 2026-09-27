@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CalendarClock, ExternalLink, MapPin, Phone, Star } from "lucide-react";
 import { DiscoveredSalonPreview } from "@/modules/sales/api/salesApi";
-import { DiscoverPlacePhoto } from "@/modules/sales/components/DiscoverPlacePhoto";
+import { DiscoverPlacePhotoGallery } from "@/modules/sales/components/DiscoverPlacePhotoGallery";
 import { formatClaimBadge } from "@/modules/sales/lib/claim-status-labels";
 
 type DiscoveredSalonListingCardProps = {
@@ -37,10 +37,11 @@ export function DiscoveredSalonListingCard({
 
   return (
     <article className="flex gap-3 border-b border-[var(--border)] py-3 last:border-b-0">
-      <DiscoverPlacePhoto
+      <DiscoverPlacePhotoGallery
         photoRef={place.photoRef}
+        photoRefs={place.photoRefs}
         alt={place.businessName}
-        className="h-[72px] w-[72px] shrink-0 rounded-lg sm:h-20 sm:w-20"
+        className="h-[72px] w-[72px] sm:h-20 sm:w-20"
       />
 
       <div className="min-w-0 flex-1">
