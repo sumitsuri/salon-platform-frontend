@@ -472,6 +472,7 @@
       "addBooking": "Add booking",
       "addBookingFor": "Add booking for {name}",
       "clickToAdd": "Click a time slot to add a booking",
+      "dragToReschedule": "Drag to reschedule",
       "servicesNotChosen": "Services not chosen yet",
       "reschedule": "Reschedule",
       "rescheduleTitle": "Move this appointment",

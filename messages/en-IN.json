@@ -230,6 +230,7 @@
       "addBooking": "Add booking",
       "addBookingFor": "Add booking for {name}",
       "clickToAdd": "Click a time slot to add a booking",
+      "dragToReschedule": "Drag to reschedule",
       "noAppointments": "No appointments yet today",
       "now": "Now",
       "timingTitle": "How long services really take",

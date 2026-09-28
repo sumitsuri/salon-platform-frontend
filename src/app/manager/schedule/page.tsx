@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -30,10 +30,12 @@ import {
   btnSecondary,
   inputClass,
   selectClass,
+  AlertBanner,
   EmptyState,
   MobileStatGrid,
   ResponsiveTableShell,
 } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
@@ -163,6 +165,19 @@ function blockTone(block: StaffTimeBlock) {
   return "bg-stone-500/80 text-white border-stone-700";
 }
 
+type DragInfo = {
+  bookingId: string;
+  block: StaffTimeBlock;
+  originStaffId: string;
+  originStartMin: number;
+  durationMin: number;
+  startClientX: number;
+  startClientY: number;
+  moved: boolean;
+  targetStaffId: string;
+  targetStartMin: number;
+};
+
 function StaffCalendarGrid({
   staff,
   openMin,
@@ -173,6 +188,7 @@ function StaffCalendarGrid({
   t,
   onSelect,
   onSlotClick,
+  onRescheduled,
 }: {
   staff: StaffAvailabilityColumn[];
   openMin: number;
@@ -183,11 +199,93 @@ function StaffCalendarGrid({
   t: ReturnType<typeof useTranslations>;
   onSelect: (block: StaffTimeBlock, staff: StaffAvailabilityColumn) => void;
   onSlotClick: (staff: StaffAvailabilityColumn, minutesFromOpen: number) => void;
+  onRescheduled: () => void;
 }) {
   const { pxPerMin, rulerW, colW, headerH } = scale;
   const bodyH = totalMin * pxPerMin;
   const hourGapPx = 60 * pxPerMin;
   const [hoveredBookingId, setHoveredBookingId] = useState<string | null>(null);
+  const [drag, setDrag] = useState<DragInfo | null>(null);
+  const dragRef = useRef<DragInfo | null>(null);
+  const justDraggedRef = useRef(false);
+  const [dragError, setDragError] = useState("");
+
+  const rescheduleMutation = useMutation({
+    mutationFn: (vars: { bookingId: string; scheduledStartAt: string; scheduledEndAt: string; staffId: string }) =>
+      api.rescheduleBooking(vars.bookingId, {
+        scheduledStartAt: vars.scheduledStartAt,
+        scheduledEndAt: vars.scheduledEndAt,
+        staffId: vars.staffId,
+      }),
+    onSuccess: () => {
+      setDragError("");
+      onRescheduled();
+    },
+    onError: (e: Error) => setDragError(e.message || "Couldn't move the appointment"),
+  });
+
+  function handlePointerDown(e: React.PointerEvent, block: StaffTimeBlock, col: StaffAvailabilityColumn) {
+    const startMin = Math.min(minutesFromOpen(block.startAt, openMin, date), totalMin);
+    const endMin = Math.min(Math.max(minutesFromOpen(block.endAt, openMin, date), startMin + 15), totalMin);
+    const info: DragInfo = {
+      bookingId: block.bookingId,
+      block,
+      originStaffId: col.staffId,
+      originStartMin: startMin,
+      durationMin: endMin - startMin,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      moved: false,
+      targetStaffId: col.staffId,
+      targetStartMin: startMin,
+    };
+    dragRef.current = info;
+    setDrag(info);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    const info = dragRef.current;
+    if (!info) return;
+    const dx = e.clientX - info.startClientX;
+    const dy = e.clientY - info.startClientY;
+    const movedNow = info.moved || Math.abs(dx) > 6 || Math.abs(dy) > 6;
+    if (!movedNow) return;
+
+    let targetStaffId = info.targetStaffId;
+    let targetStartMin = info.targetStartMin;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const colEl = el instanceof Element ? el.closest<HTMLElement>("[data-staff-column]") : null;
+    if (colEl?.dataset.staffColumn) {
+      targetStaffId = colEl.dataset.staffColumn;
+      const rect = colEl.getBoundingClientRect();
+      const rawMin = (e.clientY - rect.top) / pxPerMin;
+      const snapped = Math.round(rawMin / 15) * 15;
+      targetStartMin = Math.max(0, Math.min(snapped, Math.max(totalMin - info.durationMin, 0)));
+    }
+    const next: DragInfo = { ...info, moved: true, targetStaffId, targetStartMin };
+    dragRef.current = next;
+    setDrag(next);
+  }
+
+  function handlePointerUp() {
+    const info = dragRef.current;
+    dragRef.current = null;
+    setDrag(null);
+    if (!info || !info.moved) return;
+    justDraggedRef.current = true;
+    const changed = info.targetStaffId !== info.originStaffId || info.targetStartMin !== info.originStartMin;
+    if (!changed) return;
+
+    const newStart = `${date}T${minutesOfDayToHHMM(openMin + info.targetStartMin)}:00+05:30`;
+    const newEnd = `${date}T${minutesOfDayToHHMM(openMin + info.targetStartMin + info.durationMin)}:00+05:30`;
+    rescheduleMutation.mutate({
+      bookingId: info.bookingId,
+      scheduledStartAt: new Date(newStart).toISOString(),
+      scheduledEndAt: new Date(newEnd).toISOString(),
+      staffId: info.targetStaffId,
+    });
+  }
 
   const hourMarks = useMemo(() => {
     const marks: number[] = [];
@@ -196,7 +294,18 @@ function StaffCalendarGrid({
   }, [openMin, totalMin]);
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+    <div className="space-y-2">
+      {dragError && (
+        <AlertBanner variant="error">
+          <div className="flex items-center justify-between gap-2">
+            <span>{dragError}</span>
+            <button type="button" className="shrink-0 text-xs font-semibold underline" onClick={() => setDragError("")}>
+              {t("dismissReschedule")}
+            </button>
+          </div>
+        </AlertBanner>
+      )}
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="max-h-[72vh] overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
         <div className="inline-flex" style={{ minWidth: rulerW + staff.length * colW }}>
           <div className="sticky left-0 z-30 shrink-0 bg-[var(--surface)]" style={{ width: rulerW }}>
@@ -246,6 +355,7 @@ function StaffCalendarGrid({
 
               <div
                 className="relative cursor-pointer touch-manipulation"
+                data-staff-column={col.staffId}
                 style={{
                   height: bodyH,
                   backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent ${hourGapPx - 1}px, color-mix(in srgb, var(--border) 70%, transparent) ${hourGapPx}px)`,
@@ -271,6 +381,8 @@ function StaffCalendarGrid({
                   );
                   const top = startOff * pxPerMin;
                   const height = Math.max((endOff - startOff) * pxPerMin, 26);
+                  const draggable = block.status === "CONFIRMED";
+                  const isBeingDragged = drag?.moved && drag.bookingId === block.bookingId;
                   return (
                     <div
                       key={block.bookingId}
@@ -280,9 +392,24 @@ function StaffCalendarGrid({
                     >
                       <button
                         type="button"
-                        className={`h-full w-full rounded-md border px-1.5 py-1 shadow-md overflow-hidden text-left transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] touch-manipulation ${blockTone(block)}`}
+                        className={cn(
+                          "h-full w-full rounded-md border px-1.5 py-1 shadow-md overflow-hidden text-left transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] touch-manipulation",
+                          blockTone(block),
+                          draggable && "cursor-grab active:cursor-grabbing",
+                          isBeingDragged && "opacity-35"
+                        )}
+                        style={draggable ? { touchAction: "none" } : undefined}
+                        title={draggable ? t("dragToReschedule") : t("clickForDetails")}
+                        onPointerDown={draggable ? (e) => handlePointerDown(e, block, col) : undefined}
+                        onPointerMove={draggable ? handlePointerMove : undefined}
+                        onPointerUp={draggable ? handlePointerUp : undefined}
+                        onPointerCancel={draggable ? handlePointerUp : undefined}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (justDraggedRef.current) {
+                            justDraggedRef.current = false;
+                            return;
+                          }
                           onSelect(block, col);
                         }}
                         onMouseEnter={() => setHoveredBookingId(block.bookingId)}
@@ -298,16 +425,34 @@ function StaffCalendarGrid({
                           {formatClock(block.startAt)} – {formatClock(block.endAt)}
                         </p>
                       </button>
-                      {hoveredBookingId === block.bookingId && (
+                      {hoveredBookingId === block.bookingId && !drag && (
                         <BlockHoverCard block={block} staffName={col.staffName} t={t} />
                       )}
                     </div>
                   );
                 })}
+                {drag && drag.moved && drag.targetStaffId === col.staffId && (
+                  <div
+                    className="absolute left-0.5 right-0.5 z-30 rounded-md border-2 border-dashed border-[var(--brand)] bg-[var(--brand-light)]/80 px-1.5 py-1 pointer-events-none"
+                    style={{
+                      top: drag.targetStartMin * pxPerMin,
+                      height: Math.max(drag.durationMin * pxPerMin, 26),
+                    }}
+                  >
+                    <p className="text-[9px] sm:text-[10px] font-bold truncate leading-tight text-[var(--brand-text)]">
+                      {drag.block.customerName}
+                    </p>
+                    <p className="text-[8px] sm:text-[9px] truncate leading-tight mt-0.5 text-[var(--brand-text)]">
+                      {formatHourLabel(openMin + drag.targetStartMin)} –{" "}
+                      {formatHourLabel(openMin + drag.targetStartMin + drag.durationMin)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );
@@ -936,6 +1081,7 @@ function ManagerSchedulePageContent() {
             t={t}
             onSelect={(block, staff) => openVisit(block, staff)}
             onSlotClick={(staff, minutesFromOpenVal) => handleSlotClick(staff, minutesFromOpenVal)}
+            onRescheduled={() => void refetch()}
           />
         </div>
       )}
