@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock3,
   Phone,
+  Plus,
   RefreshCw,
   UserPlus,
   Users,
@@ -24,6 +25,7 @@ import {
   StatCard,
   StatusBadge,
   btnPrimary,
+  btnPrimarySm,
   btnSecondary,
   EmptyState,
   MobileStatGrid,
@@ -44,26 +46,6 @@ type SelectedVisit = {
   staffName: string;
 };
 
-type BoardScale = {
-  pxPerMin: number;
-  staffColW: number;
-  rowH: number;
-};
-
-function useBoardScale(): BoardScale {
-  const [width, setWidth] = useState(1024);
-  useEffect(() => {
-    const sync = () => setWidth(window.innerWidth);
-    sync();
-    window.addEventListener("resize", sync);
-    return () => window.removeEventListener("resize", sync);
-  }, []);
-  if (width < 380) return { pxPerMin: 0.82, staffColW: 108, rowH: 78 };
-  if (width < 640) return { pxPerMin: 0.95, staffColW: 124, rowH: 82 };
-  if (width < 1024) return { pxPerMin: 1.15, staffColW: 148, rowH: 86 };
-  return { pxPerMin: 1.35, staffColW: 168, rowH: 88 };
-}
-
 function todayIso() {
   const d = new Date();
   const y = d.getFullYear();
@@ -81,11 +63,6 @@ function shiftDate(iso: string, delta: number) {
   return `${y}-${m}-${day}`;
 }
 
-function parseHm(hm: string) {
-  const [h, m] = hm.split(":").map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
-
 function formatClock(iso: string) {
   try {
     return new Date(iso).toLocaleTimeString("en-IN", {
@@ -99,145 +76,128 @@ function formatClock(iso: string) {
   }
 }
 
-function minutesFromOpen(iso: string, openMinutes: number, date: string) {
-  const t = new Date(iso).getTime();
-  const open = new Date(
-    `${date}T${String(Math.floor(openMinutes / 60)).padStart(2, "0")}:${String(openMinutes % 60).padStart(2, "0")}:00+05:30`
-  ).getTime();
-  return Math.max(0, Math.round((t - open) / 60000));
-}
-
 function occupancyTone(occ: string) {
   if (occ === "FREE") return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 ring-emerald-500/30";
   if (occ === "OVERDUE") return "bg-rose-500/15 text-rose-800 dark:text-rose-300 ring-rose-500/30";
   return "bg-amber-500/15 text-amber-900 dark:text-amber-300 ring-amber-500/30";
 }
 
-function blockTone(block: StaffTimeBlock) {
-  if (block.status === "CONFIRMED") {
-    return "bg-sky-600/90 text-white border-sky-800";
-  }
-  if (block.overdue || block.status === "IN_PROGRESS") {
-    return block.overdue
-      ? "bg-rose-500/90 text-white border-rose-700"
-      : "bg-[color-mix(in_srgb,var(--brand)_88%,black)] text-white border-[color-mix(in_srgb,var(--brand)_60%,black)]";
-  }
-  if (block.status === "READY_FOR_BILLING") {
-    return "bg-amber-500 text-white border-amber-700";
-  }
-  return "bg-stone-500/80 text-white border-stone-700";
+function blockAccent(block: StaffTimeBlock) {
+  if (block.overdue) return "bg-rose-500";
+  if (block.status === "CONFIRMED") return "bg-sky-500";
+  if (block.status === "IN_PROGRESS") return "bg-[var(--brand)]";
+  if (block.status === "READY_FOR_BILLING") return "bg-amber-500";
+  return "bg-stone-400";
 }
 
-function StaffRow({
+function StaffAgendaCard({
   column,
-  openMin,
-  totalMin,
-  date,
   isToday,
-  scale,
   t,
   onSelect,
 }: {
   column: StaffAvailabilityColumn;
-  openMin: number;
-  totalMin: number;
-  date: string;
   isToday: boolean;
-  scale: BoardScale;
   t: ReturnType<typeof useTranslations>;
   onSelect: (block: StaffTimeBlock, staff: StaffAvailabilityColumn) => void;
 }) {
-  const { pxPerMin, staffColW, rowH } = scale;
-  const trackW = Math.max(totalMin * pxPerMin, 360);
-  const hourGap = Math.max(48, 60 * pxPerMin);
+  const sortedBlocks = useMemo(
+    () => [...column.blocks].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime()),
+    [column.blocks]
+  );
+  const addBookingHref = `/manager/walk-in?staffId=${column.staffId}`;
 
   return (
-    <div className="flex border-b border-[var(--border)] last:border-b-0" style={{ minHeight: rowH }}>
-      <div
-        className="sticky left-0 z-20 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] px-2 sm:px-3 py-2 flex flex-col justify-center gap-0.5 sm:gap-1 shadow-[4px_0_12px_-8px_rgba(0,0,0,0.18)]"
-        style={{ width: staffColW }}
-      >
-        <div className="flex items-start justify-between gap-1">
-          <div className="min-w-0">
-            <p className="font-semibold text-xs sm:text-sm text-[var(--text-primary)] truncate leading-tight">
-              {column.staffName}
-            </p>
-            {column.skills && (
-              <p className="text-[9px] sm:text-[10px] text-[var(--text-secondary)] truncate mt-0.5 hidden xs:block sm:block">
-                {column.skills}
-              </p>
-            )}
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+      <div className="flex items-start justify-between gap-2 px-3 sm:px-4 py-3 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--brand)_5%,var(--surface))]">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold text-sm text-[var(--text-primary)] truncate">{column.staffName}</p>
+            <span
+              className={`shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md ring-1 ${occupancyTone(column.occupancy)}`}
+            >
+              {column.occupancy === "FREE"
+                ? t("free")
+                : column.occupancy === "OVERDUE"
+                  ? t("overdue")
+                  : t("busy")}
+            </span>
           </div>
-          <span
-            className={`shrink-0 text-[8px] sm:text-[9px] font-bold uppercase tracking-wide px-1 sm:px-1.5 py-0.5 rounded-md ring-1 ${occupancyTone(column.occupancy)}`}
-          >
-            {column.occupancy === "FREE"
-              ? t("free")
-              : column.occupancy === "OVERDUE"
-                ? t("overdue")
-                : t("busy")}
-          </span>
+          {column.skills && (
+            <p className="text-[10px] text-[var(--text-secondary)] truncate mt-0.5">{column.skills}</p>
+          )}
+          {isToday && column.occupancy !== "FREE" && (
+            <p className="text-[10px] text-[var(--text-secondary)] leading-snug mt-1">
+              {column.occupancy === "OVERDUE"
+                ? t("runningLate")
+                : t("freeIn", {
+                    mins: column.remainingMinutes ?? 0,
+                    time: column.busyUntil ? formatClock(column.busyUntil) : "—",
+                  })}
+            </p>
+          )}
+          {isToday && column.occupancy === "FREE" && column.freeSlots[0] && (
+            <p className="text-[10px] text-emerald-700 dark:text-emerald-400 leading-snug mt-1">
+              {t("nextGap", { mins: column.freeSlots[0].minutes })}
+            </p>
+          )}
         </div>
-        {isToday && column.occupancy !== "FREE" && (
-          <p className="text-[9px] sm:text-[10px] text-[var(--text-secondary)] leading-snug line-clamp-2">
-            {column.occupancy === "OVERDUE"
-              ? t("runningLate")
-              : t("freeIn", {
-                  mins: column.remainingMinutes ?? 0,
-                  time: column.busyUntil ? formatClock(column.busyUntil) : "—",
-                })}
-          </p>
-        )}
-        {isToday && column.occupancy === "FREE" && column.freeSlots[0] && (
-          <p className="text-[9px] sm:text-[10px] text-emerald-700 dark:text-emerald-400 leading-snug">
-            {t("nextGap", { mins: column.freeSlots[0].minutes })}
-          </p>
-        )}
         <Link
-          href={`/manager/walk-in?staffId=${column.staffId}`}
-          className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-[var(--brand)] hover:underline w-fit touch-manipulation"
+          href={addBookingHref}
+          className={`${btnPrimarySm} shrink-0 touch-manipulation`}
+          title={t("addBookingFor", { name: column.staffName })}
         >
-          <UserPlus className="w-3 h-3" />
-          <span className="truncate">{t("assignVisit")}</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden xs:inline">{t("addBooking")}</span>
         </Link>
       </div>
 
-      <div
-        className="relative shrink-0"
-        style={{
-          width: trackW,
-          height: rowH,
-          backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--brand) 5%, transparent), transparent 18%), repeating-linear-gradient(90deg, transparent, transparent ${hourGap - 0.1}px, color-mix(in srgb, var(--border) 75%, transparent) ${hourGap}px)`,
-        }}
-      >
-        {column.blocks.map((block) => {
-          const startOff = Math.min(minutesFromOpen(block.startAt, openMin, date), totalMin);
-          const endOff = Math.min(
-            Math.max(minutesFromOpen(block.endAt, openMin, date), startOff + 15),
-            totalMin
-          );
-          const left = startOff * pxPerMin;
-          const width = Math.max((endOff - startOff) * pxPerMin, 48);
-          return (
-            <button
-              type="button"
-              key={`${block.bookingId}-${block.startAt}`}
-              className={`absolute top-1.5 bottom-1.5 sm:top-2 sm:bottom-2 rounded-lg border px-1.5 sm:px-2 py-1 shadow-md overflow-hidden text-left cursor-pointer transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] touch-manipulation ${blockTone(block)}`}
-              style={{ left, width }}
-              title={t("clickForDetails")}
-              onClick={() => onSelect(block, column)}
-            >
-              <p className="text-[10px] sm:text-[11px] font-bold truncate leading-tight">{block.customerName}</p>
-              <p className="text-[9px] sm:text-[10px] opacity-90 truncate leading-tight mt-0.5">
-                {formatClock(block.startAt)} – {formatClock(block.endAt)}
-              </p>
-              <p className="text-[9px] sm:text-[10px] opacity-85 truncate leading-tight mt-0.5 hidden sm:block">
-                {block.services.join(" · ")}
-              </p>
-            </button>
-          );
-        })}
-      </div>
+      {sortedBlocks.length === 0 ? (
+        <Link
+          href={addBookingHref}
+          className="flex flex-col items-center gap-1 px-3 sm:px-4 py-6 text-center touch-manipulation hover:bg-[var(--surface-muted)] transition"
+        >
+          <p className="text-sm text-[var(--text-secondary)]">{t("noAppointments")}</p>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-text)]">
+            <Plus className="w-3.5 h-3.5" />
+            {t("addBooking")}
+          </span>
+        </Link>
+      ) : (
+        <ul className="divide-y divide-[var(--border)]">
+          {sortedBlocks.map((block) => (
+            <li key={block.bookingId}>
+              <button
+                type="button"
+                onClick={() => onSelect(block, column)}
+                title={t("clickForDetails")}
+                className="w-full flex items-stretch gap-2.5 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 text-left transition hover:bg-[var(--surface-muted)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand)] touch-manipulation"
+              >
+                <span className={`w-1 rounded-full shrink-0 ${blockAccent(block)}`} aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-[var(--text-primary)] whitespace-nowrap">
+                      {formatClock(block.startAt)} – {formatClock(block.endAt)}
+                    </span>
+                    <StatusBadge status={block.status} />
+                  </span>
+                  <span className="block text-sm text-[var(--text-primary)] truncate mt-0.5">
+                    {block.customerName}
+                  </span>
+                  <span className="block text-xs text-[var(--text-secondary)] truncate mt-0.5">
+                    {block.services.join(" · ")}
+                  </span>
+                  {block.overdue && (
+                    <span className="inline-block text-[10px] font-bold uppercase tracking-wide text-rose-600 dark:text-rose-400 mt-1">
+                      {t("overdue")}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -445,7 +405,6 @@ function ManagerSchedulePageContent() {
     });
   };
   const bookingParam = useUrlQueryParam("bookingId");
-  const scale = useBoardScale();
 
   const { data, isLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["branch-availability", branchId, date],
@@ -462,39 +421,7 @@ function ManagerSchedulePageContent() {
 
   const onlineAppointments = useMemo(() => collectOnlineAppointments(data?.staff), [data?.staff]);
 
-  const openMin = parseHm(data?.openTime || "09:00");
-  const closeMin = parseHm(data?.closeTime || "21:00");
   const isToday = date === todayIso();
-
-  const totalMin = useMemo(() => {
-    let end = closeMin;
-    if (data?.staff) {
-      for (const s of data.staff) {
-        for (const b of s.blocks) {
-          end = Math.max(end, openMin + minutesFromOpen(b.endAt, openMin, date));
-        }
-      }
-    }
-    if (isToday && data?.now) {
-      end = Math.max(end, openMin + minutesFromOpen(data.now, openMin, date) + 30);
-    }
-    end = Math.min(end, 24 * 60 + 60);
-    return Math.max(end - openMin, 60);
-  }, [closeMin, openMin, data, date, isToday]);
-
-  const trackW = Math.max(totalMin * scale.pxPerMin, 360);
-  const axisEndMin = openMin + totalMin;
-
-  const hourMarks = useMemo(() => {
-    const marks: number[] = [];
-    for (let m = openMin; m <= axisEndMin; m += 60) marks.push(m);
-    return marks;
-  }, [openMin, axisEndMin]);
-
-  const nowOffset = useMemo(() => {
-    if (!isToday || !data?.now) return null;
-    return minutesFromOpen(data.now, openMin, date);
-  }, [isToday, data?.now, openMin, date]);
 
   const selected = useMemo((): SelectedVisit | null => {
     if (!bookingParam.value || !data?.staff) return null;
@@ -631,73 +558,16 @@ function ManagerSchedulePageContent() {
       ) : !data || data.staff.length === 0 ? (
         <EmptyState title={t("emptyTitle")} description={t("emptyDesc")} />
       ) : (
-        <div className="space-y-2 min-w-0">
-          <p className="text-[11px] text-[var(--text-secondary)] sm:hidden px-0.5">{t("scrollHint")}</p>
-          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden w-full max-w-full">
-            <div className="overflow-x-auto overscroll-x-contain touch-pan-x max-w-full min-w-0 [-webkit-overflow-scrolling:touch]">
-              <div className="inline-block align-top" style={{ minWidth: scale.staffColW + trackW }}>
-                <div className="flex border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))] sticky top-0 z-30">
-                  <div
-                    className="sticky left-0 z-40 shrink-0 border-r border-[var(--border)] bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))] px-2 sm:px-3 py-2 flex items-end"
-                    style={{ width: scale.staffColW }}
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                      {t("colStaff")}
-                    </span>
-                  </div>
-                  <div className="relative shrink-0" style={{ width: trackW, height: 36 }}>
-                    {hourMarks.map((m) => {
-                      const labelH = Math.floor(m / 60) % 24;
-                      const labelM = m % 60;
-                      const left = (m - openMin) * scale.pxPerMin;
-                      return (
-                        <div key={m} className="absolute top-0 bottom-0" style={{ left }}>
-                          <span className="absolute left-1 bottom-1.5 text-[9px] sm:text-[10px] font-semibold text-[var(--text-secondary)] whitespace-nowrap">
-                            {`${String(labelH).padStart(2, "0")}:${String(labelM).padStart(2, "0")}`}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {nowOffset != null && nowOffset >= 0 && nowOffset <= totalMin && (
-                      <div
-                        className="absolute top-0 bottom-0 z-10 pointer-events-none"
-                        style={{ left: nowOffset * scale.pxPerMin }}
-                      >
-                        <div className="w-0.5 h-full bg-rose-500" />
-                        <span className="absolute top-0 left-1 text-[9px] font-bold text-rose-600 bg-[var(--surface)] px-1 rounded shadow-sm">
-                          {t("now")}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="relative">
-                  {nowOffset != null && nowOffset >= 0 && nowOffset <= totalMin && (
-                    <div
-                      className="absolute top-0 bottom-0 z-10 pointer-events-none"
-                      style={{ left: scale.staffColW + nowOffset * scale.pxPerMin }}
-                    >
-                      <div className="w-0.5 h-full bg-rose-500/70" />
-                    </div>
-                  )}
-                  {data.staff.map((col) => (
-                    <StaffRow
-                      key={col.staffId}
-                      column={col}
-                      openMin={openMin}
-                      totalMin={totalMin}
-                      date={date}
-                      isToday={isToday}
-                      scale={scale}
-                      t={t}
-                      onSelect={(block, staff) => openVisit(block, staff)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-3 min-w-0">
+          {data.staff.map((col) => (
+            <StaffAgendaCard
+              key={col.staffId}
+              column={col}
+              isToday={isToday}
+              t={t}
+              onSelect={(block, staff) => openVisit(block, staff)}
+            />
+          ))}
         </div>
       )}
 
