@@ -1246,6 +1246,15 @@ export const api = {
   cancelBooking: (id: string) =>
     request<void>(`/api/v1/bookings/${id}/cancel`, { method: "POST" }),
 
+  rescheduleBooking: (
+    id: string,
+    data: { scheduledStartAt: string; scheduledEndAt: string; staffId?: string }
+  ) =>
+    request<Booking>(`/api/v1/bookings/${id}/reschedule`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   checkInBooking: (id: string) =>
     request<void>(`/api/v1/bookings/${id}/check-in`, { method: "POST" }),
 
@@ -1969,6 +1978,11 @@ export interface CreateBookingRequest {
   pendingMembershipPlanId?: string;
   pendingPackagePlanId?: string;
   pendingPackageSoldByStaffId?: string;
+  /** Set to create a future appointment (CONFIRMED, not started) instead of an immediate walk-in. */
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  /** Stylist for a future appointment whose services aren't chosen yet (lines may be empty). */
+  staffId?: string;
 }
 
 export type PromoStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "EXPIRED";

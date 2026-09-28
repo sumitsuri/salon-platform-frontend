@@ -2,15 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Search, User } from "lucide-react";
+import { Check, Clock3, Search, User } from "lucide-react";
 import { api } from "@/lib/api";
 import { isValidIndianMobile, normalizeIndianMobile } from "@/lib/phone";
 import { formatCurrency, cn } from "@/lib/utils";
-import { SideSheet, inputClass, selectClass, btnPrimary, AlertBanner } from "@/components/ui";
+import { SideSheet, inputClass, selectClass, btnPrimary, AlertBanner, SegmentedControl } from "@/components/ui";
 
 type LookupStatus = "idle" | "loading" | "found" | "not_found";
+type When = "now" | "later";
 
 export type StaffOption = { id: string; name: string };
+
+const DEFAULT_LATER_DURATION_MIN = 30;
+
+function todayIso() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export function AddAppointmentSheet({
   open,
@@ -19,6 +30,8 @@ export function AddAppointmentSheet({
   staffId,
   staffName,
   staffOptions,
+  date,
+  defaultTime,
   onCreated,
 }: {
   open: boolean;
@@ -27,9 +40,16 @@ export function AddAppointmentSheet({
   staffId: string;
   staffName: string;
   staffOptions: StaffOption[];
-  onCreated: () => void;
+  /** Currently viewed calendar date (YYYY-MM-DD) — default date when scheduling for later. */
+  date: string;
+  /** Clicked slot's time as HH:MM (24h) — default time when scheduling for later. */
+  defaultTime: string;
+  onCreated: (info: { date: string }) => void;
 }) {
   const queryClient = useQueryClient();
+  const [when, setWhen] = useState<When>("now");
+  const [laterDate, setLaterDate] = useState(date);
+  const [laterTime, setLaterTime] = useState(defaultTime);
   const [phone, setPhone] = useState("");
   const [lookupStatus, setLookupStatus] = useState<LookupStatus>("idle");
   const [customerId, setCustomerId] = useState("");
@@ -89,6 +109,9 @@ export function AddAppointmentSheet({
   }
 
   function reset() {
+    setWhen("now");
+    setLaterDate(date);
+    setLaterTime(defaultTime);
     setPhone("");
     setLookupStatus("idle");
     setCustomerId("");
@@ -114,33 +137,50 @@ export function AddAppointmentSheet({
         resolvedCustomerId = created.id;
       }
       if (!resolvedCustomerId) throw new Error("Look up or add a customer first");
-      if (selectedServices.length === 0) throw new Error("Add at least one service");
+
+      const lines = selectedServices.map((row) => ({
+        branchServiceId: row.id,
+        staffId: selectedStaffId,
+        quantity: 1,
+        unitPrice: row.price,
+      }));
+
+      if (when === "now") {
+        if (lines.length === 0) throw new Error("Add at least one service");
+        return api.createBooking({ branchId, customerId: resolvedCustomerId, keepOpen: true, lines });
+      }
+
+      if (!laterDate || !laterTime) throw new Error("Pick a date and time");
+      const startAt = new Date(`${laterDate}T${laterTime}:00+05:30`);
+      if (Number.isNaN(startAt.getTime())) throw new Error("Pick a valid date and time");
+      const durationMin = selectedServices.length > 0 ? estimatedMinutes : DEFAULT_LATER_DURATION_MIN;
+      const endAt = new Date(startAt.getTime() + durationMin * 60_000);
 
       return api.createBooking({
         branchId,
         customerId: resolvedCustomerId,
-        keepOpen: true,
-        lines: selectedServices.map((row) => ({
-          branchServiceId: row.id,
-          staffId: selectedStaffId,
-          quantity: 1,
-          unitPrice: row.price,
-        })),
+        staffId: selectedStaffId,
+        scheduledStartAt: startAt.toISOString(),
+        scheduledEndAt: endAt.toISOString(),
+        lines,
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["branch-availability"] });
+      const effectiveDate = when === "later" ? laterDate : todayIso();
       reset();
-      onCreated();
+      onCreated({ date: effectiveDate });
       onClose();
     },
     onError: (e: Error) => setError(e.message || "Couldn't create the booking"),
   });
 
+  const hasCustomer =
+    lookupStatus === "found" || (lookupStatus === "not_found" && newGuestName.trim().length > 0);
   const canSubmit =
-    (lookupStatus === "found" || (lookupStatus === "not_found" && newGuestName.trim().length > 0)) &&
-    selectedServices.length > 0 &&
-    !!selectedStaffId;
+    hasCustomer &&
+    !!selectedStaffId &&
+    (when === "now" ? selectedServices.length > 0 : !!laterDate && !!laterTime);
 
   const selectedStaffName = staffOptions.find((s) => s.id === selectedStaffId)?.name ?? staffName;
 
@@ -152,7 +192,11 @@ export function AddAppointmentSheet({
         onClose();
       }}
       title="New appointment"
-      subtitle={`Starts now · ${selectedStaffName}`}
+      subtitle={
+        when === "now"
+          ? `Starts now · ${selectedStaffName}`
+          : `${selectedStaffName} · scheduled for later`
+      }
       footer={
         <>
           {error && <p className="text-xs text-red-600">{error}</p>}
@@ -168,12 +212,43 @@ export function AddAppointmentSheet({
             disabled={!canSubmit || createMutation.isPending}
             onClick={() => createMutation.mutate()}
           >
-            {createMutation.isPending ? "Adding…" : "Add booking"}
+            {createMutation.isPending ? "Adding…" : when === "now" ? "Add booking" : "Schedule appointment"}
           </button>
         </>
       }
     >
       <div className="space-y-4">
+        <div>
+          <label className="text-xs font-semibold text-[var(--text-secondary)]">When</label>
+          <div className="mt-1">
+            <SegmentedControl
+              options={[
+                { id: "now" as When, label: "Now", icon: Clock3 },
+                { id: "later" as When, label: "Later", icon: Clock3 },
+              ]}
+              value={when}
+              onChange={setWhen}
+            />
+          </div>
+          {when === "later" && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                className={inputClass}
+                value={laterDate}
+                min={todayIso()}
+                onChange={(e) => setLaterDate(e.target.value)}
+              />
+              <input
+                type="time"
+                className={inputClass}
+                value={laterTime}
+                onChange={(e) => setLaterTime(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="text-xs font-semibold text-[var(--text-secondary)]">Customer phone</label>
           <div className="mt-1 flex gap-2">
@@ -229,7 +304,9 @@ export function AddAppointmentSheet({
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-[var(--text-secondary)]">Services</label>
+          <label className="text-xs font-semibold text-[var(--text-secondary)]">
+            Services{when === "later" ? " (optional)" : ""}
+          </label>
           <div className="relative mt-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-tertiary)]" />
             <input
@@ -285,7 +362,11 @@ export function AddAppointmentSheet({
         </div>
 
         <AlertBanner variant="info">
-          {`This starts a walk-in visit for ${selectedStaffName} now. Scheduling for a future time isn't supported yet.`}
+          {when === "now"
+            ? `This starts a walk-in visit for ${selectedStaffName} now.`
+            : selectedServices.length > 0
+              ? `Schedules ${selectedStaffName} for this visit — nothing starts until you check the customer in.`
+              : `Reserves ${selectedStaffName}'s time for ${DEFAULT_LATER_DURATION_MIN} minutes. Add services when the customer arrives.`}
         </AlertBanner>
       </div>
     </SideSheet>

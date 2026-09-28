@@ -28,6 +28,8 @@ import {
   StatusBadge,
   btnPrimary,
   btnSecondary,
+  inputClass,
+  selectClass,
   EmptyState,
   MobileStatGrid,
   ResponsiveTableShell,
@@ -125,6 +127,26 @@ function formatHourLabel(minutesOfDay: number) {
   return mins === 0 ? `${h12} ${ampm}` : `${h12}:${String(mins).padStart(2, "0")} ${ampm}`;
 }
 
+function toIstDateTimeParts(iso: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(iso));
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return { date: `${map.year}-${map.month}-${map.day}`, time: `${map.hour}:${map.minute}` };
+}
+
+function minutesOfDayToHHMM(minutesOfDay: number) {
+  const h = Math.floor(minutesOfDay / 60) % 24;
+  const m = minutesOfDay % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function occupancyTone(occ: string) {
   if (occ === "FREE") return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 ring-emerald-500/30";
   if (occ === "OVERDUE") return "bg-rose-500/15 text-rose-800 dark:text-rose-300 ring-rose-500/30";
@@ -165,6 +187,7 @@ function StaffCalendarGrid({
   const { pxPerMin, rulerW, colW, headerH } = scale;
   const bodyH = totalMin * pxPerMin;
   const hourGapPx = 60 * pxPerMin;
+  const [hoveredBookingId, setHoveredBookingId] = useState<string | null>(null);
 
   const hourMarks = useMemo(() => {
     const marks: number[] = [];
@@ -249,27 +272,36 @@ function StaffCalendarGrid({
                   const top = startOff * pxPerMin;
                   const height = Math.max((endOff - startOff) * pxPerMin, 26);
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={block.bookingId}
-                      className={`absolute left-0.5 right-0.5 rounded-md border px-1.5 py-1 shadow-md overflow-hidden text-left transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] touch-manipulation ${blockTone(block)}`}
-                      style={{ top, height }}
-                      title={t("clickForDetails")}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelect(block, col);
-                      }}
+                      className="absolute"
+                      style={{ top, height, left: 2, right: 2 }}
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <p className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold leading-tight">
-                        {isOnlineAppointment(block) && (
-                          <Globe className="h-2.5 w-2.5 shrink-0" aria-label={t("onlineAppointmentsBadge")} />
-                        )}
-                        <span className="truncate">{block.customerName}</span>
-                      </p>
-                      <p className="text-[8px] sm:text-[9px] opacity-90 truncate leading-tight mt-0.5">
-                        {formatClock(block.startAt)} – {formatClock(block.endAt)}
-                      </p>
-                    </button>
+                      <button
+                        type="button"
+                        className={`h-full w-full rounded-md border px-1.5 py-1 shadow-md overflow-hidden text-left transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] touch-manipulation ${blockTone(block)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(block, col);
+                        }}
+                        onMouseEnter={() => setHoveredBookingId(block.bookingId)}
+                        onMouseLeave={() => setHoveredBookingId((id) => (id === block.bookingId ? null : id))}
+                      >
+                        <p className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold leading-tight">
+                          {isOnlineAppointment(block) && (
+                            <Globe className="h-2.5 w-2.5 shrink-0" aria-label={t("onlineAppointmentsBadge")} />
+                          )}
+                          <span className="truncate">{block.customerName}</span>
+                        </p>
+                        <p className="text-[8px] sm:text-[9px] opacity-90 truncate leading-tight mt-0.5">
+                          {formatClock(block.startAt)} – {formatClock(block.endAt)}
+                        </p>
+                      </button>
+                      {hoveredBookingId === block.bookingId && (
+                        <BlockHoverCard block={block} staffName={col.staffName} t={t} />
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -281,30 +313,112 @@ function StaffCalendarGrid({
   );
 }
 
+function BlockHoverCard({
+  block,
+  staffName,
+  t,
+}: {
+  block: StaffTimeBlock;
+  staffName: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute left-full top-0 z-40 ml-1.5 hidden w-56 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-xl sm:block"
+      role="tooltip"
+    >
+      <div className="flex items-center gap-1.5">
+        {isOnlineAppointment(block) && (
+          <Globe className="h-3 w-3 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+        )}
+        <p className="truncate text-sm font-bold text-[var(--text-primary)]">{block.customerName}</p>
+      </div>
+      {block.customerPhone && (
+        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{block.customerPhone}</p>
+      )}
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <StatusBadge status={block.status} />
+        {block.overdue && (
+          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-800 dark:text-rose-300 ring-1 ring-rose-500/30">
+            {t("overdue")}
+          </span>
+        )}
+      </div>
+      <p className="mt-1.5 text-xs font-semibold text-[var(--text-primary)]">
+        {staffName} · {formatClock(block.startAt)} – {formatClock(block.endAt)}
+      </p>
+      {block.services.length > 0 ? (
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">{block.services.join(", ")}</p>
+      ) : (
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">{t("servicesNotChosen")}</p>
+      )}
+    </div>
+  );
+}
+
 function VisitDetailsModal({
   selected,
+  staffOptions,
   onClose,
-  onCheckedIn,
+  onUpdated,
   t,
 }: {
   selected: SelectedVisit;
+  staffOptions: { id: string; name: string }[];
   onClose: () => void;
-  onCheckedIn: () => void;
+  onUpdated: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
   const { block, staffName } = selected;
   const open = block.status === "IN_PROGRESS" || block.status === "READY_FOR_BILLING";
   const isConfirmed = block.status === "CONFIRMED";
   const [checkInError, setCheckInError] = useState("");
+  const [rescheduling, setRescheduling] = useState(false);
+  const startParts = useMemo(() => toIstDateTimeParts(block.startAt), [block.startAt]);
+  const [rescheduleDate, setRescheduleDate] = useState(startParts.date);
+  const [rescheduleTime, setRescheduleTime] = useState(startParts.time);
+  const [rescheduleStaffId, setRescheduleStaffId] = useState(selected.staffId);
+  const [rescheduleError, setRescheduleError] = useState("");
 
   const checkInMutation = useMutation({
     mutationFn: () => api.checkInBooking(block.bookingId),
     onSuccess: () => {
       setCheckInError("");
-      onCheckedIn();
+      onUpdated();
       onClose();
     },
     onError: (e: Error) => setCheckInError(e.message),
+  });
+
+  const rescheduleMutation = useMutation({
+    mutationFn: () => {
+      const durationMs = new Date(block.endAt).getTime() - new Date(block.startAt).getTime();
+      const newStart = new Date(`${rescheduleDate}T${rescheduleTime}:00+05:30`);
+      if (Number.isNaN(newStart.getTime())) throw new Error("Pick a valid date and time");
+      const newEnd = new Date(newStart.getTime() + Math.max(durationMs, 15 * 60_000));
+      return api.rescheduleBooking(block.bookingId, {
+        scheduledStartAt: newStart.toISOString(),
+        scheduledEndAt: newEnd.toISOString(),
+        staffId: rescheduleStaffId !== selected.staffId ? rescheduleStaffId : undefined,
+      });
+    },
+    onSuccess: () => {
+      setRescheduleError("");
+      onUpdated();
+      onClose();
+    },
+    onError: (e: Error) => setRescheduleError(e.message || "Couldn't reschedule"),
+  });
+
+  const [cancelError, setCancelError] = useState("");
+  const cancelMutation = useMutation({
+    mutationFn: () => api.cancelBooking(block.bookingId),
+    onSuccess: () => {
+      setCancelError("");
+      onUpdated();
+      onClose();
+    },
+    onError: (e: Error) => setCancelError(e.message || "Couldn't cancel the appointment"),
   });
 
   useEffect(() => {
@@ -394,30 +508,107 @@ function VisitDetailsModal({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-secondary)] mb-1.5">
               {t("services")}
             </p>
-            <ul className="space-y-1">
-              {block.services.map((s) => (
-                <li
-                  key={s}
-                  className="text-sm text-[var(--text-primary)] rounded-lg border border-[var(--border)] px-3 py-2 break-words"
-                >
-                  {s}
-                </li>
-              ))}
-            </ul>
+            {block.services.length === 0 ? (
+              <p className="text-sm text-[var(--text-tertiary)] rounded-lg border border-dashed border-[var(--border)] px-3 py-2">
+                {t("servicesNotChosen")}
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {block.services.map((s) => (
+                  <li
+                    key={s}
+                    className="text-sm text-[var(--text-primary)] rounded-lg border border-[var(--border)] px-3 py-2 break-words"
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
+          {isConfirmed && rescheduling && (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 px-3 py-3 space-y-2.5">
+              <p className="text-xs font-semibold text-[var(--text-secondary)]">{t("rescheduleTitle")}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                />
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                />
+              </div>
+              <select
+                className={selectClass}
+                value={rescheduleStaffId}
+                onChange={(e) => setRescheduleStaffId(e.target.value)}
+              >
+                {staffOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              {rescheduleError && <p className="text-xs text-red-600">{rescheduleError}</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`${btnPrimary} flex-1 min-h-10 justify-center touch-manipulation`}
+                  disabled={rescheduleMutation.isPending}
+                  onClick={() => rescheduleMutation.mutate()}
+                >
+                  {rescheduleMutation.isPending ? t("rescheduling") : t("confirmReschedule")}
+                </button>
+                <button
+                  type="button"
+                  className={`${btnSecondary} flex-1 min-h-10 justify-center touch-manipulation`}
+                  onClick={() => setRescheduling(false)}
+                >
+                  {t("dismissReschedule")}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-[var(--border)] flex flex-col sm:flex-row gap-2 shrink-0">
           {checkInError ? <p className="text-xs text-red-600 w-full">{checkInError}</p> : null}
-          {isConfirmed ? (
-            <button
-              type="button"
-              className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
-              disabled={checkInMutation.isPending}
-              onClick={() => checkInMutation.mutate()}
-            >
-              {checkInMutation.isPending ? t("checkingIn") : t("checkIn")}
-            </button>
+          {cancelError ? <p className="text-xs text-red-600 w-full">{cancelError}</p> : null}
+          {isConfirmed && !rescheduling ? (
+            <>
+              <button
+                type="button"
+                className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
+                disabled={checkInMutation.isPending}
+                onClick={() => checkInMutation.mutate()}
+              >
+                {checkInMutation.isPending ? t("checkingIn") : t("checkIn")}
+              </button>
+              <button
+                type="button"
+                className={`${btnSecondary} w-full min-h-12 touch-manipulation justify-center`}
+                onClick={() => setRescheduling(true)}
+              >
+                {t("reschedule")}
+              </button>
+              <button
+                type="button"
+                className={`${btnSecondary} w-full min-h-12 touch-manipulation justify-center text-red-600`}
+                disabled={cancelMutation.isPending}
+                onClick={() => {
+                  if (window.confirm(t("cancelAppointmentConfirm", { name: block.customerName }))) {
+                    cancelMutation.mutate();
+                  }
+                }}
+              >
+                {cancelMutation.isPending ? t("cancelling") : t("cancelAppointment")}
+              </button>
+            </>
           ) : null}
           {block.status === "READY_FOR_BILLING" ? (
             <>
@@ -444,7 +635,7 @@ function VisitDetailsModal({
             >
               {t("openVisit")}
             </Link>
-          ) : (
+          ) : !isConfirmed ? (
             <Link
               href="/manager/walk-in?tab=history"
               className={`${btnPrimary} w-full min-h-12 touch-manipulation justify-center`}
@@ -452,7 +643,7 @@ function VisitDetailsModal({
             >
               {t("viewInBookings")}
             </Link>
-          )}
+          ) : null}
           <button
             type="button"
             className={`${btnSecondary} w-full min-h-12 touch-manipulation justify-center`}
@@ -491,7 +682,11 @@ function ManagerSchedulePageContent() {
   };
   const bookingParam = useUrlQueryParam("bookingId");
   const scale = useCalendarScale();
-  const [addSheetStaff, setAddSheetStaff] = useState<{ staffId: string; staffName: string } | null>(null);
+  const [addSheetStaff, setAddSheetStaff] = useState<{
+    staffId: string;
+    staffName: string;
+    defaultTime: string;
+  } | null>(null);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
 
   const { data, isLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
@@ -535,8 +730,12 @@ function ManagerSchedulePageContent() {
     return minutesFromOpen(data.now, openMin, date);
   }, [isToday, data?.now, openMin, date]);
 
-  function handleSlotClick(staff: StaffAvailabilityColumn) {
-    setAddSheetStaff({ staffId: staff.staffId, staffName: staff.staffName });
+  function handleSlotClick(staff: StaffAvailabilityColumn, minutesFromOpenVal: number) {
+    setAddSheetStaff({
+      staffId: staff.staffId,
+      staffName: staff.staffName,
+      defaultTime: minutesOfDayToHHMM(openMin + minutesFromOpenVal),
+    });
   }
 
   const selected = useMemo((): SelectedVisit | null => {
@@ -736,13 +935,19 @@ function ManagerSchedulePageContent() {
             nowOffset={nowOffset}
             t={t}
             onSelect={(block, staff) => openVisit(block, staff)}
-            onSlotClick={(staff) => handleSlotClick(staff)}
+            onSlotClick={(staff, minutesFromOpenVal) => handleSlotClick(staff, minutesFromOpenVal)}
           />
         </div>
       )}
 
       {selected && (
-        <VisitDetailsModal selected={selected} onClose={closeVisit} onCheckedIn={() => void refetch()} t={t} />
+        <VisitDetailsModal
+          selected={selected}
+          staffOptions={(data?.staff ?? []).map((s) => ({ id: s.staffId, name: s.staffName }))}
+          onClose={closeVisit}
+          onUpdated={() => void refetch()}
+          t={t}
+        />
       )}
 
       {addSheetStaff && (
@@ -753,7 +958,12 @@ function ManagerSchedulePageContent() {
           staffId={addSheetStaff.staffId}
           staffName={addSheetStaff.staffName}
           staffOptions={(data?.staff ?? []).map((s) => ({ id: s.staffId, name: s.staffName }))}
-          onCreated={() => void refetch()}
+          date={date}
+          defaultTime={addSheetStaff.defaultTime}
+          onCreated={({ date: createdDate }) => {
+            void refetch();
+            if (createdDate !== date) setDate(createdDate);
+          }}
         />
       )}
 

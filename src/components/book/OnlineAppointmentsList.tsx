@@ -26,16 +26,13 @@ export function collectOnlineAppointments(staff: StaffAvailabilityColumn[] | und
   return rows.sort((a, b) => a.startAt.localeCompare(b.startAt));
 }
 
-/** Matches floor schedule: CONFIRMED web slots + checked-in online visits. */
+/**
+ * True for a customer's own self-service web booking, at any status. Source (not status) is the
+ * only reliable signal now that managers can also create CONFIRMED appointments — e.g. for a
+ * future visit whose services aren't chosen yet — via the floor schedule.
+ */
 export function isOnlineAppointment(block: StaffTimeBlock): boolean {
-  if (block.status === "CONFIRMED") {
-    // All CONFIRMED blocks on the floor board are scheduled online appointments.
-    return true;
-  }
-  if (block.status === "IN_PROGRESS" && block.source === "ONLINE") {
-    return true;
-  }
-  return false;
+  return block.source === "ONLINE";
 }
 
 function formatClock(iso: string) {
