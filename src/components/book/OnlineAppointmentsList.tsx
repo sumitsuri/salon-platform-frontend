@@ -27,7 +27,7 @@ export function collectOnlineAppointments(staff: StaffAvailabilityColumn[] | und
 }
 
 /** Matches floor schedule: CONFIRMED web slots + checked-in online visits. */
-function isOnlineAppointment(block: StaffTimeBlock): boolean {
+export function isOnlineAppointment(block: StaffTimeBlock): boolean {
   if (block.status === "CONFIRMED") {
     // All CONFIRMED blocks on the floor board are scheduled online appointments.
     return true;

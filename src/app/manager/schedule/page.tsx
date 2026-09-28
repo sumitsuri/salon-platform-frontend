@@ -2,14 +2,17 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock3,
+  Globe,
   Phone,
   Plus,
   RefreshCw,
@@ -22,7 +25,6 @@ import { lockBodyScroll } from "@/lib/scroll-lock";
 import { useAuthStore } from "@/lib/auth-store";
 import {
   PageHeader,
-  StatCard,
   StatusBadge,
   btnPrimary,
   btnSecondary,
@@ -30,9 +32,15 @@ import {
   MobileStatGrid,
   ResponsiveTableShell,
 } from "@/components/ui";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { MissionStrip } from "@/components/brand/MissionStrip";
 import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
-import { OnlineAppointmentsList, collectOnlineAppointments } from "@/components/book/OnlineAppointmentsList";
+import {
+  OnlineAppointmentsList,
+  collectOnlineAppointments,
+  isOnlineAppointment,
+} from "@/components/book/OnlineAppointmentsList";
+import { AddAppointmentSheet } from "@/components/manager/AddAppointmentSheet";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { useUrlQueryParam } from "@/lib/use-url-query-param";
 import { usePersistentState } from "@/lib/use-persistent-state";
@@ -252,8 +260,11 @@ function StaffCalendarGrid({
                         onSelect(block, col);
                       }}
                     >
-                      <p className="text-[9px] sm:text-[10px] font-bold truncate leading-tight">
-                        {block.customerName}
+                      <p className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold leading-tight">
+                        {isOnlineAppointment(block) && (
+                          <Globe className="h-2.5 w-2.5 shrink-0" aria-label={t("onlineAppointmentsBadge")} />
+                        )}
+                        <span className="truncate">{block.customerName}</span>
                       </p>
                       <p className="text-[8px] sm:text-[9px] opacity-90 truncate leading-tight mt-0.5">
                         {formatClock(block.startAt)} – {formatClock(block.endAt)}
@@ -334,6 +345,12 @@ function VisitDetailsModal({
         <div className="px-4 py-4 space-y-3 overflow-y-auto flex-1 overscroll-contain">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={block.status} />
+            {isOnlineAppointment(block) && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-sky-600/15 text-sky-800 dark:text-sky-300 ring-1 ring-sky-500/30">
+                <Globe className="h-3 w-3" aria-hidden />
+                {t("onlineAppointmentsBadge")}
+              </span>
+            )}
             {block.overdue && (
               <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-800 dark:text-rose-300 ring-1 ring-rose-500/30">
                 {t("overdue")}
@@ -473,8 +490,9 @@ function ManagerSchedulePageContent() {
     });
   };
   const bookingParam = useUrlQueryParam("bookingId");
-  const router = useRouter();
   const scale = useCalendarScale();
+  const [addSheetStaff, setAddSheetStaff] = useState<{ staffId: string; staffName: string } | null>(null);
+  const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
 
   const { data, isLoading, isFetching, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["branch-availability", branchId, date],
@@ -518,7 +536,7 @@ function ManagerSchedulePageContent() {
   }, [isToday, data?.now, openMin, date]);
 
   function handleSlotClick(staff: StaffAvailabilityColumn) {
-    router.push(`/manager/walk-in?staffId=${staff.staffId}`);
+    setAddSheetStaff({ staffId: staff.staffId, staffName: staff.staffName });
   }
 
   const selected = useMemo((): SelectedVisit | null => {
@@ -565,7 +583,39 @@ function ManagerSchedulePageContent() {
 
       <MissionStrip variant="accent" />
 
-      {branch ? <OnlineBookingPanel branch={branch} compact /> : null}
+      {branch ? (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setBookingSettingsOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-3 sm:px-4 py-2.5 text-left touch-manipulation"
+          >
+            <span className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[var(--text-primary)]">
+              <Globe className="h-3.5 w-3.5 text-[var(--brand)] shrink-0" aria-hidden />
+              {t("onlineBookingTitle")}
+              <span
+                className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
+                  branch.onlineBookingEffective
+                    ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                    : "bg-stone-500/15 text-stone-700 dark:text-stone-300"
+                }`}
+              >
+                {branch.onlineBookingEffective ? "On" : "Off"}
+              </span>
+            </span>
+            {bookingSettingsOpen ? (
+              <ChevronUp className="h-4 w-4 text-[var(--text-secondary)] shrink-0" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-[var(--text-secondary)] shrink-0" />
+            )}
+          </button>
+          {bookingSettingsOpen && (
+            <div className="border-t border-[var(--border)] p-3 sm:p-4">
+              <OnlineBookingPanel branch={branch} compact />
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -625,24 +675,43 @@ function ManagerSchedulePageContent() {
         </div>
       </div>
 
-      <div className="nav-tile-grid gap-2 sm:gap-3">
-        <StatCard label={t("freeNow")} value={data?.freeStaffCount ?? "—"} icon={Users} accent="emerald" />
-        <StatCard label={t("busyNow")} value={data?.busyStaffCount ?? "—"} icon={Clock3} accent="amber" />
-        <StatCard
-          label={t("avgVisit")}
-          value={data?.metrics?.avgVisitMinutes != null ? `${Math.round(data.metrics.avgVisitMinutes)}m` : "—"}
-          icon={Clock3}
-          accent="brand"
-        />
-        <StatCard
-          label={t("medianVisit")}
-          value={
-            data?.metrics?.medianVisitMinutes != null ? `${Math.round(data.metrics.medianVisitMinutes)}m` : "—"
-          }
-          icon={CalendarDays}
-          accent="violet"
-        />
-      </div>
+      <CompactStatsStrip
+        loading={isLoading}
+        testId="manager-schedule-summary-strip"
+        items={[
+          {
+            id: "free",
+            label: t("freeNow"),
+            value: String(data?.freeStaffCount ?? "—"),
+            icon: Users,
+            accent: "emerald",
+          },
+          {
+            id: "busy",
+            label: t("busyNow"),
+            value: String(data?.busyStaffCount ?? "—"),
+            icon: Clock3,
+            accent: "amber",
+          },
+          {
+            id: "avg",
+            label: t("avgVisit"),
+            value: data?.metrics?.avgVisitMinutes != null ? `${Math.round(data.metrics.avgVisitMinutes)}m` : "—",
+            icon: Clock3,
+            accent: "violet",
+          },
+          {
+            id: "median",
+            label: t("medianVisit"),
+            value:
+              data?.metrics?.medianVisitMinutes != null
+                ? `${Math.round(data.metrics.medianVisitMinutes)}m`
+                : "—",
+            icon: CalendarDays,
+            accent: "sky",
+          },
+        ]}
+      />
 
       {!isLoading && data ? (
         <OnlineAppointmentsList
@@ -674,6 +743,18 @@ function ManagerSchedulePageContent() {
 
       {selected && (
         <VisitDetailsModal selected={selected} onClose={closeVisit} onCheckedIn={() => void refetch()} t={t} />
+      )}
+
+      {addSheetStaff && (
+        <AddAppointmentSheet
+          open={!!addSheetStaff}
+          onClose={() => setAddSheetStaff(null)}
+          branchId={branchId}
+          staffId={addSheetStaff.staffId}
+          staffName={addSheetStaff.staffName}
+          staffOptions={(data?.staff ?? []).map((s) => ({ id: s.staffId, name: s.staffName }))}
+          onCreated={() => void refetch()}
+        />
       )}
 
       {data?.metrics?.byStaffService && data.metrics.byStaffService.length > 0 && (
