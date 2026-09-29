@@ -23,7 +23,6 @@ import {
 import { DataListPanel } from "@/components/DataListPanel";
 import {
   PageHeader,
-  AlertBanner,
   btnPrimary,
   btnSecondary,
   btnSecondarySm,
@@ -335,8 +334,6 @@ export default function ManagerPackagesClient() {
     <div className="space-y-4 pb-8">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
-
       <div className="flex gap-2">
         <button type="button" className={tab === "plans" ? btnPrimary : btnSecondary} onClick={() => setTab("plans")}>
           {t("tabPlans")}
@@ -475,6 +472,7 @@ export default function ManagerPackagesClient() {
         title={editingPlanId ? t("editPlanTitle") : t("createPlanTitle")}
         initial={formInitial}
         saving={saveMutation.isPending}
+        error={error}
         onSubmit={handleFormSubmit}
       />
     </div>

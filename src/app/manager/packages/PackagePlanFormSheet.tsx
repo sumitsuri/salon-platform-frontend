@@ -33,6 +33,9 @@ type Props = {
   title: string;
   initial: PackagePlanFormValues;
   saving?: boolean;
+  /** Server-side error from the last submit attempt (e.g. a rejected save) — shown alongside
+   *  client-side validation so a failed save is never silent. */
+  error?: string;
   onSubmit: (values: PackagePlanFormValues) => void;
 };
 
@@ -43,6 +46,7 @@ export function PackagePlanFormSheet({
   title,
   initial,
   saving,
+  error,
   onSubmit,
 }: Props) {
   const t = useTranslations("manager.packages");
@@ -187,9 +191,9 @@ export function PackagePlanFormSheet({
       }
     >
       <div className="space-y-4 pb-4">
-        {formError ? (
+        {formError || error ? (
           <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
-            {formError}
+            {formError || error}
           </p>
         ) : null}
         <div className="grid gap-2 sm:grid-cols-2">
