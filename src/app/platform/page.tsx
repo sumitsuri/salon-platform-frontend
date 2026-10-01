@@ -153,6 +153,21 @@ export default function PlatformPage() {
     },
   });
 
+  const demoStatusQuery = useQuery({
+    queryKey: ["platform-demo-data-status"],
+    queryFn: api.getDemoDataStatus,
+    refetchInterval: (query) => (query.state.data?.state === "RUNNING" ? 5000 : false),
+  });
+
+  const rebuildDemoMutation = useMutation({
+    mutationFn: api.rebuildDemoData,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["platform-demo-data-status"] });
+      setError("");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const sandboxMutation = useMutation({
     mutationFn: ({ tenantId, data }: {
       tenantId: string;
@@ -250,6 +265,31 @@ export default function PlatformPage() {
       <MissionStrip />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+
+      <Card>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">{t("demoDataTitle")}</p>
+            <p className="text-xs text-[var(--text-secondary)]">
+              {demoStatusQuery.data
+                ? t("demoDataStatus", {
+                    state: demoStatusQuery.data.state,
+                    message: demoStatusQuery.data.message ?? "",
+                  })
+                : t("demoDataHint")}
+            </p>
+          </div>
+          <button
+            className={`${btnPrimarySm} shrink-0`}
+            disabled={rebuildDemoMutation.isPending || demoStatusQuery.data?.state === "RUNNING"}
+            onClick={() => {
+              if (window.confirm(t("demoDataConfirm"))) rebuildDemoMutation.mutate();
+            }}
+          >
+            {t("demoDataBuild")}
+          </button>
+        </div>
+      </Card>
 
       <div className="grid lg:grid-cols-3 gap-4 min-w-0">
         <section className={cn("lg:col-span-1 min-w-0", mobileShowDetail && "hidden lg:block")}>

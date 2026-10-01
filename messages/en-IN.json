@@ -2727,7 +2727,12 @@
       "demoBrand": "Demo brand",
       "customerMessages": "Customer messages",
       "messagesLive": "Live",
-      "messagesSimulated": "Simulated"
+      "messagesSimulated": "Simulated",
+      "demoDataTitle": "Demo brand data",
+      "demoDataHint": "Builds the Aura Salon & Spa showcase brand with a year of history.",
+      "demoDataStatus": "{state} · {message}",
+      "demoDataBuild": "Build / rebuild demo brand",
+      "demoDataConfirm": "Rebuild the demo brand? Its existing data is replaced. Best run off-peak."
     }
   },
   "scratch": {

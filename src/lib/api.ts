@@ -1266,6 +1266,11 @@ export const api = {
   deactivateTenant: (tenantId: string) =>
     request<void>(`/api/v1/platform/tenants/${tenantId}`, { method: "DELETE" }),
 
+  getDemoDataStatus: () => request<DemoDataStatus>("/api/v1/platform/demo-data/status"),
+
+  rebuildDemoData: () =>
+    request<DemoDataStatus>("/api/v1/platform/demo-data/rebuild", { method: "POST" }),
+
   updateTenantSandbox: (
     tenantId: string,
     data: { demoTenant?: boolean; outboundMessagingMode?: "LIVE" | "SIMULATE" },
@@ -2795,6 +2800,14 @@ export interface Tenant {
   onlineBookingEnabled?: boolean;
   demoTenant?: boolean;
   outboundMessagingMode?: "LIVE" | "SIMULATE";
+}
+
+export interface DemoDataStatus {
+  state: "IDLE" | "RUNNING" | "SUCCEEDED" | "FAILED";
+  slug?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  message?: string | null;
 }
 
 export interface CreateTenantRequest {
