@@ -2723,7 +2723,11 @@
         "BRAND_ADMIN": "Brand Admin (CEO)",
         "BRANCH_MANAGER": "Branch Manager",
         "SALON_MANAGER": "Salon Manager"
-      }
+      },
+      "demoBrand": "Demo brand",
+      "customerMessages": "Customer messages",
+      "messagesLive": "Live",
+      "messagesSimulated": "Simulated"
     }
   },
   "scratch": {

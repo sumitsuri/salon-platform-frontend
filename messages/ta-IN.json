@@ -1671,7 +1671,11 @@
         "BRAND_ADMIN": "பிராண்ட் நிர்வாகி (CEO)",
         "BRANCH_MANAGER": "கிளை மேலாளர்",
         "SALON_MANAGER": "சலூன் மேலாளர்"
-      }
+      },
+      "demoBrand": "Demo brand",
+      "customerMessages": "Customer messages",
+      "messagesLive": "Live",
+      "messagesSimulated": "Simulated"
     }
   },
   "brand": {

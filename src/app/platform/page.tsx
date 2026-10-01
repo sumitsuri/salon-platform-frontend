@@ -153,6 +153,18 @@ export default function PlatformPage() {
     },
   });
 
+  const sandboxMutation = useMutation({
+    mutationFn: ({ tenantId, data }: {
+      tenantId: string;
+      data: { demoTenant?: boolean; outboundMessagingMode?: "LIVE" | "SIMULATE" };
+    }) => api.updateTenantSandbox(tenantId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenants"] });
+      setError("");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const createBranchMutation = useMutation({
     mutationFn: ({ tenantId, data }: { tenantId: string; data: CreatePlatformBranchRequest }) =>
       api.createPlatformBranch(tenantId, data),
@@ -293,6 +305,39 @@ export default function PlatformPage() {
                   <p className="text-xs text-[var(--text-secondary)] truncate">
                     {selectedTenant.slug} · {selectedTenant.status}
                   </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedTenant.demoTenant}
+                        disabled={sandboxMutation.isPending}
+                        onChange={(e) =>
+                          sandboxMutation.mutate({
+                            tenantId: selectedTenant.id,
+                            data: { demoTenant: e.target.checked },
+                          })
+                        }
+                      />
+                      {t("demoBrand")}
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      {t("customerMessages")}
+                      <select
+                        className="rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5"
+                        value={selectedTenant.outboundMessagingMode ?? "LIVE"}
+                        disabled={sandboxMutation.isPending}
+                        onChange={(e) =>
+                          sandboxMutation.mutate({
+                            tenantId: selectedTenant.id,
+                            data: { outboundMessagingMode: e.target.value as "LIVE" | "SIMULATE" },
+                          })
+                        }
+                      >
+                        <option value="LIVE">{t("messagesLive")}</option>
+                        <option value="SIMULATE">{t("messagesSimulated")}</option>
+                      </select>
+                    </label>
+                  </div>
                 </div>
                 {tab === "branches" && (
                   <button

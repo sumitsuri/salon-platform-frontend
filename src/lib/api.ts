@@ -1266,6 +1266,15 @@ export const api = {
   deactivateTenant: (tenantId: string) =>
     request<void>(`/api/v1/platform/tenants/${tenantId}`, { method: "DELETE" }),
 
+  updateTenantSandbox: (
+    tenantId: string,
+    data: { demoTenant?: boolean; outboundMessagingMode?: "LIVE" | "SIMULATE" },
+  ) =>
+    request<Tenant>(`/api/v1/platform/tenants/${tenantId}/sandbox`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   getPlatformBranches: (tenantId: string) =>
     request<PlatformBranch[]>(`/api/v1/platform/tenants/${tenantId}/branches`),
 
@@ -2784,6 +2793,8 @@ export interface Tenant {
   primaryColor?: string;
   gstEnabled?: boolean;
   onlineBookingEnabled?: boolean;
+  demoTenant?: boolean;
+  outboundMessagingMode?: "LIVE" | "SIMULATE";
 }
 
 export interface CreateTenantRequest {
