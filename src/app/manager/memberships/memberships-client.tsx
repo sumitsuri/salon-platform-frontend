@@ -277,7 +277,7 @@ export default function ManagerMembershipsPage() {
   const emptyDescription = showFilteredEmpty ? t("noFilterMatchesDesc") : t("noMembersDesc");
 
   return (
-    <div className="space-y-4 w-full max-w-6xl mx-auto min-w-0">
+    <div className="space-y-4 w-full mx-auto min-w-0">
       <PageHeader
         title={t("title")}
         subtitle={

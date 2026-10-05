@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 
 export type AdminPageShellWidth = "default" | "hub" | "wide";
 
+// The app shell already caps content at 1920px; per-page caps here only left dead gutters on laptops/desktops.
 const WIDTH_CLASS: Record<AdminPageShellWidth, string> = {
-  default: "max-w-6xl",
+  default: "max-w-none",
   hub: "max-w-lg",
-  wide: "max-w-7xl",
+  wide: "max-w-none",
 };
 
 type AdminPageShellProps = {

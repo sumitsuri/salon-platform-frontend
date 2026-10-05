@@ -42,7 +42,8 @@ export interface EnterpriseAppShellProps {
   mobileBottomNav?: MobileBottomNavConfig;
 }
 
-const SIDEBAR_MQ = "(min-width: 768px)";
+// Keep in sync with --breakpoint-nav in globals.css (68.75rem).
+const SIDEBAR_MQ = "(min-width: 68.75rem)";
 
 function subscribeSidebarLayout(cb: () => void) {
   const mq = window.matchMedia(SIDEBAR_MQ);
@@ -95,7 +96,7 @@ function MobileTopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-[110] glass-header border-b border-[var(--border-brand)] shadow-sm md:hidden"
+      className="fixed top-0 left-0 right-0 z-[110] glass-header border-b border-[var(--border-brand)] shadow-sm nav:hidden"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       <div className="flex items-center justify-between h-14 px-3 w-full gap-2">
@@ -221,10 +222,10 @@ export function EnterpriseAppShell({
         <div className="min-h-screen app-shell-bg flex w-full max-w-full min-w-0">
           <aside
             className={cn(
-              "enterprise-sidebar hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-40 transition-[width] duration-200 ease-out",
-              ready ? undefined : "md:w-[var(--sidebar-width)]"
+              "enterprise-sidebar hidden nav:flex nav:flex-col nav:fixed nav:inset-y-0 nav:left-0 nav:z-40 transition-[width] duration-200 ease-out",
+              ready ? undefined : "nav:w-[var(--sidebar-width)]"
             )}
-            style={ready && usesSidebar ? { width: sidebarWidth } : undefined}
+            style={ready ? { width: sidebarWidth } : undefined}
             aria-label="Primary navigation"
             data-collapsed={collapsed ? "true" : "false"}
           >
@@ -238,9 +239,9 @@ export function EnterpriseAppShell({
           </aside>
 
           <div
-            className="flex-1 flex flex-col min-h-0 md:min-h-screen max-md:max-h-[100dvh] max-md:overflow-hidden min-w-0 max-w-full transition-[padding-left] duration-200 ease-out md:pl-[var(--sidebar-current-width)]"
+            className="flex-1 flex flex-col min-h-0 nav:min-h-screen max-nav:max-h-[100dvh] max-nav:overflow-hidden min-w-0 max-w-full transition-[padding-left] duration-200 ease-out nav:pl-[var(--sidebar-current-width)]"
             style={
-              { "--sidebar-current-width": ready && usesSidebar ? sidebarWidth : "0px" } as React.CSSProperties
+              { "--sidebar-current-width": ready ? sidebarWidth : "var(--sidebar-width)" } as React.CSSProperties
             }
           >
             <MobileTopBar
@@ -262,11 +263,11 @@ export function EnterpriseAppShell({
             <main
               id="app-mobile-scroll"
               className={cn(
-                "flex-1 w-full pb-20 sm:pb-6 md:py-6 min-w-0",
+                "flex-1 w-full nav:py-6 min-w-0",
                 useBottomNav
                   ? "app-shell-main--flush-x max-md:px-0 md:px-6 lg:px-8"
                   : "px-4 sm:px-6 md:px-6 lg:px-8",
-                "max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:touch-scroll-y",
+                "max-nav:min-h-0 max-nav:overflow-y-auto max-nav:overscroll-contain max-nav:touch-scroll-y",
                 MOBILE_TOP_BAR_OFFSET,
                 resolvedMainPadding
               )}

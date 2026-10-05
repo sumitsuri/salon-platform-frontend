@@ -69,19 +69,19 @@ export type MobileNavItem = AppNavItem;
 
 /** Fixed mobile top bar height (h-14 + safe area) — main content must offset this. */
 export const MOBILE_TOP_BAR_OFFSET =
-  "pt-[calc(3.5rem+env(safe-area-inset-top,0px)+1rem)] md:pt-0";
+  "pt-[calc(3.5rem+env(safe-area-inset-top,0px)+1rem)] nav:pt-0";
 
 /** Standard mobile content padding (drawer nav — no bottom tab bar). */
 export const MOBILE_MAIN_PADDING =
-  "pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] md:pb-6";
+  "pb-[max(1.25rem,env(safe-area-inset-bottom,0px))] nav:pb-6";
 
 /** Extra bottom space when a mobile FAB is shown (manager walk-in). */
 export const MOBILE_MAIN_PADDING_FAB =
-  "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-6";
+  "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] nav:pb-6";
 
 /** Bottom tab bar (branch manager mobile). */
 export const MOBILE_MAIN_PADDING_BOTTOM_TABS =
-  "pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-6";
+  "pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] nav:pb-6";
 
 export type MobileBottomTabItem = {
   id: string;

@@ -95,7 +95,7 @@ export function MobileBottomTabBar({
 
   return (
     <nav
-      className="md:hidden fixed inset-x-0 bottom-0 z-[100] border-t border-[var(--border-brand)] bg-[var(--surface)]/95 backdrop-blur-md shadow-[0_-8px_32px_rgba(15,23,42,0.08)]"
+      className="nav:hidden fixed inset-x-0 bottom-0 z-[100] border-t border-[var(--border-brand)] bg-[var(--surface)]/95 backdrop-blur-md shadow-[0_-8px_32px_rgba(15,23,42,0.08)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="Primary"
       data-testid="mobile-bottom-tab-bar"

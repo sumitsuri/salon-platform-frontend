@@ -308,7 +308,7 @@ function StaffCalendarGrid({
       )}
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="max-h-[72vh] overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
-        <div className="inline-flex" style={{ minWidth: rulerW + staff.length * colW }}>
+        <div className="inline-flex sm:flex sm:w-full" style={{ minWidth: rulerW + staff.length * colW }}>
           <div className="sticky left-0 z-30 shrink-0 bg-[var(--surface)]" style={{ width: rulerW }}>
             <div
               className="sticky top-0 z-10 border-b border-r border-[var(--border)] bg-[var(--surface)]"
@@ -328,7 +328,7 @@ function StaffCalendarGrid({
           </div>
 
           {staff.map((col) => (
-            <div key={col.staffId} className="shrink-0 border-r border-[var(--border)] last:border-r-0" style={{ width: colW }}>
+            <div key={col.staffId} className="shrink-0 sm:grow border-r border-[var(--border)] last:border-r-0" style={{ width: colW }}>
               <div
                 className="sticky top-0 z-20 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--brand)_6%,var(--surface))] px-2 sm:px-2.5 py-1.5 flex flex-col justify-center gap-1"
                 style={{ height: headerH }}

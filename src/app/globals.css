@@ -4,6 +4,15 @@
 @import "./admin-home-glance.css";
 @import "./manager-home-walkin-motions.css";
 
+/*
+ * App-shell navigation breakpoint. Below it (phones AND tablets) the app uses the top bar + bottom tab bar;
+ * at/above it, the persistent left sidebar. Set above 1032px so a 13" iPad in portrait gets bottom navigation
+ * instead of a sidebar eating a quarter of the screen. Content layout keeps using the regular sm/md/lg breakpoints.
+ */
+@theme {
+  --breakpoint-nav: 68.75rem;
+}
+
 :root,
 [data-theme="light"] {
   --brand: #7c3aed;
@@ -178,7 +187,8 @@ body {
   flex-direction: column;
   gap: var(--space-6);
   width: 100%;
-  max-width: 100%;
+  /* Ultra-wide ceiling lives here: an unlayered max-width would otherwise beat any Tailwind max-w utility. */
+  max-width: min(100%, 1920px);
   min-width: 0;
 }
 

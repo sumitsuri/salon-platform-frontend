@@ -209,7 +209,7 @@ export default function ManagerHomePage() {
   const periodSummaryLoading = (periodLoading || periodFetching) && !periodDashboard;
 
   return (
-    <div className="mx-auto min-w-0 w-full max-w-6xl space-y-3 overflow-x-clip">
+    <div className="mx-auto min-w-0 w-full space-y-3 overflow-x-clip">
       <ManagerHomeFloorActions />
 
       {branchId ? <ManagerHomeGlanceSection branchId={branchId} /> : null}

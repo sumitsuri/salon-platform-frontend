@@ -24,7 +24,7 @@ export function MobileMoreMenuSheet({ open, onClose, title, sections, brandName,
     <>
       <div
         className={cn(
-          "md:hidden fixed inset-0 z-[140] bg-black/40 transition-opacity duration-200",
+          "nav:hidden fixed inset-0 z-[140] bg-black/40 transition-opacity duration-200",
           open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
         )}
         aria-hidden={!open}
@@ -35,7 +35,7 @@ export function MobileMoreMenuSheet({ open, onClose, title, sections, brandName,
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "md:hidden fixed inset-x-0 bottom-0 z-[150] flex max-h-[min(85dvh,560px)] flex-col rounded-t-2xl border-t border-[var(--border-brand)] bg-[var(--surface)] shadow-2xl transition-transform duration-200 ease-out",
+          "nav:hidden fixed inset-x-0 bottom-0 z-[150] flex max-h-[min(85dvh,560px)] flex-col rounded-t-2xl border-t border-[var(--border-brand)] bg-[var(--surface)] shadow-2xl transition-transform duration-200 ease-out",
           open ? "translate-y-0" : "translate-y-full pointer-events-none",
         )}
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}

@@ -370,14 +370,14 @@ export function PageHeader({
           items={ancestors}
           variant="trail"
           testId="page-breadcrumbs"
-          className={cn(breadcrumbsAlwaysVisible ? "flex" : "hidden md:flex")}
+          className={cn(breadcrumbsAlwaysVisible ? "flex" : "hidden nav:flex")}
         />
       )}
       {shouldShowBack && (
         <Link
           href={homeHref}
           data-testid="page-back-link"
-          className="hidden md:inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-text)] hover:opacity-80 touch-manipulation -ml-0.5"
+          className="hidden nav:inline-flex items-center gap-1 text-sm font-medium text-[var(--brand-text)] hover:opacity-80 touch-manipulation -ml-0.5"
         >
           <ChevronLeft className="w-4 h-4 shrink-0" />
           <span>{tCommon("backTo", { page: homeLabel })}</span>

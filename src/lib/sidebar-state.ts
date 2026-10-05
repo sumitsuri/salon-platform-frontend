@@ -13,8 +13,6 @@ export function useSidebarCollapsed() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === "true" || stored === "false") {
         setCollapsed(stored === "true");
-      } else if (window.matchMedia("(min-width: 768px) and (max-width: 1023px)").matches) {
-        setCollapsed(true);
       }
     } catch {
       /* ignore */
