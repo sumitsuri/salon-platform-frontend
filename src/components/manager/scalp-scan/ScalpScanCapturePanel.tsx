@@ -2,12 +2,13 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, Check, RotateCcw, Upload } from "lucide-react";
+import { Camera, Check, RotateCcw, SwitchCamera, Upload } from "lucide-react";
 import type { ScalpCaptureZone, ScalpLightMode } from "@/lib/api";
 import {
   classifyCameraError,
   normalizePhotoToJpeg,
   openCameraStream,
+  type CameraFacingMode,
 } from "@/lib/attendance-punch-media";
 import { cn } from "@/lib/utils";
 import { btnPrimary, btnSecondary } from "@/components/ui";
@@ -37,6 +38,8 @@ export function ScalpScanCapturePanel({
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [facing, setFacing] = useState<CameraFacingMode>("environment");
+  const [switchingCamera, setSwitchingCamera] = useState(false);
   const secureContext = typeof window !== "undefined" ? window.isSecureContext : true;
 
   const stopCamera = useCallback(() => {
@@ -51,25 +54,59 @@ export function ScalpScanCapturePanel({
     setCameraError("");
   }, [stopCamera]);
 
-  const startCamera = useCallback(async () => {
-    if (!secureContext) {
-      setCameraError(t("cameraNeedsHttps"));
-      return;
+  const attachStream = useCallback(async (stream: MediaStream) => {
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
     }
-    setCameraError("");
-    setMode("live");
-    try {
-      const stream = await openCameraStream();
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+  }, []);
+
+  const startCameraWithFacing = useCallback(
+    async (facingMode: CameraFacingMode) => {
+      if (!secureContext) {
+        setCameraError(t("cameraNeedsHttps"));
+        return;
       }
+      setCameraError("");
+      setMode("live");
+      try {
+        stopCamera();
+        const stream = await openCameraStream(facingMode);
+        await attachStream(stream);
+        setFacing(facingMode);
+      } catch (err) {
+        setMode("idle");
+        setCameraError(t(classifyCameraError(err, secureContext)));
+      }
+    },
+    [attachStream, secureContext, stopCamera, t],
+  );
+
+  const startCamera = useCallback(() => startCameraWithFacing(facing), [facing, startCameraWithFacing]);
+
+  const flipCamera = useCallback(async () => {
+    if (mode !== "live" || switchingCamera) return;
+    const next: CameraFacingMode = facing === "environment" ? "user" : "environment";
+    setSwitchingCamera(true);
+    setCameraError("");
+    try {
+      stopCamera();
+      const stream = await openCameraStream(next);
+      await attachStream(stream);
+      setFacing(next);
     } catch (err) {
-      setMode("idle");
       setCameraError(t(classifyCameraError(err, secureContext)));
+      try {
+        const stream = await openCameraStream(facing);
+        await attachStream(stream);
+      } catch {
+        setMode("idle");
+      }
+    } finally {
+      setSwitchingCamera(false);
     }
-  }, [secureContext, t]);
+  }, [attachStream, facing, mode, secureContext, stopCamera, switchingCamera, t]);
 
   const snap = useCallback(async () => {
     const video = videoRef.current;
@@ -109,6 +146,8 @@ export function ScalpScanCapturePanel({
     }
   }, [onCaptured, previewDataUrl, reset]);
 
+  const facingLabel = facing === "user" ? t("capture.facingFront") : t("capture.facingBack");
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-sm">
       <p className="text-xs font-semibold text-[var(--text-secondary)] mb-2">
@@ -123,8 +162,13 @@ export function ScalpScanCapturePanel({
       )}
 
       {mode === "live" && (
-        <div className={cn("relative overflow-hidden rounded-lg bg-black", LIGHT_PREVIEW_CLASS[lightMode])}>
-          <video ref={videoRef} playsInline muted className="max-h-64 w-full object-cover" />
+        <div className="relative">
+          <div className={cn("overflow-hidden rounded-lg bg-black", LIGHT_PREVIEW_CLASS[lightMode])}>
+            <video ref={videoRef} playsInline muted className="max-h-64 w-full object-cover" />
+          </div>
+          <span className="absolute left-2 top-2 rounded-md bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white">
+            {facingLabel}
+          </span>
         </div>
       )}
 
@@ -146,14 +190,33 @@ export function ScalpScanCapturePanel({
               <Upload className="h-4 w-4" aria-hidden />
               {t("capture.upload")}
             </button>
+            <button
+              type="button"
+              className={btnSecondary}
+              disabled={disabled}
+              onClick={() => setFacing((f) => (f === "environment" ? "user" : "environment"))}
+              title={facingLabel}
+            >
+              <SwitchCamera className="h-4 w-4" aria-hidden />
+              {facingLabel}
+            </button>
           </>
         )}
         {mode === "live" && (
           <>
-            <button type="button" className={btnPrimary} disabled={disabled} onClick={() => void snap()}>
+            <button type="button" className={btnPrimary} disabled={disabled || switchingCamera} onClick={() => void snap()}>
               {t("capture.snap")}
             </button>
-            <button type="button" className={btnSecondary} onClick={reset}>
+            <button
+              type="button"
+              className={btnSecondary}
+              disabled={switchingCamera}
+              onClick={() => void flipCamera()}
+            >
+              <SwitchCamera className="h-4 w-4" aria-hidden />
+              {switchingCamera ? t("capture.saving") : t("capture.switchCamera")}
+            </button>
+            <button type="button" className={btnSecondary} disabled={switchingCamera} onClick={reset}>
               {t("capture.cancel")}
             </button>
           </>
@@ -176,7 +239,6 @@ export function ScalpScanCapturePanel({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];

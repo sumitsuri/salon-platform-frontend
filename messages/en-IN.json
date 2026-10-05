@@ -227,7 +227,7 @@
         "capture": "Capture photos",
         "confirm": "Confirm & analyze"
       },
-      "captureProgress": "{count} photos saved · need at least {min} (include 2+ under white light)",
+      "captureProgress": "{count} photos saved · analysis available from {min} photo onward (more angles improve accuracy)",
       "continueToConfirm": "Review & analyze",
       "saveForLater": "Save & exit",
       "confirmHint": "Optional: tap concerns you see in chair — AI blends these with image analysis.",
@@ -274,7 +274,10 @@
         "cancel": "Cancel",
         "saveShot": "Save photo",
         "saving": "Saving…",
-        "retake": "Retake"
+        "retake": "Retake",
+        "switchCamera": "Flip camera",
+        "facingFront": "Front camera",
+        "facingBack": "Back camera"
       },
       "report": {
         "healthScore": "Scalp health score",
