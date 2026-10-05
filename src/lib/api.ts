@@ -3365,6 +3365,7 @@ export interface LocalSpotlightResponse {
   rivals: LocalSpotlightRivalRow[];
   searchRanks: LocalSpotlightSearchRankRow[];
   rankCompareDate?: string | null;
+  keywordRanksNeedRefresh?: boolean;
   playbook: LocalSpotlightPlaybookItem[];
 }
 

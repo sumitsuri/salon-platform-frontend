@@ -2551,6 +2551,7 @@
       "rankChange": "Change",
       "rankCompareDate": "Compare ranks to date",
       "clearCompareDate": "Clear compare date",
+      "keywordRanksNeedRefresh": "Keyword ranks are outdated or missing for the current PIN list. Use Refresh from Google once to load accurate per-keyword ranks (each row can differ).",
       "topThree": "Top 3 (rivals)",
       "notInTop20": "Not in top 20",
       "lowRatingReviews": "Reviews under 4★",

@@ -378,6 +378,9 @@ export default function LocalSpotlightPage() {
                   </p>
                 )}
               </div>
+              {data.keywordRanksNeedRefresh && (
+                <AlertBanner variant="warning">{t("keywordRanksNeedRefresh")}</AlertBanner>
+              )}
               <div className="flex flex-wrap items-end gap-3">
                 <label className="block text-xs font-semibold text-[var(--text-secondary)]">
                   {t("rankCompareDate")}
