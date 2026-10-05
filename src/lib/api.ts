@@ -2354,6 +2354,8 @@ export interface Branch {
   attendanceGraceMinutes?: number;
   monthlySalesTarget?: number;
   status?: string;
+  /** Set when status is INACTIVE (soft deactivation). */
+  deactivatedAt?: string;
   businessType?: BranchBusinessType;
   phoneNumberRequired?: boolean;
   scratchCardEnabled?: boolean;

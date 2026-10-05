@@ -343,7 +343,10 @@ export default function AdminServicesPage() {
   );
   const [serviceFilter, setServiceFilter] = useState("");
 
-  const { branches, selectedBranches, setSelectedBranches, branchesSelected } = useAdminBranchSelection();
+  const { branches, selectedBranches, setSelectedBranches, branchesSelected } = useAdminBranchSelection("all", {
+    from: dateRange.from,
+    to: dateRange.to,
+  });
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogServiceItem | null>(null);
   const [form, setForm] = useState({

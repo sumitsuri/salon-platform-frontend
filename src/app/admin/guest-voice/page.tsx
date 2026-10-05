@@ -53,7 +53,7 @@ export default function AdminGuestVoicePage() {
   const apiRange = useMemo(() => toIsoDateTimeRange(dateRange), [dateRange]);
 
   const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
-    useAdminBranchSelection();
+    useAdminBranchSelection("all", { from: dateRange.from, to: dateRange.to });
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["guest-voice", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],

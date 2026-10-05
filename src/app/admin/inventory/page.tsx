@@ -19,6 +19,7 @@ import {
   VendorItem,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { calendarMonthReportingRange } from "@/lib/branch-reporting";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
@@ -92,20 +93,20 @@ export default function AdminInventoryPage() {
   const [movementDrawer, setMovementDrawer] = useState<MovementDrawer | null>(null);
   const [stockDrawer, setStockDrawer] = useState<StockDrawer | null>(null);
 
+  const inventoryReportingRange = useMemo(
+    () => calendarMonthReportingRange(selectedMonth),
+    [selectedMonth],
+  );
+
   const {
     branches,
     selectedBranches,
     setSelectedBranches,
     branchesSelected,
-  } = useAdminBranchSelection();
+    branchIdsFilter,
+  } = useAdminBranchSelection("all", inventoryReportingRange);
 
-  const branchFilter =
-    selectedBranches.length > 0 && selectedBranches.length < 999
-      ? selectedBranches
-      : undefined;
-
-  const effectiveBranchFilter =
-    selectedBranches.length > 0 && selectedBranches.length < branches.length ? selectedBranches : undefined;
+  const effectiveBranchFilter = branchIdsFilter;
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ["inventory-overview", selectedMonth, selectedBranches],

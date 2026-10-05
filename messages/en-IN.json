@@ -2320,6 +2320,8 @@
       "maxAdvanceDays": "Max advance (days)",
       "slotMinutes": "Slot size (min)",
       "deactivateBranchConfirm": "Deactivate branch \"{name}\"?",
+      "deactivateBranchDescription": "Nothing is deleted. The branch will drop off Home and other admin views from now on, but still appears here as inactive. Pick a date range when it was active to see its historical numbers.",
+      "deactivateManagerDescription": "This person will no longer be able to sign in. You can onboard them again later if needed.",
       "onboardManagerTitle": "Onboard manager",
       "editManagerTitle": "Edit manager",
       "onboardSubtitle": "Create a login for branch or brand management",
