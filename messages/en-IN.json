@@ -202,7 +202,92 @@
       "moreStockHint": "Products & stock",
       "moreExpenditureHint": "Rent, utilities & branch costs",
       "moreSalesHint": "Service mix & pricing",
-      "moreTipsHint": "Coaching & trends"
+      "moreTipsHint": "Coaching & trends",
+      "scalpScan": "Scalp scan",
+      "scalpScanShort": "Scan",
+      "moreScalpScanHint": "AI-assisted scalp & hair diagnosis"
+    },
+    "scalpScan": {
+      "title": "Scalp & hair scan",
+      "subtitle": "Capture, analyze, and prescribe care — like in-salon smart cameras.",
+      "newScan": "New scan",
+      "quickActionDesc": "Scan scalp, get treatment plan & service picks",
+      "heroTitle": "Salon-grade diagnosis on your tablet",
+      "heroBody": "Inspired by tri-spectral tools (white, cross-polarized, UV-style views): scan the scalp, get concern scores, in-salon service matches from your catalog, and a personalized at-home routine.",
+      "emptyTitle": "No scans yet",
+      "emptyDesc": "Start a scan during consultation to build trust and recommend the right spa or retail routine.",
+      "healthShort": "Health {score}/100",
+      "draft": "In progress",
+      "newTitle": "New scalp scan",
+      "pickCustomer": "Guest",
+      "searchPlaceholder": "Search name or phone…",
+      "startSession": "Start scan session",
+      "steps": {
+        "customer": "Choose guest",
+        "capture": "Capture photos",
+        "confirm": "Confirm & analyze"
+      },
+      "captureProgress": "{count} photos saved · need at least {min} (include 2+ under white light)",
+      "continueToConfirm": "Review & analyze",
+      "saveForLater": "Save & exit",
+      "confirmHint": "Optional: tap concerns you see in chair — AI blends these with image analysis.",
+      "staffNotesPlaceholder": "Notes for the guest file (optional)",
+      "runAnalysis": "Generate report",
+      "analyzing": "Analyzing…",
+      "backToCapture": "Add more photos",
+      "reportTitle": "Scan report",
+      "backToHub": "All scans",
+      "missingId": "Missing scan id.",
+      "loadFailed": "Could not load this scan.",
+      "cameraNeedsHttps": "Camera requires HTTPS or localhost.",
+      "zones": {
+        "CROWN": "Crown",
+        "HAIRLINE": "Hairline",
+        "PARTING": "Center parting",
+        "LEFT_TEMPLE": "Left temple",
+        "RIGHT_TEMPLE": "Right temple"
+      },
+      "lights": {
+        "WHITE": "White light",
+        "CROSS_POLARIZED": "Cross-polarized",
+        "UV": "UV view"
+      },
+      "lightHints": {
+        "WHITE": "Shows oiliness, thickness, and overall scalp tone.",
+        "CROSS_POLARIZED": "Highlights redness and irritation.",
+        "UV": "Use with UV torch if available; preview simulates fluorescence for flaking."
+      },
+      "concerns": {
+        "DANDRUFF": "Dandruff",
+        "OILY_SCALP": "Oily scalp",
+        "DRY_SCALP": "Dry scalp",
+        "SCALP_IRRITATION": "Sensitivity",
+        "HAIR_THINNING": "Thinning",
+        "HAIR_BREAKAGE": "Breakage",
+        "PRODUCT_BUILDUP": "Buildup",
+        "BALANCED": "Balanced"
+      },
+      "capture": {
+        "openCamera": "Open camera",
+        "upload": "Upload photo",
+        "snap": "Capture",
+        "cancel": "Cancel",
+        "saveShot": "Save photo",
+        "saving": "Saving…",
+        "retake": "Retake"
+      },
+      "report": {
+        "healthScore": "Scalp health score",
+        "metricsTitle": "Analysis metrics",
+        "oiliness": "Oiliness",
+        "hydration": "Hydration",
+        "density": "Density signal",
+        "irritation": "Irritation",
+        "concernsTitle": "Detected concerns",
+        "inSalonTitle": "Recommended in-salon services",
+        "routineTitle": "At-home routine",
+        "capturesTitle": "Scan gallery"
+      }
     },
     "schedule": {
       "title": "Floor schedule",

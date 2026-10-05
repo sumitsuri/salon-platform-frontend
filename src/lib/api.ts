@@ -1360,6 +1360,43 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  createScalpScan: (customerId: string) =>
+    request<ScalpScanSession>("/api/v1/scalp-scans", {
+      method: "POST",
+      body: JSON.stringify({ customerId }),
+    }),
+
+  addScalpScanCapture: (
+    sessionId: string,
+    data: { zone: ScalpCaptureZone; lightMode: ScalpLightMode; photo: Blob },
+  ) => {
+    const form = new FormData();
+    form.append("zone", data.zone);
+    form.append("lightMode", data.lightMode);
+    const file =
+      data.photo instanceof File
+        ? data.photo
+        : new File([data.photo], "scalp.jpg", { type: data.photo.type || "image/jpeg" });
+    form.append("photo", file, "scalp.jpg");
+    return multipartRequest<ScalpScanCaptureItem>(`/api/v1/scalp-scans/${sessionId}/captures`, form);
+  },
+
+  analyzeScalpScan: (sessionId: string, data?: AnalyzeScalpScanRequest) =>
+    request<ScalpScanSession>(`/api/v1/scalp-scans/${sessionId}/analyze`, {
+      method: "POST",
+      body: JSON.stringify(data ?? {}),
+    }),
+
+  getScalpScan: (sessionId: string) => request<ScalpScanSession>(`/api/v1/scalp-scans/${sessionId}`),
+
+  listScalpScans: (params: { branchId: string; customerId?: string; page?: number; size?: number }) => {
+    const search = new URLSearchParams({ branchId: params.branchId });
+    if (params.customerId) search.set("customerId", params.customerId);
+    search.set("page", String(params.page ?? 0));
+    search.set("size", String(params.size ?? 20));
+    return request<PageResult<ScalpScanSession>>(`/api/v1/scalp-scans?${search.toString()}`);
+  },
 };
 
 export interface Customer {
@@ -3488,5 +3525,112 @@ export interface SubmitPublicReviewResult {
   suggestedPublicReviewText?: string | null;
   recoveryCreated: boolean;
   thankYouMessage: string;
+}
+
+export type ScalpCaptureZone = "CROWN" | "HAIRLINE" | "PARTING" | "LEFT_TEMPLE" | "RIGHT_TEMPLE";
+export type ScalpLightMode = "WHITE" | "CROSS_POLARIZED" | "UV";
+export type ScalpConcernCode =
+  | "DANDRUFF"
+  | "OILY_SCALP"
+  | "DRY_SCALP"
+  | "SCALP_IRRITATION"
+  | "HAIR_THINNING"
+  | "HAIR_BREAKAGE"
+  | "PRODUCT_BUILDUP"
+  | "BALANCED";
+
+export interface ScalpScanConcern {
+  code: ScalpConcernCode | string;
+  label: string;
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  score: number;
+  insight?: string;
+}
+
+export interface ScalpScanMetrics {
+  scalpHealthScore: number;
+  oilinessIndex: number;
+  hydrationIndex: number;
+  densityIndex: number;
+  irritationIndex: number;
+}
+
+export interface ScalpScanRoutineStep {
+  step: number;
+  phase: string;
+  title: string;
+  description: string;
+}
+
+export interface ScalpScanServiceSuggestion {
+  branchServiceId?: string | null;
+  name: string;
+  reason: string;
+}
+
+export interface ScalpScanReport {
+  metrics?: ScalpScanMetrics;
+  concerns?: ScalpScanConcern[];
+  routineSteps?: ScalpScanRoutineStep[];
+  inSalonServices?: ScalpScanServiceSuggestion[];
+  disclaimer?: string;
+}
+
+export interface ScalpScanCaptureItem {
+  id: string;
+  zone: ScalpCaptureZone;
+  lightMode: ScalpLightMode;
+  capturedAt?: string;
+}
+
+export interface ScalpScanSession {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string | null;
+  branchId: string;
+  status: "DRAFT" | "COMPLETE";
+  scalpHealthScore?: number | null;
+  primaryConcernCode?: string | null;
+  staffNotes?: string | null;
+  createdAt: string;
+  analyzedAt?: string | null;
+  captureCount: number;
+  report?: ScalpScanReport | null;
+  captures?: ScalpScanCaptureItem[];
+}
+
+export interface AnalyzeScalpScanRequest {
+  staffConfirmedConcerns?: string;
+  staffNotes?: string;
+}
+
+export async function fetchScalpScanCaptureBlob(captureId: string): Promise<string> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  async function fetchPhoto(authHeaders: Record<string, string>) {
+    return fetch(`${apiBase()}/api/v1/scalp-scans/captures/${captureId}/photo`, { headers: authHeaders });
+  }
+
+  let res = await fetchPhoto(headers);
+  if (res.status === 401) {
+    const refresh = await refreshAccessToken();
+    if (refresh.status === "ok") {
+      headers.Authorization = `Bearer ${refresh.token}`;
+      res = await fetchPhoto(headers);
+    } else if (refresh.status === "auth_failed") {
+      await handleSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    } else {
+      throw new Error("Could not refresh session. Check your connection and try again.");
+    }
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to load photo (${res.status})`);
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
