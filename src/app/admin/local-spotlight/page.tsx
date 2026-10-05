@@ -44,6 +44,7 @@ import {
   SideSheet,
   inputClass,
   AlertBanner,
+  SyncProgressBar,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
@@ -88,11 +89,39 @@ export default function LocalSpotlightPage() {
   });
 
   const syncGoogle = useMutation({
-    mutationFn: () => api.syncLocalSpotlight({ radiusKm, force: true }),
+    mutationFn: () => api.syncLocalSpotlight({ radiusKm, force: true, forceKeywords: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["local-spotlight"] });
     },
   });
+
+  const syncRunning = syncGoogle.isPending;
+
+  const { data: syncProgress } = useQuery({
+    queryKey: ["local-spotlight-sync-progress"],
+    queryFn: () => api.getLocalSpotlightSyncProgress(),
+    enabled: syncRunning,
+    refetchInterval: syncRunning ? 400 : false,
+  });
+
+  const syncProgressLabel = useMemo(() => {
+    if (!syncRunning) return "";
+    const phase = syncProgress?.phase ?? "STARTING";
+    if (phase === "LISTING") return t("googleSyncPhaseListing");
+    if (phase === "RIVALS") return t("googleSyncPhaseRivals");
+    if (phase === "KEYWORDS") {
+      const total = syncProgress?.totalSteps ? Math.max(0, syncProgress.totalSteps - 2) : 0;
+      const current = syncProgress?.completedSteps ? Math.max(0, syncProgress.completedSteps - 2) : 0;
+      return t("googleSyncPhaseKeywords", { current, total });
+    }
+    if (phase === "FINISHING") return t("googleSyncPhaseFinishing");
+    return t("googleSyncPhaseStarting");
+  }, [syncRunning, syncProgress, t]);
+
+  const syncProgressSublabel =
+    syncRunning && syncProgress?.phase === "KEYWORDS" && syncProgress.detail
+      ? t("googleSyncKeywordDetail", { keyword: syncProgress.detail })
+      : undefined;
 
   const saveDigital = useMutation({
     mutationFn: () => {
@@ -181,15 +210,17 @@ export default function LocalSpotlightPage() {
             <button
               type="button"
               className={btnPrimary}
-              disabled={syncGoogle.isPending || data?.googleApiConfigured === false}
+              disabled={syncRunning || data?.googleApiConfigured === false}
               onClick={() => syncGoogle.mutate()}
+              aria-busy={syncRunning}
             >
-              <RefreshCw className={cn("mr-2 inline h-4 w-4", syncGoogle.isPending && "animate-spin")} />
-              {t("refreshFromGoogle")}
+              <RefreshCw className={cn("mr-2 inline h-4 w-4", syncRunning && "animate-spin")} />
+              {syncRunning ? t("googleSyncInProgress") : t("refreshFromGoogle")}
             </button>
             <select
               className={selectClass}
               value={radiusKm}
+              disabled={syncRunning}
               onChange={(e) => setRadiusKm(Number(e.target.value))}
               aria-label={t("radius")}
             >
@@ -216,7 +247,15 @@ export default function LocalSpotlightPage() {
         <AlertBanner variant="warning">{t("googleApiMissing")}</AlertBanner>
       )}
 
-      {data?.googleApiConfigured === true && data.syncStatusMessage && /denied|failed|403/i.test(data.syncStatusMessage) && (
+      {syncRunning && (
+        <SyncProgressBar
+          percent={syncProgress?.percent ?? 5}
+          label={syncProgressLabel || t("googleSyncInProgress")}
+          sublabel={syncProgressSublabel}
+        />
+      )}
+
+      {data?.googleApiConfigured === true && data.syncStatusMessage && /denied|failed|403|429|rate limit/i.test(data.syncStatusMessage) && (
         <AlertBanner variant="warning">{data.syncStatusMessage}</AlertBanner>
       )}
 
