@@ -1176,7 +1176,8 @@
       "addEmployee": "ஊழியரைச் சேர்",
       "tabs": {
         "targets": "இலக்குகள் மற்றும் பயிற்சி",
-        "attendance": "வருகை மற்றும் விடுப்பு"
+        "attendance": "வருகை மற்றும் விடுப்பு",
+        "roster": "பணியாளர் பட்டியல்"
       },
       "meetingTarget": "இலக்கை அடைந்தது",
       "belowTarget": "இலக்குக்குக் கீழே",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "சம்பளம் மற்றும் விற்பனை இலக்குகளுடன் குழு உருப்பினரை சேர்க்கவும்",
       "editEmployeeSubtitle": "சுயவிவரம், ஊதியம் மற்றும் இலக்குகளைப் புதுப்பிக்கவும்",
       "editEmployeeBtn": "ஊழியரைத் திருத்து",
-      "deactivateConfirm": "{name} ஐ செயலிழக்கச் செய்யவா?",
+      "deactivateConfirm": "{name} ஐ செயலிழக்கச் செய்யவா? இனி அவர் செக்-இன் மற்றும் விற்பனைக்கு கிடைக்க மாட்டார். முந்தைய வருகை மற்றும் விற்பனை பதிவுகள் பாதுகாக்கப்படும்.",
       "projectedIncentive": "மதிப்பிடப்பட்ட ஊக்கத்தொகை: {amount}",
       "skills": "திறன்கள்",
       "biometricId": "பயோமெட்ரிக் ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "ஊதியம் மற்றும் இலக்குகள்",
       "addEmployeeBtn": "ஊழியரைச் சேர்",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "மீண்டும் செயல்படுத்து",
+      "reactivateConfirm": "{name} ஐ மீண்டும் செயல்படுத்தவா? அவர் மீண்டும் செக்-இன் மற்றும் விற்பனைக்கு கிடைப்பார்.",
+      "deactivatedOn": "செயலிழக்கச் செய்த தேதி: {date}"
     },
     "insights": {
       "title": "நுண்ணறிவு",

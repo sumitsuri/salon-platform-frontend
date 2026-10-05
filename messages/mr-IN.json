@@ -1176,7 +1176,8 @@
       "addEmployee": "कर्मचारी जोडा",
       "tabs": {
         "targets": "लक्ष्य आणि कोचिंग",
-        "attendance": "हजेरी आणि रजा"
+        "attendance": "हजेरी आणि रजा",
+        "roster": "कर्मचारी यादी"
       },
       "meetingTarget": "लक्ष्य पूर्ण",
       "belowTarget": "लक्ष्यापेक्षा मागे",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "पगार आणि विक्री लक्ष्यासह टीम सदस्य जोडा",
       "editEmployeeSubtitle": "प्रोफाइल, पगार आणि लक्ष्य अपडेट करा",
       "editEmployeeBtn": "कर्मचारी संपादित करा",
-      "deactivateConfirm": "{name} निष्क्रिय करा?",
+      "deactivateConfirm": "{name} ला निष्क्रिय करायचे? आतापासून ते चेक-इन आणि विक्रीसाठी उपलब्ध नसतील. मागील हजेरी आणि विक्रीची नोंद जतन राहील.",
       "projectedIncentive": "अंदाजित प्रोत्साहन: {amount}",
       "skills": "कौशल्य",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "पगार आणि लक्ष्य",
       "addEmployeeBtn": "कर्मचारी जोडा",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "पुन्हा सक्रिय करा",
+      "reactivateConfirm": "{name} ला पुन्हा सक्रिय करायचे? ते पुन्हा चेक-इन आणि विक्रीसाठी उपलब्ध होतील.",
+      "deactivatedOn": "निष्क्रिय केले: {date}"
     },
     "insights": {
       "title": "अंतर्दृष्टी",

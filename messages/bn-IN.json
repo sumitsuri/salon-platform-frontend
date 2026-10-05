@@ -1176,7 +1176,8 @@
       "addEmployee": "কর্মচারী যোগ করুন",
       "tabs": {
         "targets": "লক্ষ্য ও কোচিং",
-        "attendance": "উপস্থিতি ও ছুটি"
+        "attendance": "উপস্থিতি ও ছুটি",
+        "roster": "কর্মী তালিকা"
       },
       "meetingTarget": "লক্ষ্য পূরণ",
       "belowTarget": "লক্ষ্যের নিচে",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "বেতন ও বিক্রয় লক্ষ্য সহ দলের সদস্য যোগ করুন",
       "editEmployeeSubtitle": "প্রোফাইল, ক্ষতিপূরণ ও লক্ষ্য আপডেট করুন",
       "editEmployeeBtn": "কর্মচারী সম্পাদনা",
-      "deactivateConfirm": "{name} নিষ্ক্রিয় করবেন?",
+      "deactivateConfirm": "{name} কে নিষ্ক্রিয় করবেন? এখন থেকে তিনি চেক-ইন ও বিক্রির জন্য উপলব্ধ থাকবেন না। আগের উপস্থিতি ও বিক্রির তথ্য সংরক্ষিত থাকবে।",
       "projectedIncentive": "অনুমানিত প্রণোদনা: {amount}",
       "skills": "দক্ষতা",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "ক্ষতিপূরণ ও লক্ষ্য",
       "addEmployeeBtn": "কর্মচারী যোগ করুন",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "আবার সক্রিয় করুন",
+      "reactivateConfirm": "{name} কে আবার সক্রিয় করবেন? তিনি আবার চেক-ইন ও বিক্রির জন্য উপলব্ধ হবেন।",
+      "deactivatedOn": "নিষ্ক্রিয় করা হয়েছে: {date}"
     },
     "insights": {
       "title": "ইনসাইট",

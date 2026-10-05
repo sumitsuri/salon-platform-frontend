@@ -2296,7 +2296,8 @@
       "addEmployee": "Add employee",
       "tabs": {
         "targets": "Targets & coaching",
-        "attendance": "Attendance & leave"
+        "attendance": "Attendance & leave",
+        "roster": "Roster"
       },
       "summaryLabel": "Summary",
       "attendanceFrom": "From date",
@@ -2322,7 +2323,7 @@
       "newEmployeeSubtitle": "Add a team member with salary and sales targets",
       "editEmployeeSubtitle": "Update profile, compensation & targets",
       "editEmployeeBtn": "Edit employee",
-      "deactivateConfirm": "Deactivate {name}?",
+      "deactivateConfirm": "Deactivate {name}? They will no longer be available for check-in or sales from now on. Past attendance and sales are kept.",
       "projectedIncentive": "Projected incentive: {amount}",
       "skills": "Skills",
       "biometricId": "Biometric ID",
@@ -2345,7 +2346,10 @@
       "fullName": "Full name *",
       "skillsPlaceholder": "Hair, Skin, Grooming",
       "compensationTargets": "Compensation & targets",
-      "addEmployeeBtn": "Add employee"
+      "addEmployeeBtn": "Add employee",
+      "reactivate": "Reactivate",
+      "reactivateConfirm": "Reactivate {name}? They will be available for check-in and sales again.",
+      "deactivatedOn": "Deactivated {date}"
     },
     "marketPulse": {
       "title": "Market Pulse",

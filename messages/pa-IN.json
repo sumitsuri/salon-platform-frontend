@@ -1176,7 +1176,8 @@
       "addEmployee": "ਕਰਮਚਾਰੀ ਜੋੜੋ",
       "tabs": {
         "targets": "ਟਾਰਗਟ ਅਤੇ ਕੋਚਿੰਗ",
-        "attendance": "ਹਾਜ਼ਰੀ ਅਤੇ ਛੁੱਟੀ"
+        "attendance": "ਹਾਜ਼ਰੀ ਅਤੇ ਛੁੱਟੀ",
+        "roster": "ਕਰਮਚਾਰੀ ਸੂਚੀ"
       },
       "meetingTarget": "ਟਾਰਗਟ ਪੂਰਾ",
       "belowTarget": "ਟਾਰਗਟ ਤੋਂ ਪਿੱਛੇ",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "ਤਨਖਾਹ ਅਤੇ ਸੇਲਜ਼ ਟਾਰਗਟ ਨਾਲ ਟੀਮ ਮੈਂਬਰ ਜੋੜੋ",
       "editEmployeeSubtitle": "ਪ੍ਰੋਫਾਈਲ, ਤਨਖਾਹ ਅਤੇ ਟਾਰਗਟ ਅਪਡੇਟ ਕਰੋ",
       "editEmployeeBtn": "ਕਰਮਚਾਰੀ ਸੰਪਾਦਨ",
-      "deactivateConfirm": "{name} ਨਿਸ਼ਕ੍ਰਿਯ ਕਰੋ?",
+      "deactivateConfirm": "{name} ਨੂੰ ਨਿਸ਼ਕ੍ਰਿਯ ਕਰਨਾ ਹੈ? ਹੁਣ ਤੋਂ ਉਹ ਚੈੱਕ-ਇਨ ਅਤੇ ਵਿਕਰੀ ਲਈ ਉਪਲਬਧ ਨਹੀਂ ਹੋਣਗੇ। ਪਿਛਲੀ ਹਾਜ਼ਰੀ ਅਤੇ ਵਿਕਰੀ ਦਾ ਰਿਕਾਰਡ ਸੁਰੱਖਿਅਤ ਰਹੇਗਾ।",
       "projectedIncentive": "ਅਨੁਮਾਨਿਤ ਇਨਸੈਂਟਿਵ: {amount}",
       "skills": "ਸਕਿਲ",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "ਤਨਖਾਹ ਅਤੇ ਟਾਰਗਟ",
       "addEmployeeBtn": "ਕਰਮਚਾਰੀ ਜੋੜੋ",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "ਮੁੜ ਸਰਗਰਮ ਕਰੋ",
+      "reactivateConfirm": "{name} ਨੂੰ ਮੁੜ ਸਰਗਰਮ ਕਰਨਾ ਹੈ? ਉਹ ਦੁਬਾਰਾ ਚੈੱਕ-ਇਨ ਅਤੇ ਵਿਕਰੀ ਲਈ ਉਪਲਬਧ ਹੋਣਗੇ।",
+      "deactivatedOn": "ਨਿਸ਼ਕ੍ਰਿਯ ਕੀਤਾ: {date}"
     },
     "insights": {
       "title": "ਇਨਸਾਈਟਸ",

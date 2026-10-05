@@ -1176,7 +1176,8 @@
       "addEmployee": "ఉద్యోగిని జోడించండి",
       "tabs": {
         "targets": "లక్ష్యాలు మరియు కోచింగ్",
-        "attendance": "హాజరు మరియు సెలవు"
+        "attendance": "హాజరు మరియు సెలవు",
+        "roster": "సిబ్బంది జాబితా"
       },
       "meetingTarget": "లక్ష్యం చేరుకున్నారు",
       "belowTarget": "లక్ష్యం కంటే వెనుక",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "జీతం మరియు అమ్మక లక్ష్యాలతో బృంద సభ్యుని జోడించండి",
       "editEmployeeSubtitle": "ప్రొఫైల్, పరిహారం మరియు లక్ష్యాలను నవీకరించండి",
       "editEmployeeBtn": "ఉద్యోగిని సవరించండి",
-      "deactivateConfirm": "{name} నిష్క్రియం చేయాలా?",
+      "deactivateConfirm": "{name} ను నిష్క్రియం చేయాలా? ఇకపై వారు చెక్-ఇన్ మరియు అమ్మకాలకు అందుబాటులో ఉండరు. గత హాజరు మరియు అమ్మకాల రికార్డులు భద్రంగా ఉంటాయి.",
       "projectedIncentive": "అంచనా ప్రోత్సాహం: {amount}",
       "skills": "నైపుణ్యాలు",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "పరిహారం మరియు లక్ష్యాలు",
       "addEmployeeBtn": "ఉద్యోగిని జోడించండి",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "మళ్లీ సక్రియం చేయండి",
+      "reactivateConfirm": "{name} ను మళ్లీ సక్రియం చేయాలా? వారు మళ్లీ చెక్-ఇన్ మరియు అమ్మకాలకు అందుబాటులో ఉంటారు.",
+      "deactivatedOn": "నిష్క్రియం చేసిన తేదీ: {date}"
     },
     "insights": {
       "title": "అంతర్దృష్టులు",

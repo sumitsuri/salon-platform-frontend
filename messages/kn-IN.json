@@ -1176,7 +1176,8 @@
       "addEmployee": "ಉದ್ಯೋಗಿ ಸೇರಿಸಿ",
       "tabs": {
         "targets": "ಗುರಿಗಳು ಮತ್ತು ಕೋಚಿಂಗ್",
-        "attendance": "ಹಾಜರಾತಿ ಮತ್ತು ರಜೆ"
+        "attendance": "ಹಾಜರಾತಿ ಮತ್ತು ರಜೆ",
+        "roster": "ಸಿಬ್ಬಂದಿ ಪಟ್ಟಿ"
       },
       "meetingTarget": "ಗುರಿ ಪೂರೈಸಲಾಗಿದೆ",
       "belowTarget": "ಗುರಿಗಿಂತ ಹಿಂದೆ",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "ಸಂಬಳ ಮತ್ತು ಮಾರಾಟ ಗುರಿಗಳೊಂದಿಗೆ ತಂಡ ಸದಸ್ಯರನ್ನು ಸೇರಿಸಿ",
       "editEmployeeSubtitle": "ಪ್ರೊಫೈಲ್, ಪರಿಹಾರ ಮತ್ತು ಗುರಿಗಳನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಿ",
       "editEmployeeBtn": "ಉದ್ಯೋಗಿ ಸಂಪಾದಿಸಿ",
-      "deactivateConfirm": "{name} ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬೇಕೇ?",
+      "deactivateConfirm": "{name} ಅವರನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಬೇಕೇ? ಇನ್ನು ಮುಂದೆ ಅವರು ಚೆಕ್-ಇನ್ ಮತ್ತು ಮಾರಾಟಕ್ಕೆ ಲಭ್ಯವಿರುವುದಿಲ್ಲ. ಹಿಂದಿನ ಹಾಜರಾತಿ ಮತ್ತು ಮಾರಾಟದ ದಾಖಲೆ ಉಳಿಯುತ್ತದೆ.",
       "projectedIncentive": "ಅಂದಾಜು ಪ್ರೋತ್ಸಾಹ: {amount}",
       "skills": "ಕೌಶಲ್ಯಗಳು",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "ಪರಿಹಾರ ಮತ್ತು ಗುರಿಗಳು",
       "addEmployeeBtn": "ಉದ್ಯೋಗಿ ಸೇರಿಸಿ",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "ಮತ್ತೆ ಸಕ್ರಿಯಗೊಳಿಸಿ",
+      "reactivateConfirm": "{name} ಅವರನ್ನು ಮತ್ತೆ ಸಕ್ರಿಯಗೊಳಿಸಬೇಕೇ? ಅವರು ಮತ್ತೆ ಚೆಕ್-ಇನ್ ಮತ್ತು ಮಾರಾಟಕ್ಕೆ ಲಭ್ಯರಾಗುತ್ತಾರೆ.",
+      "deactivatedOn": "ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿದ ದಿನಾಂಕ: {date}"
     },
     "insights": {
       "title": "ಒಳನೋಟಗಳು",

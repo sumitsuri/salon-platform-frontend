@@ -1176,7 +1176,8 @@
       "addEmployee": "ജീവനക്കാരനെ ചേർക്കുക",
       "tabs": {
         "targets": "ലക്ഷ്യങ്ങളും കോച്ചിംഗും",
-        "attendance": "ഹാജരും അവധിയും"
+        "attendance": "ഹാജരും അവധിയും",
+        "roster": "ജീവനക്കാരുടെ പട്ടിക"
       },
       "meetingTarget": "ലക്ഷ്യം നേടുന്നു",
       "belowTarget": "ലക്ഷ്യത്തിന് താഴെ",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "ശമ്പളവും വിൽപ്പന ലക്ഷ്യങ്ങളും ഉള്ള ഒരു ടീം അംഗത്തെ ചേർക്കുക",
       "editEmployeeSubtitle": "പ്രൊഫൈൽ, നഷ്ടപരിഹാരം & ലക്ഷ്യങ്ങൾ അപ്‌ഡേറ്റ് ചെയ്യുക",
       "editEmployeeBtn": "ജീവനക്കാരനെ എഡിറ്റ് ചെയ്യുക",
-      "deactivateConfirm": "{name} നിർജ്ജീവമാക്കണോ?",
+      "deactivateConfirm": "{name} നെ നിർജ്ജീവമാക്കണോ? ഇനി മുതൽ ചെക്ക്-ഇൻ, വിൽപ്പന എന്നിവയ്ക്ക് ലഭ്യമാകില്ല. മുൻ ഹാജരും വിൽപ്പനയും സൂക്ഷിക്കും.",
       "projectedIncentive": "പ്രതീക്ഷിക്കുന്ന പ്രോത്സാഹനം: {amount}",
       "skills": "നൈപുണ്യങ്ങൾ",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "നഷ്ടപരിഹാരവും ലക്ഷ്യങ്ങളും",
       "addEmployeeBtn": "ജീവനക്കാരനെ ചേർക്കുക",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "വീണ്ടും സജീവമാക്കുക",
+      "reactivateConfirm": "{name} നെ വീണ്ടും സജീവമാക്കണോ? ചെക്ക്-ഇൻ, വിൽപ്പന എന്നിവയ്ക്ക് വീണ്ടും ലഭ്യമാകും.",
+      "deactivatedOn": "നിർജ്ജീവമാക്കിയത്: {date}"
     },
     "insights": {
       "title": "ഇൻസൈറ്റ്സ്",

@@ -10,8 +10,10 @@ import {
   ChevronRight,
   Pencil,
   Plus,
+  RotateCcw,
   Target,
   Trash2,
+  UserX,
   Users,
 } from "lucide-react";
 import {
@@ -51,7 +53,12 @@ import {
 
 const STAFF_ROLES: StaffRole[] = ["STYLIST", "BRANCH_MANAGER", "SALON_MANAGER"];
 
-type SectionTab = "targets" | "attendance";
+type SectionTab = "targets" | "attendance" | "roster";
+type RosterFilter = "active" | "inactive" | "all";
+
+function formatShortDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 type DrawerState =
   | { mode: "create" }
@@ -86,6 +93,7 @@ export default function AdminEmployeesPage() {
     reviveStoredProductDateRange,
   );
   const [sectionTab, setSectionTab] = useState<SectionTab>("attendance");
+  const [rosterFilter, setRosterFilter] = useState<RosterFilter>("active");
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");
 
@@ -146,19 +154,27 @@ export default function AdminEmployeesPage() {
     return map;
   }, [performance]);
 
+  const inactiveCount = useMemo(() => employees.filter((e) => !e.active).length, [employees]);
+  // Fall back to "active" once nobody is left deactivated so the list never goes blank on a stale filter.
+  const effectiveRosterFilter: RosterFilter = inactiveCount === 0 ? "active" : rosterFilter;
+
   const byBranch = useMemo(() => {
     const groups = new Map<string, EmployeeDetail[]>();
     for (const e of employees) {
+      if (effectiveRosterFilter === "active" && !e.active) continue;
+      if (effectiveRosterFilter === "inactive" && e.active) continue;
       const key = e.branchName || e.branchId;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(e);
     }
     return groups;
-  }, [employees]);
+  }, [employees, effectiveRosterFilter]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["employees"] });
     queryClient.invalidateQueries({ queryKey: ["staff-targets"] });
+    queryClient.invalidateQueries({ queryKey: ["staff-target-trends"] });
+    queryClient.invalidateQueries({ queryKey: ["attendance-dashboard"] });
   };
 
   const closeDrawer = () => setDrawer(null);
@@ -181,6 +197,26 @@ export default function AdminEmployeesPage() {
     onSuccess: () => { invalidate(); closeDrawer(); },
     onError: (e: Error) => setError(e.message),
   });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (id: string) => api.reactivateEmployee(id),
+    onSuccess: () => { invalidate(); closeDrawer(); setError(""); },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const requestDeactivate = (employee: EmployeeDetail) => {
+    if (window.confirm(t("deactivateConfirm", { name: employee.name }))) {
+      setError("");
+      deleteMutation.mutate(employee.id);
+    }
+  };
+
+  const requestReactivate = (employee: EmployeeDetail) => {
+    if (window.confirm(t("reactivateConfirm", { name: employee.name }))) {
+      setError("");
+      reactivateMutation.mutate(employee.id);
+    }
+  };
 
   const selectedEmployee = drawer && drawer.mode !== "create" ? drawer.employee : null;
   const selectedPerf = selectedEmployee ? perfByStaff.get(selectedEmployee.id) : null;
@@ -221,6 +257,7 @@ export default function AdminEmployeesPage() {
         options={[
           { id: "attendance" as const, label: t("tabs.attendance"), icon: CalendarDays },
           { id: "targets" as const, label: t("tabs.targets"), icon: Target },
+          { id: "roster" as const, label: t("tabs.roster"), icon: Users },
         ]}
         value={sectionTab}
         onChange={setSectionTab}
@@ -241,6 +278,109 @@ export default function AdminEmployeesPage() {
                 branchIds={branchIdsFilter ?? selectedBranches}
                 showPageHeader={false}
               />
+            ) : sectionTab === "roster" ? (
+              <>
+                <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
+                  <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
+                    <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
+                      <Users className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="dashboard-overview-section-title">{t("roster")}</h2>
+                      <p className="dashboard-overview-section-hint">{t("rosterHint")}</p>
+                    </div>
+                  </div>
+                  {inactiveCount > 0 ? (
+                    <div className="px-3 pb-3 md:px-4">
+                      <SegmentedControl
+                        options={[
+                          { id: "active" as const, label: tCommon("active") },
+                          { id: "inactive" as const, label: `${tCommon("inactive")} (${inactiveCount})` },
+                          { id: "all" as const, label: tCommon("all") },
+                        ]}
+                        value={effectiveRosterFilter}
+                        onChange={setRosterFilter}
+                      />
+                    </div>
+                  ) : null}
+                  {isLoading ? (
+                    <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingEmployees")}</p>
+                  ) : employees.length === 0 ? (
+                    <EmptyState
+                      title={t("noEmployeesTitle")}
+                      description={t("noEmployeesDesc")}
+                      icon={Users}
+                      action={
+                        <button type="button" onClick={() => setDrawer({ mode: "create" })} className={btnPrimarySm}>
+                          <Plus className="w-4 h-4" />
+                          {t("addEmployee")}
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <div>
+                      {Array.from(byBranch.entries()).map(([branchName, list]) => (
+                        <div key={branchName}>
+                          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface-muted)]/50 md:px-4">
+                            {branchName}
+                          </p>
+                          <div className="divide-y divide-[var(--border)]">
+                            {list.map((e) => {
+                              const perf = perfByStaff.get(e.id);
+                              const isSelected = drawer && drawer.mode !== "create" && drawer.employee.id === e.id;
+                              return (
+                                <div key={e.id} className="flex items-center">
+                                  <div className="min-w-0 flex-1">
+                                    <ListRow
+                                      title={e.name}
+                                      subtitle={[e.role.replace("_", " "), e.salary != null ? t("perMonth", { amount: formatCurrency(e.salary) }) : null, perf ? t("ofTargetShort", { percent: perf.achievementPercent }) : null, !e.active && e.deactivatedAt ? t("deactivatedOn", { date: formatShortDate(e.deactivatedAt) }) : null].filter(Boolean).join(" · ")}
+                                      onClick={() => setDrawer({ mode: "view", employee: e })}
+                                      trailing={
+                                        <div className="flex items-center gap-2">
+                                          {!e.active && <StatusBadge status="INACTIVE" />}
+                                          {e.idProofCollected === false && (
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">{t("idPending")}</span>
+                                          )}
+                                          <ChevronRight className={cn("w-4 h-4", isSelected ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
+                                        </div>
+                                      }
+                                    />
+                                  </div>
+                                  {e.active ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => requestDeactivate(e)}
+                                      disabled={deleteMutation.isPending}
+                                      className="hidden sm:inline-flex shrink-0 items-center gap-1 mr-3 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                      aria-label={`${tCommon("deactivate")} ${e.name}`}
+                                      data-testid={`employee-deactivate-${e.id}`}
+                                    >
+                                      <UserX className="w-3.5 h-3.5" />
+                                      {tCommon("deactivate")}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => requestReactivate(e)}
+                                      disabled={reactivateMutation.isPending}
+                                      className="hidden sm:inline-flex shrink-0 items-center gap-1 mr-3 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--brand-text)] hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                                      aria-label={`${t("reactivate")} ${e.name}`}
+                                      data-testid={`employee-reactivate-${e.id}`}
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      {t("reactivate")}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </>
             ) : (
               <>
                 <div className="dashboard-kpi-strip min-w-0 max-w-full">
@@ -352,65 +492,6 @@ export default function AdminEmployeesPage() {
                   />
                 )}
 
-                <section className="dashboard-widget-card min-w-0 max-w-full overflow-hidden">
-                  <div className="dashboard-overview-section-head dashboard-overview-section-head--metrics">
-                    <span className="dashboard-overview-section-icon dashboard-overview-section-icon--metrics" aria-hidden>
-                      <Users className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <h2 className="dashboard-overview-section-title">{t("roster")}</h2>
-                      <p className="dashboard-overview-section-hint">{t("rosterHint")}</p>
-                    </div>
-                  </div>
-                  {isLoading ? (
-                    <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loadingEmployees")}</p>
-                  ) : employees.length === 0 ? (
-                    <EmptyState
-                      title={t("noEmployeesTitle")}
-                      description={t("noEmployeesDesc")}
-                      icon={Users}
-                      action={
-                        <button type="button" onClick={() => setDrawer({ mode: "create" })} className={btnPrimarySm}>
-                          <Plus className="w-4 h-4" />
-                          {t("addEmployee")}
-                        </button>
-                      }
-                    />
-                  ) : (
-                    <div>
-                      {Array.from(byBranch.entries()).map(([branchName, list]) => (
-                        <div key={branchName}>
-                          <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface-muted)]/50 md:px-4">
-                            {branchName}
-                          </p>
-                          <div className="divide-y divide-[var(--border)]">
-                            {list.map((e) => {
-                              const perf = perfByStaff.get(e.id);
-                              const isSelected = drawer && drawer.mode !== "create" && drawer.employee.id === e.id;
-                              return (
-                                <ListRow
-                                  key={e.id}
-                                  title={e.name}
-                                  subtitle={[e.role.replace("_", " "), e.salary != null ? t("perMonth", { amount: formatCurrency(e.salary) }) : null, perf ? t("ofTargetShort", { percent: perf.achievementPercent }) : null].filter(Boolean).join(" · ")}
-                                  onClick={() => setDrawer({ mode: "view", employee: e })}
-                                  trailing={
-                                    <div className="flex items-center gap-2">
-                                      {!e.active && <StatusBadge status="INACTIVE" />}
-                                      {e.idProofCollected === false && (
-                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">{t("idPending")}</span>
-                                      )}
-                                      <ChevronRight className={cn("w-4 h-4", isSelected ? "text-[var(--brand-text)]" : "text-[var(--text-tertiary)]")} />
-                                    </div>
-                                  }
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
               </>
             )}
           </div>
@@ -426,9 +507,10 @@ export default function AdminEmployeesPage() {
         onEdit={() => drawer && drawer.mode === "view" && setDrawer({ mode: "edit", employee: drawer.employee })}
         onBackToView={() => drawer && drawer.mode === "edit" && setDrawer({ mode: "view", employee: drawer.employee })}
         onDeactivate={() => {
-          if (drawer && drawer.mode !== "create" && window.confirm(t("deactivateConfirm", { name: drawer.employee.name }))) {
-            deleteMutation.mutate(drawer.employee.id);
-          }
+          if (drawer && drawer.mode !== "create") requestDeactivate(drawer.employee);
+        }}
+        onReactivate={() => {
+          if (drawer && drawer.mode !== "create") requestReactivate(drawer.employee);
         }}
         onCreate={(data) => createMutation.mutate(data)}
         onUpdate={(id, data) => updateMutation.mutate({ id, data })}
@@ -457,6 +539,7 @@ function EmployeeDrawer({
   onEdit,
   onBackToView,
   onDeactivate,
+  onReactivate,
   onCreate,
   onUpdate,
 }: {
@@ -468,6 +551,7 @@ function EmployeeDrawer({
   onEdit: () => void;
   onBackToView: () => void;
   onDeactivate: () => void;
+  onReactivate: () => void;
   onCreate: (data: CreateEmployeeRequest) => void;
   onUpdate: (id: string, data: UpdateEmployeeRequest) => void;
 }) {
@@ -502,10 +586,15 @@ function EmployeeDrawer({
               <Pencil className="w-4 h-4" />
               {t("editEmployeeBtn")}
             </button>
-            {employee.active && (
+            {employee.active ? (
               <button onClick={onDeactivate} className={`${btnSecondary} flex-1 text-red-600 border-red-200 hover:bg-red-50`}>
                 <Trash2 className="w-4 h-4" />
                 {tCommon("deactivate")}
+              </button>
+            ) : (
+              <button onClick={onReactivate} className={`${btnSecondary} flex-1`}>
+                <RotateCcw className="w-4 h-4" />
+                {t("reactivate")}
               </button>
             )}
           </div>
@@ -575,7 +664,16 @@ function EmployeeDetailView({
         <DetailField label={tCommon("branch")} value={employee.branchName} />
         <DetailField label={t("skills")} value={employee.skills} />
         <DetailField label={t("biometricId")} value={employee.biometricId} />
-        <DetailField label={tCommon("status")} value={employee.active ? tCommon("active") : tCommon("inactive")} />
+        <DetailField
+          label={tCommon("status")}
+          value={
+            employee.active
+              ? tCommon("active")
+              : employee.deactivatedAt
+                ? `${tCommon("inactive")} · ${t("deactivatedOn", { date: formatShortDate(employee.deactivatedAt) })}`
+                : tCommon("inactive")
+          }
+        />
       </div>
 
       <SectionTitle>{t("compensationSection")}</SectionTitle>

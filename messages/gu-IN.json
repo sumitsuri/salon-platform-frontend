@@ -1176,7 +1176,8 @@
       "addEmployee": "કર્મચારી ઉમેરો",
       "tabs": {
         "targets": "લક્ષ્ય અને કોચિંગ",
-        "attendance": "હાજરી અને રજા"
+        "attendance": "હાજરી અને રજા",
+        "roster": "કર્મચારી યાદી"
       },
       "meetingTarget": "લક્ષ્ય પૂર્ણ",
       "belowTarget": "લક્ષ્ય કરતાં પાછળ",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "પગાર અને વેચાણ લક્ષ્ય સાથે ટીમ સભ્ય ઉમેરો",
       "editEmployeeSubtitle": "પ્રોફાઇલ, પગાર અને લક્ષ્ય અપડેટ કરો",
       "editEmployeeBtn": "કર્મચારી સંપાદિત કરો",
-      "deactivateConfirm": "{name} નિષ્ક્રિય કરો?",
+      "deactivateConfirm": "{name} ને નિષ્ક્રિય કરવા છે? હવેથી તેઓ ચેક-ઇન અને વેચાણ માટે ઉપલબ્ધ રહેશે નહીં. અગાઉની હાજરી અને વેચાણનો રેકોર્ડ સચવાયેલો રહેશે.",
       "projectedIncentive": "અંદાજિત પ્રોત્સાહન: {amount}",
       "skills": "કૌશલ્ય",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "પગાર અને લક્ષ્ય",
       "addEmployeeBtn": "કર્મચારી ઉમેરો",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "ફરી સક્રિય કરો",
+      "reactivateConfirm": "{name} ને ફરી સક્રિય કરવા છે? તેઓ ફરીથી ચેક-ઇન અને વેચાણ માટે ઉપલબ્ધ થશે.",
+      "deactivatedOn": "નિષ્ક્રિય કર્યા: {date}"
     },
     "insights": {
       "title": "ઇનસાઇટ્સ",

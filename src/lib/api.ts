@@ -986,6 +986,9 @@ export const api = {
   deactivateEmployee: (staffId: string) =>
     request<void>(`/api/v1/staff/${staffId}`, { method: "DELETE" }),
 
+  reactivateEmployee: (staffId: string) =>
+    request<EmployeeDetail>(`/api/v1/staff/${staffId}/reactivate`, { method: "POST" }),
+
   getStaffTargetPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
     const params = new URLSearchParams();
     if (opts?.startDate) params.set("startDate", opts.startDate);
@@ -1500,6 +1503,8 @@ export interface EmployeeDetail {
   skills?: string;
   biometricId?: string;
   active: boolean;
+  /** ISO timestamp of soft-deactivation; earlier attendance and sales are retained. */
+  deactivatedAt?: string;
   salary?: number;
   joiningDate?: string;
   idProofCollected?: boolean;

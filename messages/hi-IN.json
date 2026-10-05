@@ -1176,7 +1176,8 @@
       "addEmployee": "कर्मचारी जोड़ें",
       "tabs": {
         "targets": "टारगेट और कोचिंग",
-        "attendance": "हाज़िरी और छुट्टी"
+        "attendance": "हाज़िरी और छुट्टी",
+        "roster": "कर्मचारी सूची"
       },
       "meetingTarget": "टारगेट पूरा",
       "belowTarget": "टारगेट से पीछे",
@@ -1199,7 +1200,7 @@
       "newEmployeeSubtitle": "वेतन और सेल्स टारगेट के साथ टीम सदस्य जोड़ें",
       "editEmployeeSubtitle": "प्रोफ़ाइल, वेतन और टारगेट अपडेट करें",
       "editEmployeeBtn": "कर्मचारी एडिट",
-      "deactivateConfirm": "{name} निष्क्रिय करें?",
+      "deactivateConfirm": "{name} को निष्क्रिय करें? अब से वे चेक-इन और बिक्री के लिए उपलब्ध नहीं होंगे। पिछली हाज़िरी और बिक्री का रिकॉर्ड सुरक्षित रहेगा।",
       "projectedIncentive": "अनुमानित इंसेंटिव: {amount}",
       "skills": "स्किल",
       "biometricId": "Biometric ID",
@@ -1224,7 +1225,10 @@
       "compensationTargets": "वेतन और टारगेट",
       "addEmployeeBtn": "कर्मचारी जोड़ें",
       "attendanceFrom": "From date",
-      "attendanceTo": "To date"
+      "attendanceTo": "To date",
+      "reactivate": "फिर से सक्रिय करें",
+      "reactivateConfirm": "{name} को फिर से सक्रिय करें? वे चेक-इन और बिक्री के लिए दोबारा उपलब्ध होंगे।",
+      "deactivatedOn": "निष्क्रिय किया गया: {date}"
     },
     "insights": {
       "title": "इनसाइट्स",
