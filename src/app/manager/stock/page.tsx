@@ -58,10 +58,10 @@ export default function ManagerStockHubPage() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <div className="mx-auto min-w-0 max-w-lg space-y-4">
+    <div className="mx-auto w-full min-w-0 max-w-lg md:max-w-none space-y-4">
       <PageHeader title={t("title")} subtitle={t("subtitle", { branch: user?.branchName ?? "" })} />
 
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3">
         <HubAction
           href="/manager/inventory?add=1"
           icon={Plus}

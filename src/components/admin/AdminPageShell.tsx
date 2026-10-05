@@ -7,7 +7,7 @@ export type AdminPageShellWidth = "default" | "hub" | "wide";
 // The app shell already caps content at 1920px; per-page caps here only left dead gutters on laptops/desktops.
 const WIDTH_CLASS: Record<AdminPageShellWidth, string> = {
   default: "max-w-none",
-  hub: "max-w-lg",
+  hub: "max-w-lg md:max-w-none",
   wide: "max-w-none",
 };
 

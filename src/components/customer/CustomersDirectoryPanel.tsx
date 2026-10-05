@@ -285,19 +285,19 @@ export function CustomersDirectoryPanel({ scope }: { scope: Scope }) {
                     className="border-t border-[var(--border)] hover:bg-[var(--surface-muted)] cursor-pointer"
                     onClick={() => openCustomer(c)}
                   >
-                    <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">{c.name}</td>
-                    <td className="px-4 py-3 font-mono text-sm text-[var(--brand-text)]">{c.visitPassId || "—"}</td>
-                    <td className="px-4 py-3 text-[var(--text-secondary)]">{formatPhone(c.phone)}</td>
+                    <td className="px-4 py-3 font-semibold text-[var(--text-primary)] min-w-[7.5rem]">{c.name}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-[var(--brand-text)] whitespace-nowrap">{c.visitPassId || "—"}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)] whitespace-nowrap">{formatPhone(c.phone)}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{c.society || "—"}</td>
-                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs">{c.lastVisitBranchName || "—"}</td>
-                    <td className="px-4 py-3 tabular-nums">
+                    <td className="px-4 py-3 text-[var(--text-secondary)] text-xs min-w-[8.5rem]">{c.lastVisitBranchName || "—"}</td>
+                    <td className="px-4 py-3 tabular-nums whitespace-nowrap">
                       {(c.visitCount ?? 0) <= 0 ? (
                         <span className="text-[var(--text-tertiary)]">{t("zeroBookings")}</span>
                       ) : (
                         c.visitCount
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(c.lifetimeSpend)}</td>
+                    <td className="px-4 py-3 font-medium tabular-nums whitespace-nowrap">{formatCurrency(c.lifetimeSpend)}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)] text-xs whitespace-nowrap">
                       {formatCustomerLastVisit(c.lastVisitAt, localeKit)}
                     </td>

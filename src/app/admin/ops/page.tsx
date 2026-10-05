@@ -14,7 +14,7 @@ export default function AdminOpsHubPage() {
     <AdminPageShell width="hub">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 md:space-y-0 md:grid md:grid-cols-2 md:gap-3 xl:grid-cols-3">
         <AdminHubActionLink
           href="/admin/bookings"
           icon={ClipboardList}

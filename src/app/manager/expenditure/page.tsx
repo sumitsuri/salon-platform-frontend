@@ -109,7 +109,7 @@ export default function ManagerExpenditurePage() {
   const monthLabel = formatMonthYear(monthIso);
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-4">
+    <div className="mx-auto w-full min-w-0 space-y-4">
       <PageHeader
         title={t("title")}
         subtitle={t("subtitle", { month: monthLabel, branch: user?.branchName ?? "" })}
