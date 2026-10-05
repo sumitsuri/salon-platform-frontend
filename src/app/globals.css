@@ -10,6 +10,7 @@
  * instead of a sidebar eating a quarter of the screen. Content layout keeps using the regular sm/md/lg breakpoints.
  */
 @theme {
+  --breakpoint-hub: 56.25rem;
   --breakpoint-nav: 68.75rem;
 }
 

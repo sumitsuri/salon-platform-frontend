@@ -10,11 +10,16 @@ export function AdminHubActionLink({
   label,
   description,
   accent,
+  stat,
+  statTone = "default",
 }: {
   href: string;
   icon: LucideIcon;
   label: string;
   description: string;
+  /** Optional live metric shown under the description (tablet/desktop hubs). */
+  stat?: string;
+  statTone?: "default" | "warn";
   accent: "violet" | "sky" | "emerald" | "amber" | "rose" | "brand";
 }) {
   const styles = {
@@ -59,6 +64,18 @@ export function AdminHubActionLink({
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-[var(--text-primary)] ui-card-title">{label}</p>
         <p className="mt-0.5 text-xs text-[var(--text-secondary)] leading-snug">{description}</p>
+        {stat ? (
+          <p
+            className={cn(
+              "mt-1.5 inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+              statTone === "warn"
+                ? "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                : "bg-[var(--brand-light)] text-[var(--brand-text)]",
+            )}
+          >
+            <span className="truncate">{stat}</span>
+          </p>
+        ) : null}
       </div>
       <ChevronRight className="h-5 w-5 shrink-0 text-[var(--text-tertiary)]" aria-hidden />
     </Link>

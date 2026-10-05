@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Plus, Receipt } from "lucide-react";
+import { Hash, IndianRupee, Plus, Receipt, TrendingUp, Calculator } from "lucide-react";
 import { api, CreateExpenditureRequest, ExpenditureItem } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
+import { useMediaQuery } from "@/lib/use-media-query";
+import { CompactStatsStrip, type CompactStatItem } from "@/components/CompactStatsStrip";
 import { currentMonthIso, formatMonthYear } from "@/components/MonthYearPicker";
 import { todayIsoDate, formatDateRangeLabel } from "@/lib/date-range";
 import {
@@ -63,6 +65,18 @@ export default function ManagerExpenditurePage() {
       }),
     enabled: !!branchId,
   });
+
+  const wide = useMediaQuery("(min-width: 768px)");
+  const kpis = useMemo<CompactStatItem[]>(() => {
+    const total = items.reduce((sum, e) => sum + e.amount, 0);
+    const largest = items.reduce((max, e) => Math.max(max, e.amount), 0);
+    return [
+      { id: "total", label: t("kpiTotal"), value: formatCurrency(total), icon: IndianRupee, accent: "rose" },
+      { id: "entries", label: t("kpiEntries"), value: String(items.length), icon: Hash, accent: "violet" },
+      { id: "avg", label: t("kpiAverage"), value: formatCurrency(items.length ? total / items.length : 0), icon: Calculator, accent: "sky" },
+      { id: "largest", label: t("kpiLargest"), value: formatCurrency(largest), icon: TrendingUp, accent: "amber" },
+    ];
+  }, [items, t]);
 
   const sorted = useMemo(
     () =>
@@ -122,6 +136,8 @@ export default function ManagerExpenditurePage() {
       />
 
       {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
+
+      {wide ? <CompactStatsStrip items={kpis} loading={isLoading && items.length === 0} testId="expenditure-kpis" /> : null}
 
       <Card padding={false}>
         <div className="border-b border-[var(--border)] px-4 py-3">

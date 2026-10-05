@@ -6,6 +6,8 @@ import { Package, Plus, Receipt, ChevronRight, Boxes } from "lucide-react";
 import { PageHeader, Card, btnPrimary } from "@/components/ui";
 import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
+import { StockHubOverview } from "@/components/manager/StockHubOverview";
+import { useMediaQuery } from "@/lib/use-media-query";
 
 function HubAction({
   href,
@@ -56,6 +58,7 @@ export default function ManagerStockHubPage() {
   const t = useTranslations("manager.stockHub");
   const tHome = useTranslations("manager.home");
   const user = useAuthStore((s) => s.user);
+  const wide = useMediaQuery("(min-width: 768px)");
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-lg md:max-w-none space-y-4">
@@ -77,6 +80,8 @@ export default function ManagerStockHubPage() {
           accent="amber"
         />
       </div>
+
+      {wide ? <StockHubOverview /> : null}
 
       <Card padding={false} className="overflow-hidden">
         <div className="border-b border-[var(--border)] px-4 py-3">
