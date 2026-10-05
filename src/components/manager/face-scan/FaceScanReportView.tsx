@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertCircle, Droplets, Sparkles, Stethoscope, Sun } from "lucide-react";
+import { AlertCircle, CalendarRange, Droplets, Sparkles, Stethoscope, Sun } from "lucide-react";
 import { fetchFaceScanCaptureBlob, type FaceScanSession } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui";
@@ -49,6 +49,10 @@ export function FaceScanReportView({ session }: { session: FaceScanSession }) {
   const report = session.report;
   const metrics = report?.metrics;
   const concerns = report?.concerns ?? [];
+  const phases = report?.carePlanPhases ?? [];
+  const planSummary = report?.carePlanSummary;
+  const legacySalon = report?.inSalonServices ?? [];
+  const legacyRoutine = report?.routineSteps ?? [];
 
   return (
     <div className="space-y-4">
@@ -113,44 +117,112 @@ export function FaceScanReportView({ session }: { session: FaceScanSession }) {
         </Card>
       )}
 
-      {(report?.inSalonServices?.length ?? 0) > 0 && (
+      {phases.length > 0 ? (
         <Card className="p-4">
-          <h3 className="ui-card-title mb-3 flex items-center gap-2">
-            <Sun className="h-4 w-4 text-[var(--brand-text)]" aria-hidden />
-            {t("report.inSalonTitle")}
+          <h3 className="ui-card-title mb-1 flex items-center gap-2">
+            <CalendarRange className="h-4 w-4 text-[var(--brand-text)]" aria-hidden />
+            {planSummary?.headline ?? t("report.carePlanTitle")}
           </h3>
-          <ul className="space-y-2">
-            {report!.inSalonServices!.map((svc) => (
-              <li key={svc.name} className="rounded-xl border border-[var(--border)] px-3 py-2.5">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{svc.name}</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{svc.reason}</p>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {(report?.routineSteps?.length ?? 0) > 0 && (
-        <Card className="p-4">
-          <h3 className="ui-card-title mb-3 flex items-center gap-2">
-            <Droplets className="h-4 w-4 text-[var(--brand-text)]" aria-hidden />
-            {t("report.routineTitle")}
-          </h3>
-          <ol className="space-y-3">
-            {report!.routineSteps!.map((step) => (
-              <li key={step.step} className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand-text)]">
-                  {step.step}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">{step.phase}</p>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{step.title}</p>
-                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
+          {planSummary?.approachNote && (
+            <p className="mb-4 text-xs leading-relaxed text-[var(--text-tertiary)]">{planSummary.approachNote}</p>
+          )}
+          <ol className="space-y-4">
+            {phases.map((phase) => (
+              <li
+                key={phase.month}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden"
+              >
+                <div className="border-b border-[var(--border)] bg-[var(--brand-light)]/25 px-3 py-2.5">
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{phase.title}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{phase.goal}</p>
+                </div>
+                <div className="space-y-3 px-3 py-3">
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">{t("report.whyThisStage")}: </span>
+                    {phase.rationale}
+                  </p>
+                  {phase.visitCadence && (
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                      {phase.visitCadence}
+                    </p>
+                  )}
+                  {phase.inSalonVisit && (
+                    <div className="rounded-lg border border-[var(--brand)]/20 bg-[var(--brand-light)]/15 px-3 py-2.5">
+                      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--brand-text)]">
+                        <Sun className="h-3.5 w-3.5" aria-hidden />
+                        {t("report.inSalonVisit")}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{phase.inSalonVisit.name}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">{phase.inSalonVisit.reason}</p>
+                    </div>
+                  )}
+                  {(phase.homeRoutine?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">
+                        <Droplets className="h-3.5 w-3.5" aria-hidden />
+                        {t("report.homeThisMonth")}
+                      </p>
+                      <ul className="space-y-2">
+                        {phase.homeRoutine!.map((step) => (
+                          <li key={step.step} className="flex gap-2 text-xs">
+                            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[10px] font-bold">
+                              {step.step}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[var(--text-primary)]">{step.title}</p>
+                              <p className="leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </li>
             ))}
           </ol>
         </Card>
+      ) : (
+        <>
+          {legacySalon.length > 0 && (
+            <Card className="p-4">
+              <h3 className="ui-card-title mb-3 flex items-center gap-2">
+                <Sun className="h-4 w-4 text-[var(--brand-text)]" aria-hidden />
+                {t("report.inSalonTitle")}
+              </h3>
+              <ul className="space-y-2">
+                {legacySalon.map((svc) => (
+                  <li key={`${svc.name}-${svc.reason}`} className="rounded-xl border border-[var(--border)] px-3 py-2.5">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{svc.name}</p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">{svc.reason}</p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+          {legacyRoutine.length > 0 && (
+            <Card className="p-4">
+              <h3 className="ui-card-title mb-3 flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-[var(--brand-text)]" aria-hidden />
+                {t("report.routineTitle")}
+              </h3>
+              <ol className="space-y-3">
+                {legacyRoutine.map((step) => (
+                  <li key={step.step} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-light)] text-xs font-bold text-[var(--brand-text)]">
+                      {step.step}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">{step.phase}</p>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{step.title}</p>
+                      <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{step.description}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </Card>
+          )}
+        </>
       )}
 
       {session.captures && session.captures.length > 0 && (
