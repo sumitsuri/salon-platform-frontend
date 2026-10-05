@@ -3727,11 +3727,29 @@ export interface FaceScanServiceSuggestion {
   reason: string;
 }
 
+export interface FaceScanCarePlanSummary {
+  durationMonths: number;
+  headline: string;
+  approachNote?: string;
+}
+
+export interface FaceScanCarePlanPhase {
+  month: number;
+  title: string;
+  goal: string;
+  rationale: string;
+  visitCadence?: string;
+  inSalonVisit?: FaceScanServiceSuggestion | null;
+  homeRoutine?: FaceScanRoutineStep[];
+}
+
 export interface FaceScanReport {
   metrics?: FaceScanMetrics;
   concerns?: FaceScanConcern[];
   routineSteps?: FaceScanRoutineStep[];
   inSalonServices?: FaceScanServiceSuggestion[];
+  carePlanSummary?: FaceScanCarePlanSummary;
+  carePlanPhases?: FaceScanCarePlanPhase[];
   disclaimer?: string;
 }
 
