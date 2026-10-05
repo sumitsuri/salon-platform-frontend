@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -3194,7 +3195,7 @@ export default function WalkInPage() {
 
           <div className="lg:hidden">
             {cartSheetOpen && (
-              <>
+              <OverlayPortal>
                 <button
                   type="button"
                   className="fixed inset-0 z-[140] bg-black/45"
@@ -3259,7 +3260,7 @@ export default function WalkInPage() {
                     />
                   </div>
                 </div>
-              </>
+              </OverlayPortal>
             )}
 
             <div className="fixed bottom-0 left-0 right-0 z-[90] border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md px-2.5 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] lg:hidden">

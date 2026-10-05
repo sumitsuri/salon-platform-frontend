@@ -85,6 +85,26 @@ async function run() {
     fail("CORS app origin", e.message);
   }
 
+  const auraEmail = process.env.AURA_DEMO_OWNER_EMAIL || "aura@antrahq.com";
+  const auraPassword = process.env.AURA_DEMO_OWNER_PASSWORD;
+  if (!auraPassword) {
+    console.log("SKIP Aura demo owner login API (set AURA_DEMO_OWNER_PASSWORD)");
+  } else try {
+    const res = await fetch(`${API}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: APP },
+      body: JSON.stringify({ email: auraEmail, password: auraPassword }),
+    });
+    const body = await res.json();
+    if (!res.ok || !body.success || !body.data?.accessToken) {
+      fail("Aura demo owner login API", body.message || res.status);
+    } else {
+      pass("Aura demo owner login API", body.data.tenantName || auraEmail);
+    }
+  } catch (e) {
+    fail("Aura demo owner login API", e.message);
+  }
+
   try {
     const res = await fetch(`${API}/api/v1/auth/login`, {
       method: "POST",

@@ -19,7 +19,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       login: async (email, password) => {
-        const user = await api.login(email, password);
+        const user = await api.login(email.trim().toLowerCase(), password);
         set({ user });
         syncLocaleFromUser(user.preferredLocale, true);
       },

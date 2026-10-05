@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -186,6 +187,7 @@ export function BillingScratchModal({
     token && !scratchRewardApplied && !(attemptFinished && bookingScratch?.status === "SCRATCHED");
 
   return (
+    <OverlayPortal>
     <div
       className="fixed inset-0 z-[200] flex flex-col scratch-billing-backdrop"
       role="dialog"
@@ -295,5 +297,6 @@ export function BillingScratchModal({
         </div>
       )}
     </div>
+    </OverlayPortal>
   );
 }

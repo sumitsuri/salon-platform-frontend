@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ export function WalkInBottomSheet({
   if (!open) return null;
 
   return (
+    <OverlayPortal>
     <>
       <button
         type="button"
@@ -66,5 +68,6 @@ export function WalkInBottomSheet({
         ) : null}
       </div>
     </>
+    </OverlayPortal>
   );
 }

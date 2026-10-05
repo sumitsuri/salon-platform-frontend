@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -571,6 +572,7 @@ function VisitDetailsModal({
   }, []);
 
   return (
+    <OverlayPortal>
     <div
       className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/45 backdrop-blur-[2px]"
       role="dialog"
@@ -799,6 +801,7 @@ function VisitDetailsModal({
         </div>
       </div>
     </div>
+    </OverlayPortal>
   );
 }
 

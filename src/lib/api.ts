@@ -289,7 +289,10 @@ export async function authRequest<T>(path: string, options: RequestInit = {}): P
 
 export const api = {
   login: (email: string, password: string) =>
-    request<AuthUser>("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+    publicRequest<AuthUser>("/api/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
 
   forgotPassword: (email: string) =>
     publicRequest<{ message: string }>("/api/v1/auth/forgot-password", {

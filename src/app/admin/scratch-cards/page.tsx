@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -163,6 +164,7 @@ export default function AdminScratchCardsPage() {
       )}
 
       {sheetOpen && (
+        <OverlayPortal>
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-xl max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center gap-2">
@@ -223,6 +225,7 @@ export default function AdminScratchCardsPage() {
             </div>
           </div>
         </div>
+        </OverlayPortal>
       )}
     </AdminPageShell>
   );

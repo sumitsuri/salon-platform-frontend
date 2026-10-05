@@ -1,5 +1,6 @@
 "use client";
 
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Camera, Clock, LogOut, MapPin, Upload, UserCheck, X } from "lucide-react";
@@ -220,6 +221,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   if (!open) return null;
 
   return (
+    <OverlayPortal>
     <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <button type="button" className="absolute inset-0 bg-black/50" onClick={onClose} aria-label={tUi("close")} />
       <div
@@ -432,5 +434,6 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
         }
       `}</style>
     </div>
+    </OverlayPortal>
   );
 }

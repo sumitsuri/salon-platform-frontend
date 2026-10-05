@@ -84,7 +84,8 @@ function NavItemLink({
                   inactiveClass
                 )
         )}
-        style={fabActive ? { background: brandColor } : undefined}
+        // Inline color: the unlayered .nav-link rule in globals.css outranks Tailwind's text-white.
+        style={fabActive ? { background: brandColor, color: "#fff" } : undefined}
       >
         {collapsed ? (
           <Icon className="w-[18px] h-[18px] shrink-0" />

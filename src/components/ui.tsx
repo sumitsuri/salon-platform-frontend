@@ -10,6 +10,7 @@ import { useScrollLock } from "@/lib/use-scroll-lock";
 import { repairOrphanedScrollLock } from "@/lib/scroll-lock";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { OverlayPortal } from "@/components/OverlayPortal";
 import { useAppShell } from "@/lib/app-shell-context";
 import { useBreadcrumbs } from "@/lib/breadcrumb-context";
 import { Breadcrumbs, BreadcrumbItem } from "@/components/Breadcrumbs";
@@ -863,6 +864,7 @@ export function SideSheet({
   if (!open) return null;
 
   return (
+    <OverlayPortal>
     <div
       className={cn("fixed inset-0 z-[120] flex justify-end", className)}
       role="dialog"
@@ -919,6 +921,7 @@ export function SideSheet({
         )}
       </div>
     </div>
+    </OverlayPortal>
   );
 }
 
@@ -1501,7 +1504,7 @@ export function MobileFilterPanel({
   if (!fields) return null;
 
   return (
-    <>
+    <OverlayPortal>
       <button
         type="button"
         className="fixed inset-0 z-[130] bg-black/40 md:hidden"
@@ -1538,7 +1541,7 @@ export function MobileFilterPanel({
           </button>
         </div>
       </div>
-    </>
+    </OverlayPortal>
   );
 }
 
