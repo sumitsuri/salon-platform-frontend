@@ -2595,6 +2595,7 @@
       "refreshFromGoogle": "Refresh from Google",
       "pilotBanner": "Pilot mode: live Google data for {branch} (Varthur). Other branches unlock after you validate this report.",
       "googleApiMissing": "Google Places API key is not configured on the server. Set GOOGLE_PLACES_API_KEY to load live listings.",
+      "googleSyncFailed": "Could not refresh from Google. Showing the last saved listing data for this branch.",
       "syncRequired": "Tap Refresh from Google to pull your branch listing, nearby rivals, and keyword ranks.",
       "rivalsFromGoogle": "Nearby salons discovered from Google Places within your selected radius. Each row links to the public Google Maps listing for verification.",
       "rivalsEmpty": "No Google rivals synced yet. Use Refresh from Google after selecting the Varthur pilot branch.",

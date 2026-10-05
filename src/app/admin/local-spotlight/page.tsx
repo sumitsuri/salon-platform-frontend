@@ -210,8 +210,12 @@ export default function LocalSpotlightPage() {
         </AlertBanner>
       )}
 
-      {!data?.googleApiConfigured && (
+      {data?.googleApiConfigured === false && (
         <AlertBanner variant="warning">{t("googleApiMissing")}</AlertBanner>
+      )}
+
+      {data?.googleApiConfigured === true && data.syncStatusMessage && /denied|failed|403/i.test(data.syncStatusMessage) && (
+        <AlertBanner variant="warning">{data.syncStatusMessage}</AlertBanner>
       )}
 
       {syncGoogle.data?.message && (
