@@ -205,7 +205,10 @@
       "moreTipsHint": "Coaching & trends",
       "scalpScan": "Scalp scan",
       "scalpScanShort": "Scan",
-      "moreScalpScanHint": "AI-assisted scalp & hair diagnosis"
+      "moreScalpScanHint": "AI-assisted scalp & hair diagnosis",
+      "faceScan": "Face scan",
+      "faceScanShort": "Face",
+      "moreFaceScanHint": "Skin texture, oil & redness — facial treatments"
     },
     "scalpScan": {
       "title": "Scalp & hair scan",
@@ -289,6 +292,92 @@
         "concernsTitle": "Detected concerns",
         "inSalonTitle": "Recommended in-salon services",
         "routineTitle": "At-home routine",
+        "capturesTitle": "Scan gallery"
+      }
+    },
+    "faceScan": {
+      "title": "Face & skin scan",
+      "subtitle": "Capture the face, analyze texture and tone, recommend facials and home care.",
+      "newScan": "New face scan",
+      "quickActionDesc": "Scan skin, get facial plan & service picks",
+      "heroTitle": "Consultation-grade skin read on your tablet",
+      "heroBody": "Capture full face or zones under white, cross-polarized, or UV-style preview. Get oiliness, hydration, texture, and redness signals — matched to facials in your catalog and a daily skincare routine (separate from scalp/hair scans).",
+      "emptyTitle": "No face scans yet",
+      "emptyDesc": "Run a face scan during skin consultation to recommend the right facial and retail routine.",
+      "healthShort": "Skin {score}/100",
+      "draft": "In progress",
+      "newTitle": "New face scan",
+      "pickCustomer": "Guest",
+      "searchPlaceholder": "Search name or phone…",
+      "startSession": "Start face scan",
+      "steps": {
+        "customer": "Choose guest",
+        "capture": "Capture photos",
+        "confirm": "Confirm & analyze"
+      },
+      "captureProgress": "{count} photos saved · analysis available from {min} photo onward (more zones improve accuracy)",
+      "continueToConfirm": "Review & analyze",
+      "saveForLater": "Save & exit",
+      "confirmHint": "Optional: tap skin concerns you see in chair — analysis blends these with image signals.",
+      "staffNotesPlaceholder": "Notes for the guest file (optional)",
+      "runAnalysis": "Generate report",
+      "analyzing": "Analyzing…",
+      "backToCapture": "Add more photos",
+      "reportTitle": "Face scan report",
+      "backToHub": "All face scans",
+      "missingId": "Missing scan id.",
+      "loadFailed": "Could not load this scan.",
+      "cameraNeedsHttps": "Camera requires HTTPS or localhost.",
+      "zones": {
+        "FULL_FACE": "Full face",
+        "FOREHEAD": "Forehead",
+        "LEFT_CHEEK": "Left cheek",
+        "RIGHT_CHEEK": "Right cheek",
+        "NOSE": "Nose / T-zone",
+        "CHIN": "Chin"
+      },
+      "lights": {
+        "WHITE": "White light",
+        "CROSS_POLARIZED": "Cross-polarized",
+        "UV": "UV view"
+      },
+      "lightHints": {
+        "WHITE": "Shows shine, dryness, and overall skin tone.",
+        "CROSS_POLARIZED": "Highlights redness and sensitivity.",
+        "UV": "Optional UV torch; preview simulates fluorescence for uneven tone."
+      },
+      "concerns": {
+        "OILY_SKIN": "Oily skin",
+        "DRY_DEHYDRATED": "Dry / dehydrated",
+        "REDNESS_SENSITIVITY": "Redness & sensitivity",
+        "UNEVEN_TEXTURE": "Uneven texture",
+        "DULLNESS": "Dullness",
+        "ACNE_BLEMISH": "Blemishes",
+        "COMBINATION_SKIN": "Combination skin",
+        "BALANCED": "Balanced"
+      },
+      "capture": {
+        "openCamera": "Open camera",
+        "upload": "Upload photo",
+        "snap": "Capture",
+        "cancel": "Cancel",
+        "saveShot": "Save photo",
+        "saving": "Saving…",
+        "retake": "Retake",
+        "switchCamera": "Flip camera",
+        "facingFront": "Front camera",
+        "facingBack": "Back camera"
+      },
+      "report": {
+        "healthScore": "Skin health score",
+        "metricsTitle": "Analysis metrics",
+        "oiliness": "Oiliness",
+        "hydration": "Hydration",
+        "texture": "Texture",
+        "redness": "Redness",
+        "concernsTitle": "Detected concerns",
+        "inSalonTitle": "Recommended in-salon facials & treatments",
+        "routineTitle": "At-home skincare routine",
         "capturesTitle": "Scan gallery"
       }
     },

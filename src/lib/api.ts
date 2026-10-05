@@ -244,7 +244,10 @@ async function multipartRequest<T>(path: string, formData: FormData, retried = f
   }
 
   if (!res.ok) {
-    throw new Error(body.message || `Request failed (${res.status})`);
+    const detail =
+      body.message ||
+      (typeof (body as { detail?: string }).detail === "string" ? (body as { detail: string }).detail : undefined);
+    throw new Error(detail || `Request failed (${res.status})`);
   }
   return body.data;
 }
@@ -1396,6 +1399,43 @@ export const api = {
     search.set("page", String(params.page ?? 0));
     search.set("size", String(params.size ?? 20));
     return request<PageResult<ScalpScanSession>>(`/api/v1/scalp-scans?${search.toString()}`);
+  },
+
+  createFaceScan: (customerId: string) =>
+    request<FaceScanSession>("/api/v1/face-scans", {
+      method: "POST",
+      body: JSON.stringify({ customerId }),
+    }),
+
+  addFaceScanCapture: (
+    sessionId: string,
+    data: { zone: FaceCaptureZone; lightMode: FaceLightMode; photo: Blob },
+  ) => {
+    const form = new FormData();
+    form.append("zone", data.zone);
+    form.append("lightMode", data.lightMode);
+    const file =
+      data.photo instanceof File
+        ? data.photo
+        : new File([data.photo], "face.jpg", { type: data.photo.type || "image/jpeg" });
+    form.append("photo", file, "face.jpg");
+    return multipartRequest<FaceScanCaptureItem>(`/api/v1/face-scans/${sessionId}/captures`, form);
+  },
+
+  analyzeFaceScan: (sessionId: string, data?: AnalyzeFaceScanRequest) =>
+    request<FaceScanSession>(`/api/v1/face-scans/${sessionId}/analyze`, {
+      method: "POST",
+      body: JSON.stringify(data ?? {}),
+    }),
+
+  getFaceScan: (sessionId: string) => request<FaceScanSession>(`/api/v1/face-scans/${sessionId}`),
+
+  listFaceScans: (params: { branchId: string; customerId?: string; page?: number; size?: number }) => {
+    const search = new URLSearchParams({ branchId: params.branchId });
+    if (params.customerId) search.set("customerId", params.customerId);
+    search.set("page", String(params.page ?? 0));
+    search.set("size", String(params.size ?? 20));
+    return request<PageResult<FaceScanSession>>(`/api/v1/face-scans?${search.toString()}`);
   },
 };
 
@@ -3605,13 +3645,13 @@ export interface AnalyzeScalpScanRequest {
   staffNotes?: string;
 }
 
-export async function fetchScalpScanCaptureBlob(captureId: string): Promise<string> {
+async function fetchScanCaptureBlob(path: string): Promise<string> {
   const token = getToken();
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
 
   async function fetchPhoto(authHeaders: Record<string, string>) {
-    return fetch(`${apiBase()}/api/v1/scalp-scans/captures/${captureId}/photo`, { headers: authHeaders });
+    return fetch(`${apiBase()}${path}`, { headers: authHeaders });
   }
 
   let res = await fetchPhoto(headers);
@@ -3632,5 +3672,99 @@ export async function fetchScalpScanCaptureBlob(captureId: string): Promise<stri
   }
   const blob = await res.blob();
   return URL.createObjectURL(blob);
+}
+
+export async function fetchScalpScanCaptureBlob(captureId: string): Promise<string> {
+  return fetchScanCaptureBlob(`/api/v1/scalp-scans/captures/${captureId}/photo`);
+}
+
+export type FaceCaptureZone =
+  | "FULL_FACE"
+  | "FOREHEAD"
+  | "LEFT_CHEEK"
+  | "RIGHT_CHEEK"
+  | "NOSE"
+  | "CHIN";
+
+export type FaceLightMode = "WHITE" | "CROSS_POLARIZED" | "UV";
+
+export type FaceConcernCode =
+  | "OILY_SKIN"
+  | "DRY_DEHYDRATED"
+  | "REDNESS_SENSITIVITY"
+  | "UNEVEN_TEXTURE"
+  | "DULLNESS"
+  | "ACNE_BLEMISH"
+  | "COMBINATION_SKIN"
+  | "BALANCED";
+
+export interface FaceScanConcern {
+  code: FaceConcernCode | string;
+  label: string;
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  score: number;
+  insight?: string;
+}
+
+export interface FaceScanMetrics {
+  skinHealthScore: number;
+  oilinessIndex: number;
+  hydrationIndex: number;
+  textureIndex: number;
+  rednessIndex: number;
+}
+
+export interface FaceScanRoutineStep {
+  step: number;
+  phase: string;
+  title: string;
+  description: string;
+}
+
+export interface FaceScanServiceSuggestion {
+  branchServiceId?: string | null;
+  name: string;
+  reason: string;
+}
+
+export interface FaceScanReport {
+  metrics?: FaceScanMetrics;
+  concerns?: FaceScanConcern[];
+  routineSteps?: FaceScanRoutineStep[];
+  inSalonServices?: FaceScanServiceSuggestion[];
+  disclaimer?: string;
+}
+
+export interface FaceScanCaptureItem {
+  id: string;
+  zone: FaceCaptureZone;
+  lightMode: FaceLightMode;
+  capturedAt?: string;
+}
+
+export interface FaceScanSession {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerPhone?: string | null;
+  branchId: string;
+  status: "DRAFT" | "COMPLETE";
+  skinHealthScore?: number | null;
+  primaryConcernCode?: string | null;
+  staffNotes?: string | null;
+  createdAt: string;
+  analyzedAt?: string | null;
+  captureCount: number;
+  report?: FaceScanReport | null;
+  captures?: FaceScanCaptureItem[];
+}
+
+export interface AnalyzeFaceScanRequest {
+  staffConfirmedConcerns?: string;
+  staffNotes?: string;
+}
+
+export async function fetchFaceScanCaptureBlob(captureId: string): Promise<string> {
+  return fetchScanCaptureBlob(`/api/v1/face-scans/captures/${captureId}/photo`);
 }
 
