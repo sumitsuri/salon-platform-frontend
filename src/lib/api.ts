@@ -3366,6 +3366,8 @@ export interface LocalSpotlightResponse {
   searchRanks: LocalSpotlightSearchRankRow[];
   rankCompareDate?: string | null;
   keywordRanksNeedRefresh?: boolean;
+  keywordRanksExpectedCount?: number;
+  keywordRanksStoredCount?: number;
   playbook: LocalSpotlightPlaybookItem[];
 }
 

@@ -220,6 +220,12 @@ export default function LocalSpotlightPage() {
         <AlertBanner variant="warning">{data.syncStatusMessage}</AlertBanner>
       )}
 
+      {syncGoogle.isError && (
+        <AlertBanner variant="error">
+          {(syncGoogle.error as Error)?.message ?? t("googleSyncFailed")}
+        </AlertBanner>
+      )}
+
       {syncGoogle.data?.message && (
         <AlertBanner variant={syncGoogle.data.skipped ? "info" : "success"}>
           {syncGoogle.data.message}
@@ -379,7 +385,17 @@ export default function LocalSpotlightPage() {
                 )}
               </div>
               {data.keywordRanksNeedRefresh && (
-                <AlertBanner variant="warning">{t("keywordRanksNeedRefresh")}</AlertBanner>
+                <AlertBanner variant="warning">
+                  {data.keywordRanksStoredCount != null && data.keywordRanksExpectedCount != null
+                    ? t("keywordRanksPartial", {
+                        stored: data.keywordRanksStoredCount,
+                        expected: data.keywordRanksExpectedCount,
+                      })
+                    : t("keywordRanksNeedRefresh", {
+                        stored: data.keywordRanksStoredCount ?? 0,
+                        expected: data.keywordRanksExpectedCount ?? 0,
+                      })}
+                </AlertBanner>
               )}
               <div className="flex flex-wrap items-end gap-3">
                 <label className="block text-xs font-semibold text-[var(--text-secondary)]">
