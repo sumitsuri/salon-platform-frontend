@@ -17,6 +17,7 @@ import {
   CalendarCheck,
   Receipt,
   Warehouse,
+  Microscope,
 } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
@@ -62,6 +63,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
           { href: "/manager/memberships", label: t("memberships"), shortLabel: t("member"), icon: CreditCard },
           { href: "/manager/packages", label: t("packages"), shortLabel: t("packagesShort"), icon: Gift },
           { href: "/manager/customers", label: t("customers"), shortLabel: t("customersShort"), icon: Contact },
+          { href: "/manager/scalp-scan", label: t("scalpScan"), shortLabel: t("scalpScanShort"), icon: Microscope },
         ],
       },
       {
@@ -93,6 +95,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
         "/manager/services",
         "/manager/insights",
         "/manager/customers",
+        "/manager/scalp-scan",
       ],
       hideBarOnPrefixes: ["/manager/walk-in"],
       tabs: [
@@ -115,6 +118,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
             { href: "/manager/bookings", label: t("bookings"), icon: CalendarCheck, description: t("moreBookingsHint") },
             { href: "/manager/memberships", label: t("memberships"), icon: CreditCard, description: t("moreMemberHint") },
             { href: "/manager/customers", label: t("customers"), icon: Contact, description: t("moreGuestsHint") },
+            { href: "/manager/scalp-scan", label: t("scalpScan"), icon: Microscope, description: t("moreScalpScanHint") },
           ],
         },
         {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CreditCard, type LucideIcon } from "lucide-react";
+import { CreditCard, Microscope, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PackageUpsellCta } from "@/app/manager/packages/PackageUpsellCta";
 
@@ -38,6 +38,7 @@ function ActionTile({
 export function ManagerHomeQuickActions() {
   const t = useTranslations("manager.home");
   const tPkg = useTranslations("manager.packages");
+  const tScan = useTranslations("manager.scalpScan");
 
   return (
     <section aria-labelledby="manager-quick-actions" className="min-w-0">
@@ -45,6 +46,12 @@ export function ManagerHomeQuickActions() {
         {t("quickActions")}
       </h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <ActionTile
+          href="/manager/scalp-scan/new"
+          icon={Microscope}
+          label={tScan("newScan")}
+          description={tScan("quickActionDesc")}
+        />
         <ActionTile
           href="/manager/memberships?sell=1"
           icon={CreditCard}
