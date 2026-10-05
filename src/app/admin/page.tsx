@@ -56,6 +56,17 @@ export default function AdminDashboardPage() {
     reviveStoredProductDateRange,
   );
 
+  const apiRange = insightPeriodToRange(dateRange);
+  const mtdRange = useMemo(() => adminMtdSalesRange(dateRange), [dateRange]);
+
+  const branchReportingRange = useMemo(
+    () => ({
+      from: dateRange.from < mtdRange.from ? dateRange.from : mtdRange.from,
+      to: dateRange.to > mtdRange.to ? dateRange.to : mtdRange.to,
+    }),
+    [dateRange.from, dateRange.to, mtdRange.from, mtdRange.to],
+  );
+
   const {
     branches,
     branchesError,
@@ -63,10 +74,7 @@ export default function AdminDashboardPage() {
     setSelectedBranches,
     branchIdsFilter,
     branchesSelected,
-  } = useAdminBranchSelection();
-
-  const apiRange = insightPeriodToRange(dateRange);
-  const mtdRange = useMemo(() => adminMtdSalesRange(dateRange), [dateRange]);
+  } = useAdminBranchSelection("all", branchReportingRange);
 
   const { data: dashboard, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],

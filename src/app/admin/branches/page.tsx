@@ -37,6 +37,7 @@ import {
   selectClass,
   btnPrimary,
   btnSecondary,
+  ConfirmDialog,
 } from "@/components/ui";
 import { OnlineBookingPanel } from "@/components/book/OnlineBookingPanel";
 import { BrandOnlineBookingSettings } from "@/components/book/BrandOnlineBookingSettings";
@@ -91,6 +92,9 @@ export default function AdminBranchesPage() {
   const [branchDrawer, setBranchDrawer] = useState<BranchDrawerState | null>(null);
   const [managerDrawer, setManagerDrawer] = useState<ManagerDrawerState | null>(null);
   const [brandDrawer, setBrandDrawer] = useState<BrandDrawerState | null>(null);
+  const [deactivateConfirm, setDeactivateConfirm] = useState<
+    { kind: "branch"; branch: Branch } | { kind: "manager"; manager: PlatformUser } | null
+  >(null);
 
   const { data: tenant, isLoading: tenantLoading } = useQuery({
     queryKey: ["tenant"],
@@ -151,7 +155,11 @@ export default function AdminBranchesPage() {
 
   const deactivateBranchMutation = useMutation({
     mutationFn: (id: string) => api.deactivateBranch(id),
-    onSuccess: () => { invalidate(); closeBranchDrawer(); },
+    onSuccess: () => {
+      invalidate();
+      closeBranchDrawer();
+      setDeactivateConfirm(null);
+    },
     onError: (e: Error) => setError(e.message),
   });
 
@@ -170,7 +178,11 @@ export default function AdminBranchesPage() {
 
   const deactivateManagerMutation = useMutation({
     mutationFn: (id: string) => api.deactivateBrandUser(id),
-    onSuccess: () => { invalidate(); closeManagerDrawer(); },
+    onSuccess: () => {
+      invalidate();
+      closeManagerDrawer();
+      setDeactivateConfirm(null);
+    },
     onError: (e: Error) => setError(e.message),
   });
 
@@ -383,8 +395,8 @@ export default function AdminBranchesPage() {
         onEdit={() => branchDrawer && branchDrawer.mode === "view" && setBranchDrawer({ mode: "edit", branch: branchDrawer.branch })}
         onBackToView={() => branchDrawer && branchDrawer.mode === "edit" && setBranchDrawer({ mode: "view", branch: branchDrawer.branch })}
         onDeactivate={() => {
-          if (branchDrawer && branchDrawer.mode !== "create" && window.confirm(t("deactivateBranchConfirm", { name: branchDrawer.branch.name }))) {
-            deactivateBranchMutation.mutate(branchDrawer.branch.id);
+          if (branchDrawer && branchDrawer.mode !== "create") {
+            setDeactivateConfirm({ kind: "branch", branch: branchDrawer.branch });
           }
         }}
         onCreate={(data) => createBranchMutation.mutate(data)}
@@ -399,9 +411,13 @@ export default function AdminBranchesPage() {
         onEdit={() => managerDrawer && managerDrawer.mode === "view" && setManagerDrawer({ mode: "edit", manager: managerDrawer.manager })}
         onBackToView={() => managerDrawer && managerDrawer.mode === "edit" && setManagerDrawer({ mode: "view", manager: managerDrawer.manager })}
         onDeactivate={() => {
-          if (managerDrawer && managerDrawer.mode !== "create" && managerDrawer.manager.role !== "BRAND_ADMIN" && managerDrawer.manager.active &&
-            window.confirm(t("deactivateManagerConfirm", { name: managerDrawer.manager.name }))) {
-            deactivateManagerMutation.mutate(managerDrawer.manager.id);
+          if (
+            managerDrawer &&
+            managerDrawer.mode !== "create" &&
+            managerDrawer.manager.role !== "BRAND_ADMIN" &&
+            managerDrawer.manager.active
+          ) {
+            setDeactivateConfirm({ kind: "manager", manager: managerDrawer.manager });
           }
         }}
         onCreate={(data) => createManagerMutation.mutate(data)}
@@ -417,6 +433,45 @@ export default function AdminBranchesPage() {
         onEdit={() => setBrandDrawer({ mode: "edit" })}
         onBackToView={() => setBrandDrawer({ mode: "view" })}
         onSave={(data) => updateTenantMutation.mutate(data)}
+      />
+
+      <ConfirmDialog
+        open={deactivateConfirm?.kind === "branch"}
+        onClose={() => !deactivateBranchMutation.isPending && setDeactivateConfirm(null)}
+        onConfirm={() => {
+          if (deactivateConfirm?.kind === "branch") {
+            deactivateBranchMutation.mutate(deactivateConfirm.branch.id);
+          }
+        }}
+        title={
+          deactivateConfirm?.kind === "branch"
+            ? t("deactivateBranchConfirm", { name: deactivateConfirm.branch.name })
+            : ""
+        }
+        description={t("deactivateBranchDescription")}
+        confirmLabel={tCommon("deactivate")}
+        cancelLabel={tCommon("cancel")}
+        confirmPending={deactivateBranchMutation.isPending}
+        error={deactivateBranchMutation.isError ? error : undefined}
+      />
+
+      <ConfirmDialog
+        open={deactivateConfirm?.kind === "manager"}
+        onClose={() => !deactivateManagerMutation.isPending && setDeactivateConfirm(null)}
+        onConfirm={() => {
+          if (deactivateConfirm?.kind === "manager") {
+            deactivateManagerMutation.mutate(deactivateConfirm.manager.id);
+          }
+        }}
+        title={
+          deactivateConfirm?.kind === "manager"
+            ? t("deactivateManagerConfirm", { name: deactivateConfirm.manager.name })
+            : ""
+        }
+        description={t("deactivateManagerDescription")}
+        confirmLabel={tCommon("deactivate")}
+        cancelLabel={tCommon("cancel")}
+        confirmPending={deactivateManagerMutation.isPending}
       />
     </AdminPageShell>
   );
@@ -566,6 +621,7 @@ function BranchDetailView({
   const t = useTranslations("admin.organization");
   const tAdmin = useTranslations("admin.common");
   const tCommon = useTranslations("common");
+  const tEmployees = useTranslations("admin.employees");
   return (
     <div className="space-y-5">
       {performance && performance.monthlySalesTarget > 0 && (
@@ -589,7 +645,20 @@ function BranchDetailView({
       <SectionTitle>{tAdmin("profile")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">
         <DetailField label={t("code")} value={branch.code} />
-        <DetailField label={tCommon("status")} value={branch.status || "ACTIVE"} />
+        <DetailField
+          label={tCommon("status")}
+          value={
+            branch.status === "INACTIVE" && branch.deactivatedAt
+              ? `${tCommon("inactive")} · ${tEmployees("deactivatedOn", {
+                  date: new Date(branch.deactivatedAt).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }),
+                })}`
+              : branch.status || tCommon("active")
+          }
+        />
         <DetailField
           label={t("businessType")}
           value={branch.businessType ? t(`businessTypes.${branch.businessType}`) : t("businessTypes.SALON")}

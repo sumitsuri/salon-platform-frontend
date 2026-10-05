@@ -23,6 +23,7 @@ import {
   UpdateExpenditureRequest,
 } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
+import { calendarMonthReportingRange } from "@/lib/branch-reporting";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import {
@@ -110,15 +111,19 @@ export default function AdminFinancePage() {
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [error, setError] = useState("");
 
+  const range = monthToRange(selectedMonth);
+  const financeReportingRange = useMemo(
+    () => calendarMonthReportingRange(range.startDate),
+    [range.startDate],
+  );
+
   const {
     branches,
     selectedBranches,
     setSelectedBranches,
     branchIdsFilter: branchFilter,
     branchesSelected,
-  } = useAdminBranchSelection();
-
-  const range = monthToRange(selectedMonth);
+  } = useAdminBranchSelection("all", financeReportingRange);
   const selectedYear = parseMonth(selectedMonth).year;
   const { year: currentYear, month: currentMonthNum } = parseMonth(currentMonthIso());
 

@@ -67,7 +67,7 @@ export default function MarketPulsePage() {
   const apiRange = insightPeriodToRange(dateRange);
 
   const { branches, selectedBranches, setSelectedBranches, branchesSelected } =
-    useAdminBranchSelection();
+    useAdminBranchSelection("all", { from: dateRange.from, to: dateRange.to });
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ["benchmark", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],

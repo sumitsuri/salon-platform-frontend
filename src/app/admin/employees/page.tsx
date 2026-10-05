@@ -103,7 +103,7 @@ export default function AdminEmployeesPage() {
     setSelectedBranches,
     branchIdsFilter,
     branchesSelected,
-  } = useAdminBranchSelection();
+  } = useAdminBranchSelection("all", { from: dateRange.from, to: dateRange.to });
 
   const { data: allEmployees = [], isLoading } = useQuery({
     queryKey: ["employees", branchIdsFilter],

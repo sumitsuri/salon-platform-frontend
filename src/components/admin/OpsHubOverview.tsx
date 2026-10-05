@@ -8,6 +8,7 @@ import { ChevronRight, ClipboardList, IndianRupee, Package, UserCheck, type Luci
 import { api } from "@/lib/api";
 import { getLast30DaysRange, getTodayRange } from "@/lib/date-range";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import type { AdminReportingRange } from "@/lib/branch-reporting";
 import { cn, formatCurrency } from "@/lib/utils";
 import { CompactStatsStrip, type CompactStatItem } from "@/components/CompactStatsStrip";
 
@@ -16,10 +17,16 @@ import { CompactStatsStrip, type CompactStatItem } from "@/components/CompactSta
  * hub links to; revenue/branch/stylist rollups stay on the Home dashboard. Disabled on phones (no requests).
  */
 export function useOpsHubData(enabled: boolean) {
-  const { branchIdsFilter, branchesSelected } = useAdminBranchSelection();
-  const on = enabled && branchesSelected;
   const range = useMemo(() => getLast30DaysRange(), []);
   const today = useMemo(() => getTodayRange(), []);
+  const opsReportingRange = useMemo((): AdminReportingRange => {
+    return {
+      from: range.from < today.from ? range.from : today.from,
+      to: range.to > today.to ? range.to : today.to,
+    };
+  }, [range.from, range.to, today.from, today.to]);
+  const { branchIdsFilter, branchesSelected } = useAdminBranchSelection("all", opsReportingRange);
+  const on = enabled && branchesSelected;
 
   const dashboard = useQuery({
     queryKey: ["ops-hub", "dashboard", branchIdsFilter, range.from, range.to],
