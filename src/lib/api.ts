@@ -244,9 +244,9 @@ async function multipartRequest<T>(path: string, formData: FormData, retried = f
   }
 
   if (!res.ok) {
+    const errBody = body as { message?: string; detail?: string };
     const detail =
-      body.message ||
-      (typeof (body as { detail?: string }).detail === "string" ? (body as { detail: string }).detail : undefined);
+      errBody.message || (typeof errBody.detail === "string" ? errBody.detail : undefined);
     throw new Error(detail || `Request failed (${res.status})`);
   }
   return body.data;
