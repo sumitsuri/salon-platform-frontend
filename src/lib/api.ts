@@ -1059,13 +1059,30 @@ export const api = {
   deleteLocalCompetitor: (id: string) =>
     request<void>(`/api/v1/analytics/benchmark/local-competitors/${id}`, { method: "DELETE" }),
 
-  getLocalSpotlight: (opts?: { branchIds?: string[]; radiusKm?: number; refresh?: boolean }) => {
+  getLocalSpotlight: (opts?: {
+    branchIds?: string[];
+    radiusKm?: number;
+    refresh?: boolean;
+    rankCompareDate?: string;
+  }) => {
     const params = new URLSearchParams();
     if (opts?.radiusKm != null) params.set("radiusKm", String(opts.radiusKm));
     if (opts?.refresh) params.set("refresh", "true");
+    if (opts?.rankCompareDate) params.set("rankCompareDate", opts.rankCompareDate);
     opts?.branchIds?.forEach((id) => params.append("branchIds", id));
     const q = params.toString() ? `?${params.toString()}` : "";
     return request<LocalSpotlightResponse>(`/api/v1/analytics/local-spotlight${q}`);
+  },
+
+  getLocalSpotlightRankHistory: (opts: { branchId: string; from: string; to: string }) => {
+    const params = new URLSearchParams({
+      branchId: opts.branchId,
+      from: opts.from,
+      to: opts.to,
+    });
+    return request<LocalSpotlightRankHistoryResponse>(
+      `/api/v1/analytics/local-spotlight/rank-history?${params.toString()}`
+    );
   },
 
   syncLocalSpotlight: (opts?: { radiusKm?: number; force?: boolean }) => {
@@ -3289,6 +3306,25 @@ export interface LocalSpotlightSearchRankRow {
   inTop3: boolean;
   topThreeSummary: string;
   topThreeRivals?: LocalSpotlightTopThreeRival[];
+  compareRank?: number | null;
+  compareBeyondTop20?: boolean;
+  /** Positive = improved (lower rank number). */
+  rankChange?: number | null;
+}
+
+export interface LocalSpotlightRankHistoryPoint {
+  date: string;
+  keyword: string;
+  pinCode: string;
+  yourRank?: number | null;
+  beyondTop20: boolean;
+}
+
+export interface LocalSpotlightRankHistoryResponse {
+  branchId: string;
+  from: string;
+  to: string;
+  points: LocalSpotlightRankHistoryPoint[];
 }
 
 export interface LocalSpotlightPlaybookItem {
@@ -3328,6 +3364,7 @@ export interface LocalSpotlightResponse {
   branches: LocalSpotlightBranchRow[];
   rivals: LocalSpotlightRivalRow[];
   searchRanks: LocalSpotlightSearchRankRow[];
+  rankCompareDate?: string | null;
   playbook: LocalSpotlightPlaybookItem[];
 }
 

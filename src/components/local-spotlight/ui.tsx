@@ -504,10 +504,15 @@ export function RivalsComparisonTable({
 export function SearchRankTable({
   rows,
   t,
+  compareDateLabel,
 }: {
   rows: LocalSpotlightSearchRankRow[];
   t: (key: string) => string;
+  compareDateLabel?: string | null;
 }) {
+  const showCompare =
+    !!compareDateLabel ||
+    rows.some((r) => r.compareRank != null || r.rankChange != null || r.compareBeyondTop20);
   return (
     <div className="responsive-table-wrap rounded-xl border border-[var(--border)]">
       <table className="min-w-full text-sm">
@@ -516,6 +521,12 @@ export function SearchRankTable({
             <th className="px-3 py-2">{t("branch")}</th>
             <th className="px-3 py-2">{t("keyword")}</th>
             <th className="px-3 py-2">{t("yourRank")}</th>
+            {showCompare ? (
+              <>
+                <th className="px-3 py-2">{compareDateLabel ?? t("compareRank")}</th>
+                <th className="px-3 py-2">{t("rankChange")}</th>
+              </>
+            ) : null}
             <th className="px-3 py-2">{t("topThree")}</th>
           </tr>
         </thead>
@@ -535,6 +546,37 @@ export function SearchRankTable({
                   row.yourRankLabel ?? "—"
                 )}
               </td>
+              {showCompare ? (
+                <>
+                  <td className="px-3 py-3 text-[var(--text-secondary)]">
+                    {row.compareRank != null ? (
+                      `#${row.compareRank}`
+                    ) : row.compareBeyondTop20 ? (
+                      t("notInTop20")
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-3 py-3">
+                    {row.rankChange != null ? (
+                      <span
+                        className={cn(
+                          "font-semibold",
+                          row.rankChange > 0
+                            ? "text-emerald-600"
+                            : row.rankChange < 0
+                              ? "text-red-600"
+                              : "text-[var(--text-secondary)]"
+                        )}
+                      >
+                        {row.rankChange > 0 ? `+${row.rankChange}` : row.rankChange}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </>
+              ) : null}
               <td className="px-3 py-3">
                 {row.topThreeRivals && row.topThreeRivals.length > 0 ? (
                   <ol className="list-decimal space-y-1 pl-4 text-xs">

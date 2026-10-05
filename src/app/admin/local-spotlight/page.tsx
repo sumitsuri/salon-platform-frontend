@@ -59,6 +59,7 @@ export default function LocalSpotlightPage() {
 
   const [tab, setTab] = useState<Tab>("overview");
   const [radiusKm, setRadiusKm] = useState(2);
+  const [rankCompareDate, setRankCompareDate] = useState("");
   const [statFilter, setStatFilter] = useState<StatFilter>("all");
   const [detailBranch, setDetailBranch] = useState<LocalSpotlightBranchRow | null>(null);
   const [editDigital, setEditDigital] = useState(false);
@@ -73,10 +74,11 @@ export default function LocalSpotlightPage() {
     useAdminBranchSelection("pilot");
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["local-spotlight", selectedBranches, radiusKm],
+    queryKey: ["local-spotlight", selectedBranches, radiusKm, rankCompareDate],
     queryFn: () =>
       api.getLocalSpotlight({
         radiusKm,
+        rankCompareDate: rankCompareDate || undefined,
         branchIds:
           selectedBranches.length > 0 && selectedBranches.length < branches.length
             ? selectedBranches
@@ -376,7 +378,27 @@ export default function LocalSpotlightPage() {
                   </p>
                 )}
               </div>
-              <SearchRankTable rows={data.searchRanks} t={t} />
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+                  {t("rankCompareDate")}
+                  <input
+                    type="date"
+                    className={cn(inputClass, "mt-1 max-w-[12rem]")}
+                    value={rankCompareDate}
+                    onChange={(e) => setRankCompareDate(e.target.value)}
+                  />
+                </label>
+                {rankCompareDate ? (
+                  <button type="button" className={btnSecondary} onClick={() => setRankCompareDate("")}>
+                    {t("clearCompareDate")}
+                  </button>
+                ) : null}
+              </div>
+              <SearchRankTable
+                rows={data.searchRanks}
+                t={t}
+                compareDateLabel={data.rankCompareDate ?? rankCompareDate ?? null}
+              />
             </div>
           )}
 
