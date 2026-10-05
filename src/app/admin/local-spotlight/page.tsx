@@ -205,7 +205,7 @@ export default function LocalSpotlightPage() {
       {data?.pilotMode && (
         <AlertBanner variant="info">
           {t("pilotBanner", {
-            branch: data.pilotBranchName ?? data.pilotBranchCode ?? "VAR",
+            branch: data.pilotBranchName ?? data.pilotBranchCode ?? "MW01",
           })}
         </AlertBanner>
       )}
