@@ -123,15 +123,23 @@ export async function normalizePhotoToJpeg(dataUrl: string, maxDim = 1280, quali
   return blob;
 }
 
-export async function openCameraStream(): Promise<MediaStream> {
+export type CameraFacingMode = "user" | "environment";
+
+export async function openCameraStream(preferredFacing?: CameraFacingMode): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw Object.assign(new Error("CAMERA_UNSUPPORTED"), { name: "NotSupportedError" });
   }
-  const attempts: MediaStreamConstraints[] = [
-    { video: { facingMode: { ideal: "user" } }, audio: false },
-    { video: { facingMode: "environment" }, audio: false },
-    { video: true, audio: false },
-  ];
+  const attempts: MediaStreamConstraints[] = preferredFacing
+    ? [
+        { video: { facingMode: { ideal: preferredFacing } }, audio: false },
+        { video: { facingMode: preferredFacing }, audio: false },
+        { video: true, audio: false },
+      ]
+    : [
+        { video: { facingMode: { ideal: "user" } }, audio: false },
+        { video: { facingMode: "environment" }, audio: false },
+        { video: true, audio: false },
+      ];
   let lastError: unknown;
   for (const constraints of attempts) {
     try {

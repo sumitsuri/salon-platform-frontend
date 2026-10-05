@@ -20,4 +20,4 @@ export const STAFF_CONCERN_OPTIONS: ScalpConcernCode[] = [
   "PRODUCT_BUILDUP",
 ];
 
-export const MIN_CAPTURES = 3;
+export const MIN_CAPTURES = 1;
