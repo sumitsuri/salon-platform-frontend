@@ -628,6 +628,33 @@ export function EmptyState({
   );
 }
 
+export function SyncProgressBar({
+  percent,
+  label,
+  sublabel,
+}: {
+  percent: number;
+  label: string;
+  sublabel?: string;
+}) {
+  const clamped = Math.min(100, Math.max(0, percent));
+  return (
+    <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-sm" role="status" aria-live="polite">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+        <span className="font-medium text-[var(--text-primary)]">{label}</span>
+        <span className="text-xs tabular-nums text-[var(--text-secondary)]">{clamped}%</span>
+      </div>
+      {sublabel && <p className="text-xs text-[var(--text-secondary)]">{sublabel}</p>}
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--border)]">
+        <div
+          className="h-full rounded-full bg-[var(--brand)] transition-[width] duration-300 ease-out"
+          style={{ width: `${clamped}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function AlertBanner({
   children,
   variant = "error",

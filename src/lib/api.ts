@@ -140,7 +140,12 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}, retried = false): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  retried = false,
+  timeoutMs = 45_000
+): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -154,7 +159,7 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
     headers["Accept-Language"] = locale;
   }
 
-  const res = await fetchWithTimeout(`${apiBase()}${path}`, { ...options, headers });
+  const res = await fetchWithTimeout(`${apiBase()}${path}`, { ...options, headers }, timeoutMs);
   const text = await res.text();
 
   let body: ApiWrapper<T> & { message?: string } = { success: false, data: undefined as T };
@@ -169,7 +174,7 @@ async function request<T>(path: string, options: RequestInit = {}, retried = fal
   if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
     if (!retried) {
       const refresh = await refreshAccessToken();
-      if (refresh.status === "ok") return request<T>(path, options, true);
+      if (refresh.status === "ok") return request<T>(path, options, true, timeoutMs);
       if (refresh.status === "network_failed") {
         throw new Error("Could not refresh session. Check your connection and try again.");
       }
@@ -1085,12 +1090,21 @@ export const api = {
     );
   },
 
-  syncLocalSpotlight: (opts?: { radiusKm?: number; force?: boolean }) => {
+  getLocalSpotlightSyncProgress: () =>
+    request<LocalSpotlightSyncProgressResponse>(`/api/v1/analytics/local-spotlight/sync/progress`),
+
+  syncLocalSpotlight: (opts?: { radiusKm?: number; force?: boolean; forceKeywords?: boolean }) => {
     const params = new URLSearchParams();
     if (opts?.radiusKm != null) params.set("radiusKm", String(opts.radiusKm));
     if (opts?.force != null) params.set("force", String(opts.force));
+    if (opts?.forceKeywords != null) params.set("forceKeywords", String(opts.forceKeywords));
     const q = params.toString() ? `?${params.toString()}` : "";
-    return request<LocalSpotlightSyncResponse>(`/api/v1/analytics/local-spotlight/sync${q}`, { method: "POST" });
+    return request<LocalSpotlightSyncResponse>(
+      `/api/v1/analytics/local-spotlight/sync${q}`,
+      { method: "POST" },
+      false,
+      180_000
+    );
   },
 
   getExpenditures: (opts?: { branchId?: string; fromMonth?: string; toMonth?: string }) => {
@@ -3369,6 +3383,15 @@ export interface LocalSpotlightResponse {
   keywordRanksExpectedCount?: number;
   keywordRanksStoredCount?: number;
   playbook: LocalSpotlightPlaybookItem[];
+}
+
+export interface LocalSpotlightSyncProgressResponse {
+  active: boolean;
+  phase: string;
+  completedSteps: number;
+  totalSteps: number;
+  detail?: string | null;
+  percent: number;
 }
 
 export interface LocalSpotlightSyncResponse {
