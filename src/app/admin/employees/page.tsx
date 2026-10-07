@@ -644,6 +644,7 @@ function StaffLoginSection({
   onUpdated: (employee: EmployeeDetail) => void;
 }) {
   const t = useTranslations("admin.employees");
+  const qc = useQueryClient();
   const hasLogin = Boolean(employee.hasStaffLogin);
   const [email, setEmail] = useState(employee.staffLoginEmail ?? "");
   const [password, setPassword] = useState("");
@@ -653,6 +654,12 @@ function StaffLoginSection({
   );
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const { data: vaultPassword, isLoading: vaultLoading } = useQuery({
+    queryKey: ["staff-login-vault", employee.id],
+    queryFn: () => api.getStaffLoginVaultPassword(employee.id),
+    enabled: hasLogin,
+  });
 
   const generatePassword = useMutation({
     mutationFn: () => api.getSuggestedStaffPassword(),
@@ -691,6 +698,7 @@ function StaffLoginSection({
       setPassword("");
       setError("");
       setSuccess(t("staffLoginCreated"));
+      qc.invalidateQueries({ queryKey: ["staff-login-vault", employee.id] });
     },
     onError: (e) => {
       setSuccess("");
@@ -719,6 +727,7 @@ function StaffLoginSection({
       setNewPassword("");
       setError("");
       setSuccess(t("staffLoginUpdated"));
+      qc.invalidateQueries({ queryKey: ["staff-login-vault", employee.id] });
     },
     onError: (e) => {
       setSuccess("");
@@ -753,7 +762,27 @@ function StaffLoginSection({
             }}
           />
         </label>
-        <p className="text-[10px] font-medium text-[var(--text-tertiary)]">{t("staffLoginPasswordHint")}</p>
+        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+          {t("staffLoginPasswordLabel")}
+          <StaffPasswordInput
+            className="mt-1"
+            readOnly
+            value={vaultPassword?.available ? vaultPassword.password ?? "" : ""}
+            onChange={() => {}}
+            placeholder={
+              vaultLoading
+                ? t("staffLoginPasswordLoading")
+                : vaultPassword?.available
+                  ? t("staffLoginPasswordMasked")
+                  : t("staffLoginPasswordNotVaulted")
+            }
+          />
+          {!vaultLoading && !vaultPassword?.available ? (
+            <p className="mt-1 text-[10px] font-medium text-[var(--text-tertiary)]">
+              {t("staffLoginPasswordHint")}
+            </p>
+          ) : null}
+        </label>
         <label className="block text-xs font-semibold text-[var(--text-secondary)]">
           {t("staffLoginNewPassword")}
           <StaffPasswordInput

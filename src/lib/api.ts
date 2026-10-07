@@ -1474,13 +1474,18 @@ export const api = {
 
   getStaffPortalGrowth: () => request<StaffGrowthSnapshot>("/api/v1/staff-portal/growth"),
 
-  getStaffPortalSalesInsights: (historyMonths = 2) =>
-    request<StaffPortalSalesInsights>(
-      `/api/v1/staff-portal/sales/insights?historyMonths=${historyMonths}`,
-    ),
+  getStaffPortalSalesInsights: (from: string, to: string) => {
+    const params = new URLSearchParams({ from, to });
+    return request<StaffPortalSalesInsights>(`/api/v1/staff-portal/sales/insights?${params.toString()}`);
+  },
 
   getSuggestedStaffPassword: () =>
     request<{ password: string }>("/api/v1/staff/suggested-password"),
+
+  getStaffLoginVaultPassword: (staffId: string) =>
+    request<{ available: boolean; password?: string | null }>(
+      `/api/v1/staff/${staffId}/login/vault-password`,
+    ),
 
   getStaffPortalLeaves: () => request<LeaveRecord[]>("/api/v1/staff-portal/leaves"),
 
@@ -1747,6 +1752,18 @@ export interface StaffPortalSalesInsights {
     quantity: number;
     amount: number;
   }>;
+  periodSummary: {
+    serviceCount: number;
+    totalSales: number;
+    avgTicket: number;
+  };
+  serviceContributions: Array<{
+    serviceName: string;
+    count: number;
+    revenue: number;
+    sharePercent: number;
+  }>;
+  focusSummary: string;
   boost: {
     monthlyTarget: number;
     actualSalesMtd: number;

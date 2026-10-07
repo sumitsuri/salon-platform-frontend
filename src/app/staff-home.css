@@ -1,3 +1,63 @@
+/* Staff sales — bold period KPIs (3-up) */
+
+.staff-sales-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.staff-sales-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-height: 5.5rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: 0.875rem;
+  border: 2px solid transparent;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.staff-sales-kpi-label {
+  font-size: 0.625rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--text-secondary) 85%, transparent);
+  line-height: 1.2;
+}
+
+.staff-sales-kpi-value {
+  font-size: clamp(1.25rem, 5.5vw, 1.625rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--text-primary);
+}
+
+.staff-sales-kpi-sub {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-secondary);
+  margin-top: 0.125rem;
+}
+
+.staff-sales-kpi--purple {
+  background: linear-gradient(145deg, #ede9fe 0%, #ddd6fe 100%);
+  border-color: #a78bfa66;
+}
+
+.staff-sales-kpi--pink {
+  background: linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%);
+  border-color: #f472b666;
+}
+
+.staff-sales-kpi--green {
+  background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%);
+  border-color: #34d39966;
+}
+
 /* Staff home — dense, action-first (aligned with manager glance density) */
 
 .staff-home {

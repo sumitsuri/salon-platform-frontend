@@ -2591,7 +2591,9 @@
       "staffLoginEmailLabel": "Login email",
       "staffLoginPasswordLabel": "Current password",
       "staffLoginPasswordMasked": "Password is set",
-      "staffLoginPasswordHint": "For security, saved passwords are not shown. Enter a new password below to replace it.",
+      "staffLoginPasswordHint": "Passwords set before this update are not stored for viewing. Save a new password below to enable show/hide here.",
+      "staffLoginPasswordNotVaulted": "Not available — set a new password and save",
+      "staffLoginPasswordLoading": "Loading…",
       "staffLoginNewPassword": "New password (optional)",
       "updateStaffLogin": "Save login changes",
       "updatingStaffLogin": "Saving…",
@@ -3208,7 +3210,16 @@
       "boostOnTarget": "You’re on target this month — keep upselling add-ons.",
       "boostTrack": "Focus: {track}",
       "boostSuggested": "≈ {count}× {service} (~{amount} each)",
-      "boostEst": "≈ {revenue} toward gap"
+      "boostEst": "≈ {revenue} toward gap",
+      "rangeLabel": "Period",
+      "rangeMtd": "This month",
+      "rangeLastMonth": "Last month",
+      "rangeTwoMonths": "Last 2 months",
+      "periodSalesHint": "Services & ticket for selected period",
+      "insightsTitle": "Your focus & sales mix",
+      "contributionTitle": "Sales contribution",
+      "contributionLine": "{share}% · {count} services · {revenue}",
+      "targetFocusTitle": "What to push for your target"
     },
     "goals": {
       "title": "Goals",
