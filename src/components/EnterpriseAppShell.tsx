@@ -293,15 +293,18 @@ export function EnterpriseAppShell({
               moreActive={moreActive || mobileMoreOpen}
               onMoreClick={() => setMobileMoreOpen(true)}
               hidden={mobileMoreOpen || hideBottomBarByRoute}
+              showMoreTab={mobileBottomNav.showMoreTab !== false}
             />
-            <MobileMoreMenuSheet
-              open={mobileMoreOpen}
-              onClose={() => setMobileMoreOpen(false)}
-              title={mobileBottomNav.menuTitle}
-              sections={mobileBottomNav.moreSections}
-              brandName={brandName}
-              brandSubtitle={brandSubtitle}
-            />
+            {mobileBottomNav.showMoreTab !== false && mobileBottomNav.moreSections.length > 0 ? (
+              <MobileMoreMenuSheet
+                open={mobileMoreOpen}
+                onClose={() => setMobileMoreOpen(false)}
+                title={mobileBottomNav.menuTitle}
+                sections={mobileBottomNav.moreSections}
+                brandName={brandName}
+                brandSubtitle={brandSubtitle}
+              />
+            ) : null}
           </>
         ) : null}
         <SettingsSheet open={settingsOpen} onClose={() => onSettingsOpen(false)} />

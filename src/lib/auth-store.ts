@@ -65,6 +65,8 @@ export function getHomeForRole(role: string) {
       return "/platform/sales";
     case "BRAND_ADMIN":
       return "/admin";
+    case "SALON_STAFF":
+      return "/staff";
     default:
       return "/manager";
   }

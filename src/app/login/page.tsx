@@ -84,6 +84,7 @@ export default function LoginPage() {
                   <p>Velvet CEO: ceo@velvet-scissors.local / ceo123</p>
                   <p>Bloom CEO: ceo@bloom-beauty.local / ceo123</p>
                   <p>Crown CEO: ceo@crown-comb.local / ceo123</p>
+                  <p>Staff app: amit.lithos@demo-brand.local / staff123</p>
                   <p className="pt-1 text-[var(--text-muted)]">All managers use manager123 — full list in docs/DEMO_CREDENTIALS.md</p>
                 </div>
               </details>

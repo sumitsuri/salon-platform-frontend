@@ -25,7 +25,8 @@ export type UserRole =
   | "SALES_EXECUTIVE"
   | "BRAND_ADMIN"
   | "BRANCH_MANAGER"
-  | "SALON_MANAGER";
+  | "SALON_MANAGER"
+  | "SALON_STAFF";
 
 export interface AuthUser {
   accessToken: string;
@@ -41,6 +42,7 @@ export interface AuthUser {
   primaryColor?: string;
   logoUrl?: string;
   preferredLocale?: string | null;
+  staffId?: string;
 }
 
 interface ApiWrapper<T> {
@@ -1437,6 +1439,73 @@ export const api = {
     search.set("size", String(params.size ?? 20));
     return request<PageResult<FaceScanSession>>(`/api/v1/face-scans?${search.toString()}`);
   },
+
+  getStaffPortalProfile: () => request<StaffPortalProfile>("/api/v1/staff-portal/me"),
+
+  updateStaffPortalProfile: (data: { phone?: string; designation?: string }) =>
+    request<StaffPortalProfile>("/api/v1/staff-portal/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  staffPortalPunch: (
+    data: { action?: string; latitude?: number; longitude?: number; accuracyMeters?: number; locationHighAccuracy?: boolean },
+    photo: Blob,
+  ) => {
+    const form = new FormData();
+    if (data.action) form.append("action", data.action);
+    if (data.latitude != null) form.append("latitude", String(data.latitude));
+    if (data.longitude != null) form.append("longitude", String(data.longitude));
+    if (data.accuracyMeters != null) form.append("accuracyMeters", String(data.accuracyMeters));
+    if (data.locationHighAccuracy != null) form.append("locationHighAccuracy", String(data.locationHighAccuracy));
+    const file =
+      photo instanceof File ? photo : new File([photo], "punch.jpg", { type: photo.type || "image/jpeg" });
+    form.append("photo", file, "punch.jpg");
+    return multipartRequest<PunchResult>("/api/v1/staff-portal/attendance/punch", form);
+  },
+
+  getStaffPortalAttendanceMonth: (year?: number, month?: number) => {
+    const params = new URLSearchParams();
+    if (year != null) params.set("year", String(year));
+    if (month != null) params.set("month", String(month));
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request<StaffAttendanceMonth>(`/api/v1/staff-portal/attendance/month${q}`);
+  },
+
+  getStaffPortalGrowth: () => request<StaffGrowthSnapshot>("/api/v1/staff-portal/growth"),
+
+  getStaffPortalLeaves: () => request<LeaveRecord[]>("/api/v1/staff-portal/leaves"),
+
+  applyStaffPortalLeave: (data: CreateLeaveRequest) =>
+    request<LeaveRecord>("/api/v1/staff-portal/leaves", { method: "POST", body: JSON.stringify(data) }),
+
+  getStaffPortalGoals: () => request<StaffGoalItem[]>("/api/v1/staff-portal/goals"),
+
+  getStaffPortalReviews: () => request<StaffPerformanceReviewItem[]>("/api/v1/staff-portal/reviews"),
+
+  uploadStaffProfilePhoto: (photo: Blob) => {
+    const form = new FormData();
+    const file =
+      photo instanceof File ? photo : new File([photo], "profile.jpg", { type: photo.type || "image/jpeg" });
+    form.append("photo", file, "profile.jpg");
+    return multipartRequest<StaffPortalProfile>("/api/v1/staff-portal/me/profile-photo", form);
+  },
+
+  uploadStaffAadhar: (document: Blob) => {
+    const form = new FormData();
+    const file =
+      document instanceof File
+        ? document
+        : new File([document], "aadhar.jpg", { type: document.type || "image/jpeg" });
+    form.append("document", file, "aadhar.jpg");
+    return multipartRequest<StaffPortalProfile>("/api/v1/staff-portal/me/aadhar", form);
+  },
+
+  provisionStaffLogin: (staffId: string, data: { email: string; password: string; designation?: string }) =>
+    request<EmployeeDetail>(`/api/v1/staff/${staffId}/login`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 export interface Customer {
@@ -1601,6 +1670,81 @@ export interface StaffItem {
 export type StaffRole = "STYLIST" | "BRANCH_MANAGER" | "SALON_MANAGER";
 
 /** Full employee record — sensitive fields only returned for CEO (BRAND_ADMIN) */
+export interface StaffPortalProfile {
+  staffId: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  designation?: string;
+  role: StaffRole;
+  skills?: string;
+  branchId: string;
+  branchName?: string;
+  joiningDate?: string;
+  hasProfilePhoto: boolean;
+  hasAadharDocument: boolean;
+  idProofReference?: string;
+  monthlySalesTarget?: number;
+  incentivePercent?: number;
+}
+
+export interface StaffAttendanceMonth {
+  year: number;
+  month: number;
+  monthLabel: string;
+  periodLabel?: string;
+  presentDays: number;
+  absentDays: number;
+  halfDays: number;
+  leaveDays: number;
+  overtimeHours: string;
+  lessHours: string;
+  days: AttendanceRecord[];
+}
+
+export interface StaffGrowthSnapshot {
+  periodLabel: string;
+  monthlySalesTarget: number;
+  actualSales: number;
+  achievementPercent: number;
+  meetingTarget: boolean;
+  onTrack: boolean;
+  salesCount: number;
+  avgTicketSize: number;
+  projectedIncentive: number;
+  attendanceComplianceScore: number;
+  daysPresent: number;
+  daysAbsent: number;
+  todaySales?: number;
+  todaySalesCount?: number;
+}
+
+export interface StaffGoalItem {
+  id: string;
+  title: string;
+  description?: string;
+  metricUnit?: string;
+  targetValue?: number;
+  currentValue?: number;
+  periodStart?: string;
+  periodEnd?: string;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED";
+  progressPercent: number;
+}
+
+export interface StaffPerformanceReviewItem {
+  id: string;
+  periodLabel: string;
+  reviewDate?: string;
+  overallRating?: number;
+  strengths?: string;
+  improvements?: string;
+  managerNotes?: string;
+  attendanceScore?: number;
+  salesAchievementPercent?: number;
+}
+
 export interface EmployeeDetail {
   id: string;
   name: string;
@@ -1610,6 +1754,8 @@ export interface EmployeeDetail {
   role: StaffRole;
   skills?: string;
   biometricId?: string;
+  designation?: string;
+  hasStaffLogin?: boolean;
   active: boolean;
   /** ISO timestamp of soft-deactivation; earlier attendance and sales are retained. */
   deactivatedAt?: string;

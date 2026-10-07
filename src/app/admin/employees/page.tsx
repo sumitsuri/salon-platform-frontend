@@ -623,6 +623,75 @@ function EmployeeDrawer({
   );
 }
 
+function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
+  const t = useTranslations("admin.employees");
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [designation, setDesignation] = useState(employee.designation ?? "");
+  const [error, setError] = useState("");
+
+  const provision = useMutation({
+    mutationFn: () =>
+      api.provisionStaffLogin(employee.id, {
+        email,
+        password,
+        designation: designation || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      setPassword("");
+      setError("");
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : t("staffLoginFailed")),
+  });
+
+  if (employee.hasStaffLogin) {
+    return (
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+        <p className="text-sm font-semibold text-emerald-900">{t("staffLoginActive")}</p>
+        <p className="text-xs text-emerald-800 mt-1">{t("staffLoginActiveHint")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] p-4 space-y-3">
+      <p className="text-sm font-semibold text-[var(--text-primary)]">{t("staffAppLogin")}</p>
+      <p className="text-xs text-[var(--text-secondary)]">{t("staffAppLoginHint")}</p>
+      {error && <AlertBanner variant="error">{error}</AlertBanner>}
+      <input
+        type="email"
+        className={inputClass}
+        placeholder={t("staffLoginEmail")}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <input
+        type="password"
+        className={inputClass}
+        placeholder={t("staffLoginPassword")}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <input
+        className={inputClass}
+        placeholder={t("designationOptional")}
+        value={designation}
+        onChange={(e) => setDesignation(e.target.value)}
+      />
+      <button
+        type="button"
+        className={btnPrimarySm}
+        disabled={!email || password.length < 6 || provision.isPending}
+        onClick={() => provision.mutate()}
+      >
+        {provision.isPending ? t("creatingLogin") : t("createStaffLogin")}
+      </button>
+    </div>
+  );
+}
+
 function EmployeeDetailView({
   employee,
   performance,
@@ -657,6 +726,8 @@ function EmployeeDetailView({
           )}
         </div>
       )}
+
+      <StaffLoginSection employee={employee} />
 
       <SectionTitle>{tAdmin("profile")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">

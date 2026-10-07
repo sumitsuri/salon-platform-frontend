@@ -151,6 +151,29 @@ export default function ManagerAttendancePage() {
     onSuccess: () => {
       setLeaveReason("");
       queryClient.invalidateQueries({ queryKey: ["leaves", branchId] });
+      queryClient.invalidateQueries({ queryKey: ["leaves-pending", branchId] });
+    },
+  });
+
+  const { data: pendingLeaves } = useQuery({
+    queryKey: ["leaves-pending", branchId],
+    queryFn: () => api.getLeaves({ branchId, status: "PENDING", size: 50 }),
+    enabled: !!branchId,
+  });
+
+  const approveLeaveMutation = useMutation({
+    mutationFn: (leaveId: string) => api.approveLeave(leaveId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaves-pending", branchId] });
+      queryClient.invalidateQueries({ queryKey: ["leaves", branchId] });
+    },
+  });
+
+  const rejectLeaveMutation = useMutation({
+    mutationFn: (leaveId: string) => api.rejectLeave(leaveId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leaves-pending", branchId] });
+      queryClient.invalidateQueries({ queryKey: ["leaves", branchId] });
     },
   });
 
@@ -393,6 +416,46 @@ export default function ManagerAttendancePage() {
           >
             {leaveMutation.isPending ? t("submitting") : t("submitLeave")}
           </button>
+
+          {(pendingLeaves?.content?.length ?? 0) > 0 && (
+            <div className="border-t border-[var(--border)] pt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                {t("pendingApprovals")}
+              </p>
+              {pendingLeaves!.content.map((leave) => (
+                <div
+                  key={leave.id}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-3 space-y-2"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{leave.staffName}</p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      {leave.startDate} → {leave.endDate}
+                    </p>
+                    {leave.reason && <p className="text-xs text-[var(--text-tertiary)] mt-1">{leave.reason}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={`${btnPrimary} flex-1 py-2 text-xs`}
+                      disabled={approveLeaveMutation.isPending}
+                      onClick={() => approveLeaveMutation.mutate(leave.id)}
+                    >
+                      {t("approveLeave")}
+                    </button>
+                    <button
+                      type="button"
+                      className={`${btnPrimary} flex-1 py-2 text-xs bg-red-600 hover:bg-red-700 shadow-red-600/20`}
+                      disabled={rejectLeaveMutation.isPending}
+                      onClick={() => rejectLeaveMutation.mutate(leave.id)}
+                    >
+                      {t("rejectLeave")}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 

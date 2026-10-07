@@ -115,6 +115,8 @@ export type MobileBottomNavConfig = {
   moreSections: MobileMoreNavSection[];
   moreTabLabel: string;
   menuTitle: string;
+  /** When false, bottom bar shows only tabs (e.g. staff app with full daily nav). Default true. */
+  showMoreTab?: boolean;
   /** Paths that activate the More tab highlight */
   moreActivePrefixes?: string[];
   /** Hide the bottom tab bar on these path prefixes (e.g. walk-in wizard with its own footer). */

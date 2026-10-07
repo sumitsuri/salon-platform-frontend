@@ -13,6 +13,7 @@ type Props = {
   moreActive?: boolean;
   onMoreClick: () => void;
   hidden?: boolean;
+  showMoreTab?: boolean;
 };
 
 function tabActive(pathname: string, tab: MobileBottomTabItem): boolean {
@@ -26,7 +27,7 @@ function tabActive(pathname: string, tab: MobileBottomTabItem): boolean {
   return isNavActive(pathname, tab.href, tab.exact);
 }
 
-function renderTab(tab: MobileBottomTabItem, pathname: string) {
+function renderTab(tab: MobileBottomTabItem, pathname: string, compactLabels: boolean) {
   const Icon = tab.icon;
   const active = tabActive(pathname, tab);
   return (
@@ -43,7 +44,14 @@ function renderTab(tab: MobileBottomTabItem, pathname: string) {
       )}
     >
       <Icon className={cn("h-5 w-5 shrink-0", active && "text-[var(--brand)]")} aria-hidden />
-      <span className="text-[10px] font-bold leading-none tracking-tight heading-case">{tab.label}</span>
+      <span
+        className={cn(
+          "font-bold leading-none tracking-tight heading-case px-0.5 text-center line-clamp-2",
+          compactLabels ? "text-[8px]" : "text-[10px]",
+        )}
+      >
+        {tab.label}
+      </span>
     </Link>
   );
 }
@@ -79,6 +87,7 @@ export function MobileBottomTabBar({
   moreActive,
   onMoreClick,
   hidden,
+  showMoreTab = true,
 }: Props) {
   const pathname = usePathname();
 
@@ -91,7 +100,8 @@ export function MobileBottomTabBar({
 
   const regularTabs = tabs.filter((t) => !t.primary);
   const primaryTab = tabs.find((t) => t.primary);
-  const colCount = regularTabs.length + (primaryTab ? 1 : 0) + 1;
+  const colCount = regularTabs.length + (primaryTab ? 1 : 0) + (showMoreTab ? 1 : 0);
+  const compactLabels = regularTabs.length >= 6;
 
   return (
     <nav
@@ -106,28 +116,30 @@ export function MobileBottomTabBar({
       >
         {primaryTab ? (
           <>
-            {regularTabs.slice(0, 2).map((tab) => renderTab(tab, pathname))}
+            {regularTabs.slice(0, 2).map((tab) => renderTab(tab, pathname, compactLabels))}
             {renderPrimary(primaryTab, brandColor)}
-            {regularTabs.slice(2).map((tab) => renderTab(tab, pathname))}
+            {regularTabs.slice(2).map((tab) => renderTab(tab, pathname, compactLabels))}
           </>
         ) : (
-          regularTabs.map((tab) => renderTab(tab, pathname))
+          regularTabs.map((tab) => renderTab(tab, pathname, compactLabels))
         )}
 
-        <button
-          type="button"
-          onClick={onMoreClick}
-          data-testid="mobile-tab-more"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 rounded-xl mx-0.5 touch-manipulation transition-colors min-h-[3rem]",
-            moreActive
-              ? "text-[var(--brand-text)] bg-[var(--brand-light)]/50"
-              : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
-          )}
-        >
-          <LayoutGrid className={cn("h-5 w-5 shrink-0", moreActive && "text-[var(--brand)]")} aria-hidden />
-          <span className="text-[10px] font-bold leading-none tracking-tight heading-case">{moreLabel}</span>
-        </button>
+        {showMoreTab ? (
+          <button
+            type="button"
+            onClick={onMoreClick}
+            data-testid="mobile-tab-more"
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 rounded-xl mx-0.5 touch-manipulation transition-colors min-h-[3rem]",
+              moreActive
+                ? "text-[var(--brand-text)] bg-[var(--brand-light)]/50"
+                : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]",
+            )}
+          >
+            <LayoutGrid className={cn("h-5 w-5 shrink-0", moreActive && "text-[var(--brand)]")} aria-hidden />
+            <span className="text-[10px] font-bold leading-none tracking-tight heading-case">{moreLabel}</span>
+          </button>
+        ) : null}
       </div>
     </nav>
   );

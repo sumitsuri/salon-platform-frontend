@@ -1,0 +1,132 @@
+/* Staff home — dense, action-first (aligned with manager glance density) */
+
+.staff-home {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .staff-home {
+    gap: 0.75rem;
+  }
+}
+
+.staff-home-greeting {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.staff-home-meta {
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.staff-home-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+@media (min-width: 480px) {
+  .staff-home-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.staff-home-action-btn {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  touch-action: manipulation;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.staff-home-action-btn:active {
+  transform: scale(0.98);
+}
+
+.staff-home-action-btn--primary {
+  grid-column: span 2;
+  background: var(--brand);
+  color: white;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--brand) 60%, black);
+}
+
+@media (min-width: 480px) {
+  .staff-home-action-btn--primary {
+    grid-column: span 1;
+  }
+}
+
+.staff-home-action-btn--secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.staff-home-insight {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 70%, transparent);
+  text-decoration: none;
+  color: inherit;
+}
+
+.staff-home-insight:hover {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+  background: color-mix(in srgb, var(--brand-light) 25%, var(--surface));
+}
+
+.staff-home-insight-icon {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.staff-home-insight--warn {
+  border-color: color-mix(in srgb, #f59e0b 35%, var(--border));
+  background: color-mix(in srgb, #fffbeb 70%, var(--surface));
+}
+
+.staff-home-insight--ok {
+  border-color: color-mix(in srgb, #10b981 30%, var(--border));
+  background: color-mix(in srgb, #ecfdf5 55%, var(--surface));
+}
+
+.staff-home-tip {
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  padding: 0 0.125rem;
+}
+
+.staff-home-tip strong {
+  font-weight: 700;
+  color: var(--text-primary);
+}
