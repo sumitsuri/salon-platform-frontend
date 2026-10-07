@@ -9,7 +9,6 @@ import { btnPrimary } from "@/components/ui";
 import { StaffSelfPunchSheet } from "@/components/staff/StaffSelfPunchSheet";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
 import { StaffMtdPeriodHeader, StaffDailySectionLabel } from "@/components/staff/StaffMtdPeriodHeader";
-import { StaffPayrollCoachNote } from "@/components/staff/StaffPayrollCoachNote";
 import { StaffAttendanceDayList } from "@/components/staff/StaffAttendanceDayList";
 import { cn } from "@/lib/utils";
 
@@ -136,10 +135,6 @@ export function StaffAttendanceSection() {
               {t("checkOut")}
             </button>
           )}
-        </div>
-
-        <div id="payroll-tip">
-          <StaffPayrollCoachNote />
         </div>
 
         <StaffAttendanceDayList days={data?.days ?? []} isLoading={isLoading} />

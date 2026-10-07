@@ -2,10 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { AttendanceRecord } from "@/lib/api";
-import { Card, InfiniteScrollFooter, InfiniteScrollViewport } from "@/components/ui";
-import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
+import { Card } from "@/components/ui";
+import { useClientPagedList } from "@/lib/use-client-paged-list";
 import { cn } from "@/lib/utils";
 import { STAFF_ATTENDANCE_LIST_PAGE_SIZE } from "@/components/staff/staff-list-constants";
+import { ListPageArrows } from "@/components/staff/ListPageArrows";
 
 function formatTime(iso?: string) {
   if (!iso) return "—";
@@ -38,8 +39,8 @@ type Props = {
 export function StaffAttendanceDayList({ days, isLoading, previewLimit, sectionTitle = true }: Props) {
   const t = useTranslations("staff.attendance");
   const pageSize = previewLimit ?? STAFF_ATTENDANCE_LIST_PAGE_SIZE;
-  const { visible, totalElements, loadedCount, hasMore, loadMore } = useClientInfiniteList(days, pageSize);
-  const rows = previewLimit != null ? days.slice(0, previewLimit) : visible;
+  const pager = useClientPagedList(days, pageSize);
+  const rows = previewLimit != null ? days.slice(0, previewLimit) : pager.pageItems;
 
   return (
     <div className="min-w-0 space-y-2">
@@ -53,47 +54,46 @@ export function StaffAttendanceDayList({ days, isLoading, previewLimit, sectionT
         )}
         {!isLoading && days.length > 0 && (
           <>
-            <InfiniteScrollViewport visibleRows={STAFF_ATTENDANCE_LIST_PAGE_SIZE} className={previewLimit ? undefined : ""}>
-              <div className="divide-y divide-[var(--border)]">
-                {rows.map((record) => (
-                  <div key={record.workDate} className="flex items-center gap-3 px-4 py-3">
-                    <div className="min-w-[88px] text-xs font-semibold text-[var(--text-secondary)]">
-                      {rowLabel(record.workDate)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={cn(
-                          "text-sm font-semibold",
-                          record.status === "ABSENT" ? "text-amber-700" : "text-[var(--text-primary)]",
-                        )}
-                      >
-                        {record.status === "ABSENT"
-                          ? t("absent")
-                          : record.exitTime
-                            ? t("presentCompleted")
-                            : t("presentOpen")}
-                      </p>
-                      {record.entryTime && (
-                        <p className="text-xs text-[var(--text-secondary)]">
-                          {formatTime(record.entryTime)}
-                          {record.exitTime ? ` - ${formatTime(record.exitTime)}` : ""}
-                        </p>
-                      )}
-                      {record.hoursWorked != null && record.status !== "ABSENT" && (
-                        <p className="text-[10px] font-medium text-[var(--text-tertiary)]">{formatHours(record.hoursWorked)}</p>
-                      )}
-                    </div>
+            <div className="divide-y divide-[var(--border)]">
+              {rows.map((record) => (
+                <div key={record.workDate} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-[88px] text-xs font-semibold text-[var(--text-secondary)]">
+                    {rowLabel(record.workDate)}
                   </div>
-                ))}
-              </div>
-            </InfiniteScrollViewport>
-            {!previewLimit && days.length > 0 && (
-              <InfiniteScrollFooter
-                totalElements={totalElements}
-                loadedCount={loadedCount}
-                hasMore={hasMore}
-                isFetchingNextPage={false}
-                onLoadMore={loadMore}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        record.status === "ABSENT" ? "text-amber-700" : "text-[var(--text-primary)]",
+                      )}
+                    >
+                      {record.status === "ABSENT"
+                        ? t("absent")
+                        : record.exitTime
+                          ? t("presentCompleted")
+                          : t("presentOpen")}
+                    </p>
+                    {record.entryTime && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        {formatTime(record.entryTime)}
+                        {record.exitTime ? ` - ${formatTime(record.exitTime)}` : ""}
+                      </p>
+                    )}
+                    {record.hoursWorked != null && record.status !== "ABSENT" && (
+                      <p className="text-[10px] font-medium text-[var(--text-tertiary)]">{formatHours(record.hoursWorked)}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {!previewLimit && pager.showPager && (
+              <ListPageArrows
+                page={pager.page}
+                totalPages={pager.totalPages}
+                hasPrev={pager.hasPrev}
+                hasNext={pager.hasNext}
+                onPrev={pager.goPrev}
+                onNext={pager.goNext}
               />
             )}
           </>

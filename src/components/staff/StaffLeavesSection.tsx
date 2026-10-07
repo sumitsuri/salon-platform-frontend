@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { api, CreateLeaveRequest } from "@/lib/api";
 import { Card, StatusBadge, inputClass, btnPrimary, AlertBanner } from "@/components/ui";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
+import { useClientPagedList, DEFAULT_LIST_PAGE_SIZE } from "@/lib/use-client-paged-list";
+import { ListPageArrows } from "@/components/staff/ListPageArrows";
 
 function todayStr() {
   const d = new Date();
@@ -29,6 +31,8 @@ export function StaffLeavesSection() {
     queryKey: ["staff-portal-leaves"],
     queryFn: () => api.getStaffPortalLeaves(),
   });
+
+  const leavesPager = useClientPagedList(leaves, DEFAULT_LIST_PAGE_SIZE);
 
   const apply = useMutation({
     mutationFn: () => {
@@ -92,22 +96,33 @@ export function StaffLeavesSection() {
 
         <div>
           <p className="section-label mb-2">{t("history")}</p>
-          <Card className="divide-y divide-[var(--border)] overflow-hidden p-0 max-h-[20rem] overflow-y-auto">
+          <Card className="divide-y divide-[var(--border)] overflow-hidden p-0">
             {isLoading && <p className="p-4 text-sm text-[var(--text-secondary)]">{t("loading")}</p>}
             {!isLoading && leaves.length === 0 && (
               <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
             )}
-            {leaves.map((leave) => (
-              <div key={leave.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
-                    {leave.startDate} → {leave.endDate}
-                  </p>
-                  <p className="text-xs text-[var(--text-secondary)] line-clamp-2">{leave.reason}</p>
+            {!isLoading &&
+              leavesPager.pageItems.map((leave) => (
+                <div key={leave.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      {leave.startDate} → {leave.endDate}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] line-clamp-2">{leave.reason}</p>
+                  </div>
+                  <StatusBadge status={leave.status} />
                 </div>
-                <StatusBadge status={leave.status} />
-              </div>
-            ))}
+              ))}
+            {!isLoading && leavesPager.showPager && (
+              <ListPageArrows
+                page={leavesPager.page}
+                totalPages={leavesPager.totalPages}
+                hasPrev={leavesPager.hasPrev}
+                hasNext={leavesPager.hasNext}
+                onPrev={leavesPager.goPrev}
+                onNext={leavesPager.goNext}
+              />
+            )}
           </Card>
         </div>
       </div>

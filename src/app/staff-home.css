@@ -7,6 +7,16 @@
   min-width: 0;
 }
 
+@media (max-width: 380px) {
+  .staff-sales-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .staff-sales-kpi-grid .staff-sales-kpi--total {
+    grid-column: 1 / -1;
+  }
+}
+
 .staff-sales-kpi {
   display: flex;
   flex-direction: column;
@@ -56,6 +66,11 @@
 .staff-sales-kpi--green {
   background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%);
   border-color: #34d39966;
+}
+
+.staff-sales-kpi--total {
+  background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b66;
 }
 
 /* Staff home — dense, action-first (aligned with manager glance density) */

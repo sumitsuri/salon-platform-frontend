@@ -6,6 +6,7 @@ import { PageHeader, SegmentedControl } from "@/components/ui";
 import { StaffPageShell } from "@/components/staff/StaffPageShell";
 import { StaffAttendanceSection } from "@/components/staff/StaffAttendanceSection";
 import { StaffLeavesSection } from "@/components/staff/StaffLeavesSection";
+import { StaffPayrollCoachNote } from "@/components/staff/StaffPayrollCoachNote";
 
 export default function StaffTimePage() {
   const t = useTranslations("staff.time");
@@ -14,6 +15,7 @@ export default function StaffTimePage() {
   return (
     <StaffPageShell className="pb-6">
       <PageHeader title={t("title")} subtitle={t("subtitleCompact")} />
+      <StaffPayrollCoachNote className="mb-1" />
       <div className="lg:hidden mb-2">
         <SegmentedControl
           value={tab}

@@ -17,7 +17,6 @@ export default function StaffProfilePage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const [phone, setPhone] = useState("");
-  const [designation, setDesignation] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -30,7 +29,6 @@ export default function StaffProfilePage() {
   useEffect(() => {
     if (!profile) return;
     setPhone(profile.phone ?? "");
-    setDesignation(profile.designation ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -57,7 +55,7 @@ export default function StaffProfilePage() {
   }, [profile?.hasProfilePhoto]);
 
   const saveProfile = useMutation({
-    mutationFn: () => api.updateStaffPortalProfile({ phone, designation }),
+    mutationFn: () => api.updateStaffPortalProfile({ phone }),
     onSuccess: () => {
       setMsg(t("saved"));
       queryClient.invalidateQueries({ queryKey: ["staff-portal-profile"] });
@@ -130,20 +128,28 @@ export default function StaffProfilePage() {
         </label>
         <label className="text-xs font-semibold text-[var(--text-secondary)]">
           {t("designation")}
-          <input className={`${inputClass} mt-1`} value={designation} onChange={(e) => setDesignation(e.target.value)} />
+          <input
+            className={`${inputClass} mt-1 bg-[var(--surface-muted)]/80 text-[var(--text-secondary)] cursor-default`}
+            value={profile?.designation ?? ""}
+            readOnly
+            aria-readonly="true"
+          />
+          <span className="mt-1 block text-[10px] font-medium text-[var(--text-tertiary)]">{t("designationReadOnly")}</span>
         </label>
-        <button
-          type="button"
-          className={btnPrimary}
-          disabled={saveProfile.isPending}
-          onClick={() => {
-            setError("");
-            setMsg("");
-            saveProfile.mutate();
-          }}
-        >
-          {saveProfile.isPending ? t("saving") : t("save")}
-        </button>
+        <div className="pt-1 flex justify-end">
+          <button
+            type="button"
+            className={`${btnPrimary} w-full sm:w-auto min-w-[8rem]`}
+            disabled={saveProfile.isPending}
+            onClick={() => {
+              setError("");
+              setMsg("");
+              saveProfile.mutate();
+            }}
+          >
+            {saveProfile.isPending ? t("saving") : t("save")}
+          </button>
+        </div>
       </Card>
 
       <Card className="space-y-3 p-4">

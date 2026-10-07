@@ -1771,12 +1771,14 @@ export interface StaffPortalSalesInsights {
     daysRemaining: number;
     dailyNeeded: number;
     trackLabel: string;
+    incentivePercent?: number;
     suggestions: Array<{
       serviceName: string;
       typicalAmount: number;
       suggestedCount: number;
       estimatedRevenue: number;
       rationale: string;
+      packageOffer?: boolean;
     }>;
   };
 }
