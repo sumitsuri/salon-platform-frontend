@@ -6,6 +6,7 @@ import { AlertCircle, CalendarRange, Droplets, Sparkles, Stethoscope, Sun } from
 import { fetchFaceScanCaptureBlob, type FaceScanSession } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui";
+import { ScanAnalysisMetaBanner } from "@/components/manager/scan/ScanAnalysisMetaBanner";
 
 function MetricBar({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
@@ -75,7 +76,9 @@ export function FaceScanReportView({ session }: { session: FaceScanSession }) {
         </div>
       </Card>
 
-      {metrics && (
+      <ScanAnalysisMetaBanner meta={report?.analysisMeta} />
+
+      {metrics && report?.analysisMeta?.confidence !== "LOW" && (
         <Card className="p-4 space-y-3">
           <h3 className="ui-card-title">{t("report.metricsTitle")}</h3>
           <MetricBar label={t("report.oiliness")} value={metrics.oilinessIndex} accent="bg-amber-500" />

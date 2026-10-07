@@ -6,6 +6,7 @@ import { AlertCircle, Droplets, Sparkles, Stethoscope, Sun } from "lucide-react"
 import { fetchScalpScanCaptureBlob, type ScalpScanSession } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui";
+import { ScanAnalysisMetaBanner } from "@/components/manager/scan/ScanAnalysisMetaBanner";
 
 function MetricBar({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
@@ -69,7 +70,9 @@ export function ScalpScanReportView({ session }: { session: ScalpScanSession }) 
         </div>
       </Card>
 
-      {metrics && (
+      <ScanAnalysisMetaBanner meta={report?.analysisMeta} />
+
+      {metrics && report?.analysisMeta?.confidence !== "LOW" && (
         <Card className="p-4 space-y-3">
           <h3 className="ui-card-title">{t("report.metricsTitle")}</h3>
           <MetricBar label={t("report.oiliness")} value={metrics.oilinessIndex} accent="bg-amber-500" />
