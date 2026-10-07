@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import {
@@ -88,21 +88,61 @@ export default function LocalSpotlightPage() {
     enabled: branchesSelected,
   });
 
+  const [syncPollActive, setSyncPollActive] = useState(false);
+  const wasSyncActiveRef = useRef(false);
+
   const syncGoogle = useMutation({
     mutationFn: () => api.syncLocalSpotlight({ radiusKm, force: true, forceKeywords: true }),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.started) {
+        setSyncPollActive(true);
+        return;
+      }
+      setSyncPollActive(false);
       qc.invalidateQueries({ queryKey: ["local-spotlight"] });
+    },
+    onError: async () => {
+      try {
+        const progress = await api.getLocalSpotlightSyncProgress();
+        if (progress.active) {
+          setSyncPollActive(true);
+        }
+      } catch {
+        /* ignore — error banner handles true failures */
+      }
     },
   });
 
-  const syncRunning = syncGoogle.isPending;
+  const syncRunning = syncGoogle.isPending || syncPollActive;
+
+  useQuery({
+    queryKey: ["local-spotlight-sync-progress", "boot"],
+    queryFn: async () => {
+      const progress = await api.getLocalSpotlightSyncProgress();
+      if (progress.active) {
+        setSyncPollActive(true);
+      }
+      return progress;
+    },
+    staleTime: 0,
+    retry: 1,
+  });
 
   const { data: syncProgress } = useQuery({
     queryKey: ["local-spotlight-sync-progress"],
     queryFn: () => api.getLocalSpotlightSyncProgress(),
-    enabled: syncRunning,
-    refetchInterval: syncRunning ? 400 : false,
+    enabled: syncPollActive || syncGoogle.isPending,
+    refetchInterval: syncPollActive || syncGoogle.isPending ? 500 : false,
   });
+
+  useEffect(() => {
+    const active = !!syncProgress?.active;
+    if (wasSyncActiveRef.current && !active && syncPollActive) {
+      setSyncPollActive(false);
+      qc.invalidateQueries({ queryKey: ["local-spotlight"] });
+    }
+    wasSyncActiveRef.current = active;
+  }, [syncProgress?.active, syncPollActive, qc]);
 
   const syncProgressLabel = useMemo(() => {
     if (!syncRunning) return "";
@@ -259,13 +299,27 @@ export default function LocalSpotlightPage() {
         <AlertBanner variant="warning">{data.syncStatusMessage}</AlertBanner>
       )}
 
-      {syncGoogle.isError && (
+      {syncGoogle.isError && !syncPollActive && !syncProgress?.active && (
         <AlertBanner variant="error">
           {(syncGoogle.error as Error)?.message ?? t("googleSyncFailed")}
         </AlertBanner>
       )}
 
-      {syncGoogle.data?.message && (
+      {!syncRunning && syncProgress?.lastSyncError && (
+        <AlertBanner variant="error">{syncProgress.lastSyncError}</AlertBanner>
+      )}
+
+      {syncGoogle.data?.started && syncRunning && (
+        <AlertBanner variant="info">{t("googleSyncStarted")}</AlertBanner>
+      )}
+
+      {!syncRunning && syncProgress?.lastSyncMessage && !syncProgress.lastSyncError && (
+        <AlertBanner variant={syncProgress.lastSyncSkipped ? "info" : "success"}>
+          {syncProgress.lastSyncMessage}
+        </AlertBanner>
+      )}
+
+      {!syncRunning && syncGoogle.data?.message && !syncGoogle.data.started && (
         <AlertBanner variant={syncGoogle.data.skipped ? "info" : "success"}>
           {syncGoogle.data.message}
           {syncGoogle.data.googleMapsUrl && (

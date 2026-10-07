@@ -1108,7 +1108,7 @@ export const api = {
       `/api/v1/analytics/local-spotlight/sync${q}`,
       { method: "POST" },
       false,
-      180_000
+      30_000
     );
   },
 
@@ -3627,9 +3627,13 @@ export interface LocalSpotlightSyncProgressResponse {
   totalSteps: number;
   detail?: string | null;
   percent: number;
+  lastSyncMessage?: string | null;
+  lastSyncError?: string | null;
+  lastSyncSkipped?: boolean | null;
 }
 
 export interface LocalSpotlightSyncResponse {
+  started?: boolean;
   skipped: boolean;
   branchId?: string | null;
   branchName?: string | null;

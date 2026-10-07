@@ -2797,6 +2797,7 @@
       "googleListing": "Google listing",
       "openListing": "Open listing",
       "refreshFromGoogle": "Refresh from Google",
+      "googleSyncStarted": "Google sync is running in the background. Keep this page open or come back in a few minutes — progress updates below.",
       "googleSyncInProgress": "Refreshing from Google…",
       "googleSyncPhaseStarting": "Starting Google sync…",
       "googleSyncPhaseListing": "Matching your Google Business listing",
