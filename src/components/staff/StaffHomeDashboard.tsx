@@ -12,6 +12,8 @@ import { StaffSelfPunchSheet } from "@/components/staff/StaffSelfPunchSheet";
 import { StaffTodayPunchBar } from "@/components/staff/StaffTodayPunchBar";
 import { StaffPageShell } from "@/components/staff/StaffPageShell";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
+import { StaffSummaryStatusRing } from "@/components/staff/StaffSummaryStatusRing";
+import { targetTrafficBand, type TargetTrafficBand } from "@/components/manager/ManagerHomeTargetChip";
 
 function todayIso() {
   const d = new Date();
@@ -23,11 +25,19 @@ function formatTime(iso?: string) {
   return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
-function ProgressBar({ percent }: { percent: number }) {
+function ProgressBar({ percent, band }: { percent: number; band?: TargetTrafficBand | "neutral" }) {
   const w = Math.min(100, Math.max(0, percent));
+  const fillClass =
+    band === "green"
+      ? "bg-emerald-600/85"
+      : band === "amber"
+        ? "bg-amber-600/85"
+        : band === "red"
+          ? "bg-rose-600/80"
+          : "bg-[var(--brand)]";
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
-      <div className="h-full rounded-full bg-[var(--brand)] transition-all" style={{ width: `${w}%` }} />
+      <div className={cn("h-full rounded-full transition-all", fillClass)} style={{ width: `${w}%` }} />
     </div>
   );
 }
@@ -37,6 +47,8 @@ function SummaryCard({
   icon: Icon,
   title,
   periodLabel,
+  statusBand,
+  ringPct,
   className,
   children,
 }: {
@@ -44,6 +56,8 @@ function SummaryCard({
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   periodLabel?: string;
+  statusBand: TargetTrafficBand | "neutral";
+  ringPct: number;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -52,9 +66,7 @@ function SummaryCard({
       <DashboardWidgetCard className="hover:ring-1 hover:ring-[var(--border)]">
         <div className="p-3.5 sm:p-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-secondary)]">
-              <Icon className="h-4 w-4" />
-            </span>
+            <StaffSummaryStatusRing band={statusBand} ringPct={ringPct} icon={Icon} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold text-[var(--text-primary)]">{title}</p>
@@ -140,6 +152,29 @@ export function StaffHomeDashboard() {
 
   const shiftComplete = !canCheckIn && !canCheckOut && !!todayRecord?.exitTime;
 
+  const salesBand: TargetTrafficBand | "neutral" =
+    growth && growth.monthlySalesTarget > 0 ? targetTrafficBand(Number(growth.achievementPercent) || 0) : "neutral";
+  const salesRingPct =
+    growth && growth.monthlySalesTarget > 0 ? Math.min(100, Number(growth.achievementPercent) || 0) : 0;
+
+  const { timeBand, timeRingPct } = useMemo(() => {
+    let score = growth?.attendanceComplianceScore;
+    if (score == null && attendance) {
+      const denom = attendance.presentDays + attendance.absentDays;
+      score = denom > 0 ? Math.round((attendance.presentDays / denom) * 100) : 0;
+    }
+    const normalized = Math.min(100, Math.max(0, score ?? 0));
+    return {
+      timeBand: score != null || attendance ? targetTrafficBand(normalized) : ("neutral" as const),
+      timeRingPct: normalized,
+    };
+  }, [growth?.attendanceComplianceScore, attendance]);
+
+  const progressRingPct = topGoal ? Math.min(100, Number(topGoal.progressPercent) || 0) : 0;
+  const progressBand: TargetTrafficBand | "neutral" = topGoal
+    ? targetTrafficBand(progressRingPct)
+    : "red";
+
   return (
     <StaffPageShell className="pb-6">
       <PageHeader
@@ -165,7 +200,14 @@ export function StaffHomeDashboard() {
 
       <div className="grid gap-2.5 md:gap-3 md:grid-cols-2 xl:grid-cols-3 min-w-0">
         {growth && (
-          <SummaryCard href="/staff/sales" icon={TrendingUp} title={t("salesTitle")} periodLabel={growth.periodLabel}>
+          <SummaryCard
+            href="/staff/sales"
+            icon={TrendingUp}
+            title={t("salesTitle")}
+            periodLabel={growth.periodLabel}
+            statusBand={salesBand}
+            ringPct={salesRingPct}
+          >
             <div className="flex items-end justify-between gap-2">
               <p className="text-xl font-bold text-[var(--text-primary)] tabular-nums">{formatCurrency(growth.actualSales)}</p>
               {paceBadge && (
@@ -181,7 +223,7 @@ export function StaffHomeDashboard() {
               })}
             </p>
             <div className="mt-2">
-              <ProgressBar percent={Number(growth.achievementPercent) || 0} />
+              <ProgressBar percent={Number(growth.achievementPercent) || 0} band={salesBand} />
             </div>
             <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
               {t("todayLabel")}: {formatCurrency(growth.todaySales ?? 0)} · {t("todaySalesLine", { count: growth.todaySalesCount ?? 0 })}
@@ -189,7 +231,14 @@ export function StaffHomeDashboard() {
           </SummaryCard>
         )}
 
-        <SummaryCard href="/staff/time" icon={Clock} title={t("timeTitle")} periodLabel={attendance?.periodLabel}>
+        <SummaryCard
+          href="/staff/time"
+          icon={Clock}
+          title={t("timeTitle")}
+          periodLabel={attendance?.periodLabel}
+          statusBand={timeBand}
+          ringPct={timeRingPct}
+        >
           {attendance && (
             <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
               {t("mtdSummary")}: {Math.round(attendance.presentDays)} {t("present")} · {Math.round(attendance.absentDays)}{" "}
@@ -200,13 +249,20 @@ export function StaffHomeDashboard() {
           <p className="mt-2 text-[10px] font-medium text-[var(--text-tertiary)] leading-snug">{t("payrollCoachShort")}</p>
         </SummaryCard>
 
-        <SummaryCard href="/staff/progress" icon={Target} title={t("progressTitle")} className="md:col-span-2 xl:col-span-1">
+        <SummaryCard
+          href="/staff/progress"
+          icon={Target}
+          title={t("progressTitle")}
+          className="md:col-span-2 xl:col-span-1"
+          statusBand={progressBand}
+          ringPct={progressRingPct}
+        >
           {topGoal ? (
             <>
               <p className="text-sm font-semibold text-[var(--text-primary)]">{topGoal.title}</p>
               <p className="text-xs text-[var(--text-secondary)]">{t("goalProgress", { percent: topGoal.progressPercent })}</p>
               <div className="mt-1.5">
-                <ProgressBar percent={Number(topGoal.progressPercent) || 0} />
+                <ProgressBar percent={Number(topGoal.progressPercent) || 0} band={progressBand} />
               </div>
             </>
           ) : (

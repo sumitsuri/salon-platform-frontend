@@ -73,6 +73,53 @@
   border-color: #f59e0b66;
 }
 
+/* Staff home summary — single subtle progress ring (neutral track + thin accent arc) */
+
+.staff-summary-ring-wrap {
+  --ring-accent: #94a3b8;
+  --ring-track: color-mix(in srgb, var(--border) 55%, var(--surface-muted));
+}
+
+.staff-summary-ring-wrap--red {
+  --ring-accent: #e11d48;
+}
+
+.staff-summary-ring-wrap--amber {
+  --ring-accent: #d97706;
+}
+
+.staff-summary-ring-wrap--green {
+  --ring-accent: #059669;
+}
+
+.staff-summary-ring-wrap--neutral {
+  --ring-accent: #94a3b8;
+}
+
+.staff-summary-ring {
+  --ring-pct: 0;
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(
+    var(--ring-accent) calc(var(--ring-pct) * 1%),
+    var(--ring-track) 0
+  );
+  transition: background 0.45s ease;
+}
+
+.staff-summary-ring-inner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 80%, transparent);
+}
+
 /* Staff home — dense, action-first (aligned with manager glance density) */
 
 .staff-home {
