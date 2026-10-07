@@ -2768,6 +2768,7 @@
       "keywordRanksPartial": "Showing {stored} of {expected} keyword ranks. Scroll for synced terms (e.g. salon near your PIN). Remaining rows need a successful Google refresh.",
       "topThree": "Top 3 (rivals)",
       "notInTop20": "Not in top 20",
+      "notInSearchDepth": "Not in top 40",
       "lowRatingReviews": "Reviews under 4★",
       "lowRatingSample": "of {sample} sampled",
       "lowRatingFootnote": "Sub-4★ counts come from the public review sample Google returns (typically up to 5 recent reviews per listing), not your full review history.",

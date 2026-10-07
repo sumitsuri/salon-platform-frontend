@@ -50,6 +50,27 @@ export function scoreLabelText(label: string, t: (key: string) => string) {
   return map[label] ?? label;
 }
 
+function keywordRankNumber(
+  row: Pick<LocalSpotlightSearchRankRow, "yourRank" | "yourRankLabel">
+): number | null {
+  if (row.yourRank != null) return row.yourRank;
+  const match = row.yourRankLabel?.trim().match(/^#(\d+)$/);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+/** Prefer numeric rank (#N); fall back to API label (e.g. not found within search depth). */
+export function formatKeywordRankLabel(
+  row: Pick<LocalSpotlightSearchRankRow, "yourRank" | "yourRankBeyondTop20" | "yourRankLabel">,
+  t: (key: string) => string
+): string {
+  const rank = keywordRankNumber(row);
+  if (rank != null) return `#${rank}`;
+  const label = row.yourRankLabel?.trim();
+  if (label) return label;
+  if (row.yourRankBeyondTop20) return t("notInTop20");
+  return "—";
+}
+
 function rivalThreatScore(rival: {
   googleRating?: number | null;
   googleReviewCount?: number | null;
@@ -536,26 +557,34 @@ export function SearchRankTable({
               <td className="px-3 py-3">{row.branchName}</td>
               <td className="px-3 py-3 font-medium">{row.keyword}</td>
               <td className="px-3 py-3">
-                {row.yourRank != null ? (
-                  <span className={cn("font-semibold", row.inTop3 ? "text-emerald-600" : "text-amber-600")}>
-                    #{row.yourRank}
-                  </span>
-                ) : row.yourRankBeyondTop20 ? (
-                  <span className="text-sm font-medium text-[var(--text-secondary)]">{t("notInTop20")}</span>
-                ) : (
-                  row.yourRankLabel ?? "—"
-                )}
+                {(() => {
+                  const rankNum = keywordRankNumber(row);
+                  const label = formatKeywordRankLabel(row, t);
+                  if (rankNum != null) {
+                    return (
+                      <span
+                        className={cn(
+                          "font-semibold tabular-nums",
+                          rankNum <= 3 ? "text-emerald-600" : "text-amber-600"
+                        )}
+                      >
+                        {label}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-sm font-medium text-[var(--text-secondary)]">{label}</span>
+                  );
+                })()}
               </td>
               {showCompare ? (
                 <>
-                  <td className="px-3 py-3 text-[var(--text-secondary)]">
-                    {row.compareRank != null ? (
-                      `#${row.compareRank}`
-                    ) : row.compareBeyondTop20 ? (
-                      t("notInTop20")
-                    ) : (
-                      "—"
-                    )}
+                  <td className="px-3 py-3 text-[var(--text-secondary)] tabular-nums">
+                    {row.compareRank != null
+                      ? `#${row.compareRank}`
+                      : row.compareBeyondTop20
+                        ? t("notInSearchDepth")
+                        : "—"}
                   </td>
                   <td className="px-3 py-3">
                     {row.rankChange != null ? (
@@ -749,12 +778,7 @@ function buildKeywordEvidenceRows(
         const leaderText = row.topThreeRivals?.map((rival) => rival.name).slice(0, 3).join(", ");
         return {
           keyword,
-          rank:
-            row.yourRank != null
-              ? `#${row.yourRank}`
-              : row.yourRankBeyondTop20
-                ? t("notInTop20")
-                : row.yourRankLabel ?? "—",
+          rank: formatKeywordRankLabel(row, t),
           ...(leaderText ? { leaders: leaderText } : {}),
         };
       })
@@ -881,16 +905,12 @@ function KeywordRankChips({
     <div className="flex flex-wrap gap-1.5">
       {keywords.map((keyword) => {
         const rankRow = searchRanks?.find((row) => row.keyword === keyword);
-        const rankLabel =
-          rankRow?.yourRank != null
-            ? `#${rankRow.yourRank}`
-            : rankRow?.yourRankBeyondTop20
-              ? t("notInTop20")
-              : null;
+        const rankLabel = rankRow ? formatKeywordRankLabel(rankRow, t) : null;
+        const rankNum = rankRow ? keywordRankNumber(rankRow) : null;
         const rankTone =
-          rankRow?.yourRank != null && rankRow.yourRank <= 2
+          rankNum != null && rankNum <= 2
             ? "text-emerald-700 dark:text-emerald-400"
-            : rankRow?.yourRank != null
+            : rankNum != null
               ? "text-amber-700 dark:text-amber-400"
               : "text-[var(--text-tertiary)]";
 
