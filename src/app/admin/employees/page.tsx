@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -515,6 +515,13 @@ export default function AdminEmployeesPage() {
         }}
         onCreate={(data) => createMutation.mutate(data)}
         onUpdate={(id, data) => updateMutation.mutate({ id, data })}
+        onStaffLoginUpdated={(updated) => {
+          setDrawer((d) => {
+            if (!d || d.mode === "create" || d.employee.id !== updated.id) return d;
+            return { ...d, employee: { ...d.employee, ...updated } };
+          });
+          invalidate();
+        }}
       />
     </AdminPageShell>
   );
@@ -543,6 +550,7 @@ function EmployeeDrawer({
   onReactivate,
   onCreate,
   onUpdate,
+  onStaffLoginUpdated,
 }: {
   drawer: DrawerState | null;
   branches: { id: string; name: string }[];
@@ -555,6 +563,7 @@ function EmployeeDrawer({
   onReactivate: () => void;
   onCreate: (data: CreateEmployeeRequest) => void;
   onUpdate: (id: string, data: UpdateEmployeeRequest) => void;
+  onStaffLoginUpdated: (employee: EmployeeDetail) => void;
 }) {
   const t = useTranslations("admin.employees");
   const tAdmin = useTranslations("admin.common");
@@ -602,7 +611,9 @@ function EmployeeDrawer({
         ) : undefined
       }
     >
-      {isView && employee && <EmployeeDetailView employee={employee} performance={performance} />}
+      {isView && employee && (
+        <EmployeeDetailView employee={employee} performance={performance} onStaffLoginUpdated={onStaffLoginUpdated} />
+      )}
       {isForm && (
         <EmployeeForm
           key={drawer.mode === "create" ? "create" : employee!.id}
@@ -624,15 +635,31 @@ function EmployeeDrawer({
   );
 }
 
-function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
+function StaffLoginSection({
+  employee,
+  onUpdated,
+}: {
+  employee: EmployeeDetail;
+  onUpdated: (employee: EmployeeDetail) => void;
+}) {
   const t = useTranslations("admin.employees");
-  const queryClient = useQueryClient();
-  const [email, setEmail] = useState("");
+  const hasLogin = Boolean(employee.hasStaffLogin);
+  const [email, setEmail] = useState(employee.staffLoginEmail ?? "");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [designation, setDesignation] = useState<StaffDesignation | "">(
-    () => resolveStaffDesignation(employee.designation),
+    () => resolveStaffDesignation(employee.designation) || "",
   );
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    setEmail(employee.staffLoginEmail ?? "");
+    setDesignation(resolveStaffDesignation(employee.designation) || "");
+    setNewPassword("");
+    setPassword("");
+    setError("");
+  }, [employee.id, employee.hasStaffLogin, employee.staffLoginEmail, employee.designation]);
 
   const provision = useMutation({
     mutationFn: () =>
@@ -641,19 +668,124 @@ function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
         password,
         designation: designation || undefined,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    onSuccess: (updated) => {
+      onUpdated(updated);
       setPassword("");
       setError("");
+      setSuccess(t("staffLoginCreated"));
     },
-    onError: (e) => setError(e instanceof Error ? e.message : t("staffLoginFailed")),
+    onError: (e) => {
+      setSuccess("");
+      setError(e instanceof Error ? e.message : t("staffLoginFailed"));
+    },
   });
 
-  if (employee.hasStaffLogin) {
+  const updateLogin = useMutation({
+    mutationFn: () => {
+      const payload: { email?: string; password?: string; designation?: string } = {};
+      const trimmedEmail = email.trim();
+      if (trimmedEmail && trimmedEmail !== employee.staffLoginEmail) {
+        payload.email = trimmedEmail;
+      }
+      if (newPassword.length >= 6) {
+        payload.password = newPassword;
+      }
+      const des = designation || undefined;
+      if (des && des !== employee.designation) {
+        payload.designation = des;
+      }
+      return api.updateStaffLogin(employee.id, payload);
+    },
+    onSuccess: (updated) => {
+      onUpdated(updated);
+      setNewPassword("");
+      setError("");
+      setSuccess(t("staffLoginUpdated"));
+    },
+    onError: (e) => {
+      setSuccess("");
+      setError(e instanceof Error ? e.message : t("staffLoginUpdateFailed"));
+    },
+  });
+
+  const canUpdate =
+    hasLogin &&
+    ((email.trim() && email.trim() !== (employee.staffLoginEmail ?? "")) ||
+      newPassword.length >= 6 ||
+      (designation && designation !== resolveStaffDesignation(employee.designation)));
+
+  if (hasLogin) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-        <p className="text-sm font-semibold text-emerald-900">{t("staffLoginActive")}</p>
-        <p className="text-xs text-emerald-800 mt-1">{t("staffLoginActiveHint")}</p>
+      <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-emerald-950">{t("staffLoginActive")}</p>
+          <p className="text-xs text-emerald-900/80 mt-0.5">{t("staffLoginActiveHint")}</p>
+        </div>
+        {error && <AlertBanner variant="error">{error}</AlertBanner>}
+        {success && <AlertBanner variant="success">{success}</AlertBanner>}
+        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+          {t("staffLoginEmailLabel")}
+          <input
+            type="email"
+            className={`${inputClass} mt-1`}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setSuccess("");
+            }}
+          />
+        </label>
+        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+          {t("staffLoginPasswordLabel")}
+          <input
+            type="text"
+            readOnly
+            className={`${inputClass} mt-1 bg-[var(--surface-muted)] text-[var(--text-secondary)]`}
+            value="••••••••"
+            aria-label={t("staffLoginPasswordMasked")}
+          />
+          <p className="mt-1 text-[10px] font-medium text-[var(--text-tertiary)]">{t("staffLoginPasswordHint")}</p>
+        </label>
+        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+          {t("staffLoginNewPassword")}
+          <input
+            type="password"
+            autoComplete="new-password"
+            className={`${inputClass} mt-1`}
+            placeholder={t("staffLoginPassword")}
+            value={newPassword}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setSuccess("");
+            }}
+          />
+        </label>
+        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+          {t("designationLabel")}
+          <select
+            className={`${selectClass} mt-1 w-full`}
+            value={designation}
+            onChange={(e) => {
+              setDesignation(e.target.value as StaffDesignation | "");
+              setSuccess("");
+            }}
+          >
+            <option value="">{t("designationSelectPlaceholder")}</option>
+            {STAFF_DESIGNATION_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={btnPrimarySm}
+          disabled={!canUpdate || updateLogin.isPending}
+          onClick={() => updateLogin.mutate()}
+        >
+          {updateLogin.isPending ? t("updatingStaffLogin") : t("updateStaffLogin")}
+        </button>
       </div>
     );
   }
@@ -663,6 +795,7 @@ function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
       <p className="text-sm font-semibold text-[var(--text-primary)]">{t("staffAppLogin")}</p>
       <p className="text-xs text-[var(--text-secondary)]">{t("staffAppLoginHint")}</p>
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
+      {success && <AlertBanner variant="success">{success}</AlertBanner>}
       <input
         type="email"
         className={inputClass}
@@ -707,9 +840,11 @@ function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
 function EmployeeDetailView({
   employee,
   performance,
+  onStaffLoginUpdated,
 }: {
   employee: EmployeeDetail;
   performance: StaffTargetPerformanceItem | null | undefined;
+  onStaffLoginUpdated: (employee: EmployeeDetail) => void;
 }) {
   const t = useTranslations("admin.employees");
   const tAdmin = useTranslations("admin.common");
@@ -739,7 +874,7 @@ function EmployeeDetailView({
         </div>
       )}
 
-      <StaffLoginSection employee={employee} />
+      <StaffLoginSection employee={employee} onUpdated={onStaffLoginUpdated} />
 
       <SectionTitle>{tAdmin("profile")}</SectionTitle>
       <div className="grid grid-cols-2 gap-4">

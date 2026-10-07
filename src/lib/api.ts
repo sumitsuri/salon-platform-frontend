@@ -1506,6 +1506,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  updateStaffLogin: (
+    staffId: string,
+    data: { email?: string; password?: string; designation?: string },
+  ) =>
+    request<EmployeeDetail>(`/api/v1/staff/${staffId}/login`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 };
 
 export interface Customer {
@@ -1756,6 +1765,7 @@ export interface EmployeeDetail {
   biometricId?: string;
   designation?: string;
   hasStaffLogin?: boolean;
+  staffLoginEmail?: string;
   active: boolean;
   /** ISO timestamp of soft-deactivation; earlier attendance and sales are retained. */
   deactivatedAt?: string;
