@@ -2580,6 +2580,8 @@
       "staffLoginEmail": "Login email",
       "staffLoginPassword": "Temporary password (min 6 chars)",
       "designationOptional": "Designation (e.g. Gents Hair Dresser)",
+      "designationLabel": "Designation",
+      "designationSelectPlaceholder": "Select designation",
       "createStaffLogin": "Create staff login",
       "creatingLogin": "Creating…",
       "staffLoginFailed": "Could not create login",

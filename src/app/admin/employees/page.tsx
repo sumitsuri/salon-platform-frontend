@@ -34,6 +34,7 @@ import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
+import { resolveStaffDesignation, STAFF_DESIGNATION_OPTIONS, type StaffDesignation } from "@/lib/staff-designations";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import {
   PageHeader,
@@ -628,7 +629,9 @@ function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [designation, setDesignation] = useState(employee.designation ?? "");
+  const [designation, setDesignation] = useState<StaffDesignation | "">(
+    () => resolveStaffDesignation(employee.designation),
+  );
   const [error, setError] = useState("");
 
   const provision = useMutation({
@@ -674,16 +677,25 @@ function StaffLoginSection({ employee }: { employee: EmployeeDetail }) {
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <input
-        className={inputClass}
-        placeholder={t("designationOptional")}
-        value={designation}
-        onChange={(e) => setDesignation(e.target.value)}
-      />
+      <label className="block text-xs font-semibold text-[var(--text-secondary)]">
+        {t("designationLabel")}
+        <select
+          className={`${selectClass} mt-1 w-full`}
+          value={designation}
+          onChange={(e) => setDesignation(e.target.value as StaffDesignation | "")}
+        >
+          <option value="">{t("designationSelectPlaceholder")}</option>
+          {STAFF_DESIGNATION_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </label>
       <button
         type="button"
         className={btnPrimarySm}
-        disabled={!email || password.length < 6 || provision.isPending}
+        disabled={!email || password.length < 6 || !designation || provision.isPending}
         onClick={() => provision.mutate()}
       >
         {provision.isPending ? t("creatingLogin") : t("createStaffLogin")}
