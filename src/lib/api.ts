@@ -3608,11 +3608,20 @@ export interface ScalpScanServiceSuggestion {
   reason: string;
 }
 
+export interface ScanAnalysisMeta {
+  confidence?: "HIGH" | "MEDIUM" | "LOW" | string;
+  method?: "HEURISTIC" | "LLM_ASSISTED" | string;
+  qualityIssues?: string[];
+  retakeHint?: string | null;
+  staffInputUsed?: boolean;
+}
+
 export interface ScalpScanReport {
   metrics?: ScalpScanMetrics;
   concerns?: ScalpScanConcern[];
   routineSteps?: ScalpScanRoutineStep[];
   inSalonServices?: ScalpScanServiceSuggestion[];
+  analysisMeta?: ScanAnalysisMeta;
   disclaimer?: string;
 }
 
@@ -3750,6 +3759,7 @@ export interface FaceScanReport {
   inSalonServices?: FaceScanServiceSuggestion[];
   carePlanSummary?: FaceScanCarePlanSummary;
   carePlanPhases?: FaceScanCarePlanPhase[];
+  analysisMeta?: ScanAnalysisMeta;
   disclaimer?: string;
 }
 
