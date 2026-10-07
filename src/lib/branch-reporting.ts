@@ -22,6 +22,24 @@ function lastActiveDateIso(branch: Pick<Branch, "status" | "deactivatedAt">): st
   return `${y}-${m}-${day}`;
 }
 
+/** Branch is currently operational (not soft-deactivated). */
+export function branchIsOperationallyActive(branch: Pick<Branch, "status">): boolean {
+  return branch.status !== "INACTIVE";
+}
+
+/** Active branch ids from scope list (for brand MTD target rollups). */
+export function activeBranchIdsInScope(
+  branches: Pick<Branch, "id" | "status">[],
+  selectedIds?: string[],
+): string[] {
+  const active = branches.filter(branchIsOperationallyActive).map((b) => b.id);
+  if (selectedIds && selectedIds.length > 0) {
+    const selected = new Set(selectedIds);
+    return active.filter((id) => selected.has(id));
+  }
+  return active;
+}
+
 /** True when branch should appear in admin scope/reporting for inclusive calendar range [from, to]. */
 export function branchOverlapsReportingRange(
   branch: Pick<Branch, "status" | "deactivatedAt">,

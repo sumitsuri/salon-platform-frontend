@@ -28,6 +28,7 @@ import {
 import { insightPeriodToRange } from "@/lib/insights-utils";
 import { adminBookingsPath } from "@/lib/navigation-scope";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
+import { activeBranchIdsInScope } from "@/lib/branch-reporting";
 import { staffSalesRowsFromTargetPerformance } from "@/lib/staff-sales-rows";
 import { deriveOverviewActions } from "@/lib/dashboard-overview-actions";
 import {
@@ -69,12 +70,18 @@ export default function AdminDashboardPage() {
 
   const {
     branches,
+    allBranches,
     branchesError,
     selectedBranches,
     setSelectedBranches,
     branchIdsFilter,
     branchesSelected,
   } = useAdminBranchSelection("all", branchReportingRange);
+
+  const brandMtdBranchIds = useMemo(
+    () => activeBranchIdsInScope(allBranches, selectedBranches),
+    [allBranches, selectedBranches],
+  );
 
   const { data: dashboard, isLoading, isFetching } = useQuery({
     queryKey: ["dashboard", selectedBranches, dateRange.preset, dateRange.from, dateRange.to],
@@ -111,25 +118,26 @@ export default function AdminDashboardPage() {
   });
 
   const { data: brandMtdTargets, isLoading: brandMtdLoading } = useQuery({
-    queryKey: ["admin-brand-mtd-targets", branchIdsFilter, mtdRange.from, mtdRange.to],
+    queryKey: ["admin-brand-mtd-targets", brandMtdBranchIds, mtdRange.from, mtdRange.to],
     queryFn: () =>
       api.getBranchTargetPerformance({
         startDate: mtdRange.from,
         endDate: mtdRange.to,
-        branchIds: branchIdsFilter,
+        branchIds: brandMtdBranchIds.length > 0 ? brandMtdBranchIds : undefined,
+        activeOnly: true,
       }),
-    enabled: branchesSelected,
+    enabled: branchesSelected && brandMtdBranchIds.length > 0,
   });
 
   const { data: brandMtdPl, isLoading: brandMtdPlLoading } = useQuery({
-    queryKey: ["admin-brand-mtd-pl", branchIdsFilter, mtdRange.from, mtdRange.to],
+    queryKey: ["admin-brand-mtd-pl", brandMtdBranchIds, mtdRange.from, mtdRange.to],
     queryFn: () =>
       api.getPlSummary({
         startDate: mtdRange.from,
         endDate: mtdRange.to,
-        branchIds: branchIdsFilter,
+        branchIds: brandMtdBranchIds.length > 0 ? brandMtdBranchIds : undefined,
       }),
-    enabled: branchesSelected,
+    enabled: branchesSelected && brandMtdBranchIds.length > 0,
   });
 
   const brandTargetAggregate = useMemo(

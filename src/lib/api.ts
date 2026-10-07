@@ -947,11 +947,18 @@ export const api = {
     return request<PageResult<AttendanceIncident>>(`/api/v1/attendance/incidents?${params}`);
   },
 
-  getBranchTargetPerformance: (opts?: { startDate?: string; endDate?: string; branchIds?: string[] }) => {
+  getBranchTargetPerformance: (opts?: {
+    startDate?: string;
+    endDate?: string;
+    branchIds?: string[];
+    /** Exclude soft-deactivated branches (brand MTD rollups). */
+    activeOnly?: boolean;
+  }) => {
     const params = new URLSearchParams();
     if (opts?.startDate) params.set("startDate", opts.startDate);
     if (opts?.endDate) params.set("endDate", opts.endDate);
     opts?.branchIds?.forEach((id) => params.append("branchIds", id));
+    if (opts?.activeOnly) params.set("activeOnly", "true");
     const q = params.toString() ? `?${params.toString()}` : "";
     return request<BranchTargetPerformance>(`/api/v1/branches/performance/targets${q}`);
   },
