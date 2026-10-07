@@ -1474,6 +1474,14 @@ export const api = {
 
   getStaffPortalGrowth: () => request<StaffGrowthSnapshot>("/api/v1/staff-portal/growth"),
 
+  getStaffPortalSalesInsights: (historyMonths = 2) =>
+    request<StaffPortalSalesInsights>(
+      `/api/v1/staff-portal/sales/insights?historyMonths=${historyMonths}`,
+    ),
+
+  getSuggestedStaffPassword: () =>
+    request<{ password: string }>("/api/v1/staff/suggested-password"),
+
   getStaffPortalLeaves: () => request<LeaveRecord[]>("/api/v1/staff-portal/leaves"),
 
   applyStaffPortalLeave: (data: CreateLeaveRequest) =>
@@ -1727,6 +1735,33 @@ export interface StaffGrowthSnapshot {
   daysAbsent: number;
   todaySales?: number;
   todaySalesCount?: number;
+}
+
+export interface StaffPortalSalesInsights {
+  historyFilterLabel: string;
+  historyFrom: string;
+  historyTo: string;
+  history: Array<{
+    serviceDate: string;
+    serviceName: string;
+    quantity: number;
+    amount: number;
+  }>;
+  boost: {
+    monthlyTarget: number;
+    actualSalesMtd: number;
+    gapToTarget: number;
+    daysRemaining: number;
+    dailyNeeded: number;
+    trackLabel: string;
+    suggestions: Array<{
+      serviceName: string;
+      typicalAmount: number;
+      suggestedCount: number;
+      estimatedRevenue: number;
+      rationale: string;
+    }>;
+  };
 }
 
 export interface StaffGoalItem {

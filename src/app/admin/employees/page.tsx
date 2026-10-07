@@ -35,6 +35,7 @@ import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
 import { resolveStaffDesignation, STAFF_DESIGNATION_OPTIONS, type StaffDesignation } from "@/lib/staff-designations";
+import { StaffPasswordInput } from "@/components/admin/StaffPasswordInput";
 import { usePersistentState } from "@/lib/use-persistent-state";
 import {
   PageHeader,
@@ -653,6 +654,23 @@ function StaffLoginSection({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const generatePassword = useMutation({
+    mutationFn: () => api.getSuggestedStaffPassword(),
+    onSuccess: (res) => {
+      if (hasLogin) {
+        setNewPassword(res.password);
+      } else {
+        setPassword(res.password);
+      }
+      setError("");
+      setSuccess("");
+    },
+    onError: (e) => {
+      setSuccess("");
+      setError(e instanceof Error ? e.message : t("staffLoginFailed"));
+    },
+  });
+
   useEffect(() => {
     setEmail(employee.staffLoginEmail ?? "");
     setDesignation(resolveStaffDesignation(employee.designation) || "");
@@ -735,29 +753,20 @@ function StaffLoginSection({
             }}
           />
         </label>
-        <label className="block text-xs font-semibold text-[var(--text-secondary)]">
-          {t("staffLoginPasswordLabel")}
-          <input
-            type="text"
-            readOnly
-            className={`${inputClass} mt-1 bg-[var(--surface-muted)] text-[var(--text-secondary)]`}
-            value="••••••••"
-            aria-label={t("staffLoginPasswordMasked")}
-          />
-          <p className="mt-1 text-[10px] font-medium text-[var(--text-tertiary)]">{t("staffLoginPasswordHint")}</p>
-        </label>
+        <p className="text-[10px] font-medium text-[var(--text-tertiary)]">{t("staffLoginPasswordHint")}</p>
         <label className="block text-xs font-semibold text-[var(--text-secondary)]">
           {t("staffLoginNewPassword")}
-          <input
-            type="password"
-            autoComplete="new-password"
-            className={`${inputClass} mt-1`}
-            placeholder={t("staffLoginPassword")}
+          <StaffPasswordInput
+            className="mt-1"
             value={newPassword}
-            onChange={(e) => {
-              setNewPassword(e.target.value);
+            onChange={(v) => {
+              setNewPassword(v);
               setSuccess("");
             }}
+            placeholder={t("staffLoginPassword")}
+            onGenerate={() => generatePassword.mutate()}
+            generating={generatePassword.isPending}
+            generateLabel={t("generateStaffPassword")}
           />
         </label>
         <label className="block text-xs font-semibold text-[var(--text-secondary)]">
@@ -803,12 +812,13 @@ function StaffLoginSection({
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <input
-        type="password"
-        className={inputClass}
-        placeholder={t("staffLoginPassword")}
+      <StaffPasswordInput
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={setPassword}
+        placeholder={t("staffLoginPassword")}
+        onGenerate={() => generatePassword.mutate()}
+        generating={generatePassword.isPending}
+        generateLabel={t("generateStaffPassword")}
       />
       <label className="block text-xs font-semibold text-[var(--text-secondary)]">
         {t("designationLabel")}
