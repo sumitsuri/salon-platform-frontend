@@ -12,7 +12,7 @@ type Props = {
 
 /** Collapsible payroll tip — high contrast on mobile gradient backgrounds. */
 export function StaffPayrollCoachNote({ className, defaultExpanded = false }: Props) {
-  const t = useTranslations("staff.home");
+  const t = useTranslations("employee.home");
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (

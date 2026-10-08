@@ -8,13 +8,13 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
-import { staffPortalMtdRange } from "@/components/staff/staff-mtd-range";
+import { staffPortalMtdRange } from "@/components/employee/staff-mtd-range";
 
 const HOME_SUGGESTION_LIMIT = 4;
 
 export function StaffHomeTargetRecommendations({ className }: { className?: string }) {
-  const t = useTranslations("staff.growth");
-  const tHome = useTranslations("staff.home");
+  const t = useTranslations("employee.growth");
+  const tHome = useTranslations("employee.home");
   const range = useMemo(() => staffPortalMtdRange(), []);
 
   const { data: insights, isLoading } = useQuery({
@@ -30,8 +30,8 @@ export function StaffHomeTargetRecommendations({ className }: { className?: stri
 
   if (isLoading) {
     return (
-      <DashboardWidgetCard className={cn("staff-home-panel-card min-w-0", className)}>
-        <div className="staff-home-summary-body">
+      <DashboardWidgetCard className={cn("employee-home-panel-card min-w-0", className)}>
+        <div className="employee-home-summary-body">
           <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>
         </div>
       </DashboardWidgetCard>
@@ -43,8 +43,8 @@ export function StaffHomeTargetRecommendations({ className }: { className?: stri
   }
 
   return (
-    <DashboardWidgetCard className={cn("staff-home-panel-card min-w-0", className)}>
-      <div className="staff-home-summary-body">
+    <DashboardWidgetCard className={cn("employee-home-panel-card min-w-0", className)}>
+      <div className="employee-home-summary-body">
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-start gap-2">
             <span
@@ -59,7 +59,7 @@ export function StaffHomeTargetRecommendations({ className }: { className?: stri
             </div>
           </div>
           <Link
-            href="/staff/sales"
+            href="/employee/sales"
             className="flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-[var(--brand-text)] hover:underline"
           >
             {tHome("viewSales")}

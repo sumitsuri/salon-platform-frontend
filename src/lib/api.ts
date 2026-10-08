@@ -298,10 +298,10 @@ export async function authRequest<T>(path: string, options: RequestInit = {}): P
 }
 
 export const api = {
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, portal?: "employee" | "manager" | "admin") =>
     publicRequest<AuthUser>("/api/v1/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, ...(portal ? { portal } : {}) }),
     }),
 
   forgotPassword: (email: string) =>
@@ -1449,7 +1449,12 @@ export const api = {
 
   getStaffPortalProfile: () => request<StaffPortalProfile>("/api/v1/staff-portal/me"),
 
-  updateStaffPortalProfile: (data: { phone?: string; designation?: string }) =>
+  updateStaffPortalProfile: (data: {
+    phone?: string;
+    bankAccountNumber?: string;
+    bankName?: string;
+    bankIfscCode?: string;
+  }) =>
     request<StaffPortalProfile>("/api/v1/staff-portal/me", {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -1711,6 +1716,10 @@ export interface StaffPortalProfile {
   branchId: string;
   branchName?: string;
   joiningDate?: string;
+  exitDate?: string;
+  bankAccountNumber?: string;
+  bankName?: string;
+  bankIfscCode?: string;
   hasProfilePhoto: boolean;
   hasAadharDocument: boolean;
   idProofReference?: string;
@@ -1832,6 +1841,7 @@ export interface EmployeeDetail {
   deactivatedAt?: string;
   salary?: number;
   joiningDate?: string;
+  exitDate?: string;
   idProofCollected?: boolean;
   idProofReference?: string;
   monthlySalesTarget?: number;
@@ -1862,6 +1872,7 @@ export interface UpdateEmployeeRequest {
   biometricId?: string;
   salary?: number;
   joiningDate?: string;
+  exitDate?: string;
   idProofCollected?: boolean;
   idProofReference?: string;
   monthlySalesTarget?: number;

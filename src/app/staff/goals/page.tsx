@@ -1,29 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
-import { api } from "@/lib/api";
-import { PageHeader } from "@/components/ui";
-import { StaffPageShell } from "@/components/staff/StaffPageShell";
-import { StaffGoalsReadOnlyList } from "@/components/staff/StaffGoalsReadOnlyList";
-import { DashboardWidgetCard } from "@/components/enterprise-ui";
-
-export default function StaffGoalsPage() {
-  const t = useTranslations("staff.goals");
-
-  const { data: goals = [], isLoading } = useQuery({
-    queryKey: ["staff-portal-goals"],
-    queryFn: () => api.getStaffPortalGoals(),
-  });
-
-  return (
-    <StaffPageShell className="pb-6">
-      <PageHeader title={t("title")} subtitle={t("readOnlySubtitle")} />
-      <DashboardWidgetCard>
-        <div className="p-3 sm:p-4">
-          <StaffGoalsReadOnlyList goals={goals} loading={isLoading} />
-        </div>
-      </DashboardWidgetCard>
-    </StaffPageShell>
-  );
+export default function LegacyStaffGoalsPage() {
+  redirect("/employee/goals/");
 }

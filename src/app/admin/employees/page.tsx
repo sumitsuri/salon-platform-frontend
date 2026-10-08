@@ -976,6 +976,7 @@ function EmployeeForm({
   const [biometricId, setBiometricId] = useState(employee?.biometricId ?? "");
   const [salary, setSalary] = useState(employee?.salary?.toString() ?? "");
   const [joiningDate, setJoiningDate] = useState(employee?.joiningDate ?? "");
+  const [exitDate, setExitDate] = useState(employee?.exitDate ?? "");
   const [idProofCollected, setIdProofCollected] = useState(employee?.idProofCollected ?? false);
   const [idProofReference, setIdProofReference] = useState(employee?.idProofReference ?? "");
   const [monthlySalesTarget, setMonthlySalesTarget] = useState(employee?.monthlySalesTarget?.toString() ?? "");
@@ -992,6 +993,7 @@ function EmployeeForm({
       biometricId: biometricId || undefined,
       salary: salary ? Number(salary) : undefined,
       joiningDate: joiningDate || undefined,
+      exitDate: exitDate || undefined,
       idProofCollected,
       idProofReference: idProofReference || undefined,
       monthlySalesTarget: monthlySalesTarget ? Number(monthlySalesTarget) : undefined,
@@ -1038,6 +1040,9 @@ function EmployeeForm({
         </Field>
         <Field label={t("joiningDate")}>
           <input type="date" value={joiningDate} onChange={(e) => setJoiningDate(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label={t("exitDate")}>
+          <input type="date" value={exitDate} onChange={(e) => setExitDate(e.target.value)} className={inputClass} />
         </Field>
         <Field label={t("monthlySalesTargetField")}>
           <input type="number" min={0} value={monthlySalesTarget} onChange={(e) => setMonthlySalesTarget(e.target.value)} className={inputClass} />

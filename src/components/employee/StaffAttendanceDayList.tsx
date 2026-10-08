@@ -5,8 +5,8 @@ import { AttendanceRecord } from "@/lib/api";
 import { Card } from "@/components/ui";
 import { useClientPagedList } from "@/lib/use-client-paged-list";
 import { cn } from "@/lib/utils";
-import { STAFF_ATTENDANCE_LIST_PAGE_SIZE } from "@/components/staff/staff-list-constants";
-import { ListPageArrows } from "@/components/staff/ListPageArrows";
+import { STAFF_ATTENDANCE_LIST_PAGE_SIZE } from "@/components/employee/staff-list-constants";
+import { ListPageArrows } from "@/components/employee/ListPageArrows";
 
 function formatTime(iso?: string) {
   if (!iso) return "—";
@@ -37,7 +37,7 @@ type Props = {
 };
 
 export function StaffAttendanceDayList({ days, isLoading, previewLimit, sectionTitle = true }: Props) {
-  const t = useTranslations("staff.attendance");
+  const t = useTranslations("employee.attendance");
   const pageSize = previewLimit ?? STAFF_ATTENDANCE_LIST_PAGE_SIZE;
   const pager = useClientPagedList(days, pageSize);
   const rows = previewLimit != null ? days.slice(0, previewLimit) : pager.pageItems;

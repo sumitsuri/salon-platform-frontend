@@ -8,13 +8,13 @@ import { ChevronRight, Clock, Star, TrendingUp } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCurrency, cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui";
-import { StaffSelfPunchSheet } from "@/components/staff/StaffSelfPunchSheet";
-import { StaffTodayPunchBar } from "@/components/staff/StaffTodayPunchBar";
-import { StaffPageShell } from "@/components/staff/StaffPageShell";
-import { StaffHomeTargetRecommendations } from "@/components/staff/StaffHomeTargetRecommendations";
-import { StaffPayrollCoachNote } from "@/components/staff/StaffPayrollCoachNote";
+import { StaffSelfPunchSheet } from "@/components/employee/StaffSelfPunchSheet";
+import { StaffTodayPunchBar } from "@/components/employee/StaffTodayPunchBar";
+import { StaffPageShell } from "@/components/employee/StaffPageShell";
+import { StaffHomeTargetRecommendations } from "@/components/employee/StaffHomeTargetRecommendations";
+import { StaffPayrollCoachNote } from "@/components/employee/StaffPayrollCoachNote";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
-import { StaffSummaryStatusRing } from "@/components/staff/StaffSummaryStatusRing";
+import { StaffSummaryStatusRing } from "@/components/employee/StaffSummaryStatusRing";
 import { targetTrafficBand, type TargetTrafficBand } from "@/components/manager/ManagerHomeTargetChip";
 
 function todayIso() {
@@ -66,10 +66,10 @@ function SummaryCard({
   return (
     <Link
       href={href}
-      className={cn("staff-home-summary-link touch-manipulation active:scale-[0.99] transition-transform", className)}
+      className={cn("employee-home-summary-link touch-manipulation active:scale-[0.99] transition-transform", className)}
     >
-      <DashboardWidgetCard className="staff-home-summary-card hover:ring-1 hover:ring-[var(--border)]">
-        <div className="staff-home-summary-body">
+      <DashboardWidgetCard className="employee-home-summary-card hover:ring-1 hover:ring-[var(--border)]">
+        <div className="employee-home-summary-body">
           <div className="flex items-start gap-2.5">
             <StaffSummaryStatusRing band={statusBand} ringPct={ringPct} icon={Icon} />
             <div className="min-w-0 flex-1">
@@ -90,7 +90,7 @@ function SummaryCard({
 }
 
 export function StaffHomeDashboard() {
-  const t = useTranslations("staff.home");
+  const t = useTranslations("employee.home");
   const queryClient = useQueryClient();
   const [punchOpen, setPunchOpen] = useState(false);
   const [punchAction, setPunchAction] = useState<"CHECK_IN" | "CHECK_OUT">("CHECK_IN");
@@ -180,9 +180,9 @@ export function StaffHomeDashboard() {
 
   return (
     <StaffPageShell className="staff-page-shell--home mx-auto min-w-0 w-full max-w-full overflow-x-clip pb-6">
-      <div className="staff-home-dashboard">
-        <div className="staff-home-dashboard__rail">
-          <div className="staff-home-dashboard__top">
+      <div className="employee-home-dashboard">
+        <div className="employee-home-dashboard__rail">
+          <div className="employee-home-dashboard__top">
             <PageHeader
               title={t("greeting", { name: profile?.name?.split(" ")[0] || "…" })}
               subtitle={profile?.designation}
@@ -205,10 +205,10 @@ export function StaffHomeDashboard() {
             />
           </div>
 
-          <div className="staff-home-dashboard__metrics">
+          <div className="employee-home-dashboard__metrics">
           {growth && (
             <SummaryCard
-              href="/staff/sales"
+              href="/employee/sales"
               icon={TrendingUp}
               title={t("salesTitle")}
               periodLabel={growth.periodLabel}
@@ -240,7 +240,7 @@ export function StaffHomeDashboard() {
           )}
 
           <SummaryCard
-            href="/staff/time"
+            href="/employee/time"
             icon={Clock}
             title={t("timeTitle")}
             periodLabel={attendance?.periodLabel}
@@ -260,7 +260,7 @@ export function StaffHomeDashboard() {
           </SummaryCard>
 
           <SummaryCard
-            href="/staff/progress"
+            href="/employee/progress"
             icon={Star}
             title={t("progressTitle")}
             statusBand={reviewBand}
@@ -291,7 +291,7 @@ export function StaffHomeDashboard() {
           </SummaryCard>
         </div>
 
-          <div className="staff-home-dashboard__lower">
+          <div className="employee-home-dashboard__lower">
             <StaffPayrollCoachNote />
             <StaffHomeTargetRecommendations />
           </div>

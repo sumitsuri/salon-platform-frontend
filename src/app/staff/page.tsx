@@ -1,7 +1,5 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { StaffHomeDashboard } from "@/components/staff/StaffHomeDashboard";
-
-export default function StaffHomePage() {
-  return <StaffHomeDashboard />;
+export default function LegacyStaffHomePage() {
+  redirect("/employee/");
 }

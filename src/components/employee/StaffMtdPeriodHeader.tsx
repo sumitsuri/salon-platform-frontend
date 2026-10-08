@@ -11,7 +11,7 @@ type Props = {
 
 /** Month-to-date scope chip — aligned with admin brand-target period hints. */
 export function StaffMtdPeriodHeader({ periodLabel, className, compact }: Props) {
-  const t = useTranslations("staff.home");
+  const t = useTranslations("employee.home");
   if (!periodLabel) return null;
 
   return (
@@ -30,7 +30,7 @@ export function StaffMtdPeriodHeader({ periodLabel, className, compact }: Props)
 }
 
 export function StaffDailySectionLabel({ className }: { className?: string }) {
-  const t = useTranslations("staff.home");
+  const t = useTranslations("employee.home");
   return (
     <div className={cn("flex items-center gap-2 pt-1", className)}>
       <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-tertiary)]">{t("todayLabel")}</span>

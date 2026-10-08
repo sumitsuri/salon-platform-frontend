@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, LogIn, LogOut } from "lucide-react";
 import { api } from "@/lib/api";
 import { btnPrimary } from "@/components/ui";
-import { StaffSelfPunchSheet } from "@/components/staff/StaffSelfPunchSheet";
+import { StaffSelfPunchSheet } from "@/components/employee/StaffSelfPunchSheet";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
-import { StaffMtdPeriodHeader, StaffDailySectionLabel } from "@/components/staff/StaffMtdPeriodHeader";
-import { StaffAttendanceDayList } from "@/components/staff/StaffAttendanceDayList";
+import { StaffMtdPeriodHeader, StaffDailySectionLabel } from "@/components/employee/StaffMtdPeriodHeader";
+import { StaffAttendanceDayList } from "@/components/employee/StaffAttendanceDayList";
 import { cn } from "@/lib/utils";
 
 function formatTime(iso?: string) {
@@ -32,8 +32,8 @@ function todayIso() {
 }
 
 export function StaffAttendanceSection() {
-  const t = useTranslations("staff.attendance");
-  const tHome = useTranslations("staff.home");
+  const t = useTranslations("employee.attendance");
+  const tHome = useTranslations("employee.home");
   const queryClient = useQueryClient();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });

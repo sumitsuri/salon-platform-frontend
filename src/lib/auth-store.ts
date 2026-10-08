@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, AuthUser } from "./api";
+import type { LoginPortal } from "./login-portal";
 import { clearStoredAuth } from "./auth-session";
 import { syncLocaleFromUser } from "./locale-client";
 
 interface AuthState {
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, portal?: LoginPortal) => Promise<void>;
   logout: () => void;
   setUser: (user: AuthUser) => void;
 }
@@ -18,8 +19,8 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      login: async (email, password) => {
-        const user = await api.login(email.trim().toLowerCase(), password);
+      login: async (email, password, portal) => {
+        const user = await api.login(email.trim().toLowerCase(), password, portal);
         set({ user });
         syncLocaleFromUser(user.preferredLocale, true);
       },
@@ -66,7 +67,7 @@ export function getHomeForRole(role: string) {
     case "BRAND_ADMIN":
       return "/admin";
     case "SALON_STAFF":
-      return "/staff";
+      return "/employee";
     default:
       return "/manager";
   }

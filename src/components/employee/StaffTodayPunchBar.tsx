@@ -25,7 +25,7 @@ export function StaffTodayPunchBar({
   onCheckIn,
   onCheckOut,
 }: Props) {
-  const t = useTranslations("staff.home");
+  const t = useTranslations("employee.home");
 
   const state = canCheckIn ? "idle" : canCheckOut ? "active" : shiftComplete ? "done" : "idle";
 
@@ -63,7 +63,7 @@ export function StaffTodayPunchBar({
         ) : canCheckOut ? (
           <p className="text-[11px] text-[var(--text-tertiary)]">{t("punchHintCheckOut")}</p>
         ) : shiftComplete ? (
-          <Link href="/staff/time" className="text-[11px] font-semibold text-[var(--brand-text)] hover:underline">
+          <Link href="/employee/time" className="text-[11px] font-semibold text-[var(--brand-text)] hover:underline">
             {t("viewAttendanceLog")}
           </Link>
         ) : null}

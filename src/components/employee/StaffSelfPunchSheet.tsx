@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function StaffSelfPunchSheet({ open, action, onClose, onSuccess }: Props) {
-  const t = useTranslations("staff.attendance");
+  const t = useTranslations("employee.attendance");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [busy, setBusy] = useState(false);

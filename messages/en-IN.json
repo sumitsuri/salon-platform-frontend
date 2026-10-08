@@ -55,6 +55,12 @@
     "signingIn": "Signing in...",
     "sessionExpired": "Your session expired. Please sign in again.",
     "loginFailed": "Login failed",
+    "employeeSignInTitle": "Employee sign in",
+    "employeeSignInHint": "Shifts, sales, and reviews for your branch",
+    "managerSignInTitle": "Manager sign in",
+    "managerSignInHint": "Run the floor — bookings, team, and walk-ins",
+    "useEmployeeSignIn": "Employee app sign in",
+    "useManagerSignIn": "Manager sign in instead",
     "demoAccounts": "Demo accounts",
     "welcomeBack": "Welcome back",
     "formHint": "Sign in to your connected workspace",
@@ -2604,6 +2610,7 @@
       "monthlySalary": "Monthly salary",
       "monthlySalaryField": "Monthly salary (₹)",
       "joiningDate": "Joining date",
+      "exitDate": "Exit date",
       "salesTarget": "Sales target",
       "monthlySalesTargetField": "Monthly sales target (₹)",
       "incentive": "Incentive",
@@ -3028,7 +3035,7 @@
       "demoDataConfirm": "Rebuild the demo brand? Its existing data is replaced. Best run off-peak."
     }
   },
-  "staff": {
+  "employee": {
     "nav": {
       "home": "Home",
       "time": "Attendance & leave",
@@ -3265,7 +3272,16 @@
       "aadharOnFile": "Aadhaar / ID document on file",
       "aadharMissing": "Upload Aadhaar or government ID for HR records",
       "uploadAadhar": "Upload document",
-      "docUploaded": "Document uploaded"
+      "docUploaded": "Document uploaded",
+      "employment": "Employment",
+      "joiningDate": "Joining date",
+      "exitDate": "Exit date",
+      "datesReadOnly": "Set by admin — contact HR if something looks wrong.",
+      "bankDetails": "Bank details",
+      "bankAccountNumber": "Account number",
+      "bankName": "Bank name",
+      "bankIfscCode": "IFSC code",
+      "bankHint": "Used for salary — keep accurate."
     }
   },
   "scratch": {

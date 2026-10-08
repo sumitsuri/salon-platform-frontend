@@ -12,7 +12,7 @@ type Props = {
 
 /** Manager-assigned targets — read-only reference (no progress math in UI). */
 export function StaffGoalsReadOnlyList({ goals, loading }: Props) {
-  const t = useTranslations("staff.goals");
+  const t = useTranslations("employee.goals");
 
   if (loading) {
     return <p className="text-sm text-[var(--text-secondary)]">{t("loading")}</p>;

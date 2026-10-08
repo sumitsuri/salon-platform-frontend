@@ -7,7 +7,7 @@ import { api, CreateLeaveRequest } from "@/lib/api";
 import { Card, StatusBadge, inputClass, btnPrimary, AlertBanner } from "@/components/ui";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
 import { useClientPagedList, DEFAULT_LIST_PAGE_SIZE } from "@/lib/use-client-paged-list";
-import { ListPageArrows } from "@/components/staff/ListPageArrows";
+import { ListPageArrows } from "@/components/employee/ListPageArrows";
 
 function todayStr() {
   const d = new Date();
@@ -15,7 +15,7 @@ function todayStr() {
 }
 
 export function StaffLeavesSection() {
-  const t = useTranslations("staff.leaves");
+  const t = useTranslations("employee.leaves");
   const queryClient = useQueryClient();
   const [start, setStart] = useState(todayStr());
   const [end, setEnd] = useState(todayStr());
