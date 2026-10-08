@@ -3033,7 +3033,7 @@
       "home": "Home",
       "time": "Attendance & leave",
       "timeShort": "Time",
-      "progress": "Goals & reviews",
+      "progress": "Performance reviews",
       "progressShort": "Progress",
       "attendance": "Attendance",
       "attendanceShort": "Attend",
@@ -3062,7 +3062,8 @@
       "todayLabel": "Today",
       "todaySalesLine": "{count, plural, =0 {No services billed yet today} one {# service today} other {# services today}}",
       "payrollCoachTitle": "Keep your payout predictable",
-      "payrollCoachTeaser": "Tap to read how punctuality and approved leave protect your earnings.",
+      "payrollCoachTeaser": "How punctuality and approved leave protect your earnings.",
+      "payrollCoachTapHint": "Tap to read",
       "payrollCoachBody": "Punching in on time and getting leave approved before your shift helps payroll run smoothly. Late check-ins or unapproved absences can lead to salary adjustments — small habits keep your earnings on track.",
       "payrollCoachLeaves": "If plans change after leave is approved, you can ask your manager to adjust the dates when needed.",
       "payrollCoachShort": "On-time punches & early leave approval keep pay smooth. Tap for details.",
@@ -3092,7 +3093,7 @@
       "growthGlance": "This month",
       "salesTitle": "Sales & target",
       "timeTitle": "Time & leave",
-      "progressTitle": "Goals & performance",
+      "progressTitle": "Performance review",
       "attendanceTitle": "Attendance",
       "leavesTitle": "Leave requests",
       "goalsTitle": "Goals",
@@ -3123,6 +3124,7 @@
       "noGoals": "No active goals yet",
       "reviewSales": "Sales achievement {percent}%",
       "noReviews": "No reviews published yet",
+      "assignedGoalsHome": "{count, plural, one {# assigned goal — see Progress} other {# assigned goals — see Progress}}",
       "quickActions": "Quick actions",
       "moreActions": "More actions",
       "attendance": "Attendance",
@@ -3182,9 +3184,10 @@
       "tabLeave": "Leave"
     },
     "progress": {
-      "title": "Goals & reviews",
-      "subtitle": "Targets from your manager and how you’re measured against them",
-      "reviewsHint": "Reviews reflect progress on the goals above"
+      "title": "Performance reviews",
+      "subtitle": "Feedback from your manager on sales, attendance, and growth",
+      "reviewsHint": "Published by your manager — read-only",
+      "viewAssignedGoals": "View assigned goals ({count})"
     },
     "growth": {
       "title": "Sales & targets",
@@ -3228,8 +3231,12 @@
       "boostPackageBadge": "Package"
     },
     "goals": {
-      "title": "Goals",
+      "title": "Assigned goals",
       "subtitle": "Shared targets for your growth",
+      "readOnlySubtitle": "Targets your manager set for you — for reference only",
+      "readOnlyHint": "These are notes from your manager, not live calculated scores.",
+      "period": "Period: ",
+      "statusActive": "Active",
       "loading": "Loading…",
       "empty": "No active goals — your manager can assign them from the admin app."
     },

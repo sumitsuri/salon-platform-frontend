@@ -252,3 +252,69 @@
   font-weight: 700;
   color: var(--text-primary);
 }
+
+/* Staff home — single-column rail (mobile, tablet, desktop sidebar) */
+
+.staff-home-dashboard {
+  --staff-home-gap: 0.625rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.staff-home-dashboard__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--staff-home-gap);
+  width: 100%;
+  min-width: 0;
+}
+
+/* md+: rely on app shell px (same as manager home) — no edge bleed */
+@media (min-width: 768px) {
+  .staff-page-shell--home {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+}
+
+.staff-home-dashboard__top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--staff-home-gap);
+  min-width: 0;
+}
+
+.staff-home-dashboard__metrics,
+.staff-home-dashboard__lower {
+  display: flex;
+  flex-direction: column;
+  gap: var(--staff-home-gap);
+  min-width: 0;
+}
+
+.staff-home-dashboard__lower {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .staff-home-dashboard__lower {
+    display: flex;
+  }
+}
+
+.staff-home-summary-link {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.staff-home-summary-card,
+.staff-home-panel-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.staff-home-summary-body {
+  padding: 0.875rem 1rem;
+}
