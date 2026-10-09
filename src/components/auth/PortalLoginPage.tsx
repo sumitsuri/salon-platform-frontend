@@ -9,26 +9,11 @@ import { LoginFormCard } from "@/components/brand/LoginFormCard";
 import { LoginMobileShell } from "@/components/brand/LoginMobileShell";
 import { LoginHeroPanel, LoginHeroTablet } from "@/components/brand/LoginHeroPanel";
 import { isLocalDev } from "@/lib/env";
-import type { LoginPortal } from "@/lib/login-portal";
 import { storeLoginPortal } from "@/lib/login-portal";
+import { employeeLoginUrl } from "@/lib/app-hosts";
 
-type Props = {
-  portal: LoginPortal;
-  titleKey: "employeeSignInTitle" | "managerSignInTitle";
-  hintKey: "employeeSignInHint" | "managerSignInHint";
-  alternatePortal: LoginPortal;
-  alternateHref: string;
-  alternateLabelKey: "useManagerSignIn" | "useEmployeeSignIn";
-};
-
-export function PortalLoginPage({
-  portal,
-  titleKey,
-  hintKey,
-  alternatePortal,
-  alternateHref,
-  alternateLabelKey,
-}: Props) {
+/** Manager / admin / platform login (app.antrahq.com). */
+export function PortalLoginPage() {
   const t = useTranslations("auth");
   const tBrand = useTranslations("brand");
   const [email, setEmail] = useState("");
@@ -55,8 +40,8 @@ export function PortalLoginPage({
     setError("");
     setLoading(true);
     try {
-      await login(email, password, portal);
-      storeLoginPortal(portal);
+      await login(email, password, "manager");
+      storeLoginPortal("manager");
       const next = useAuthStore.getState().user;
       router.push(getHomeForRole(next?.role || "SALON_MANAGER"));
     } catch (err) {
@@ -78,9 +63,17 @@ export function PortalLoginPage({
     onSubmit: handleSubmit,
   };
 
+  const employeeHref = employeeLoginUrl();
+
   return (
     <div className="pravaah-login-page flex min-h-[100dvh] w-full max-w-full flex-col overflow-x-clip">
       <LoginMobileShell {...formProps} />
+      <p className="md:hidden px-5 pb-4 text-center text-xs text-[var(--text-secondary)]">
+        {t("managerLoginEmployeeHint")}{" "}
+        <Link href={employeeHref} className="font-semibold text-[var(--brand-text)] hover:underline">
+          {t("employeeSignInShort")}
+        </Link>
+      </p>
 
       <div className="hidden min-h-[100dvh] w-full flex-1 flex-col bg-[var(--app-bg)] md:flex md:flex-row">
         <LoginHeroTablet />
@@ -88,23 +81,18 @@ export function PortalLoginPage({
 
         <main className="relative flex min-h-[100dvh] w-full min-w-0 flex-1 flex-col justify-center overflow-x-clip overflow-y-auto px-6 py-8 sm:px-10 lg:px-12 lg:py-12 pravaah-login-form-side">
           <div className="relative z-10 mx-auto w-full max-w-md mp-animate-in lg:max-w-sm">
-            <p className="mb-3 text-center text-lg font-black text-[var(--text-primary)]">{t(titleKey)}</p>
-            <p className="mb-4 text-center text-xs font-medium text-[var(--text-secondary)]">{t(hintKey)}</p>
+            <p className="mb-3 text-center text-lg font-black text-[var(--text-primary)]">{t("managerSignInTitle")}</p>
+            <p className="mb-4 text-center text-xs font-medium text-[var(--text-secondary)]">{t("managerSignInHint")}</p>
             <LoginFormCard {...formProps} />
-            <p className="mt-4 text-center text-xs">
-              <Link href={alternateHref} className="font-semibold text-[var(--brand-text)] hover:underline">
-                {t(alternateLabelKey)}
+            <p className="mt-4 text-center text-xs text-[var(--text-secondary)]">
+              {t("managerLoginEmployeeHint")}{" "}
+              <Link href={employeeHref} className="font-semibold text-[var(--brand-text)] hover:underline">
+                {t("employeeSignInShort")}
               </Link>
             </p>
             <p className="mt-4 text-center text-[11px] font-medium text-[var(--text-tertiary)]">{tBrand("taglineShort")}</p>
 
-            {isLocalDev && portal === "employee" && (
-              <details className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
-                <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">{t("demoAccounts")}</summary>
-                <p className="mt-2">Employee app: amit.lithos@demo-brand.local / staff123</p>
-              </details>
-            )}
-            {isLocalDev && portal === "manager" && (
+            {isLocalDev && (
               <details className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-xs text-[var(--text-secondary)] shadow-sm">
                 <summary className="cursor-pointer font-semibold text-[var(--text-primary)]">{t("demoAccounts")}</summary>
                 <div className="mt-2 space-y-1">

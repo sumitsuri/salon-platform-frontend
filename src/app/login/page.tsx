@@ -1,16 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { PortalLoginPage } from "@/components/auth/PortalLoginPage";
+import { employeeLoginPath, isEmployeeAppHost } from "@/lib/app-hosts";
 
+/** Manager, CEO, and platform sign-in — employee app lives on employee.antrahq.com */
 export default function LoginPage() {
-  return (
-    <PortalLoginPage
-      portal="manager"
-      titleKey="managerSignInTitle"
-      hintKey="managerSignInHint"
-      alternatePortal="employee"
-      alternateHref="/employee/login/"
-      alternateLabelKey="useEmployeeSignIn"
-    />
-  );
+  useEffect(() => {
+    if (isEmployeeAppHost()) {
+      window.location.replace(employeeLoginPath());
+    }
+  }, []);
+
+  return <PortalLoginPage />;
 }

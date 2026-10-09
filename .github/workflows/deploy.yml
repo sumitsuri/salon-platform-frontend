@@ -28,6 +28,8 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: https://api.antrahq.com
           NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_MANAGER_APP_URL: https://app.antrahq.com
+          NEXT_PUBLIC_EMPLOYEE_APP_URL: https://employee.antrahq.com
         run: |
           npm ci
           npm run build -- --webpack

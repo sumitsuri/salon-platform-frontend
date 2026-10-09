@@ -1,16 +1,7 @@
 "use client";
 
-import { PortalLoginPage } from "@/components/auth/PortalLoginPage";
+import { EmployeeLoginPage } from "@/components/auth/EmployeeLoginPage";
 
-export default function EmployeeLoginPage() {
-  return (
-    <PortalLoginPage
-      portal="employee"
-      titleKey="employeeSignInTitle"
-      hintKey="employeeSignInHint"
-      alternatePortal="manager"
-      alternateHref="/login/"
-      alternateLabelKey="useManagerSignIn"
-    />
-  );
+export default function EmployeeLoginRoute() {
+  return <EmployeeLoginPage />;
 }

@@ -1,4 +1,5 @@
 import type { AuthUser } from "./api";
+import { employeeLoginPath, isEmployeeAppHost, managerLoginPath } from "./app-hosts";
 
 const STORAGE_KEY = "auth";
 
@@ -60,8 +61,12 @@ export async function syncAuthStore(user: AuthUser | null) {
 
 export function redirectToLogin(expired = false) {
   if (typeof window === "undefined") return;
-  const path = expired ? "/login?expired=1" : "/login";
-  if (!window.location.pathname.startsWith("/login")) {
+  const onEmployeeArea =
+    isEmployeeAppHost() || window.location.pathname.startsWith("/employee");
+  const base = onEmployeeArea ? employeeLoginPath() : managerLoginPath();
+  const path = expired ? `${base}?expired=1` : base;
+  const loginPrefix = onEmployeeArea ? "/employee/login" : "/login";
+  if (!window.location.pathname.startsWith(loginPrefix)) {
     window.location.href = path;
   }
 }

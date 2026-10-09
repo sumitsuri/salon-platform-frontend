@@ -15,6 +15,8 @@ import {
 } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { consumeLoginPortal } from "@/lib/login-portal";
+import { EmployeeHostRedirect } from "@/components/auth/EmployeeHostRedirect";
+import { employeeLoginPath } from "@/lib/app-hosts";
 
 function isEmployeeLoginPath(pathname: string | null) {
   if (!pathname) return false;
@@ -67,7 +69,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (onLoginPage || !hydrated) return;
     if (!user) {
-      router.replace("/employee/login/?expired=1");
+      router.replace(`${employeeLoginPath()}?expired=1`);
       return;
     }
     if (user.role !== "SALON_STAFF") {
@@ -76,7 +78,12 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
   }, [user, router, hydrated, onLoginPage]);
 
   if (onLoginPage) {
-    return <>{children}</>;
+    return (
+      <>
+        <EmployeeHostRedirect />
+        {children}
+      </>
+    );
   }
 
   if (!hydrated) {
@@ -89,6 +96,8 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
   const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
 
   return (
+    <>
+      <EmployeeHostRedirect />
     <EnterpriseAppShell
       homeHref="/employee"
       homeLabel={t("home")}
@@ -103,7 +112,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
       onLogout={() => {
         logout();
         consumeLoginPortal();
-        router.push("/employee/login/");
+        router.push(employeeLoginPath());
       }}
       logoutLabel={tCommon("logout")}
       mobileMainPadding={MOBILE_MAIN_PADDING_BOTTOM_TABS}
@@ -112,5 +121,6 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
     >
       {children}
     </EnterpriseAppShell>
+    </>
   );
 }

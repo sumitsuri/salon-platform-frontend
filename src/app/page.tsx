@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
+import { employeeLoginPath, isEmployeeAppHost } from "@/lib/app-hosts";
 
 export default function HomePage() {
   const t = useTranslations("common");
@@ -13,10 +14,20 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (isEmployeeAppHost()) {
+      if (user?.role === "SALON_STAFF") {
+        router.replace("/employee/");
+      } else if (user) {
+        router.replace(getHomeForRole(user.role));
+      } else {
+        router.replace(employeeLoginPath());
+      }
+      return;
+    }
     if (user) {
       router.replace(getHomeForRole(user.role));
     } else {
-      router.replace("/login");
+      router.replace("/login/");
     }
   }, [user, router, hydrated]);
 

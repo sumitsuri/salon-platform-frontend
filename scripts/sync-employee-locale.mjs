@@ -17,6 +17,14 @@ const AUTH_KEYS = [
   "managerSignInHint",
   "useEmployeeSignIn",
   "useManagerSignIn",
+  "employeePortalBadge",
+  "employeeSignInCta",
+  "employeeLoginFeatureTime",
+  "employeeLoginFeatureLeave",
+  "employeeLoginManagerHint",
+  "managerLoginEmployeeHint",
+  "managerSignInShort",
+  "employeeSignInShort",
 ];
 
 const locales = fs

@@ -61,7 +61,15 @@
     "managerSignInTitle": "Manager sign in",
     "managerSignInHint": "Run the floor — bookings, team, and walk-ins",
     "useEmployeeSignIn": "Employee app sign in",
-    "useManagerSignIn": "Manager sign in instead"
+    "useManagerSignIn": "Manager sign in instead",
+    "employeePortalBadge": "Employee app",
+    "employeeSignInCta": "Sign in to employee app",
+    "employeeLoginFeatureTime": "Punch & attendance",
+    "employeeLoginFeatureLeave": "Leave requests",
+    "employeeLoginManagerHint": "Salon managers and owners sign in at",
+    "managerLoginEmployeeHint": "Employees sign in at",
+    "managerSignInShort": "app.antrahq.com",
+    "employeeSignInShort": "employee.antrahq.com"
   },
   "settings": {
     "title": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
