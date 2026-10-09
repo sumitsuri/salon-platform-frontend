@@ -1,5 +1,11 @@
 import { isLocalDev } from "./env";
 
+/** Employee portal sign-in on employee.antrahq.com (not under /employee prefix). */
+export const EMPLOYEE_HOST_LOGIN_PATH = "/login/";
+
+/** Legacy / fallback on app.antrahq.com before redirect to employee host. */
+export const EMPLOYEE_LOGIN_PATH_LEGACY = "/employee/login/";
+
 /** Canonical manager / admin app origin (no trailing slash). */
 export function managerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_MANAGER_APP_URL?.replace(/\/$/, "");
@@ -31,8 +37,23 @@ export function isEmployeeAppHost(hostname?: string): boolean {
   return false;
 }
 
+/** Map app-host /employee/* paths to URLs on the employee origin. */
+export function pathOnEmployeeOrigin(pathname: string): string {
+  if (pathname === "/employee/login" || pathname.startsWith("/employee/login/")) {
+    return EMPLOYEE_HOST_LOGIN_PATH;
+  }
+  return pathname;
+}
+
+/** In-app login route (host-aware). */
 export function employeeLoginPath(): string {
-  return "/employee/login/";
+  if (typeof window !== "undefined" && isEmployeeAppHost()) {
+    return EMPLOYEE_HOST_LOGIN_PATH;
+  }
+  if (shouldUseEmployeeOriginForStaffPortal()) {
+    return EMPLOYEE_HOST_LOGIN_PATH;
+  }
+  return EMPLOYEE_LOGIN_PATH_LEGACY;
 }
 
 export function managerLoginPath(): string {
@@ -40,11 +61,19 @@ export function managerLoginPath(): string {
 }
 
 export function employeeLoginUrl(): string {
-  return `${employeeAppOrigin()}${employeeLoginPath()}`;
+  return `${employeeAppOrigin()}${EMPLOYEE_HOST_LOGIN_PATH}`;
 }
 
 export function managerLoginUrl(): string {
   return `${managerAppOrigin()}${managerLoginPath()}`;
+}
+
+export function isEmployeeLoginPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname === "/login" || pathname.startsWith("/login/")) {
+    return isEmployeeAppHost();
+  }
+  return pathname === "/employee/login" || pathname.startsWith("/employee/login/");
 }
 
 /** Staff portal should run on the employee host in production. */
@@ -58,7 +87,8 @@ export function redirectStaffPortalToEmployeeHost(pathname: string): boolean {
   if (!shouldUseEmployeeOriginForStaffPortal()) return false;
   if (isEmployeeAppHost()) return false;
   if (!pathname.startsWith("/employee")) return false;
-  const target = `${employeeAppOrigin()}${pathname}${window.location.search}`;
+  const onEmployee = pathOnEmployeeOrigin(pathname);
+  const target = `${employeeAppOrigin()}${onEmployee}${window.location.search}`;
   window.location.replace(target);
   return true;
 }

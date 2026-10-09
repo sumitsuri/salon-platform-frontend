@@ -16,12 +16,7 @@ import {
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { consumeLoginPortal } from "@/lib/login-portal";
 import { EmployeeHostRedirect } from "@/components/auth/EmployeeHostRedirect";
-import { employeeLoginPath } from "@/lib/app-hosts";
-
-function isEmployeeLoginPath(pathname: string | null) {
-  if (!pathname) return false;
-  return pathname === "/employee/login" || pathname.startsWith("/employee/login/");
-}
+import { employeeLoginPath, isEmployeeLoginPath } from "@/lib/app-hosts";
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("employee.nav");

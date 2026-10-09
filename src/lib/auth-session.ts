@@ -65,8 +65,11 @@ export function redirectToLogin(expired = false) {
     isEmployeeAppHost() || window.location.pathname.startsWith("/employee");
   const base = onEmployeeArea ? employeeLoginPath() : managerLoginPath();
   const path = expired ? `${base}?expired=1` : base;
-  const loginPrefix = onEmployeeArea ? "/employee/login" : "/login";
-  if (!window.location.pathname.startsWith(loginPrefix)) {
+  const onEmployeeHost = isEmployeeAppHost();
+  const onLogin =
+    window.location.pathname.startsWith("/login") ||
+    (!onEmployeeHost && window.location.pathname.startsWith("/employee/login"));
+  if (!onLogin) {
     window.location.href = path;
   }
 }

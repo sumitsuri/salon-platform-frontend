@@ -1,3 +1,5 @@
+import { employeeLoginPath } from "./app-hosts";
+
 export type LoginPortal = "employee" | "manager" | "admin";
 
 export const AUTH_PORTAL_STORAGE_KEY = "authPortal";
@@ -16,6 +18,6 @@ export function consumeLoginPortal(): LoginPortal | null {
 }
 
 export function loginPathForPortal(portal: LoginPortal | null): string {
-  if (portal === "employee") return "/employee/login/";
+  if (portal === "employee") return employeeLoginPath();
   return "/login/";
 }

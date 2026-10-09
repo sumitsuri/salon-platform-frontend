@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PortalLoginPage } from "@/components/auth/PortalLoginPage";
-import { employeeLoginPath, isEmployeeAppHost } from "@/lib/app-hosts";
+import { EmployeeLoginPage } from "@/components/auth/EmployeeLoginPage";
+import { isEmployeeAppHost } from "@/lib/app-hosts";
 
-/** Manager, CEO, and platform sign-in — employee app lives on employee.antrahq.com */
+/** `/login/` — manager on app.antrahq.com, employee on employee.antrahq.com (same path, different origin). */
 export default function LoginPage() {
+  const [employeeHost, setEmployeeHost] = useState(false);
+
   useEffect(() => {
-    if (isEmployeeAppHost()) {
-      window.location.replace(employeeLoginPath());
-    }
+    setEmployeeHost(isEmployeeAppHost());
   }, []);
 
+  if (employeeHost) {
+    return <EmployeeLoginPage />;
+  }
   return <PortalLoginPage />;
 }

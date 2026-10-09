@@ -26,7 +26,10 @@ export function EmployeeLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    redirectStaffPortalToEmployeeHost("/employee/login/");
+    const path = window.location.pathname;
+    if (path.startsWith("/employee/login")) {
+      redirectStaffPortalToEmployeeHost(path);
+    }
   }, []);
 
   useEffect(() => {
