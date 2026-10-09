@@ -1,0 +1,54 @@
+/* Employee portal login — teal palette (distinct from manager indigo/violet) */
+.employee-login-page {
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.employee-login-bg {
+  background: linear-gradient(145deg, #042f2e 0%, #0d9488 28%, #0891b2 55%, #0e7490 78%, #134e4a 100%);
+  background-size: 220% 220%;
+  animation: employee-login-gradient-shift 14s ease infinite;
+}
+
+@keyframes employee-login-gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 40%;
+  }
+  50% {
+    background-position: 100% 60%;
+  }
+}
+
+.employee-login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.employee-login-btn {
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%) !important;
+  border-color: #0f766e !important;
+  color: #fff !important;
+}
+
+.employee-login-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f766e 0%, #0e7490 100%) !important;
+}
+
+.employee-login-form-side {
+  background: var(--app-bg);
+}
+
+.employee-login-showcase-glow {
+  filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.35));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .employee-login-bg,
+  .employee-login-showcase-glow {
+    animation: none;
+  }
+}

@@ -57,6 +57,26 @@
     "loginFailed": "Login failed",
     "employeeSignInTitle": "Employee sign in",
     "employeeSignInHint": "Shifts, sales, and reviews for your branch",
+    "employeeFormHint": "Sign in with your work email to punch in, track targets, and view feedback.",
+    "employeeHero": {
+      "tagline": "Your shift, your progress",
+      "mission": "Punch in, hit your targets, and see manager feedback — built for stylists and floor staff on the go.",
+      "footer": "Antrahq Employee · same platform as your salon, focused on you",
+      "pillars": {
+        "punch": {
+          "title": "Punch & attendance",
+          "desc": "Photo-verified check-in, hours, and leave — all from your phone."
+        },
+        "sales": {
+          "title": "Sales & incentives",
+          "desc": "Live run rate against your monthly target and projected incentives."
+        },
+        "reviews": {
+          "title": "Performance reviews",
+          "desc": "Read transparent feedback on sales, attendance, and growth goals."
+        }
+      }
+    },
     "managerSignInTitle": "Manager sign in",
     "managerSignInHint": "Run the floor — bookings, team, and walk-ins",
     "useEmployeeSignIn": "Employee app sign in",
