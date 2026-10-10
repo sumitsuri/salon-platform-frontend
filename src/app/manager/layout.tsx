@@ -30,6 +30,7 @@ import {
   type MobileBottomNavConfig,
 } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
+import { resolveUnauthenticatedLoginPath } from "@/lib/app-hosts";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("manager.nav");
@@ -143,7 +144,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user) router.replace("/login");
+    if (!user) router.replace(resolveUnauthenticatedLoginPath());
   }, [user, router, hydrated]);
 
   if (!hydrated) {

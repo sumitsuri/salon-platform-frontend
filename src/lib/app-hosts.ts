@@ -1,12 +1,16 @@
 import { isLocalDev } from "./env";
 
-/** Employee portal sign-in on employee.antrahq.com (not under /employee prefix). */
-export const EMPLOYEE_HOST_LOGIN_PATH = "/login/";
+/** Employee sign-in at the employee app origin root (Play Store / TWA launch URL). */
+export const EMPLOYEE_HOST_LOGIN_PATH = "/";
 
-/** Legacy / fallback on app.antrahq.com before redirect to employee host. */
+/** Legacy paths — redirect to canonical entry. */
 export const EMPLOYEE_LOGIN_PATH_LEGACY = "/employee/login/";
+export const EMPLOYEE_HOST_LOGIN_PATH_LEGACY = "/login/";
 
-/** Canonical manager / admin app origin (no trailing slash). */
+/** Platform internal app sign-in at platform origin root. */
+export const PLATFORM_HOST_LOGIN_PATH = "/";
+
+/** Canonical manager / brand CEO app origin (no trailing slash). */
 export function managerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_MANAGER_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
@@ -23,17 +27,56 @@ export function employeeAppOrigin(): string {
   return "https://employee.antrahq.com";
 }
 
-const EMPLOYEE_HOSTS = new Set(["employee.antrahq.com"]);
+/** Canonical platform (Antrahq internal) app origin (no trailing slash). */
+export function platformAppOrigin(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_PLATFORM_APP_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (typeof window !== "undefined" && isPlatformAppHost()) return window.location.origin;
+  return "https://platform.antrahq.com";
+}
 
-/** Local dev: set NEXT_PUBLIC_EMPLOYEE_HOST=employee.localhost and map 127.0.0.1 employee.localhost in /etc/hosts */
+const EMPLOYEE_HOSTS = new Set(["employee.antrahq.com"]);
+const MANAGER_HOSTS = new Set(["app.antrahq.com"]);
+const PLATFORM_HOSTS = new Set(["platform.antrahq.com"]);
+
+/** Local dev: map 127.0.0.1 employee.localhost / platform.localhost / app.localhost in /etc/hosts */
 function devEmployeeHost(): string | undefined {
   return process.env.NEXT_PUBLIC_EMPLOYEE_HOST?.toLowerCase();
 }
 
+function devManagerHost(): string | undefined {
+  return process.env.NEXT_PUBLIC_MANAGER_HOST?.toLowerCase();
+}
+
+function devPlatformHost(): string | undefined {
+  return process.env.NEXT_PUBLIC_PLATFORM_HOST?.toLowerCase();
+}
+
+function resolveHost(hostname?: string): string {
+  return (hostname ?? (typeof window !== "undefined" ? window.location.hostname : "")).toLowerCase();
+}
+
 export function isEmployeeAppHost(hostname?: string): boolean {
-  const h = (hostname ?? (typeof window !== "undefined" ? window.location.hostname : "")).toLowerCase();
+  const h = resolveHost(hostname);
   if (EMPLOYEE_HOSTS.has(h)) return true;
   if (isLocalDev && devEmployeeHost() && h === devEmployeeHost()) return true;
+  return false;
+}
+
+export function isManagerAppHost(hostname?: string): boolean {
+  const h = resolveHost(hostname);
+  if (MANAGER_HOSTS.has(h)) return true;
+  if (isLocalDev && devManagerHost() && h === devManagerHost()) return true;
+  if (isLocalDev && !devManagerHost() && !devEmployeeHost() && !devPlatformHost() && h === "localhost") {
+    return true;
+  }
+  return false;
+}
+
+export function isPlatformAppHost(hostname?: string): boolean {
+  const h = resolveHost(hostname);
+  if (PLATFORM_HOSTS.has(h)) return true;
+  if (isLocalDev && devPlatformHost() && h === devPlatformHost()) return true;
   return false;
 }
 
@@ -45,7 +88,6 @@ export function pathOnEmployeeOrigin(pathname: string): string {
   return pathname;
 }
 
-/** In-app login route (host-aware). */
 export function employeeLoginPath(): string {
   if (typeof window !== "undefined" && isEmployeeAppHost()) {
     return EMPLOYEE_HOST_LOGIN_PATH;
@@ -54,6 +96,13 @@ export function employeeLoginPath(): string {
     return EMPLOYEE_HOST_LOGIN_PATH;
   }
   return EMPLOYEE_LOGIN_PATH_LEGACY;
+}
+
+export function platformLoginPath(): string {
+  if (typeof window !== "undefined" && isPlatformAppHost()) {
+    return PLATFORM_HOST_LOGIN_PATH;
+  }
+  return `${platformAppOrigin()}${PLATFORM_HOST_LOGIN_PATH}`;
 }
 
 export function managerLoginPath(): string {
@@ -68,12 +117,33 @@ export function managerLoginUrl(): string {
   return `${managerAppOrigin()}${managerLoginPath()}`;
 }
 
+export function platformLoginUrl(): string {
+  return `${platformAppOrigin()}${PLATFORM_HOST_LOGIN_PATH}`;
+}
+
 export function isEmployeeLoginPath(pathname: string | null): boolean {
   if (!pathname) return false;
-  if (pathname === "/login" || pathname.startsWith("/login/")) {
-    return isEmployeeAppHost();
+  if (isEmployeeAppHost()) {
+    if (pathname === "/" || pathname === "/login" || pathname.startsWith("/login/")) return true;
   }
   return pathname === "/employee/login" || pathname.startsWith("/employee/login/");
+}
+
+export function isPlatformLoginPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (isPlatformAppHost()) {
+    return pathname === "/" || pathname === "/login" || pathname.startsWith("/login/");
+  }
+  return false;
+}
+
+/** Unauthenticated redirect target for the current host. */
+export function resolveUnauthenticatedLoginPath(): string {
+  if (typeof window !== "undefined") {
+    if (isPlatformAppHost()) return platformLoginPath();
+    if (isEmployeeAppHost()) return employeeLoginPath();
+  }
+  return managerLoginPath();
 }
 
 /** Staff portal should run on the employee host in production. */
@@ -89,6 +159,16 @@ export function redirectStaffPortalToEmployeeHost(pathname: string): boolean {
   if (!pathname.startsWith("/employee")) return false;
   const onEmployee = pathOnEmployeeOrigin(pathname);
   const target = `${employeeAppOrigin()}${onEmployee}${window.location.search}`;
+  window.location.replace(target);
+  return true;
+}
+
+/** Send /platform/* on the manager host to the platform app origin (separate store listing). */
+export function redirectPlatformRoutesToPlatformHost(pathname: string): boolean {
+  if (typeof window === "undefined") return false;
+  if (isPlatformAppHost()) return false;
+  if (!pathname.startsWith("/platform")) return false;
+  const target = `${platformAppOrigin()}${pathname}${window.location.search}`;
   window.location.replace(target);
   return true;
 }

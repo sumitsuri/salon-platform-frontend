@@ -33,6 +33,7 @@ import {
   type MobileBottomNavConfig,
 } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
+import { resolveUnauthenticatedLoginPath } from "@/lib/app-hosts";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("admin.layout");
@@ -203,7 +204,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user) router.replace("/login");
+    if (!user) router.replace(resolveUnauthenticatedLoginPath());
     else if (user.role !== "BRAND_ADMIN" && user.role !== "PLATFORM_SUPER_ADMIN") router.replace("/manager");
   }, [user, router, hydrated]);
 

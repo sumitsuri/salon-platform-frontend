@@ -30,8 +30,14 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ""
           NEXT_PUBLIC_MANAGER_APP_URL: https://app.antrahq.com
           NEXT_PUBLIC_EMPLOYEE_APP_URL: https://employee.antrahq.com
+          NEXT_PUBLIC_PLATFORM_APP_URL: https://platform.antrahq.com
+          ANDROID_SHA256_EMPLOYEE: ${{ secrets.ANDROID_SHA256_EMPLOYEE }}
+          ANDROID_SHA256_MANAGER: ${{ secrets.ANDROID_SHA256_MANAGER }}
+          ANDROID_SHA256_PLATFORM: ${{ secrets.ANDROID_SHA256_PLATFORM }}
         run: |
           npm ci
+          npm run generate-icons
+          node scripts/generate-assetlinks.mjs
           npm run build -- --webpack
           if ! grep -rq "api.antrahq.com" out/_next/static/chunks/; then
             echo "::error::Production build is missing api.antrahq.com in client bundles."

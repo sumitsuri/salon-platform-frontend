@@ -1,5 +1,5 @@
 import type { AuthUser } from "./api";
-import { employeeLoginPath, isEmployeeAppHost, managerLoginPath } from "./app-hosts";
+import { isEmployeeLoginPath, isPlatformAppHost, resolveUnauthenticatedLoginPath } from "./app-hosts";
 
 const STORAGE_KEY = "auth";
 
@@ -61,14 +61,12 @@ export async function syncAuthStore(user: AuthUser | null) {
 
 export function redirectToLogin(expired = false) {
   if (typeof window === "undefined") return;
-  const onEmployeeArea =
-    isEmployeeAppHost() || window.location.pathname.startsWith("/employee");
-  const base = onEmployeeArea ? employeeLoginPath() : managerLoginPath();
+  const base = resolveUnauthenticatedLoginPath();
   const path = expired ? `${base}?expired=1` : base;
-  const onEmployeeHost = isEmployeeAppHost();
   const onLogin =
     window.location.pathname.startsWith("/login") ||
-    (!onEmployeeHost && window.location.pathname.startsWith("/employee/login"));
+    isEmployeeLoginPath(window.location.pathname) ||
+    (isPlatformAppHost() && window.location.pathname === "/");
   if (!onLogin) {
     window.location.href = path;
   }

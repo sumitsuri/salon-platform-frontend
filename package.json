@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
+    "generate-assetlinks": "node scripts/generate-assetlinks.mjs",
     "test:prod-e2e": "node scripts/run-prod-e2e.mjs"
   },
   "dependencies": {

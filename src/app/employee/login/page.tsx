@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { employeeLoginUrl, isEmployeeAppHost, EMPLOYEE_HOST_LOGIN_PATH } from "@/lib/app-hosts";
 
-/** Legacy URL — canonical employee sign-in is `/login/` on the employee host. */
+/** Legacy URL — canonical employee sign-in is `/` on the employee host. */
 export default function LegacyEmployeeLoginRoute() {
   useEffect(() => {
     if (isEmployeeAppHost()) {

@@ -19,5 +19,6 @@ export function consumeLoginPortal(): LoginPortal | null {
 
 export function loginPathForPortal(portal: LoginPortal | null): string {
   if (portal === "employee") return employeeLoginPath();
+  if (portal === "admin") return "/";
   return "/login/";
 }

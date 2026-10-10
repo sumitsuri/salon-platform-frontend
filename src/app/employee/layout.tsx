@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Clock, Home, Target, TrendingUp, UserCircle } from "lucide-react";
-import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
+import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import {
@@ -17,6 +17,7 @@ import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { consumeLoginPortal } from "@/lib/login-portal";
 import { EmployeeHostRedirect } from "@/components/auth/EmployeeHostRedirect";
 import { employeeLoginPath, isEmployeeLoginPath } from "@/lib/app-hosts";
+import { navigateToRoleHome } from "@/lib/role-home";
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("employee.nav");
@@ -68,7 +69,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
       return;
     }
     if (user.role !== "SALON_STAFF") {
-      router.replace(getHomeForRole(user.role));
+      navigateToRoleHome(user.role, router);
     }
   }, [user, router, hydrated, onLoginPage]);
 

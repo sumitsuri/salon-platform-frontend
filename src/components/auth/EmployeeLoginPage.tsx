@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
+import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
+import { navigateToRoleHome } from "@/lib/role-home";
 import { isLocalDev } from "@/lib/env";
 import { storeLoginPortal } from "@/lib/login-portal";
 import { managerLoginUrl, redirectStaffPortalToEmployeeHost } from "@/lib/app-hosts";
@@ -28,6 +29,10 @@ export function EmployeeLoginPage() {
     const path = window.location.pathname;
     if (path.startsWith("/employee/login")) {
       redirectStaffPortalToEmployeeHost(path);
+      return;
+    }
+    if (path === "/login" || path.startsWith("/login/")) {
+      window.location.replace("/");
     }
   }, []);
 
@@ -37,11 +42,7 @@ export function EmployeeLoginPage() {
 
   useEffect(() => {
     if (!hydrated || !user) return;
-    if (user.role === "SALON_STAFF") {
-      router.replace("/employee/");
-    } else {
-      router.replace(getHomeForRole(user.role));
-    }
+    navigateToRoleHome(user.role, router);
   }, [hydrated, user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,7 +52,7 @@ export function EmployeeLoginPage() {
     try {
       await login(email, password, "employee");
       storeLoginPortal("employee");
-      router.push("/employee/");
+      navigateToRoleHome("SALON_STAFF", router);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginFailed"));
     } finally {

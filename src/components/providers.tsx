@@ -8,6 +8,7 @@ import { useAuthHydrated, useAuthStore } from "@/lib/auth-store";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LanguagePickerModal, LocaleSync } from "@/components/LanguagePickerModal";
 import { PwaScrollRecovery } from "@/components/PwaScrollRecovery";
+import { CrossOriginRoleGuard } from "@/components/auth/CrossOriginRoleGuard";
 import { ToastViewport } from "@/components/ToastViewport";
 
 const SESSION_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
@@ -66,6 +67,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={client}>
       <ThemeProvider>
         <SessionKeeper />
+        <CrossOriginRoleGuard />
         <PwaScrollRecovery />
         <LocaleSync />
         <LanguagePickerModal />

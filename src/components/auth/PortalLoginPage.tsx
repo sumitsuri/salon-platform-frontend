@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useAuthStore, useAuthHydrated, getHomeForRole } from "@/lib/auth-store";
+import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
+import { navigateToRoleHome } from "@/lib/role-home";
+import { isPlatformRole } from "@/lib/platform-roles";
 import { LoginFormCard } from "@/components/brand/LoginFormCard";
 import { LoginMobileShell } from "@/components/brand/LoginMobileShell";
 import { LoginHeroPanel, LoginHeroTablet } from "@/components/brand/LoginHeroPanel";
@@ -32,7 +34,7 @@ export function PortalLoginPage() {
 
   useEffect(() => {
     if (!hydrated || !user) return;
-    router.replace(getHomeForRole(user.role));
+    navigateToRoleHome(user.role, router);
   }, [hydrated, user, router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,7 +45,12 @@ export function PortalLoginPage() {
       await login(email, password, "manager");
       storeLoginPortal("manager");
       const next = useAuthStore.getState().user;
-      router.push(getHomeForRole(next?.role || "SALON_MANAGER"));
+      if (next && isPlatformRole(next.role)) {
+        useAuthStore.getState().logout();
+        setError(t("usePlatformSignIn"));
+        return;
+      }
+      navigateToRoleHome(next?.role || "SALON_MANAGER", router);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("loginFailed");
       setError(msg);

@@ -10,8 +10,8 @@ import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { isNavActive, MOBILE_MAIN_PADDING_BOTTOM_TABS, type MobileBottomNavConfig } from "@/components/app-nav";
 import { FieldTrackingProvider } from "@/modules/sales/hooks/useFieldTracking";
-
-const PLATFORM_ROLES = new Set(["PLATFORM_SUPER_ADMIN", "SALES_EXECUTIVE"]);
+import { isPlatformRole } from "@/lib/platform-roles";
+import { isPlatformAppHost, platformLoginPath, resolveUnauthenticatedLoginPath } from "@/lib/app-hosts";
 
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("platform.layout");
@@ -106,8 +106,11 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!user || !PLATFORM_ROLES.has(user.role)) {
-      router.replace("/login");
+    if (!isPlatformAppHost() && typeof window !== "undefined") {
+      return;
+    }
+    if (!user || !isPlatformRole(user.role)) {
+      router.replace(resolveUnauthenticatedLoginPath());
       return;
     }
     if (user.role === "SALES_EXECUTIVE" && isNavActive(pathname, "/platform", true)) {
@@ -131,7 +134,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     return <AntrahqLoading label={tCommon("loading")} />;
   }
 
-  if (!user || !PLATFORM_ROLES.has(user.role)) return null;
+  if (!user || !isPlatformRole(user.role)) return null;
 
   const isActive = (href: string, exact?: boolean) => isNavActive(pathname, href, exact);
   const brandColor = resolveAccentColor(themeSettings, user.primaryColor);
@@ -154,7 +157,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
       onSettingsOpen={setSettingsOpen}
       onLogout={() => {
         logout();
-        router.push("/login");
+        router.push(platformLoginPath());
       }}
       logoutLabel={tCommon("logout")}
       mobileMainPadding={MOBILE_MAIN_PADDING_BOTTOM_TABS}

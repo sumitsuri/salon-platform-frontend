@@ -1,6 +1,7 @@
 {
   "name": "Antrahq",
   "short_name": "Antrahq",
+  "id": "https://antrahq.com/apps/ops",
   "description": "Every location in sync — multi-location ops platform",
   "start_url": "/",
   "scope": "/",
