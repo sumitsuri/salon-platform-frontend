@@ -31,6 +31,7 @@ import {
 } from "@/components/app-nav";
 import { AntrahqLoading } from "@/components/brand/AntrahqLoading";
 import { resolveUnauthenticatedLoginPath } from "@/lib/app-hosts";
+import { ProductTelemetryTracker } from "@/components/ProductTelemetryTracker";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("manager.nav");
@@ -178,6 +179,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
       mobileNavFabColor={brandColor}
       mobileBottomNav={mobileBottomNav}
     >
+      <ProductTelemetryTracker portal="manager" active />
       {children}
     </EnterpriseAppShell>
   );

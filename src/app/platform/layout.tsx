@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { BarChart3, Building2, Inbox, Kanban, MapPin, TrendingUp, Users } from "lucide-react";
+import { Activity, BarChart3, Building2, Inbox, Kanban, MapPin, TrendingUp, Users } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -30,6 +30,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     if (isAdmin) {
       return [
         { href: "/platform/overview", label: "Overview", icon: BarChart3, exact: true },
+        { href: "/platform/usage", label: "Customer usage", icon: Activity, exact: true },
         { href: "/platform", label: t("tenants"), icon: Building2, exact: true },
         {
           href: "/platform/sales",
@@ -64,6 +65,7 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
         menuTitle: "More",
         tabs: [
           { id: "overview", href: "/platform/overview", label: "Overview", icon: BarChart3, exact: true },
+          { id: "usage", href: "/platform/usage", label: "Usage", icon: Activity, exact: true },
           { id: "tenants", href: "/platform", label: t("tenants"), icon: Building2, exact: true },
           {
             id: "sales",
@@ -74,6 +76,18 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
           },
         ],
         moreSections: [
+          {
+            id: "platform",
+            label: "Platform",
+            links: [
+              {
+                href: "/platform/usage",
+                label: "Customer usage",
+                icon: Activity,
+                description: "Adoption by brand and user",
+              },
+            ],
+          },
           {
             id: "sales",
             label: "Sales",

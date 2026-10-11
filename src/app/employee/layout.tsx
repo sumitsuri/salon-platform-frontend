@@ -18,6 +18,7 @@ import { consumeLoginPortal } from "@/lib/login-portal";
 import { EmployeeHostRedirect } from "@/components/auth/EmployeeHostRedirect";
 import { employeeLoginPath, isEmployeeLoginPath } from "@/lib/app-hosts";
 import { navigateToRoleHome } from "@/lib/role-home";
+import { ProductTelemetryTracker } from "@/components/ProductTelemetryTracker";
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("employee.nav");
@@ -115,6 +116,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
       mobileNavFabColor={brandColor}
       mobileBottomNav={mobileBottomNav}
     >
+      <ProductTelemetryTracker portal="employee" active={!onLoginPage} />
       {children}
     </EnterpriseAppShell>
     </>

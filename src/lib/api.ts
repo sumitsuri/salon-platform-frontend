@@ -1368,6 +1368,23 @@ export const api = {
   deactivatePlatformUser: (tenantId: string, userId: string) =>
     request<void>(`/api/v1/platform/tenants/${tenantId}/users/${userId}`, { method: "DELETE" }),
 
+  getPlatformUsageSummary: (opts: { from: string; to: string; includeDemo?: boolean }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.includeDemo) params.set("includeDemo", "true");
+    return request<PlatformUsageSummary>(`/api/v1/platform/usage/summary?${params.toString()}`);
+  },
+
+  getPlatformTenantUsage: (tenantId: string, opts: { from: string; to: string }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    return request<PlatformTenantUsageDetail>(
+      `/api/v1/platform/usage/tenants/${tenantId}?${params.toString()}`,
+    );
+  },
+
   getReviewInvitationByVisit: (visitId: string) =>
     request<ReviewInvitation>(`/api/v1/reviews/invitations/by-visit/${visitId}`),
 
@@ -3172,6 +3189,62 @@ export interface DemoDataStatus {
   startedAt?: string | null;
   finishedAt?: string | null;
   message?: string | null;
+}
+
+export interface PlatformUsageFeatureHit {
+  featureKey: string;
+  hitCount: number;
+}
+
+export interface PlatformUsageTenantRow {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  demoTenant: boolean;
+  provisionedUsers: number;
+  wau: number;
+  mau: number;
+  lastActivityAt?: string | null;
+  topFeatures: PlatformUsageFeatureHit[];
+}
+
+export interface PlatformUsageSummary {
+  from: string;
+  to: string;
+  tenants: PlatformUsageTenantRow[];
+}
+
+export interface PlatformTenantUsageDaily {
+  date: string;
+  activeUsers: number;
+}
+
+export interface PlatformTenantUserUsage {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  branchId?: string | null;
+  active: boolean;
+  lastSeenAt?: string | null;
+  lastPortal?: string | null;
+  lastFeatureKey?: string | null;
+  loginCount: number;
+  daysActive28d: number;
+  everLoggedIn: boolean;
+}
+
+export interface PlatformTenantUsageDetail {
+  tenantId: string;
+  tenantName: string;
+  from: string;
+  to: string;
+  provisionedUsers: number;
+  wau: number;
+  mau: number;
+  dailyActiveUsers: PlatformTenantUsageDaily[];
+  topFeatures: PlatformUsageFeatureHit[];
+  users: PlatformTenantUserUsage[];
 }
 
 export interface CreateTenantRequest {

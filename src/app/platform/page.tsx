@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
@@ -367,6 +368,12 @@ export default function PlatformPage() {
                   <p className="text-xs text-[var(--text-secondary)] truncate">
                     {selectedTenant.slug} · {selectedTenant.status}
                   </p>
+                  <Link
+                    href={`/platform/usage/detail?tenantId=${encodeURIComponent(selectedTenant.id)}`}
+                    className="inline-block mt-1 text-xs font-medium text-teal-700 dark:text-teal-400 hover:underline"
+                  >
+                    View product usage
+                  </Link>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)]">
                     <label className="inline-flex items-center gap-1.5">
                       <input
