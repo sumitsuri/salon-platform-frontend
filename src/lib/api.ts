@@ -1322,9 +1322,24 @@ export const api = {
 
   updateTenantSandbox: (
     tenantId: string,
-    data: { demoTenant?: boolean; outboundMessagingMode?: "LIVE" | "SIMULATE" },
+    data: {
+      demoTenant?: boolean;
+      outboundMessagingMode?: "LIVE" | "SIMULATE";
+      localSpotlightEnabled?: boolean;
+      guestReviewsEnabled?: boolean;
+    },
   ) =>
     request<Tenant>(`/api/v1/platform/tenants/${tenantId}/sandbox`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  updatePlatformBranchFeatures: (
+    tenantId: string,
+    branchId: string,
+    data: { localSpotlightGoogleSyncEnabled?: boolean },
+  ) =>
+    request<PlatformBranch>(`/api/v1/platform/tenants/${tenantId}/branches/${branchId}/features`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
@@ -2682,6 +2697,7 @@ export interface Branch {
   gbpServicesListedCount?: number;
   estimatedSearchRank?: number;
   digitalPresenceUpdatedAt?: string;
+  localSpotlightGoogleSyncEnabled?: boolean;
   tenantSlug?: string;
   onlineBookingEnabled?: boolean;
   onlineBookingBrandEnabled?: boolean;
@@ -3146,6 +3162,8 @@ export interface Tenant {
   onlineBookingEnabled?: boolean;
   demoTenant?: boolean;
   outboundMessagingMode?: "LIVE" | "SIMULATE";
+  localSpotlightEnabled?: boolean;
+  guestReviewsEnabled?: boolean;
 }
 
 export interface DemoDataStatus {
@@ -3174,6 +3192,7 @@ export interface PlatformBranch {
   gstin?: string;
   phone?: string;
   status: string;
+  localSpotlightGoogleSyncEnabled?: boolean;
 }
 
 export interface CreatePlatformBranchRequest {

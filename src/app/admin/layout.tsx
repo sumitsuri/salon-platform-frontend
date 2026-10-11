@@ -23,6 +23,8 @@ import {
   MessageCircle,
   Briefcase,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -46,7 +48,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [settingsOpen, setSettingsOpen] = useState(false);
   const themeSettings = useThemeStore();
 
+  const { data: tenant } = useQuery({
+    queryKey: ["tenant"],
+    queryFn: () => api.getTenant(),
+    enabled: hydrated && !!user,
+    staleTime: 300_000,
+  });
+
+  const localSpotlightLicensed =
+    user?.role === "PLATFORM_SUPER_ADMIN" || tenant?.localSpotlightEnabled === true;
+  const guestReviewsLicensed =
+    user?.role === "PLATFORM_SUPER_ADMIN" || tenant?.guestReviewsEnabled === true;
+
   const nav = useMemo((): AppNavSection[] => {
+    const intelligenceItems = [
+      { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
+      ...(localSpotlightLicensed
+        ? [{ href: "/admin/local-spotlight", label: t("nav.localSpotlight"), shortLabel: t("nav.spotlight"), icon: ScanSearch }]
+        : []),
+      { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
+      ...(guestReviewsLicensed
+        ? [{ href: "/admin/guest-voice", label: t("nav.guestVoice"), shortLabel: t("nav.voice"), icon: MessageSquareHeart }]
+        : []),
+    ];
     return [
       {
         id: "command",
@@ -57,12 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {
         id: "intelligence",
         label: t("nav.sectionIntelligence"),
-        items: [
-          { href: "/admin/market-pulse", label: t("nav.marketPulse"), shortLabel: t("nav.pulse"), icon: TrendingUp },
-          { href: "/admin/local-spotlight", label: t("nav.localSpotlight"), shortLabel: t("nav.spotlight"), icon: ScanSearch },
-          { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
-          { href: "/admin/guest-voice", label: t("nav.guestVoice"), shortLabel: t("nav.voice"), icon: MessageSquareHeart },
-        ],
+        items: intelligenceItems,
       },
       {
         id: "operations",
@@ -95,9 +114,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ],
       },
     ];
-  }, [t]);
+  }, [t, localSpotlightLicensed, guestReviewsLicensed]);
 
   const mobileBottomNav = useMemo((): MobileBottomNavConfig => {
+    const intelligenceLinks = [
+      {
+        href: "/admin/market-pulse",
+        label: t("nav.marketPulse"),
+        icon: TrendingUp,
+        description: t("nav.morePulseHint"),
+      },
+      ...(localSpotlightLicensed
+        ? [{
+            href: "/admin/local-spotlight",
+            label: t("nav.localSpotlight"),
+            icon: ScanSearch,
+            description: t("nav.moreSpotlightHint"),
+          }]
+        : []),
+      {
+        href: "/admin/insights",
+        label: t("nav.insights"),
+        icon: Sparkles,
+        description: t("nav.moreInsightsHint"),
+      },
+      ...(guestReviewsLicensed
+        ? [{
+            href: "/admin/guest-voice",
+            label: t("nav.guestVoice"),
+            icon: MessageSquareHeart,
+            description: t("nav.moreGuestVoiceHint"),
+          }]
+        : []),
+    ];
     return {
       moreTabLabel: t("nav.tabMore"),
       menuTitle: t("nav.moreMenuTitle"),
@@ -135,32 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {
           id: "intelligence",
           label: t("nav.sectionIntelligence"),
-          links: [
-            {
-              href: "/admin/market-pulse",
-              label: t("nav.marketPulse"),
-              icon: TrendingUp,
-              description: t("nav.morePulseHint"),
-            },
-            {
-              href: "/admin/local-spotlight",
-              label: t("nav.localSpotlight"),
-              icon: ScanSearch,
-              description: t("nav.moreSpotlightHint"),
-            },
-            {
-              href: "/admin/insights",
-              label: t("nav.insights"),
-              icon: Sparkles,
-              description: t("nav.moreInsightsHint"),
-            },
-            {
-              href: "/admin/guest-voice",
-              label: t("nav.guestVoice"),
-              icon: MessageSquareHeart,
-              description: t("nav.moreGuestVoiceHint"),
-            },
-          ],
+          links: intelligenceLinks,
         },
         {
           id: "growth",
@@ -200,7 +224,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         },
       ],
     };
-  }, [t]);
+  }, [t, localSpotlightLicensed, guestReviewsLicensed]);
 
   useEffect(() => {
     if (!hydrated) return;

@@ -168,10 +168,32 @@ export default function PlatformPage() {
     onError: (e: Error) => setError(e.message),
   });
 
+  const branchFeaturesMutation = useMutation({
+    mutationFn: ({
+      tenantId,
+      branchId,
+      data,
+    }: {
+      tenantId: string;
+      branchId: string;
+      data: { localSpotlightGoogleSyncEnabled?: boolean };
+    }) => api.updatePlatformBranchFeatures(tenantId, branchId, data),
+    onSuccess: (_, { tenantId }) => {
+      invalidateTenantData(tenantId);
+      setError("");
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const sandboxMutation = useMutation({
     mutationFn: ({ tenantId, data }: {
       tenantId: string;
-      data: { demoTenant?: boolean; outboundMessagingMode?: "LIVE" | "SIMULATE" };
+      data: {
+        demoTenant?: boolean;
+        outboundMessagingMode?: "LIVE" | "SIMULATE";
+        localSpotlightEnabled?: boolean;
+        guestReviewsEnabled?: boolean;
+      };
     }) => api.updateTenantSandbox(tenantId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
@@ -361,6 +383,34 @@ export default function PlatformPage() {
                       {t("demoBrand")}
                     </label>
                     <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedTenant.localSpotlightEnabled}
+                        disabled={sandboxMutation.isPending}
+                        onChange={(e) =>
+                          sandboxMutation.mutate({
+                            tenantId: selectedTenant.id,
+                            data: { localSpotlightEnabled: e.target.checked },
+                          })
+                        }
+                      />
+                      {t("localSpotlightLicense")}
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedTenant.guestReviewsEnabled}
+                        disabled={sandboxMutation.isPending}
+                        onChange={(e) =>
+                          sandboxMutation.mutate({
+                            tenantId: selectedTenant.id,
+                            data: { guestReviewsEnabled: e.target.checked },
+                          })
+                        }
+                      />
+                      {t("guestReviewsLicense")}
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
                       {t("customerMessages")}
                       <select
                         className="rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5"
@@ -445,8 +495,16 @@ export default function PlatformPage() {
           <PlatformBranchDrawer
             drawer={branchDrawer}
             loading={createBranchMutation.isPending}
+            featuresLoading={branchFeaturesMutation.isPending}
             onClose={() => setBranchDrawer(null)}
             onCreate={(data) => createBranchMutation.mutate({ tenantId: selectedTenant.id, data })}
+            onToggleGoogleSync={(branchId, enabled) =>
+              branchFeaturesMutation.mutate({
+                tenantId: selectedTenant.id,
+                branchId,
+                data: { localSpotlightGoogleSyncEnabled: enabled },
+              })
+            }
             onDeactivate={() => {
               if (branchDrawer && branchDrawer.mode === "view" && window.confirm(t("deactivateBranchConfirm", { name: branchDrawer.branch.name }))) {
                 deactivateBranchMutation.mutate({ tenantId: selectedTenant.id, branchId: branchDrawer.branch.id });
@@ -695,14 +753,18 @@ function TenantDrawer({
 function PlatformBranchDrawer({
   drawer,
   loading,
+  featuresLoading,
   onClose,
   onCreate,
+  onToggleGoogleSync,
   onDeactivate,
 }: {
   drawer: BranchDrawerState | null;
   loading: boolean;
+  featuresLoading: boolean;
   onClose: () => void;
   onCreate: (data: CreatePlatformBranchRequest) => void;
+  onToggleGoogleSync: (branchId: string, enabled: boolean) => void;
   onDeactivate: () => void;
 }) {
   const t = useTranslations("platform.admin");
@@ -748,6 +810,20 @@ function PlatformBranchDrawer({
             <DetailField label={t("defaultSociety")} value={branch.societyDefault} />
             <DetailField label={tCommon("phone")} value={branch.phone} />
           </div>
+          <SectionTitle>{t("localSpotlightLicense")}</SectionTitle>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={!!branch.localSpotlightGoogleSyncEnabled}
+              disabled={featuresLoading}
+              onChange={(e) => onToggleGoogleSync(branch.id, e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">{t("localSpotlightGoogleSync")}</span>
+              <span className="mt-0.5 block text-xs text-[var(--text-secondary)]">{t("localSpotlightGoogleSyncHint")}</span>
+            </span>
+          </label>
         </div>
       ) : (
         <form

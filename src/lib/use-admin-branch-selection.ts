@@ -12,14 +12,13 @@ import {
 
 export type AdminBranchSelectionMode = "all" | "pilot";
 
-/** Branch codes used for Local Spotlight Google pilot (demo-brand VAR, Mystic prod MW01). */
-export const LOCAL_SPOTLIGHT_PILOT_BRANCH_CODES = ["MW01", "VAR"] as const;
+function isGoogleSyncBranch(b: { localSpotlightGoogleSyncEnabled?: boolean }): boolean {
+  return b.localSpotlightGoogleSyncEnabled === true;
+}
 
-function defaultPilotBranchIds(branches: { id: string; code: string }[]): string[] {
-  const pilot = branches.find((b) =>
-    (LOCAL_SPOTLIGHT_PILOT_BRANCH_CODES as readonly string[]).includes(b.code),
-  );
-  if (pilot) return [pilot.id];
+function defaultPilotBranchIds(branches: { id: string; code: string; localSpotlightGoogleSyncEnabled?: boolean }[]): string[] {
+  const syncBranches = branches.filter(isGoogleSyncBranch);
+  if (syncBranches.length > 0) return syncBranches.map((b) => b.id);
   return branches.length > 0 ? [branches[0].id] : [];
 }
 
@@ -46,9 +45,7 @@ export function useAdminBranchSelection(
       branchOverlapsReportingRange(b, effectiveRange.from, effectiveRange.to),
     );
     if (mode === "pilot") {
-      const pilots = scoped.filter((b) =>
-        (LOCAL_SPOTLIGHT_PILOT_BRANCH_CODES as readonly string[]).includes(b.code),
-      );
+      const pilots = scoped.filter(isGoogleSyncBranch);
       return pilots.length > 0 ? pilots : scoped;
     }
     return scoped;

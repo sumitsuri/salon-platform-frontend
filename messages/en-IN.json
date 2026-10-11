@@ -3059,6 +3059,10 @@
         "SALON_MANAGER": "Salon Manager"
       },
       "demoBrand": "Demo brand",
+      "localSpotlightLicense": "Local Spotlight (license)",
+      "guestReviewsLicense": "Guest reviews (license)",
+      "localSpotlightGoogleSync": "Google Places sync (branch)",
+      "localSpotlightGoogleSyncHint": "Uses Google API for ranks, rivals, and GBP metrics on this branch.",
       "customerMessages": "Customer messages",
       "messagesLive": "Live",
       "messagesSimulated": "Simulated",
