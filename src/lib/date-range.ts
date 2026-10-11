@@ -216,8 +216,8 @@ export function dashboardSecondaryRange(range: ProductDateRange): { startDate: s
 export function toIsoDateTimeRange(range: ProductDateRange): { from: string; to: string } {
   const { from, to } = resolveProductDateRange(range);
   return {
-    from: new Date(`${from}T00:00:00`).toISOString(),
-    to: new Date(`${to}T23:59:59.999`).toISOString(),
+    from: `${from}T00:00:00.000Z`,
+    to: `${to}T23:59:59.999Z`,
   };
 }
 

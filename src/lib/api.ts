@@ -3337,6 +3337,7 @@ export interface PlatformUsageUserRow {
 export interface PlatformUsageAnalytics {
   from: string;
   to: string;
+  telemetryReady: boolean;
   tenantId: string;
   tenantName: string;
   summary: PlatformUsageSummaryBlock;
@@ -3363,6 +3364,7 @@ export interface PlatformUsagePortfolioTenantRow {
 export interface PlatformUsagePortfolio {
   from: string;
   to: string;
+  telemetryReady: boolean;
   platformSummary: PlatformUsageSummaryBlock;
   dailyActiveUsers: PlatformUsageDailyPoint[];
   topFeatures: PlatformUsageFeatureHit[];

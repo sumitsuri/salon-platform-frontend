@@ -10,7 +10,7 @@ import { MetricChart } from "@/components/LineChart";
 import { BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 import { AlertBanner, Card, PageHeader } from "@/components/ui";
 import { PlatformUsageFilterBar } from "@/modules/platform/usage/PlatformUsageFilterBar";
-import { UsagePagedTable } from "@/modules/platform/usage/UsagePagedTable";
+import { UsageStandardTable } from "@/modules/platform/usage/UsageStandardTable";
 import { featureLabel } from "@/modules/platform/usage/feature-labels";
 
 function formatInstant(iso?: string | null) {
@@ -160,7 +160,14 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
         <Card className="p-8 text-center text-sm text-[var(--ink-muted)]">Loading analytics…</Card>
       )}
 
-      {data && data.summary.totalEvents === 0 && (
+      {data && data.telemetryReady === false && (
+        <AlertBanner variant="warning">
+          Telemetry metrics could not be loaded from storage. User directory is still shown — retry shortly or contact
+          platform ops if this persists.
+        </AlertBanner>
+      )}
+
+      {data && data.telemetryReady && data.summary.totalEvents === 0 && (
         <AlertBanner variant="info">
           No usage events in this period yet. Data appears when teams use employee, manager, and admin apps after
           sign-in. Try widening the date range or clearing branch/user filters.
@@ -177,12 +184,12 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
             <Card className="min-w-0 overflow-x-auto">{branchChart}</Card>
           )}
 
-          <UsagePagedTable
+          <UsageStandardTable
             title="Feature breakdown"
             rows={data.featureUsage}
             rowKey={(r) => r.featureKey}
             emptyMessage="No feature events in this period."
-            filterSlot={
+            toolbar={
               <span className="text-xs text-[var(--text-tertiary)]">{data.featureUsage.length} features</span>
             }
             columns={[
@@ -210,7 +217,7 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
             ]}
           />
 
-          <UsagePagedTable
+          <UsageStandardTable
             title="Branches"
             rows={data.branchUsage}
             rowKey={(r) => r.branchId ?? "unassigned"}
@@ -244,7 +251,7 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
             ]}
           />
 
-          <UsagePagedTable
+          <UsageStandardTable
             title="Users"
             rows={data.users}
             rowKey={(r) => r.userId}

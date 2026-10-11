@@ -11,7 +11,7 @@ import { BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 import { AlertBanner, Card, PageHeader, inputClass, selectClass } from "@/components/ui";
 import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
-import { UsagePagedTable } from "@/modules/platform/usage/UsagePagedTable";
+import { UsageStandardTable } from "@/modules/platform/usage/UsageStandardTable";
 import { featureLabel } from "@/modules/platform/usage/feature-labels";
 
 function formatInstant(iso?: string | null) {
@@ -52,18 +52,29 @@ export function PlatformUsagePortfolioView() {
     );
   }, [data?.tenants, tenantSearch]);
 
+  const stickinessPct = useMemo(() => {
+    const s = data?.platformSummary;
+    if (!s || s.mau === 0) return null;
+    return Math.round((s.wau / s.mau) * 100);
+  }, [data?.platformSummary]);
+
   const platformChart = useMemo(() => {
     if (!data?.dailyActiveUsers?.length) return null;
     const labels = data.dailyActiveUsers.map((d) => d.date.slice(5));
     return (
       <MetricChart
-        title="Platform daily active users"
+        title="Platform activity (daily)"
         labels={labels}
         series={[
           {
             name: "Active users",
             color: BRANCH_SERIES_COLORS[0],
             values: data.dailyActiveUsers.map((d) => d.activeUsers),
+          },
+          {
+            name: "Events",
+            color: BRANCH_SERIES_COLORS[1],
+            values: data.dailyActiveUsers.map((d) => d.eventCount),
           },
         ]}
       />
@@ -154,14 +165,22 @@ export function PlatformUsagePortfolioView() {
         </AlertBanner>
       )}
 
+      {data && data.telemetryReady === false && (
+        <AlertBanner variant="warning">
+          Usage metrics are temporarily unavailable (telemetry storage is still initializing). Brand list and
+          provisioned users are shown below — try again in a few minutes after API restart.
+        </AlertBanner>
+      )}
+
       {isLoading && !data && (
         <Card className="p-8 text-center text-sm text-[var(--ink-muted)]">Loading…</Card>
       )}
 
       {data?.platformSummary && (
-        <Card className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+        <Card className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 text-center">
           <Stat label="WAU" value={data.platformSummary.wau} />
           <Stat label="MAU" value={data.platformSummary.mau} />
+          <Stat label="Stickiness" value={stickinessPct ?? 0} suffix={stickinessPct != null ? "%" : ""} />
           <Stat label="Active (range)" value={data.platformSummary.activeUsersInRange} />
           <Stat label="Events" value={data.platformSummary.totalEvents} />
           <Stat label="Features" value={data.platformSummary.distinctFeatures} />
@@ -185,7 +204,7 @@ export function PlatformUsagePortfolioView() {
       )}
 
       {data && data.topFeatures.length > 0 && (
-        <UsagePagedTable
+        <UsageStandardTable
           title="Top features (platform-wide)"
           rows={data.topFeatures}
           rowKey={(r) => r.featureKey}
@@ -206,7 +225,7 @@ export function PlatformUsagePortfolioView() {
         />
       )}
 
-      <UsagePagedTable
+      <UsageStandardTable
         title="Brands"
         rows={filteredTenants}
         rowKey={(r) => r.tenantId}
@@ -261,11 +280,14 @@ export function PlatformUsagePortfolioView() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, suffix = "" }: { label: string; value: number; suffix?: string }) {
   return (
     <div className="rounded-xl bg-[var(--surface-muted)]/60 px-2 py-3">
       <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{label}</p>
-      <p className="text-lg font-bold tabular-nums text-[var(--text-primary)]">{value}</p>
+      <p className="text-lg font-bold tabular-nums text-[var(--text-primary)]">
+        {value}
+        {suffix}
+      </p>
     </div>
   );
 }

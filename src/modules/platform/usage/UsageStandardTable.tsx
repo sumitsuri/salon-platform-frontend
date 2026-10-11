@@ -1,10 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
-import { ListPageArrows } from "@/components/employee/ListPageArrows";
-import { Card, DataTable } from "@/components/ui";
-import { useClientPagedList, DEFAULT_LIST_PAGE_SIZE } from "@/lib/use-client-paged-list";
+import { useEffect, useMemo, useState } from "react";
+import { Card, DataTable, TablePagination } from "@/components/ui";
 
 type Column<T> = {
   id: string;
@@ -19,21 +17,33 @@ type Props<T> = {
   columns: Column<T>[];
   rowKey: (row: T) => string;
   emptyMessage: string;
-  pageSize?: number;
-  filterSlot?: ReactNode;
+  toolbar?: ReactNode;
+  defaultPageSize?: number;
 };
 
-export function UsagePagedTable<T>({
+export function UsageStandardTable<T>({
   title,
   rows,
   columns,
   rowKey,
   emptyMessage,
-  pageSize = DEFAULT_LIST_PAGE_SIZE,
-  filterSlot,
+  toolbar,
+  defaultPageSize = 10,
 }: Props<T>) {
-  const [pageSizeState, setPageSizeState] = useState(pageSize);
-  const pager = useClientPagedList(rows, pageSizeState);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    setPage(0);
+  }, [rows, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize) || 1);
+  const safePage = Math.min(page, totalPages - 1);
+
+  const pageItems = useMemo(
+    () => rows.slice(safePage * pageSize, safePage * pageSize + pageSize),
+    [rows, safePage, pageSize],
+  );
 
   const headers = useMemo(() => columns.map((c) => c.header), [columns]);
 
@@ -41,23 +51,7 @@ export function UsagePagedTable<T>({
     <Card padding={false} className="min-w-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">{title}</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          {filterSlot}
-          <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-            Rows
-            <select
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs"
-              value={pageSizeState}
-              onChange={(e) => setPageSizeState(Number(e.target.value))}
-            >
-              {[10, 20, 50].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        {toolbar}
       </div>
 
       {rows.length === 0 ? (
@@ -68,7 +62,7 @@ export function UsagePagedTable<T>({
             headers={headers}
             mobile={
               <div className="divide-y divide-[var(--border)]">
-                {pager.pageItems.map((row) => (
+                {pageItems.map((row) => (
                   <div key={rowKey(row)} className="p-4 space-y-2">
                     {columns.map((col) => (
                       <div key={col.id} className="flex justify-between gap-3 text-sm">
@@ -83,26 +77,27 @@ export function UsagePagedTable<T>({
               </div>
             }
           >
-            {pager.pageItems.map((row) => (
-              <tr key={rowKey(row)} className="border-b border-[var(--border)] last:border-0">
+            {pageItems.map((row) => (
+              <tr
+                key={rowKey(row)}
+                className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-muted)]/50"
+              >
                 {columns.map((col) => (
-                  <td key={col.id} className="px-4 py-2.5 align-top text-[var(--text-primary)]">
+                  <td key={col.id} className="px-4 py-3 align-top text-sm text-[var(--text-primary)]">
                     {col.cell(row)}
                   </td>
                 ))}
               </tr>
             ))}
           </DataTable>
-          {pager.showPager && (
-            <ListPageArrows
-              page={pager.page}
-              totalPages={pager.totalPages}
-              hasPrev={pager.hasPrev}
-              hasNext={pager.hasNext}
-              onPrev={pager.goPrev}
-              onNext={pager.goNext}
-            />
-          )}
+          <TablePagination
+            page={safePage}
+            size={pageSize}
+            totalPages={totalPages}
+            totalElements={rows.length}
+            onPageChange={setPage}
+            onSizeChange={setPageSize}
+          />
         </>
       )}
     </Card>
