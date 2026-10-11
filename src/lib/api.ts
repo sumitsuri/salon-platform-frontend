@@ -1376,6 +1376,45 @@ export const api = {
     return request<PlatformUsageSummary>(`/api/v1/platform/usage/summary?${params.toString()}`);
   },
 
+  getPlatformUsagePortfolio: (opts: {
+    from: string;
+    to: string;
+    includeDemo?: boolean;
+    tenantId?: string;
+    branchId?: string;
+  }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.includeDemo) params.set("includeDemo", "true");
+    if (opts.tenantId) params.set("tenantId", opts.tenantId);
+    if (opts.branchId) params.set("branchId", opts.branchId);
+    return request<PlatformUsagePortfolio>(`/api/v1/platform/usage/portfolio?${params.toString()}`);
+  },
+
+  getPlatformUsageAnalytics: (
+    tenantId: string,
+    opts: {
+      from: string;
+      to: string;
+      branchId?: string;
+      userId?: string;
+      role?: UserRole;
+      search?: string;
+    },
+  ) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.branchId) params.set("branchId", opts.branchId);
+    if (opts.userId) params.set("userId", opts.userId);
+    if (opts.role) params.set("role", opts.role);
+    if (opts.search) params.set("search", opts.search);
+    return request<PlatformUsageAnalytics>(
+      `/api/v1/platform/usage/tenants/${tenantId}/analytics?${params.toString()}`,
+    );
+  },
+
   getPlatformTenantUsage: (tenantId: string, opts: { from: string; to: string }) => {
     const params = new URLSearchParams();
     params.set("from", opts.from);
@@ -3245,6 +3284,89 @@ export interface PlatformTenantUsageDetail {
   dailyActiveUsers: PlatformTenantUsageDaily[];
   topFeatures: PlatformUsageFeatureHit[];
   users: PlatformTenantUserUsage[];
+}
+
+export interface PlatformUsageSummaryBlock {
+  provisionedUsers: number;
+  wau: number;
+  mau: number;
+  activeUsersInRange: number;
+  totalEvents: number;
+  distinctFeatures: number;
+}
+
+export interface PlatformUsageDailyPoint {
+  date: string;
+  activeUsers: number;
+  eventCount: number;
+}
+
+export interface PlatformUsageFeatureRow {
+  featureKey: string;
+  hitCount: number;
+  uniqueUsers: number;
+}
+
+export interface PlatformUsageBranchRow {
+  branchId?: string | null;
+  branchName: string;
+  branchCode: string;
+  activeUsers: number;
+  eventCount: number;
+  topFeatureKey?: string | null;
+}
+
+export interface PlatformUsageUserRow {
+  userId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  branchId?: string | null;
+  branchName?: string | null;
+  active: boolean;
+  lastSeenAt?: string | null;
+  lastPortal?: string | null;
+  lastFeatureKey?: string | null;
+  loginCount: number;
+  daysActive28d: number;
+  eventsInRange: number;
+  featuresUsedInRange: number;
+  everLoggedIn: boolean;
+}
+
+export interface PlatformUsageAnalytics {
+  from: string;
+  to: string;
+  tenantId: string;
+  tenantName: string;
+  summary: PlatformUsageSummaryBlock;
+  dailyActiveUsers: PlatformUsageDailyPoint[];
+  featureUsage: PlatformUsageFeatureRow[];
+  branchUsage: PlatformUsageBranchRow[];
+  users: PlatformUsageUserRow[];
+}
+
+export interface PlatformUsagePortfolioTenantRow {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  demoTenant: boolean;
+  provisionedUsers: number;
+  wau: number;
+  mau: number;
+  activeUsersInRange: number;
+  totalEvents: number;
+  lastActivityAt?: string | null;
+  topFeatures: PlatformUsageFeatureHit[];
+}
+
+export interface PlatformUsagePortfolio {
+  from: string;
+  to: string;
+  platformSummary: PlatformUsageSummaryBlock;
+  dailyActiveUsers: PlatformUsageDailyPoint[];
+  topFeatures: PlatformUsageFeatureHit[];
+  tenants: PlatformUsagePortfolioTenantRow[];
 }
 
 export interface CreateTenantRequest {
