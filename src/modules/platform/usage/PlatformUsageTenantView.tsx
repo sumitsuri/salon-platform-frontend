@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,7 +12,8 @@ import { BRANCH_SERIES_COLORS } from "@/lib/chart-colors";
 import { AlertBanner, Card, PageHeader } from "@/components/ui";
 import { PlatformUsageFilterBar } from "@/modules/platform/usage/PlatformUsageFilterBar";
 import { UsageStandardTable } from "@/modules/platform/usage/UsageStandardTable";
-import { featureLabel } from "@/modules/platform/usage/feature-labels";
+import { featureLabel, featurePortalLabel } from "@/modules/platform/usage/feature-labels";
+import { PlatformUsageHeatmapSection } from "@/modules/platform/usage/PlatformUsageHeatmapSection";
 
 function formatInstant(iso?: string | null) {
   if (!iso) return "—";
@@ -21,8 +23,9 @@ function formatInstant(iso?: string | null) {
 type Props = { tenantId: string };
 
 export function PlatformUsageTenantView({ tenantId }: Props) {
+  const searchParams = useSearchParams();
   const [dateRange, setDateRange] = useState<ProductDateRange>(getDefaultDateRange);
-  const [branchId, setBranchId] = useState("");
+  const [branchId, setBranchId] = useState(() => searchParams.get("branchId") ?? "");
   const [userId, setUserId] = useState("");
   const [role, setRole] = useState("");
   const [search, setSearch] = useState("");
@@ -49,6 +52,17 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
         userId: userId || undefined,
         role: (role || undefined) as UserRole | undefined,
         search: search.trim() || undefined,
+      }),
+  });
+
+  const { data: heatmap } = useQuery({
+    queryKey: ["platform-usage-heatmap", tenantId, iso.from, iso.to, branchId],
+    queryFn: () =>
+      api.getPlatformUsageHeatmap({
+        from: iso.from,
+        to: iso.to,
+        tenantId,
+        branchId: branchId || undefined,
       }),
   });
 
@@ -178,6 +192,10 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
 
       {data && (
         <>
+          {heatmap && (
+            <PlatformUsageHeatmapSection data={heatmap} mode="tenant" tenantId={tenantId} />
+          )}
+
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 min-w-0">
             <Card className="min-w-0 overflow-x-auto">{dailyChart ?? <EmptyChart label="Daily active users" />}</Card>
             <Card className="min-w-0 overflow-x-auto">{featureChart ?? <EmptyChart label="Feature usage" />}</Card>
@@ -201,8 +219,12 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
                 mobileLabel: "Feature",
                 cell: (r) => (
                   <div>
-                    <p className="font-medium">{featureLabel(r.featureKey)}</p>
-                    <p className="text-xs text-[var(--text-tertiary)] font-mono">{r.featureKey}</p>
+                    <p className="font-medium" title={r.featureKey}>
+                      {featureLabel(r.featureKey)}
+                    </p>
+                    {featurePortalLabel(r.featureKey) && (
+                      <p className="text-xs text-[var(--text-tertiary)]">{featurePortalLabel(r.featureKey)} app</p>
+                    )}
                   </div>
                 ),
               },

@@ -1376,6 +1376,22 @@ export const api = {
     return request<PlatformUsageSummary>(`/api/v1/platform/usage/summary?${params.toString()}`);
   },
 
+  getPlatformUsageHeatmap: (opts: {
+    from: string;
+    to: string;
+    includeDemo?: boolean;
+    tenantId?: string;
+    branchId?: string;
+  }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.includeDemo) params.set("includeDemo", "true");
+    if (opts.tenantId) params.set("tenantId", opts.tenantId);
+    if (opts.branchId) params.set("branchId", opts.branchId);
+    return request<PlatformUsageHeatmap>(`/api/v1/platform/usage/heatmap?${params.toString()}`);
+  },
+
   getPlatformUsagePortfolio: (opts: {
     from: string;
     to: string;
@@ -3369,6 +3385,47 @@ export interface PlatformUsagePortfolio {
   dailyActiveUsers: PlatformUsageDailyPoint[];
   topFeatures: PlatformUsageFeatureHit[];
   tenants: PlatformUsagePortfolioTenantRow[];
+}
+
+export interface PlatformUsageHeatmapPortalSlice {
+  portal: string;
+  eventCount: number;
+  activeUsers: number;
+}
+
+export interface PlatformUsageHeatmapTenantCell {
+  tenantId: string;
+  tenantName: string;
+  portal: string;
+  eventCount: number;
+  activeUsers: number;
+}
+
+export interface PlatformUsageHeatmapBranchCell {
+  branchId: string | null;
+  branchName: string;
+  branchCode: string;
+  portal: string;
+  eventCount: number;
+  activeUsers: number;
+}
+
+export interface PlatformUsageHeatmapUserDayCell {
+  userId: string;
+  userName: string;
+  role: string;
+  branchName: string;
+  usageDate: string;
+  eventCount: number;
+}
+
+export interface PlatformUsageHeatmap {
+  from: string;
+  to: string;
+  portals: PlatformUsageHeatmapPortalSlice[];
+  tenantPortalCells: PlatformUsageHeatmapTenantCell[];
+  branchPortalCells: PlatformUsageHeatmapBranchCell[];
+  userDayCells: PlatformUsageHeatmapUserDayCell[];
 }
 
 export interface CreateTenantRequest {

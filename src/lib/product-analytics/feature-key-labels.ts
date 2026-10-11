@@ -1,0 +1,56 @@
+/**
+ * Display names for stable analytics feature keys — aligned with app nav / routes
+ * ({@link route-feature-map.ts}). Keys stay dotted in storage; UI uses these labels.
+ */
+export const FEATURE_KEY_LABELS: Record<string, string> = {
+  "auth.login": "Sign-in",
+
+  "employee.home": "Employee home",
+  "employee.time": "Time clock",
+  "employee.sales": "Sales",
+  "employee.progress": "Progress",
+  "employee.profile": "Profile",
+  "employee.goals": "Goals",
+  "employee.growth": "Growth",
+  "employee.leaves": "Leaves",
+  "employee.attendance": "Attendance",
+  "employee.reviews": "Reviews",
+  "employee.session": "Employee session",
+
+  "manager.home": "Manager home",
+  "manager.schedule": "Schedule",
+  "manager.walk_in": "Walk-in",
+  "manager.memberships": "Memberships",
+  "manager.packages": "Packages",
+  "manager.customers": "Customers",
+  "manager.scalp_scan": "Scalp scan",
+  "manager.face_scan": "Face scan",
+  "manager.attendance": "Attendance",
+  "manager.inventory": "Inventory",
+  "manager.session": "Manager session",
+
+  "admin.home": "Overview",
+  "admin.ops": "Operations",
+  "admin.bookings": "Bookings",
+  "admin.customers": "Customers",
+  "admin.services": "Services",
+  "admin.inventory": "Inventory",
+  "admin.employees": "Employees",
+  "admin.leads": "Leads",
+  "admin.campaigns": "Campaigns",
+  "admin.whatsapp_templates": "WhatsApp templates",
+  "admin.promotions": "Promotions",
+  "admin.scratch_cards": "Scratch cards",
+  "admin.finance": "Finance",
+  "admin.branches": "Branches",
+  "admin.market_pulse": "Market pulse",
+  "admin.local_spotlight": "Local spotlight",
+  "admin.insights": "Insights",
+  "admin.guest_voice": "Guest voice",
+  "admin.session": "Admin session",
+
+  login_succeeded: "Sign-in",
+  screen_viewed: "Screen view",
+  session_started: "Session started",
+  feature_used: "Feature used",
+};

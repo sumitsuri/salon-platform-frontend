@@ -13,6 +13,7 @@ import { ScopeFilterBar } from "@/components/ScopeFilterBar";
 import { DateRangeSelector } from "@/components/DateRangeSelector";
 import { UsageStandardTable } from "@/modules/platform/usage/UsageStandardTable";
 import { featureLabel } from "@/modules/platform/usage/feature-labels";
+import { PlatformUsageHeatmapSection } from "@/modules/platform/usage/PlatformUsageHeatmapSection";
 
 function formatInstant(iso?: string | null) {
   if (!iso) return "—";
@@ -36,6 +37,17 @@ export function PlatformUsagePortfolioView() {
     queryKey: ["platform-usage-portfolio", iso.from, iso.to, includeDemo, tenantFilterId],
     queryFn: () =>
       api.getPlatformUsagePortfolio({
+        from: iso.from,
+        to: iso.to,
+        includeDemo,
+        tenantId: tenantFilterId || undefined,
+      }),
+  });
+
+  const { data: heatmap } = useQuery({
+    queryKey: ["platform-usage-heatmap", iso.from, iso.to, includeDemo, tenantFilterId],
+    queryFn: () =>
+      api.getPlatformUsageHeatmap({
         from: iso.from,
         to: iso.to,
         includeDemo,
@@ -197,6 +209,8 @@ export function PlatformUsagePortfolioView() {
         </Card>
       )}
 
+      {heatmap && <PlatformUsageHeatmapSection data={heatmap} mode="portfolio" />}
+
       {data && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 min-w-0">
           <Card className="min-w-0 overflow-x-auto">
@@ -223,10 +237,9 @@ export function PlatformUsagePortfolioView() {
               id: "f",
               header: "Feature",
               cell: (r) => (
-                <div>
-                  <p className="font-medium">{featureLabel(r.featureKey)}</p>
-                  <p className="text-xs font-mono text-[var(--text-tertiary)]">{r.featureKey}</p>
-                </div>
+                <span className="font-medium" title={r.featureKey}>
+                  {featureLabel(r.featureKey)}
+                </span>
               ),
             },
             { id: "h", header: "Hits", cell: (r) => r.hitCount },
