@@ -212,12 +212,17 @@ export function dashboardSecondaryRange(range: ProductDateRange): { startDate: s
   return toStartEndDates({ preset: "last_30_days", ...getLast30DaysRange() });
 }
 
-/** Guest-voice summary API (full ISO datetimes). */
+/**
+ * Platform usage APIs — bounds are the user's local calendar days (not UTC midnight),
+ * so "Today" includes activity that happened early morning in IST and similar zones.
+ */
 export function toIsoDateTimeRange(range: ProductDateRange): { from: string; to: string } {
   const { from, to } = resolveProductDateRange(range);
+  const startLocal = new Date(`${from}T00:00:00`);
+  const endLocal = new Date(`${to}T23:59:59.999`);
   return {
-    from: `${from}T00:00:00.000Z`,
-    to: `${to}T23:59:59.999Z`,
+    from: startLocal.toISOString(),
+    to: endLocal.toISOString(),
   };
 }
 

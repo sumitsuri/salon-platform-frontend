@@ -60,7 +60,9 @@ export function PlatformUsagePortfolioView() {
 
   const platformChart = useMemo(() => {
     if (!data?.dailyActiveUsers?.length) return null;
-    const labels = data.dailyActiveUsers.map((d) => d.date.slice(5));
+    const labels = data.dailyActiveUsers.map((d) =>
+      new Date(`${d.date}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    );
     return (
       <MetricChart
         title="Platform activity (daily)"
