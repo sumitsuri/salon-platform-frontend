@@ -77,12 +77,11 @@ async function flush() {
   const queue = readQueue();
   if (queue.length === 0) return;
 
-  writeQueue([]);
   const body = JSON.stringify({ events: queue });
   const url = `${resolveClientApiBase()}/api/v1/telemetry/events`;
 
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -91,6 +90,11 @@ async function flush() {
       body,
       keepalive: true,
     });
+    if (!res.ok) {
+      writeQueue([...readQueue(), ...queue].slice(-MAX_QUEUE));
+      return;
+    }
+    writeQueue([]);
   } catch {
     writeQueue([...readQueue(), ...queue].slice(-MAX_QUEUE));
   }
