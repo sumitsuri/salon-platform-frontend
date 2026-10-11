@@ -162,12 +162,12 @@ export function PlatformUsageTenantView({ tenantId }: Props) {
 
       {data && data.telemetryReady === false && (
         <AlertBanner variant="warning">
-          Telemetry metrics could not be loaded from storage. User directory is still shown — retry shortly or contact
-          platform ops if this persists.
+          Usage metrics could not be loaded from storage. User directory is still shown — contact platform ops if this
+          persists.
         </AlertBanner>
       )}
 
-      {data && data.telemetryReady && data.summary.totalEvents === 0 && (
+      {data && data.telemetryReady !== false && data.summary.totalEvents === 0 && (
         <AlertBanner variant="info">
           No usage events in this period yet. Data appears when teams use employee, manager, and admin apps after
           sign-in. Try widening the date range or clearing branch/user filters.

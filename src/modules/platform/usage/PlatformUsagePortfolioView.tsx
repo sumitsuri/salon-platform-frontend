@@ -167,8 +167,15 @@ export function PlatformUsagePortfolioView() {
 
       {data && data.telemetryReady === false && (
         <AlertBanner variant="warning">
-          Usage metrics are temporarily unavailable (telemetry storage is still initializing). Brand list and
-          provisioned users are shown below — try again in a few minutes after API restart.
+          Usage metrics could not be loaded from storage. Brand list and provisioned users are still shown below —
+          contact platform ops if this persists.
+        </AlertBanner>
+      )}
+
+      {data && data.telemetryReady !== false && data.platformSummary.totalEvents === 0 && (
+        <AlertBanner variant="info">
+          No product usage recorded in this date range yet. Metrics appear after teams use employee, manager, and
+          admin apps (screen views and sign-ins). Widen the range or check back after the hourly rollup.
         </AlertBanner>
       )}
 
