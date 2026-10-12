@@ -900,11 +900,66 @@ export const api = {
     return request<PageResult<LeaveRecord>>(`/api/v1/leave${q}`);
   },
 
-  approveLeave: (leaveId: string) =>
-    request<LeaveRecord>(`/api/v1/leave/${leaveId}/approve`, { method: "POST" }),
+  approveLeave: (leaveId: string, note?: string) =>
+    request<LeaveRecord>(`/api/v1/leave/${leaveId}/approve`, {
+      method: "POST",
+      ...(note ? { body: JSON.stringify({ note }) } : {}),
+    }),
 
-  rejectLeave: (leaveId: string) =>
-    request<LeaveRecord>(`/api/v1/leave/${leaveId}/reject`, { method: "POST" }),
+  rejectLeave: (leaveId: string, note?: string) =>
+    request<LeaveRecord>(`/api/v1/leave/${leaveId}/reject`, {
+      method: "POST",
+      ...(note ? { body: JSON.stringify({ note }) } : {}),
+    }),
+
+  cancelLeave: (leaveId: string) =>
+    request<LeaveRecord>(`/api/v1/leave/${leaveId}/cancel`, { method: "POST" }),
+
+  getPendingLeaves: (branchId?: string) =>
+    request<LeaveRecord[]>(`/api/v1/leave/pending${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+
+  // Salary advances — owner side
+  getAdvanceBudget: () => request<AdvanceBudget>("/api/v1/salary-advances/budget"),
+
+  updateAdvancePolicy: (data: AdvancePolicyInput) =>
+    request<AdvancePolicy>("/api/v1/salary-advances/policy", { method: "PUT", body: JSON.stringify(data) }),
+
+  getAdvances: (opts?: { status?: AdvanceStatus; staffId?: string; branchId?: string; page?: number; size?: number }) => {
+    const params = new URLSearchParams();
+    if (opts?.status) params.set("status", opts.status);
+    if (opts?.staffId) params.set("staffId", opts.staffId);
+    if (opts?.branchId) params.set("branchId", opts.branchId);
+    params.set("page", String(opts?.page ?? 0));
+    params.set("size", String(opts?.size ?? 50));
+    return request<PageResult<AdvanceRequest>>(`/api/v1/salary-advances?${params.toString()}`);
+  },
+
+  getAdvanceEmployees: (branchId?: string) =>
+    request<EmployeeAdvanceSummary[]>(`/api/v1/salary-advances/employees${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+
+  approveAdvance: (id: string, data: DecideAdvanceInput) =>
+    request<AdvanceRequest>(`/api/v1/salary-advances/${id}/approve`, { method: "POST", body: JSON.stringify(data) }),
+
+  rejectAdvance: (id: string, note?: string) =>
+    request<AdvanceRequest>(`/api/v1/salary-advances/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ note: note || undefined }),
+    }),
+
+  getAdvanceDeductions: (month?: string) =>
+    request<AdvanceDeductions>(`/api/v1/salary-advances/deductions${month ? `?month=${encodeURIComponent(month)}` : ""}`),
+
+  deductAdvanceMonth: (month: string) =>
+    request<AdvanceDeductions>(`/api/v1/salary-advances/deductions/deduct-month?month=${encodeURIComponent(month)}`, { method: "POST" }),
+
+  deductAdvanceInstallment: (id: string) =>
+    request<AdvanceInstallment>(`/api/v1/salary-advances/installments/${id}/deduct`, { method: "POST" }),
+
+  waiveAdvanceInstallment: (id: string, note?: string) =>
+    request<AdvanceInstallment>(
+      `/api/v1/salary-advances/installments/${id}/waive${note ? `?note=${encodeURIComponent(note)}` : ""}`,
+      { method: "POST" },
+    ),
 
   getBranches: () => request<Branch[]>("/api/v1/branches"),
 
@@ -1608,6 +1663,18 @@ export const api = {
     ),
 
   getStaffPortalLeaves: () => request<LeaveRecord[]>("/api/v1/staff-portal/leaves"),
+
+  cancelStaffPortalLeave: (leaveId: string) =>
+    request<LeaveRecord>(`/api/v1/staff-portal/leaves/${leaveId}/cancel`, { method: "POST" }),
+
+  // Salary advances — employee side
+  getMyAdvances: () => request<MyAdvances>("/api/v1/staff-portal/advances"),
+
+  requestAdvance: (data: { amount: number; installments: number; reason: string }) =>
+    request<AdvanceRequest>("/api/v1/staff-portal/advances", { method: "POST", body: JSON.stringify(data) }),
+
+  cancelMyAdvance: (id: string) =>
+    request<AdvanceRequest>(`/api/v1/staff-portal/advances/${id}/cancel`, { method: "POST" }),
 
   applyStaffPortalLeave: (data: CreateLeaveRequest) =>
     request<LeaveRecord>("/api/v1/staff-portal/leaves", { method: "POST", body: JSON.stringify(data) }),
@@ -3139,9 +3206,142 @@ export interface LeaveRecord {
   startDate: string;
   endDate: string;
   leaveType: "FULL_DAY" | "HALF_DAY";
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   reason?: string;
   createdAt?: string;
+  /** Calendar days requested (half days count as 0.5). */
+  days?: number;
+  decisionNote?: string | null;
+  decidedAt?: string | null;
+  /** Only on pending requests: approved leave days this year, for context. */
+  staffApprovedDaysThisYear?: number | null;
+}
+
+export type AdvanceStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED";
+export type AdvanceInstallmentStatus = "SCHEDULED" | "DEDUCTED" | "WAIVED";
+
+export interface AdvanceInstallment {
+  id: string;
+  advanceId: string;
+  dueMonth: string;
+  amount: number;
+  status: AdvanceInstallmentStatus;
+  settledAt?: string | null;
+  note?: string | null;
+}
+
+export interface EmployeeAdvanceSummary {
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName?: string;
+  role?: string;
+  active: boolean;
+  monthlySalary?: number | null;
+  requestCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  totalRequested: number;
+  totalApproved: number;
+  outstanding: number;
+  poolSharePct: number;
+  lastRequestedAt?: string | null;
+  requestsLast180Days: number;
+  repeatRequester: boolean;
+  eligibleMax: number;
+}
+
+export interface AdvanceRequest {
+  id: string;
+  staffId: string;
+  staffName: string;
+  branchId: string;
+  branchName?: string;
+  requestedAmount: number;
+  requestedInstallments: number;
+  reason?: string;
+  status: AdvanceStatus;
+  approvedAmount?: number | null;
+  approvedInstallments?: number | null;
+  firstDeductionMonth?: string | null;
+  decisionNote?: string | null;
+  decidedAt?: string | null;
+  decidedByName?: string | null;
+  createdAt?: string;
+  outstanding: number;
+  settled: number;
+  installments: AdvanceInstallment[];
+  requesterHistory?: EmployeeAdvanceSummary | null;
+}
+
+export interface AdvancePolicy {
+  poolAmount: number;
+  maxPoolSharePercent: number;
+  maxSalaryMultiple: number;
+  maxInstallments: number;
+  cooldownDays: number;
+  enabled: boolean;
+  configured: boolean;
+  updatedAt?: string | null;
+}
+
+export type AdvancePolicyInput = Omit<AdvancePolicy, "configured" | "updatedAt">;
+
+export interface AdvanceBudget {
+  policy: AdvancePolicy;
+  poolAmount: number;
+  outstanding: number;
+  available: number;
+  pendingRequested: number;
+  pendingCount: number;
+  utilizationPct: number;
+  perEmployeeCap: number;
+  dueThisMonth: number;
+}
+
+export interface DecideAdvanceInput {
+  approvedAmount?: number;
+  installments?: number;
+  firstDeductionMonth?: string;
+  note?: string;
+}
+
+export interface AdvanceEligibility {
+  canRequest: boolean;
+  blockedReason: "NONE" | "NOT_CONFIGURED" | "DISABLED" | "PENDING_REQUEST" | "COOLDOWN" | "AT_LIMIT" | "POOL_EXHAUSTED";
+  maxAmount: number;
+  maxInstallments: number;
+  outstanding: number;
+  cooldownEndsOn?: string | null;
+  firstDeductionMonth: string;
+}
+
+export interface MyAdvances {
+  eligibility: AdvanceEligibility;
+  advances: AdvanceRequest[];
+  requestCount: number;
+  totalRequested: number;
+  totalApproved: number;
+  outstanding: number;
+  nextInstallment?: AdvanceInstallment | null;
+}
+
+export interface AdvanceDeductions {
+  month: string;
+  totalDue: number;
+  totalDeducted: number;
+  rows: {
+    staffId: string;
+    staffName: string;
+    branchName?: string;
+    baseSalary?: number | null;
+    dueAmount: number;
+    deductedAmount: number;
+    netAfterAdvances?: number | null;
+    daysPresent: number;
+    approvedLeaveDays: number;
+    installments: AdvanceInstallment[];
+  }[];
 }
 
 export interface CreateLeaveRequest {

@@ -1754,7 +1754,9 @@
       "goals": "Goals",
       "goalsHint": "Targets set with your manager",
       "reviews": "Performance reviews",
-      "reviewsHint": "Data-backed review notes"
+      "reviewsHint": "Data-backed review notes",
+      "advance": "सैलरी एडवांस",
+      "advanceShort": "एडवांस"
     },
     "home": {
       "greeting": "Hello, {name}",
@@ -1875,14 +1877,19 @@
       "approvalHint": "Pending requests need manager or owner approval.",
       "history": "Your requests",
       "loading": "Loading…",
-      "empty": "No leave requests yet"
+      "empty": "No leave requests yet",
+      "days": "{count, plural, one {# दिन} other {# दिन}}",
+      "decisionNote": "टिप्पणी:",
+      "cancelRequest": "अनुरोध रद्द करें"
     },
     "time": {
       "title": "Time & leave",
       "subtitle": "Punch attendance, view your log, and request time off",
       "subtitleCompact": "Punch, log & leave in one place",
       "tabAttendance": "Attendance",
-      "tabLeave": "Leave"
+      "tabLeave": "Leave",
+      "advanceLinkTitle": "सैलरी एडवांस चाहिए?",
+      "advanceLinkHint": "अनुरोध करें और अगली सैलरी से किस्तों में चुकाएँ"
     },
     "progress": {
       "title": "Performance reviews",
@@ -1976,6 +1983,53 @@
       "bankName": "Bank name",
       "bankIfscCode": "IFSC code",
       "bankHint": "Used for salary — keep accurate."
+    },
+    "advance": {
+      "title": "सैलरी एडवांस",
+      "subtitle": "पहले से पैसे माँगें और अगली सैलरी से चुकाएँ",
+      "youOwe": "आपको चुकाना है",
+      "nextDeduction": "अगली कटौती",
+      "fromSalaryOf": "{month} की सैलरी से",
+      "nothingDue": "कुछ बकाया नहीं",
+      "yourHistory": "आपके अनुरोध",
+      "approvedTotal": "अब तक {amount} मंज़ूर",
+      "requestTitle": "एडवांस के लिए अनुरोध",
+      "requestSubtitle": "हर अनुरोध आपके मैनेजर या मालिक देखते हैं।",
+      "amount": "राशि (₹)",
+      "maxHint": "आप अभी अधिकतम {amount} माँग सकते हैं।",
+      "repayOver": "कितने महीनों में चुकाएँ",
+      "monthsShort": "{count} माह",
+      "preview": "लगभग {amount} प्रति माह, {count, plural, one {# महीने} other {# महीनों}} तक, {month} की सैलरी से शुरू।",
+      "reason": "आपको क्यों चाहिए?",
+      "reasonPlaceholder": "छोटा-सा कारण मालिक को निर्णय लेने में मदद करता है",
+      "submit": "अनुरोध भेजें",
+      "submitting": "भेजा जा रहा है…",
+      "approvalHint": "एक समय में दो अनुरोध नहीं हो सकते। मंज़ूर राशि आपकी सैलरी से किस्तों में कटेगी।",
+      "requestFailed": "अनुरोध नहीं भेजा जा सका",
+      "history": "आपका एडवांस इतिहास",
+      "loading": "लोड हो रहा है…",
+      "empty": "आपने अभी तक एडवांस नहीं माँगा है।",
+      "overMonths": "{count, plural, one {# महीने} other {# महीनों}} में",
+      "requestedOn": "{date} को माँगा",
+      "grantedLess": "{amount} मंज़ूर, {count, plural, one {# महीने} other {# महीनों}} में",
+      "ownerNote": "टिप्पणी:",
+      "schedule": "चुकाने का कार्यक्रम",
+      "repaidOf": "{total} में से {settled} चुकाया",
+      "cancelRequest": "अनुरोध रद्द करें",
+      "blocked": {
+        "NOT_CONFIGURED": "सैलरी एडवांस अभी शुरू नहीं हुआ है। कृपया अपने मैनेजर से पूछें।",
+        "DISABLED": "नए एडवांस अनुरोध अभी रोके गए हैं।",
+        "PENDING_REQUEST": "आपका एक अनुरोध पहले से निर्णय की प्रतीक्षा में है।",
+        "COOLDOWN": "आप {date} से दोबारा एडवांस माँग सकते हैं।",
+        "AT_LIMIT": "पिछले एडवांस चुकने तक आप अपनी सीमा पर हैं।",
+        "POOL_EXHAUSTED": "एडवांस का बजट अभी पूरा उपयोग में है। चुकौती के बाद फिर कोशिश करें।",
+        "NONE": ""
+      },
+      "installment": {
+        "SCHEDULED": "बाकी",
+        "DEDUCTED": "कट गया",
+        "WAIVED": "माफ़"
+      }
     }
   }
 }

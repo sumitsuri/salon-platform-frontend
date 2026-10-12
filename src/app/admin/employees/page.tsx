@@ -33,6 +33,7 @@ import { CompactStatsStrip } from "@/components/CompactStatsStrip";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
+import { PendingRequestsBanner } from "@/components/admin/requests/PendingRequestsBanner";
 import { getDefaultDateRange, reviveStoredProductDateRange } from "@/lib/date-range";
 import { resolveStaffDesignation, STAFF_DESIGNATION_OPTIONS, type StaffDesignation } from "@/lib/staff-designations";
 import { StaffPasswordInput } from "@/components/admin/StaffPasswordInput";
@@ -242,6 +243,8 @@ export default function AdminEmployeesPage() {
           </button>
         }
       />
+
+      <PendingRequestsBanner />
 
       {error && <AlertBanner variant="error">{error}</AlertBanner>}
 

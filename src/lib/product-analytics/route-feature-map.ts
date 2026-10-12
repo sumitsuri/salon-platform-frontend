@@ -8,6 +8,8 @@ const EMPLOYEE_ROUTES: Record<string, string> = {
   "/employee/sales": "employee.sales",
   "/employee/progress": "employee.progress",
   "/employee/profile": "employee.profile",
+  "/employee/advance": "employee.advance",
+  "/admin/requests": "admin.requests",
   "/employee/goals": "employee.goals",
   "/employee/growth": "employee.growth",
   "/employee/leaves": "employee.leaves",

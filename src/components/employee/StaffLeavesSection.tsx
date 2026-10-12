@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api, CreateLeaveRequest } from "@/lib/api";
-import { Card, StatusBadge, inputClass, btnPrimary, AlertBanner } from "@/components/ui";
+import { Card, StatusBadge, inputClass, btnPrimary, btnSecondary, AlertBanner } from "@/components/ui";
 import { DashboardWidgetCard } from "@/components/enterprise-ui";
 import { useClientPagedList, DEFAULT_LIST_PAGE_SIZE } from "@/lib/use-client-paged-list";
 import { ListPageArrows } from "@/components/employee/ListPageArrows";
@@ -48,6 +48,12 @@ export function StaffLeavesSection() {
       setReason("");
       queryClient.invalidateQueries({ queryKey: ["staff-portal-leaves"] });
     },
+    onError: (e) => setError(e instanceof Error ? e.message : t("applyFailed")),
+  });
+
+  const cancel = useMutation({
+    mutationFn: (leaveId: string) => api.cancelStaffPortalLeave(leaveId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff-portal-leaves"] }),
     onError: (e) => setError(e instanceof Error ? e.message : t("applyFailed")),
   });
 
@@ -103,14 +109,34 @@ export function StaffLeavesSection() {
             )}
             {!isLoading &&
               leavesPager.pageItems.map((leave) => (
-                <div key={leave.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      {leave.startDate} → {leave.endDate}
-                    </p>
-                    <p className="text-xs text-[var(--text-secondary)] line-clamp-2">{leave.reason}</p>
+                <div key={leave.id} className="space-y-1.5 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
+                        {leave.startDate} → {leave.endDate}
+                        {leave.days ? (
+                          <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">{t("days", { count: leave.days })}</span>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-[var(--text-secondary)] line-clamp-2">{leave.reason}</p>
+                    </div>
+                    <StatusBadge status={leave.status} />
                   </div>
-                  <StatusBadge status={leave.status} />
+                  {leave.decisionNote ? (
+                    <p className="rounded-lg bg-[var(--surface-muted)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+                      <span className="font-semibold text-[var(--text-primary)]">{t("decisionNote")}</span> {leave.decisionNote}
+                    </p>
+                  ) : null}
+                  {leave.status === "PENDING" ? (
+                    <button
+                      type="button"
+                      className={`${btnSecondary} !py-1.5 text-xs`}
+                      disabled={cancel.isPending}
+                      onClick={() => cancel.mutate(leave.id)}
+                    >
+                      {t("cancelRequest")}
+                    </button>
+                  ) : null}
                 </div>
               ))}
             {!isLoading && leavesPager.showPager && (

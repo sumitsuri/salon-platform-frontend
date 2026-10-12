@@ -11,6 +11,7 @@ import { useAdminBranchSelection } from "@/lib/use-admin-branch-selection";
 import type { AdminReportingRange } from "@/lib/branch-reporting";
 import { cn, formatCurrency } from "@/lib/utils";
 import { CompactStatsStrip, type CompactStatItem } from "@/components/CompactStatsStrip";
+import { useTeamRequests } from "@/components/admin/requests/use-team-requests";
 
 /**
  * Live figures behind the Operations hub (tablet/desktop). Everything here is specific to the five modules the
@@ -74,6 +75,8 @@ export function useOpsHubData(enabled: boolean) {
     enabled,
   });
 
+  const team = useTeamRequests(enabled);
+
   const catalog = useMemo(() => {
     if (!services.data) return undefined;
     const list = services.data;
@@ -95,6 +98,9 @@ export function useOpsHubData(enabled: boolean) {
     customerCount: customers.data?.totalElements,
     activeCustomerCount: activeCustomers.data?.totalElements,
     catalog,
+    pendingRequests: enabled && !team.loading ? team.pendingTotal : undefined,
+    pendingLeaves: enabled && !team.loading ? team.pendingLeaves.length : undefined,
+    advanceBudgetLeft: team.budget && team.budget.policy.configured ? team.budget.available : undefined,
     loading: dashboard.isLoading || attendance.isLoading || inventory.isLoading,
   };
 }
@@ -152,13 +158,14 @@ export function OpsHubKpis({ data }: { data: OpsHubData }) {
 }
 
 export type OpsTileMetric = { id: string; label: string; value: string; tone?: "default" | "warn" | "risk" };
-export type OpsAccent = "violet" | "sky" | "emerald" | "amber" | "brand";
+export type OpsAccent = "violet" | "sky" | "emerald" | "amber" | "rose" | "brand";
 
 const TILE_STYLES: Record<OpsAccent, { border: string; icon: string }> = {
   violet: { border: "border-violet-200/80 dark:border-violet-900/40", icon: "bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-300" },
   sky: { border: "border-sky-200/80 dark:border-sky-900/40", icon: "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200" },
   emerald: { border: "border-emerald-200/80 dark:border-emerald-900/40", icon: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200" },
   amber: { border: "border-amber-200/80 dark:border-amber-900/40", icon: "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200" },
+  rose: { border: "border-rose-200/80 dark:border-rose-900/40", icon: "bg-rose-100 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200" },
   brand: { border: "border-[var(--brand-muted)]", icon: "bg-[var(--brand-light)] text-[var(--brand-text)]" },
 };
 

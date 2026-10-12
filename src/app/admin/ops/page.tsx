@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ClipboardList, Contact, Package, Scissors, Users } from "lucide-react";
+import { ClipboardCheck, ClipboardList, Contact, Package, Scissors, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui";
 import { AdminHubActionLink } from "@/components/admin/AdminHubActionLink";
 import { AdminPageShell } from "@/components/admin/AdminPageShell";
@@ -29,6 +29,7 @@ export default function AdminOpsHubPage() {
           <AdminHubActionLink href="/admin/services" icon={Scissors} label={tNav("services")} description={t("servicesHint")} accent="violet" />
           <AdminHubActionLink href="/admin/inventory" icon={Package} label={tNav("inventory")} description={t("inventoryHint")} accent="amber" />
           <AdminHubActionLink href="/admin/employees" icon={Users} label={tNav("employees")} description={t("employeesHint")} accent="emerald" />
+          <AdminHubActionLink href="/admin/requests" icon={ClipboardCheck} label={tNav("requests")} description={t("requestsHint")} accent="rose" />
         </div>
       </AdminPageShell>
     );
@@ -91,7 +92,7 @@ export default function AdminOpsHubPage() {
           ]}
         />
         <OpsModuleTile
-          className="hub:col-span-3"
+          className="hub:col-span-2"
           href="/admin/inventory"
           icon={Package}
           label={tNav("inventory")}
@@ -104,7 +105,7 @@ export default function AdminOpsHubPage() {
           ]}
         />
         <OpsModuleTile
-          className="md:col-span-2 hub:col-span-3"
+          className="hub:col-span-2"
           href="/admin/employees"
           icon={Users}
           label={tNav("employees")}
@@ -123,6 +124,19 @@ export default function AdminOpsHubPage() {
                 }
               : undefined
           }
+        />
+        <OpsModuleTile
+          className="hub:col-span-2"
+          href="/admin/requests"
+          icon={ClipboardCheck}
+          label={tNav("requests")}
+          description={t("requestsHint")}
+          accent="rose"
+          metrics={[
+            { id: "waiting", label: t("metricWaiting"), value: num(data.pendingRequests), tone: (data.pendingRequests ?? 0) > 0 ? "warn" : "default" },
+            { id: "leaves", label: t("metricLeaveRequests"), value: num(data.pendingLeaves) },
+            { id: "budget", label: t("metricAdvanceLeft"), value: data.advanceBudgetLeft != null ? formatCurrency(data.advanceBudgetLeft) : DASH },
+          ]}
         />
       </div>
     </AdminPageShell>

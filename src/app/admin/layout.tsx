@@ -3,26 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  LayoutDashboard,
-  ClipboardList,
-  Building2,
-  Sparkles,
-  Scissors,
-  Users,
-  Contact,
-  IndianRupee,
-  Package,
-  UserPlus,
-  Megaphone,
-  TrendingUp,
-  BadgePercent,
-  Gift,
-  ScanSearch,
-  MessageSquareHeart,
-  MessageCircle,
-  Briefcase,
-} from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
@@ -93,6 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { href: "/admin/services", label: t("nav.services"), shortLabel: t("nav.sales"), icon: Scissors },
           { href: "/admin/inventory", label: t("nav.inventory"), shortLabel: t("nav.stock"), icon: Package },
           { href: "/admin/employees", label: t("nav.employees"), shortLabel: t("nav.staff"), icon: Users },
+          { href: "/admin/requests", label: t("nav.requests"), shortLabel: t("nav.requestsShort"), icon: ClipboardCheck },
         ],
       },
       {
@@ -176,6 +158,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             "/admin/services",
             "/admin/inventory",
             "/admin/employees",
+            "/admin/requests",
           ],
         },
         { id: "finance", href: "/admin/finance", label: t("nav.tabFinance"), icon: IndianRupee },

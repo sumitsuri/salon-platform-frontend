@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Clock, Home, Target, TrendingUp, UserCircle } from "lucide-react";
+import { Banknote, Clock, Home, Target, TrendingUp, UserCircle } from "lucide-react";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
 import { resolveAccentColor, useThemeStore } from "@/lib/theme-store";
 import { EnterpriseAppShell } from "@/components/EnterpriseAppShell";
@@ -41,6 +41,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
           { href: "/employee/time", label: t("time"), shortLabel: t("timeShort"), icon: Clock },
           { href: "/employee/sales", label: t("sales"), shortLabel: t("salesShort"), icon: TrendingUp },
           { href: "/employee/progress", label: t("progress"), shortLabel: t("progressShort"), icon: Target },
+          { href: "/employee/advance", label: t("advance"), shortLabel: t("advanceShort"), icon: Banknote },
           { href: "/employee/profile", label: t("profile"), shortLabel: t("profileShort"), icon: UserCircle },
         ],
       },
