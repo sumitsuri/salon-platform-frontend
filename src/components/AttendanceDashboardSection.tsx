@@ -30,9 +30,11 @@ import {
   btnSecondary,
 } from "@/components/ui";
 import { useInfinitePagedList } from "@/lib/use-infinite-paged-list";
-import { useClientInfiniteList } from "@/lib/use-client-infinite-list";
+import { useClientPagedList } from "@/lib/use-client-paged-list";
+import { ListPageArrows } from "@/components/employee/ListPageArrows";
+import { formatCurrency } from "@/lib/utils";
 
-const ATTENDANCE_TABLE_PAGE_SIZE = 10;
+const ATTENDANCE_TABLE_PAGE_SIZE = 20;
 const DAILY_HOURS_TARGET = 10;
 const LOG_TABLE_COLUMN_COUNT = 14;
 
@@ -280,12 +282,15 @@ export function AttendanceDashboardSection({
     });
   }, [staffSummaries, staffPerfFilters, branches]);
   const {
-    visible: staffSlice,
-    totalElements: staffTotalElements,
-    loadedCount: staffLoadedCount,
-    hasMore: staffHasMore,
-    loadMore: loadMoreStaff,
-  } = useClientInfiniteList(filteredStaffSummaries, ATTENDANCE_TABLE_PAGE_SIZE);
+    pageItems: staffSlice,
+    page: staffPage,
+    totalPages: staffTotalPages,
+    hasPrev: staffHasPrev,
+    hasNext: staffHasNext,
+    goPrev: staffGoPrev,
+    goNext: staffGoNext,
+    showPager: staffShowPager,
+  } = useClientPagedList(filteredStaffSummaries, ATTENDANCE_TABLE_PAGE_SIZE);
   const selectedStaff = staffSummaries.find((s) => s.staffId === selectedStaffId);
 
   const { data: incidentData, isLoading: incidentsLoading } = useQuery({
@@ -469,6 +474,7 @@ export function AttendanceDashboardSection({
       { label: t("staff"), filter: { type: "none" as const } },
       { label: t("days"), filter: { type: "none" as const } },
       { label: t("leave"), filter: { type: "none" as const } },
+      { label: t("proRatedSalary"), filter: { type: "none" as const } },
       { label: t("hours"), filter: { type: "none" as const } },
       { label: t("late"), filter: { type: "none" as const } },
       { label: t("geoFlags"), filter: { type: "none" as const } },
@@ -1011,6 +1017,9 @@ export function AttendanceDashboardSection({
                     </td>
                     <td className="px-4 py-2.5">{s.daysPresent}</td>
                     <td className="px-4 py-2.5">{s.daysLeave}</td>
+                    <td className="px-4 py-2.5 tabular-nums text-[var(--text-secondary)]">
+                      {s.proRatedSalary != null ? formatCurrency(s.proRatedSalary) : "—"}
+                    </td>
                     <td className="px-4 py-2.5">{s.totalHours}h</td>
                     <td className="px-4 py-2.5">{s.lateArrivals}</td>
                     <td className="px-4 py-2.5">{s.geoFlags}</td>
@@ -1041,13 +1050,18 @@ export function AttendanceDashboardSection({
                 </button>
               ))}
             </div>
-            <InfiniteScrollFooter
-              totalElements={staffTotalElements}
-              loadedCount={staffLoadedCount}
-              hasMore={staffHasMore}
-              isFetchingNextPage={false}
-              onLoadMore={loadMoreStaff}
-            />
+            {staffShowPager ? (
+              <div className="border-t border-[var(--border)] px-4 py-3">
+                <ListPageArrows
+                  page={staffPage}
+                  totalPages={staffTotalPages}
+                  hasPrev={staffHasPrev}
+                  hasNext={staffHasNext}
+                  onPrev={staffGoPrev}
+                  onNext={staffGoNext}
+                />
+              </div>
+            ) : null}
           </InfiniteScrollViewport>
         )}
       </PanelShell>

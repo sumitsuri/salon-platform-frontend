@@ -57,12 +57,7 @@ export function StaffAdvanceSection() {
     onError: (e) => setError(e instanceof Error ? e.message : t("requestFailed")),
   });
 
-  const blockedText = (() => {
-    if (!eligibility || eligibility.canRequest) return null;
-    const reasonKey = eligibility.blockedReason;
-    if (reasonKey === "COOLDOWN") return t("blocked.COOLDOWN", { date: dayLabel(eligibility.cooldownEndsOn) });
-    return t(`blocked.${reasonKey}` as "blocked.DISABLED");
-  })();
+  const canRequest = eligibility?.canRequest === true;
 
   return (
     <div className="min-w-0 space-y-3">
@@ -86,16 +81,14 @@ export function StaffAdvanceSection() {
 
       <DashboardWidgetCard>
         <div className="space-y-3 p-3 sm:p-4">
-          <div>
-            <h2 className="dashboard-widget-title">{t("requestTitle")}</h2>
-            <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{t("requestSubtitle")}</p>
-          </div>
-
           {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
 
-          {blockedText ? (
-            <AlertBanner variant="info">{blockedText}</AlertBanner>
-          ) : (
+          {canRequest ? (
+            <>
+              <div>
+                <h2 className="dashboard-widget-title">{t("requestTitle")}</h2>
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{t("requestSubtitle")}</p>
+              </div>
             <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/30 p-4">
               <label className="block text-xs font-semibold text-[var(--text-secondary)]">
                 {t("amount")}
@@ -170,7 +163,8 @@ export function StaffAdvanceSection() {
               </button>
               <p className="text-[11px] text-[var(--text-tertiary)]">{t("approvalHint")}</p>
             </div>
-          )}
+            </>
+          ) : null}
 
           <div>
             <p className="section-label mb-2">{t("history")}</p>

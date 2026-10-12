@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { AlertBanner, Card, btnPrimary, btnSecondary } from "@/components/ui";
+import { AlertBanner, Card, TablePagination, btnPrimary, btnSecondary } from "@/components/ui";
 import { api, type AdvanceInstallment } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 import { monthLabel, monthStart } from "@/components/admin/requests/format";
@@ -28,6 +28,16 @@ export function DeductionsPanel() {
   const deductOne = useMutation({ mutationFn: (id: string) => api.deductAdvanceInstallment(id), onSuccess: refresh, onError: (e) => setError(e instanceof Error ? e.message : t("actionFailed")) });
   const waiveOne = useMutation({ mutationFn: (id: string) => api.waiveAdvanceInstallment(id), onSuccess: refresh, onError: (e) => setError(e instanceof Error ? e.message : t("actionFailed")) });
   const busy = deductMonth.isPending || deductOne.isPending || waiveOne.isPending;
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+  const allRows = data?.rows ?? [];
+  const totalPages = Math.max(1, Math.ceil(allRows.length / pageSize) || 1);
+  const safePage = Math.min(page, totalPages - 1);
+  const pageRows = useMemo(
+    () => allRows.slice(safePage * pageSize, safePage * pageSize + pageSize),
+    [allRows, safePage, pageSize],
+  );
+  useEffect(() => setPage(0), [month]);
 
   return (
     <Card className="min-w-0 space-y-3">
@@ -66,6 +76,7 @@ export function DeductionsPanel() {
             <tr className="border-b border-[var(--border)] text-left text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
               <th className="px-3 py-2">{t("colEmployee")}</th>
               <th className="px-3 py-2 text-right">{t("colSalary")}</th>
+              <th className="px-3 py-2 text-right">{t("colProRated")}</th>
               <th className="px-3 py-2 text-right">{t("colDeduct")}</th>
               <th className="px-3 py-2 text-right">{t("colNet")}</th>
               <th className="hidden px-3 py-2 xl:table-cell">{t("colAttendance")}</th>
@@ -74,17 +85,20 @@ export function DeductionsPanel() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("loading")}</td></tr>
-            ) : (data?.rows.length ?? 0) === 0 ? (
-              <tr><td colSpan={6} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("nothingDue")}</td></tr>
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("loading")}</td></tr>
+            ) : allRows.length === 0 ? (
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("nothingDue")}</td></tr>
             ) : (
-              data?.rows.map((r) => (
+              pageRows.map((r) => (
                 <tr key={r.staffId} className="border-b border-[var(--border)] last:border-0">
                   <td className="px-3 py-3">
                     <p className="font-medium text-[var(--text-primary)]">{r.staffName}</p>
                     <p className="text-xs text-[var(--text-tertiary)]">{r.branchName}</p>
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">{r.baseSalary != null ? formatCurrency(r.baseSalary) : "—"}</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--text-secondary)]">
+                    {r.proRatedSalary != null ? formatCurrency(r.proRatedSalary) : "—"}
+                  </td>
                   <td className="px-3 py-3 text-right tabular-nums">
                     <span className={cn("font-semibold", r.dueAmount > 0 ? "text-amber-600" : "text-emerald-600")}>
                       {formatCurrency(r.dueAmount > 0 ? r.dueAmount : r.deductedAmount)}
@@ -115,6 +129,16 @@ export function DeductionsPanel() {
           </tbody>
         </table>
       </div>
+      {allRows.length > 0 ? (
+        <TablePagination
+          page={safePage}
+          size={pageSize}
+          totalPages={totalPages}
+          totalElements={allRows.length}
+          onPageChange={setPage}
+          onSizeChange={() => {}}
+        />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="max-w-xl text-[11px] text-[var(--text-tertiary)]">{t("netNote")}</p>

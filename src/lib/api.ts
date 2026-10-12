@@ -924,18 +924,43 @@ export const api = {
   updateAdvancePolicy: (data: AdvancePolicyInput) =>
     request<AdvancePolicy>("/api/v1/salary-advances/policy", { method: "PUT", body: JSON.stringify(data) }),
 
-  getAdvances: (opts?: { status?: AdvanceStatus; staffId?: string; branchId?: string; page?: number; size?: number }) => {
+  getAdvances: (opts?: {
+    status?: AdvanceStatus;
+    staffId?: string;
+    branchId?: string;
+    excludePending?: boolean;
+    page?: number;
+    size?: number;
+  }) => {
     const params = new URLSearchParams();
     if (opts?.status) params.set("status", opts.status);
     if (opts?.staffId) params.set("staffId", opts.staffId);
     if (opts?.branchId) params.set("branchId", opts.branchId);
+    if (opts?.excludePending) params.set("excludePending", "true");
     params.set("page", String(opts?.page ?? 0));
-    params.set("size", String(opts?.size ?? 50));
+    params.set("size", String(opts?.size ?? 20));
     return request<PageResult<AdvanceRequest>>(`/api/v1/salary-advances?${params.toString()}`);
   },
 
-  getAdvanceEmployees: (branchId?: string) =>
-    request<EmployeeAdvanceSummary[]>(`/api/v1/salary-advances/employees${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  getAdvanceEmployees: (opts?: {
+    branchId?: string;
+    onlyAsked?: boolean;
+    search?: string;
+    page?: number;
+    size?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (opts?.branchId) params.set("branchId", opts.branchId);
+    if (opts?.onlyAsked) params.set("onlyAsked", "true");
+    if (opts?.search?.trim()) params.set("search", opts.search.trim());
+    params.set("page", String(opts?.page ?? 0));
+    params.set("size", String(opts?.size ?? 20));
+    const q = params.toString();
+    return request<PageResult<EmployeeAdvanceSummary>>(`/api/v1/salary-advances/employees${q ? `?${q}` : ""}`);
+  },
+
+  updateAdvance: (id: string, data: UpdateAdvanceInput) =>
+    request<AdvanceRequest>(`/api/v1/salary-advances/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
   grantAdvance: (data: GrantAdvanceInput) =>
     request<AdvanceRequest>("/api/v1/salary-advances/grant", { method: "POST", body: JSON.stringify(data) }),
@@ -3241,6 +3266,7 @@ export interface EmployeeAdvanceSummary {
   role?: string;
   active: boolean;
   monthlySalary?: number | null;
+  proRatedSalary?: number | null;
   requestCount: number;
   approvedCount: number;
   rejectedCount: number;
@@ -3319,6 +3345,15 @@ export interface GrantAdvanceInput {
   note?: string;
 }
 
+export interface UpdateAdvanceInput {
+  reason?: string;
+  note?: string;
+  approvedAmount?: number;
+  installments?: number;
+  firstDeductionMonth?: string;
+  revoke?: boolean;
+}
+
 export interface AdvanceEligibility {
   canRequest: boolean;
   blockedReason: "NONE" | "NOT_CONFIGURED" | "DISABLED" | "PENDING_REQUEST" | "COOLDOWN" | "AT_LIMIT" | "POOL_EXHAUSTED";
@@ -3348,6 +3383,7 @@ export interface AdvanceDeductions {
     staffName: string;
     branchName?: string;
     baseSalary?: number | null;
+    proRatedSalary?: number | null;
     dueAmount: number;
     deductedAmount: number;
     netAfterAdvances?: number | null;
@@ -3406,6 +3442,8 @@ export interface AttendanceDashboard {
     staffId: string;
     staffName: string;
     branchName: string;
+    monthlySalary?: number | null;
+    proRatedSalary?: number | null;
     daysPresent: number;
     daysLeave: number;
     totalHours: number;

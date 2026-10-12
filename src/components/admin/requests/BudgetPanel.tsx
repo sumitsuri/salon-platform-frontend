@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { AlertBanner, Card, btnPrimary, inputClass } from "@/components/ui";
+import { AdvanceRecordsPanel } from "@/components/admin/requests/AdvanceRecordsPanel";
+import { AlertBanner, Card, TablePagination, btnPrimary, inputClass } from "@/components/ui";
 import { api, type AdvanceBudget, type AdvancePolicyInput, type EmployeeAdvanceSummary } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 import { monthStart, relativeDay } from "@/components/admin/requests/format";
@@ -20,6 +21,7 @@ export function BudgetPanel() {
       {budget ? <BudgetOverview budget={budget} /> : null}
       {budget ? <PolicyForm key={policyKey(budget)} budget={budget} /> : null}
       {budget?.policy.configured ? <RecordAdvanceForm budget={budget} /> : null}
+      {budget ? <AdvanceRecordsPanel budget={budget} /> : null}
       <EmployeeTable />
     </div>
   );
@@ -153,10 +155,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function RecordAdvanceForm({ budget }: { budget: AdvanceBudget }) {
   const t = useTranslations("admin.requests");
   const queryClient = useQueryClient();
-  const { data: employees = [], isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: TEAM_REQUEST_KEYS.employees,
-    queryFn: () => api.getAdvanceEmployees(),
+    queryFn: () => api.getAdvanceEmployees({ page: 0, size: 500 }),
   });
+  const employees = data?.content ?? [];
   const active = useMemo(() => employees.filter((e) => e.active), [employees]);
 
   const [staffId, setStaffId] = useState("");
@@ -274,16 +277,26 @@ function RecordAdvanceForm({ budget }: { budget: AdvanceBudget }) {
   );
 }
 
+const EMPLOYEE_PAGE_SIZE = 20;
+
 function EmployeeTable() {
   const t = useTranslations("admin.requests");
   const [onlyAsked, setOnlyAsked] = useState(false);
   const [search, setSearch] = useState("");
-  const { data = [], isLoading } = useQuery({ queryKey: TEAM_REQUEST_KEYS.employees, queryFn: () => api.getAdvanceEmployees() });
+  const [page, setPage] = useState(0);
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return data.filter((e) => (!onlyAsked || e.requestCount > 0) && (!q || e.staffName.toLowerCase().includes(q)));
-  }, [data, onlyAsked, search]);
+  const { data, isLoading } = useQuery({
+    queryKey: ["team-requests", "employees", page, onlyAsked, search.trim()],
+    queryFn: () =>
+      api.getAdvanceEmployees({
+        page,
+        size: EMPLOYEE_PAGE_SIZE,
+        onlyAsked: onlyAsked || undefined,
+        search: search.trim() || undefined,
+      }),
+  });
+
+  const rows = data?.content ?? [];
 
   return (
     <Card className="min-w-0 space-y-3">
@@ -294,10 +307,26 @@ function EmployeeTable() {
         </div>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
-            <input type="checkbox" className="accent-[var(--brand)]" checked={onlyAsked} onChange={(e) => setOnlyAsked(e.target.checked)} />
+            <input
+              type="checkbox"
+              className="accent-[var(--brand)]"
+              checked={onlyAsked}
+              onChange={(e) => {
+                setOnlyAsked(e.target.checked);
+                setPage(0);
+              }}
+            />
             {t("onlyAsked")}
           </label>
-          <input className={`${inputClass} !w-44 !py-1.5 text-xs`} placeholder={t("searchEmployee")} value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            className={`${inputClass} !w-44 !py-1.5 text-xs`}
+            placeholder={t("searchEmployee")}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+          />
         </div>
       </div>
       <div className="-mx-1 overflow-x-auto">
@@ -306,6 +335,7 @@ function EmployeeTable() {
             <tr className="border-b border-[var(--border)] text-left text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
               <th className="px-3 py-2">{t("colEmployee")}</th>
               <th className="px-3 py-2 text-right">{t("colRequests")}</th>
+              <th className="px-3 py-2 text-right">{t("colProRated")}</th>
               <th className="px-3 py-2 text-right">{t("colRequested")}</th>
               <th className="px-3 py-2 text-right">{t("colApproved")}</th>
               <th className="px-3 py-2">{t("colHolds")}</th>
@@ -315,9 +345,9 @@ function EmployeeTable() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("loading")}</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("loading")}</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("noEmployees")}</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-sm text-[var(--text-tertiary)]">{t("noEmployees")}</td></tr>
             ) : (
               rows.map((e) => (
                 <tr key={e.staffId} className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-muted)]/50">
@@ -335,6 +365,9 @@ function EmployeeTable() {
                         {t("repeat")}
                       </span>
                     ) : null}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--text-secondary)]" title={t("colProRatedHint")}>
+                    {e.proRatedSalary != null ? formatCurrency(e.proRatedSalary) : "—"}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(e.totalRequested)}</td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(e.totalApproved)}</td>
@@ -356,6 +389,16 @@ function EmployeeTable() {
           </tbody>
         </table>
       </div>
+      {data && data.totalElements > 0 ? (
+        <TablePagination
+          page={page}
+          size={EMPLOYEE_PAGE_SIZE}
+          totalPages={data.totalPages}
+          totalElements={data.totalElements}
+          onPageChange={setPage}
+          onSizeChange={() => {}}
+        />
+      ) : null}
     </Card>
   );
 }
