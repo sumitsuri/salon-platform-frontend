@@ -1376,6 +1376,27 @@ export const api = {
     return request<PlatformUsageSummary>(`/api/v1/platform/usage/summary?${params.toString()}`);
   },
 
+  getPlatformUsageInsightsPortfolio: (opts: { from: string; to: string; includeDemo?: boolean }) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.includeDemo) params.set("includeDemo", "true");
+    return request<UsageInsightsPortfolio>(`/api/v1/platform/usage/insights/portfolio?${params.toString()}`);
+  },
+
+  getPlatformUsageInsightsTenant: (
+    tenantId: string,
+    opts: { from: string; to: string; branchId?: string },
+  ) => {
+    const params = new URLSearchParams();
+    params.set("from", opts.from);
+    params.set("to", opts.to);
+    if (opts.branchId) params.set("branchId", opts.branchId);
+    return request<UsageInsightsTenant>(
+      `/api/v1/platform/usage/insights/tenants/${encodeURIComponent(tenantId)}?${params.toString()}`,
+    );
+  },
+
   getPlatformUsageHeatmap: (opts: {
     from: string;
     to: string;
@@ -3385,6 +3406,153 @@ export interface PlatformUsagePortfolio {
   dailyActiveUsers: PlatformUsageDailyPoint[];
   topFeatures: PlatformUsageFeatureHit[];
   tenants: PlatformUsagePortfolioTenantRow[];
+}
+
+export type UsageHealthStatus = "HEALTHY" | "WATCH" | "AT_RISK" | "DORMANT" | "NEW";
+
+export interface UsageHealth {
+  score: number;
+  status: UsageHealthStatus;
+  adoption: number;
+  breadth: number;
+  stickiness: number;
+  momentum: number;
+}
+
+export interface UsageTotals {
+  events: number;
+  previousEvents: number;
+  activeUsers: number;
+  previousActiveUsers: number;
+  wau: number;
+  mau: number;
+  provisionedUsers: number;
+  distinctFeatures: number;
+  lastActivityAt?: string | null;
+}
+
+export interface UsageAccountInsight {
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  demoTenant: boolean;
+  totals: UsageTotals;
+  health: UsageHealth;
+  trend: number[];
+}
+
+export interface UsageFeatureReach {
+  featureKey: string;
+  hits: number;
+  previousHits: number;
+  uniqueUsers: number;
+  brands: number;
+  lastUsedAt?: string | null;
+  trend: number[];
+}
+
+export interface UsageInsightsPortfolio {
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  rangeDays: number;
+  telemetryReady: boolean;
+  platform: UsageTotals;
+  segments: { status: UsageHealthStatus; count: number }[];
+  accounts: UsageAccountInsight[];
+  featureReach: UsageFeatureReach[];
+  platformFeatureCount: number;
+  totalBrands: number;
+}
+
+export interface UsageDailyPoint {
+  date: string;
+  events: number;
+  activeUsers: number;
+  admin: number;
+  manager: number;
+  employee: number;
+  other: number;
+}
+
+export interface UsageFeatureRow {
+  featureKey: string;
+  hits: number;
+  previousHits: number;
+  uniqueUsers: number;
+  userReachPct: number;
+  firstUsedAt?: string | null;
+  lastUsedAt?: string | null;
+  trend: number[];
+}
+
+export interface UsageBranchRow {
+  branchId: string;
+  branchName: string;
+  branchCode?: string;
+  provisionedUsers: number;
+  activeUsers: number;
+  events: number;
+  previousEvents: number;
+  distinctFeatures: number;
+  topFeatureKey?: string | null;
+  lastActivityAt?: string | null;
+  trend: number[];
+}
+
+export interface UsageUserRow {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  branchId?: string | null;
+  branchName?: string | null;
+  active: boolean;
+  events: number;
+  previousEvents: number;
+  featuresUsed: number;
+  activeDays: number;
+  topFeatureKey?: string | null;
+  lastSeenAt?: string | null;
+  trend: number[];
+}
+
+export interface UsageMatrixCell {
+  featureKey: string;
+  columnId: string;
+  hits: number;
+  lastUsedAt?: string | null;
+}
+
+export interface UsageActivityEvent {
+  occurredAt: string;
+  userId?: string | null;
+  userName?: string | null;
+  role: string;
+  branchName?: string | null;
+  portal?: string | null;
+  featureKey: string;
+}
+
+export interface UsageInsightsTenant {
+  tenantId: string;
+  tenantName: string;
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  rangeDays: number;
+  telemetryReady: boolean;
+  totals: UsageTotals;
+  health: UsageHealth;
+  daily: UsageDailyPoint[];
+  features: UsageFeatureRow[];
+  branches: UsageBranchRow[];
+  users: UsageUserRow[];
+  featureBranchMatrix: UsageMatrixCell[];
+  featureUserMatrix: UsageMatrixCell[];
+  recentActivity: UsageActivityEvent[];
 }
 
 export interface PlatformUsageHeatmapPortalSlice {
