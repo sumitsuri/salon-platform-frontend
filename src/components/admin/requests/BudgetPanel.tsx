@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { AlertBanner, Card, btnPrimary, inputClass } from "@/components/ui";
-import { api, type AdvanceBudget, type AdvancePolicyInput } from "@/lib/api";
+import { api, type AdvanceBudget, type AdvancePolicyInput, type EmployeeAdvanceSummary } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
-import { relativeDay } from "@/components/admin/requests/format";
+import { monthStart, relativeDay } from "@/components/admin/requests/format";
 import { TEAM_REQUEST_KEYS } from "@/components/admin/requests/use-team-requests";
 
 export function BudgetPanel() {
@@ -19,6 +19,7 @@ export function BudgetPanel() {
       {budget && !budget.policy.configured ? <AlertBanner variant="info">{t("budgetNotSet")}</AlertBanner> : null}
       {budget ? <BudgetOverview budget={budget} /> : null}
       {budget ? <PolicyForm key={policyKey(budget)} budget={budget} /> : null}
+      {budget?.policy.configured ? <RecordAdvanceForm budget={budget} /> : null}
       <EmployeeTable />
     </div>
   );
@@ -146,6 +147,130 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       <div className="mt-1">{children}</div>
       {hint ? <span className="mt-1 block text-[11px] font-normal text-[var(--text-tertiary)]">{hint}</span> : null}
     </label>
+  );
+}
+
+function RecordAdvanceForm({ budget }: { budget: AdvanceBudget }) {
+  const t = useTranslations("admin.requests");
+  const queryClient = useQueryClient();
+  const { data: employees = [], isLoading } = useQuery({
+    queryKey: TEAM_REQUEST_KEYS.employees,
+    queryFn: () => api.getAdvanceEmployees(),
+  });
+  const active = useMemo(() => employees.filter((e) => e.active), [employees]);
+
+  const [staffId, setStaffId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [installments, setInstallments] = useState(3);
+  const [firstMonth, setFirstMonth] = useState(monthStart(1));
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const selected = useMemo(() => active.find((e) => e.staffId === staffId), [active, staffId]);
+  const maxGrant = useMemo(() => {
+    if (!selected) return budget.available;
+    return Math.max(0, Math.floor(Math.min(budget.available, selected.eligibleMax)));
+  }, [budget.available, selected]);
+
+  const amountNumber = Number(amount);
+  const amountValid = Number.isFinite(amountNumber) && amountNumber >= 1;
+  const canSubmit = !!staffId && amountValid && installments >= 1 && installments <= budget.policy.maxInstallments;
+
+  const grant = useMutation({
+    mutationFn: () =>
+      api.grantAdvance({
+        staffId,
+        amount: amountNumber,
+        installments,
+        firstDeductionMonth: firstMonth,
+        reason: reason.trim() || undefined,
+        note: note.trim() || undefined,
+      }),
+    onSuccess: () => {
+      setSaved(true);
+      setError("");
+      setAmount("");
+      setReason("");
+      setNote("");
+      for (const key of Object.values(TEAM_REQUEST_KEYS)) void queryClient.invalidateQueries({ queryKey: key });
+    },
+    onError: (e) => {
+      setSaved(false);
+      setError(e instanceof Error ? e.message : t("actionFailed"));
+    },
+  });
+
+  const perMonth = amountValid ? Math.floor((amountNumber / installments) * 100) / 100 : 0;
+
+  return (
+    <Card className="min-w-0 space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t("recordTitle")}</h2>
+        <p className="text-xs text-[var(--text-tertiary)]">{t("recordHint")}</p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <Field label={t("recordEmployee")}>
+          <select
+            className={inputClass}
+            value={staffId}
+            disabled={isLoading}
+            onChange={(e) => {
+              setStaffId(e.target.value);
+              setSaved(false);
+            }}
+          >
+            <option value="">{isLoading ? t("loading") : t("recordPickEmployee")}</option>
+            {active.map((e: EmployeeAdvanceSummary) => (
+              <option key={e.staffId} value={e.staffId}>
+                {e.staffName} · {e.branchName ?? "—"}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("recordAmount")} hint={selected ? t("recordMaxHint", { amount: formatCurrency(maxGrant) }) : undefined}>
+          <input
+            type="number"
+            min={1}
+            className={inputClass}
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setSaved(false);
+            }}
+          />
+        </Field>
+        <Field label={t("installments")}>
+          <select className={inputClass} value={installments} onChange={(e) => setInstallments(Number(e.target.value))}>
+            {Array.from({ length: budget.policy.maxInstallments }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {t("monthsOption", { count: n })}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={t("firstDeduction")}>
+          <input type="month" className={inputClass} value={firstMonth.slice(0, 7)} onChange={(e) => setFirstMonth(`${e.target.value}-01`)} />
+        </Field>
+        <Field label={t("recordReason")} hint={t("recordReasonHint")}>
+          <input className={inputClass} value={reason} maxLength={500} placeholder={t("recordReasonPlaceholder")} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+        <Field label={t("notePlaceholder")}>
+          <input className={inputClass} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+      </div>
+      {amountValid ? (
+        <p className="text-xs text-[var(--text-secondary)]">{t("approvePreview", { each: formatCurrency(perMonth), count: installments })}</p>
+      ) : null}
+      {error ? <AlertBanner variant="error">{error}</AlertBanner> : null}
+      <div className="flex items-center gap-3">
+        <button type="button" className={btnPrimary} disabled={!canSubmit || grant.isPending} onClick={() => grant.mutate()}>
+          {grant.isPending ? t("recordSaving") : t("recordSubmit")}
+        </button>
+        {saved ? <span className="text-xs font-medium text-emerald-600">{t("recordSaved")}</span> : null}
+      </div>
+    </Card>
   );
 }
 

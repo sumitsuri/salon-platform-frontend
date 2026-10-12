@@ -179,6 +179,11 @@ export function StaffAdvanceSection() {
               {!isLoading && (data?.advances.length ?? 0) === 0 ? (
                 <p className="p-4 text-sm text-[var(--text-secondary)]">{t("empty")}</p>
               ) : null}
+              {!isLoading && (data?.advances.some((a) => a.recordedOnBehalf) ?? false) ? (
+                <p className="border-b border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-2.5 text-xs text-[var(--text-secondary)]">
+                  {t("onBehalfHint")}
+                </p>
+              ) : null}
               {data?.advances.map((a) => (
                 <AdvanceRow key={a.id} advance={a} onCancel={() => cancel.mutate(a.id)} cancelling={cancel.isPending} />
               ))}
@@ -220,17 +225,29 @@ function SummaryTile({
 function AdvanceRow({ advance, onCancel, cancelling }: { advance: AdvanceRequest; onCancel: () => void; cancelling: boolean }) {
   const t = useTranslations("employee.advance");
   const granted = advance.approvedAmount ?? null;
+  const onBehalf = advance.recordedOnBehalf === true;
+  const dateLine = onBehalf
+    ? t("recordedOnBehalf", {
+        date: dayLabel(advance.decidedAt ?? advance.createdAt),
+        name: advance.decidedByName?.trim() || t("yourManager"),
+      })
+    : t("requestedOn", { date: dayLabel(advance.createdAt) });
   return (
     <div className="space-y-2 px-4 py-3">
+      {onBehalf ? (
+        <p className="rounded-lg border border-violet-200/80 bg-violet-50/70 px-3 py-2 text-xs font-medium text-violet-900 dark:border-violet-900/50 dark:bg-violet-950/30 dark:text-violet-200">
+          {t("onBehalfBadge")}
+        </p>
+      ) : null}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[var(--text-primary)]">
-            {formatCurrency(advance.requestedAmount)}
+            {formatCurrency(onBehalf ? (granted ?? advance.requestedAmount) : advance.requestedAmount)}
             <span className="ml-2 text-xs font-normal text-[var(--text-secondary)]">
-              {t("overMonths", { count: advance.requestedInstallments })}
+              {t("overMonths", { count: advance.approvedInstallments ?? advance.requestedInstallments })}
             </span>
           </p>
-          <p className="text-xs text-[var(--text-tertiary)]">{t("requestedOn", { date: dayLabel(advance.createdAt) })}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">{dateLine}</p>
         </div>
         <StatusBadge status={advance.status} />
       </div>

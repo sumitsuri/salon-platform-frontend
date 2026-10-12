@@ -937,6 +937,9 @@ export const api = {
   getAdvanceEmployees: (branchId?: string) =>
     request<EmployeeAdvanceSummary[]>(`/api/v1/salary-advances/employees${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
 
+  grantAdvance: (data: GrantAdvanceInput) =>
+    request<AdvanceRequest>("/api/v1/salary-advances/grant", { method: "POST", body: JSON.stringify(data) }),
+
   approveAdvance: (id: string, data: DecideAdvanceInput) =>
     request<AdvanceRequest>(`/api/v1/salary-advances/${id}/approve`, { method: "POST", body: JSON.stringify(data) }),
 
@@ -3272,6 +3275,7 @@ export interface AdvanceRequest {
   settled: number;
   installments: AdvanceInstallment[];
   requesterHistory?: EmployeeAdvanceSummary | null;
+  recordedOnBehalf?: boolean;
 }
 
 export interface AdvancePolicy {
@@ -3303,6 +3307,15 @@ export interface DecideAdvanceInput {
   approvedAmount?: number;
   installments?: number;
   firstDeductionMonth?: string;
+  note?: string;
+}
+
+export interface GrantAdvanceInput {
+  staffId: string;
+  amount: number;
+  installments: number;
+  firstDeductionMonth?: string;
+  reason?: string;
   note?: string;
 }
 
