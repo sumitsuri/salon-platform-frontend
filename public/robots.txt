@@ -1,0 +1,6 @@
+# AntraHQ apps — app.antrahq.com, employee.antrahq.com, platform.antrahq.com
+# App pages carry <meta name="robots" content="noindex">. Crawling stays allowed so search engines can
+# read that tag and remove already-indexed login/dashboard URLs. Customer booking pages (/book/) are indexable.
+# Marketing site and sitemap: https://antrahq.com/
+User-agent: *
+Allow: /

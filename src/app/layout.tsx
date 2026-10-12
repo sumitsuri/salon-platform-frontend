@@ -80,13 +80,25 @@ const fontVariables = [
 ].join(" ");
 
 export const metadata: Metadata = {
-  title: "Antrahq",
+  title: {
+    default: "AntraHQ — Salon & spa management app",
+    template: "%s | AntraHQ",
+  },
   description: "Every location in sync — multi-location ops platform for growing local chains",
   manifest: "/manifest.json",
+  // Signed-in app surfaces (app./employee./platform.antrahq.com) must not appear in search results —
+  // they duplicate each other's login screens and compete with antrahq.com for brand searches.
+  // Customer booking pages opt back in (see app/book). Crawling stays allowed in robots.txt so
+  // search engines can read this tag and drop already-indexed URLs.
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Antrahq",
+    title: "AntraHQ",
   },
   icons: {
     icon: [
