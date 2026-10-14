@@ -45,6 +45,24 @@ export interface AuthUser {
   staffId?: string;
 }
 
+/** One device the signed-in user is logged in on (Settings → Signed-in devices). */
+export interface SignedInDevice {
+  id: string;
+  deviceLabel: string;
+  deviceType?: "MOBILE" | "TABLET" | "DESKTOP" | null;
+  browser?: string | null;
+  os?: string | null;
+  /** employee | manager | admin | platform — the app that was signed in to. */
+  portal?: string | null;
+  signedInAt?: string | null;
+  lastActiveAt?: string | null;
+  loginIp?: string | null;
+  loginLocation?: string | null;
+  lastIp?: string | null;
+  lastLocation?: string | null;
+  current: boolean;
+}
+
 interface ApiWrapper<T> {
   success: boolean;
   message?: string;
@@ -174,15 +192,17 @@ async function request<T>(
   }
 
   if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
-    if (!retried) {
-      const refresh = await refreshAccessToken();
-      if (refresh.status === "ok") return request<T>(path, options, true, timeoutMs);
-      if (refresh.status === "network_failed") {
-        throw new Error("Could not refresh session. Check your connection and try again.");
-      }
+    if (retried) {
+      // The session was just refreshed successfully, so this is not a sign-out. Never log the user out over it.
+      throw new Error("We couldn't verify your session just now. Please try again.");
+    }
+    const refresh = await refreshAccessToken();
+    if (refresh.status === "ok") return request<T>(path, options, true, timeoutMs);
+    if (refresh.status === "network_failed") {
+      throw new Error("Could not refresh session. Check your connection and try again.");
     }
     await handleSessionExpired();
-    throw new Error("Session expired. Please sign in again.");
+    throw new Error("You were signed out. Please sign in again.");
   }
 
   if (!res.ok) {
@@ -234,15 +254,16 @@ async function multipartRequest<T>(path: string, formData: FormData, retried = f
   }
 
   if (res.status === 401 && !path.startsWith("/api/v1/auth/")) {
-    if (!retried) {
-      const refresh = await refreshAccessToken();
-      if (refresh.status === "ok") return multipartRequest<T>(path, formData, true);
-      if (refresh.status === "network_failed") {
-        throw new Error("Could not refresh session. Check your connection and try again.");
-      }
+    if (retried) {
+      throw new Error("We couldn't verify your session just now. Please try again.");
+    }
+    const refresh = await refreshAccessToken();
+    if (refresh.status === "ok") return multipartRequest<T>(path, formData, true);
+    if (refresh.status === "network_failed") {
+      throw new Error("Could not refresh session. Check your connection and try again.");
     }
     await handleSessionExpired();
-    throw new Error("Session expired. Please sign in again.");
+    throw new Error("You were signed out. Please sign in again.");
   }
 
   if (!res.ok) {
@@ -317,6 +338,30 @@ export const api = {
     }),
 
   me: () => request<AuthUser>("/api/v1/auth/me"),
+
+  /**
+   * Ends this device's session on the server. Fire-and-forget: it must never delay or block signing out, and
+   * `keepalive` lets it finish even if the page navigates away straight after.
+   */
+  logoutRemote: async (refreshToken?: string | null): Promise<void> => {
+    if (!refreshToken) return;
+    try {
+      await fetch(`${apiBase()}/api/v1/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+        keepalive: true,
+      });
+    } catch {
+      // Offline: the local sign-out still happens; the server session can be removed from Signed-in devices.
+    }
+  },
+
+  listSignedInDevices: () => request<SignedInDevice[]>("/api/v1/account/sessions"),
+  revokeSignedInDevice: (id: string) =>
+    request<{ message: string }>(`/api/v1/account/sessions/${id}`, { method: "DELETE" }),
+  revokeOtherSignedInDevices: () =>
+    request<{ message: string }>("/api/v1/account/sessions/revoke-others", { method: "POST" }),
 
   getLocales: () => request<LocaleInfo[]>("/api/v1/meta/locales"),
   getMessagingConfig: () => request<MessagingConfig>("/api/v1/meta/messaging"),

@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { api, AuthUser } from "./api";
 import type { LoginPortal } from "./login-portal";
-import { clearStoredAuth } from "./auth-session";
+import { clearStoredAuth, getStoredUser } from "./auth-session";
 import { syncLocaleFromUser } from "./locale-client";
 
 interface AuthState {
@@ -25,6 +25,9 @@ export const useAuthStore = create<AuthState>()(
         syncLocaleFromUser(user.preferredLocale, true);
       },
       logout: () => {
+        // Sign-out is the only thing that ends a session: tell the server too, so this device's refresh token
+        // can't be reused. Fire-and-forget — clearing local state never waits on the network.
+        void api.logoutRemote(getStoredUser()?.refreshToken);
         clearStoredAuth();
         set({ user: null });
       },

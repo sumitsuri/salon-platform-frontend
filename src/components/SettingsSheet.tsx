@@ -19,6 +19,7 @@ import { applyLocaleChange } from "@/lib/locale-client";
 import { resolveLocale, type AppLocale } from "@/i18n/config";
 import { FALLBACK_LOCALES } from "@/lib/locale-catalog";
 import { LocalePickerList } from "@/components/LocalePickerList";
+import { SignedInDevices } from "@/components/account/SignedInDevices";
 
 interface SettingsSheetProps {
   open: boolean;
@@ -362,6 +363,10 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
             <p className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">{t("preview")}</p>
             <ThemePreview darkMode={previewDark} accent={previewAccent} />
           </section>
+
+          <div className="border-t border-[var(--border)] pt-5">
+            <SignedInDevices />
+          </div>
         </div>
 
         <div className="relative z-[1] p-4 border-t border-[var(--border)] space-y-2 bg-[var(--surface-muted)] pb-[max(1rem,env(safe-area-inset-bottom))]">

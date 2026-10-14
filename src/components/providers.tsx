@@ -39,14 +39,30 @@ function SessionKeeper() {
       if (document.visibilityState === "visible") void validateSession();
     };
 
+    // A phone that was offline (or asleep) comes back online: re-check straight away rather than waiting.
+    const onOnline = () => void validateSession();
+
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
     const interval = window.setInterval(() => void validateSession(), SESSION_REFRESH_INTERVAL_MS);
 
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
       window.clearInterval(interval);
     };
   }, [hydrated, user, validateSession]);
+
+  // Sessions no longer expire, so ask the browser not to evict this app's storage (and with it the sign-in).
+  // Installed apps only: Firefox shows a permission prompt for this, which would be noise in a normal tab.
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    const installed =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
+    if (!installed) return;
+    void navigator.storage?.persist?.().catch(() => undefined);
+  }, [hydrated, user]);
 
   return null;
 }
