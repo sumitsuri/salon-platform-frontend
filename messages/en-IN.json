@@ -3159,7 +3159,7 @@
       "statusTweak": "Small tweaks",
       "statusOk": "On track",
       "statusNoData": "Need more data",
-      "summaryAct": "{n} of {total} branches need a change to shifts",
+      "summaryAct": "{n} of {total} branches need action",
       "summaryStart": "Start with {branch}:",
       "summaryOk": "All {total} branches look well matched to demand",
       "summaryIdle": "About {amount} a month of staff time is going unused (estimate).",

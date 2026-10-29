@@ -10,7 +10,7 @@ import { BarChart } from "./BarChart";
 import { DayShape } from "./DayShape";
 import { Recommendations } from "./Recommendations";
 import { WeekMap } from "./WeekMap";
-import { fmt1, formatInr, hourLong, monthBars, weekBars } from "./busy-model";
+import { whole, formatInr, hourLong, monthBars, weekBars } from "./busy-model";
 
 function Tile({ label, value, sub, testId }: { label: string; value: React.ReactNode; sub?: React.ReactNode; testId?: string }) {
   return (
@@ -100,7 +100,7 @@ export function BranchDetail({
               ) : (
                 <>
                   <p className="text-sm font-semibold text-[var(--text-secondary)]">{t("heroLabelNoStaff")}</p>
-                  <p className="text-5xl font-bold text-[var(--text-primary)] leading-none">{fmt1(s.avgVisitsPerOpenDay)}</p>
+                  <p className="text-5xl font-bold text-[var(--text-primary)] leading-none">{whole(s.avgVisitsPerOpenDay)}</p>
                   <p className="text-sm text-[var(--text-secondary)] leading-snug">{t("heroExplainNoStaff")}</p>
                 </>
               )}
@@ -108,7 +108,7 @@ export function BranchDetail({
             <div className="grid grid-cols-2 gap-3 content-start">
               <Tile
                 label={t("tileCustomers")}
-                value={fmt1(s.avgVisitsPerOpenDay)}
+                value={whole(s.avgVisitsPerOpenDay)}
                 sub={
                   s.trendPercent != null ? (
                     <span className={cn("inline-flex items-center gap-0.5 font-semibold", s.trendPercent >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400")}>
@@ -119,7 +119,7 @@ export function BranchDetail({
                 }
                 testId="tile-customers"
               />
-              <Tile label={t("tileBusiest")} value={s.busiestSlot ?? "—"} sub={t("tileBusiestSub", { n: fmt1(s.busiestSlotVisitsPerHour) })} testId="tile-busiest" />
+              <Tile label={t("tileBusiest")} value={s.busiestSlot ?? "—"} sub={t("tileBusiestSub", { n: whole(s.busiestSlotVisitsPerHour) })} testId="tile-busiest" />
               <Tile
                 label={t("tileFit")}
                 value={s.staffingFitPercent != null ? `${s.staffingFitPercent}%` : "—"}
@@ -128,7 +128,7 @@ export function BranchDetail({
               />
               <Tile
                 label={t("tileIdle")}
-                value={s.idleStaffCostPerMonth != null ? `≈ ${formatInr(s.idleStaffCostPerMonth)}` : s.spareStaffHoursPerWeek != null ? `${fmt1(s.spareStaffHoursPerWeek)} h` : "—"}
+                value={s.idleStaffCostPerMonth != null ? `≈ ${formatInr(s.idleStaffCostPerMonth)}` : s.spareStaffHoursPerWeek != null ? `${whole(s.spareStaffHoursPerWeek)} h` : "—"}
                 sub={s.idleStaffCostPerMonth != null ? t("tileIdleSub") : s.spareStaffHoursPerWeek != null ? t("tileIdleHoursSub") : t("noAttendanceShort")}
                 testId="tile-idle"
               />

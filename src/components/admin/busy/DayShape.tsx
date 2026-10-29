@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { SegmentedControl } from "@/components/ui";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { TooltipLayer, useChartTooltip } from "./ChartTooltip";
-import { DAY_LONG, DAY_SHORT, daySeries, fmt1, hourShort, niceScale, openWeekdays, rangeLong, type HourPoint } from "./busy-model";
+import { DAY_LONG, DAY_SHORT, daySeries, whole, hourShort, niceScale, openWeekdays, rangeLong, type HourPoint } from "./busy-model";
 
 const PLOT_H = 210;
 const LEFT = 34;
@@ -115,7 +115,7 @@ export function DayShape({ branch }: { branch: BranchDemand }) {
         <>
           <p className="text-sm text-[var(--text-primary)]" data-testid="day-shape-summary">
             {t("onADay", { day: dayName })}{" "}
-            <strong>{rangeLong(peak.hour, peak.hour + 1)}</strong> {t("isBusiest", { n: fmt1(peak.visits) })}.
+            <strong>{rangeLong(peak.hour, peak.hour + 1)}</strong> {t("isBusiest", { n: whole(peak.visits) })}.
             {hasStaff && stretched.length > 0 ? <> {t("shortOnPeople")} <strong>{stretched.join(", ")}</strong>.</> : null}
             {hasStaff && spare.length > 0 ? <> {t("sparePeople")} <strong>{spare.join(", ")}</strong>.</> : null}
           </p>
@@ -138,9 +138,9 @@ export function DayShape({ branch }: { branch: BranchDemand }) {
                   {series.map((p) => (
                     <tr key={p.hour} className="border-t border-[var(--border)]">
                       <th scope="row" className="px-2 py-1 text-left font-medium text-[var(--text-secondary)] whitespace-nowrap">{rangeLong(p.hour, p.hour + 1)}</th>
-                      <td className="px-2 py-1 text-right tabular-nums">{fmt1(p.visits)}</td>
-                      {hasStaff && <td className="px-2 py-1 text-right tabular-nums">{fmt1(p.staff)}</td>}
-                      {hasStaff && <td className="px-2 py-1 text-right tabular-nums">{fmt1(cap(p))}</td>}
+                      <td className="px-2 py-1 text-right tabular-nums">{whole(p.visits)}</td>
+                      {hasStaff && <td className="px-2 py-1 text-right tabular-nums">{whole(p.staff)}</td>}
+                      {hasStaff && <td className="px-2 py-1 text-right tabular-nums">{whole(cap(p))}</td>}
                       {hasStaff && <td className="px-2 py-1 text-right tabular-nums">{p.busy != null ? `${p.busy}%` : "—"}</td>}
                       {hasStaff && <td className="px-2 py-1">{stateText(p.state)}</td>}
                     </tr>
@@ -205,7 +205,7 @@ export function DayShape({ branch }: { branch: BranchDemand }) {
                     fontWeight={700}
                     fill="var(--text-primary)"
                   >
-                    {fmt1(peak.visits)}
+                    {whole(peak.visits)}
                   </text>
                 )}
 
@@ -241,7 +241,7 @@ export function DayShape({ branch }: { branch: BranchDemand }) {
                     fill="transparent"
                     tabIndex={0}
                     role="img"
-                    aria-label={`${rangeLong(p.hour, p.hour + 1)}: ${fmt1(p.visits)} ${t("customersPerHour")}${hasStaff ? `, ${fmt1(p.staff)} ${t("staffOnFloor")}, ${stateText(p.state)}` : ""}`}
+                    aria-label={`${rangeLong(p.hour, p.hour + 1)}: ${whole(p.visits)} ${t("customersPerHour")}${hasStaff ? `, ${whole(p.staff)} ${t("staffOnFloor")}, ${stateText(p.state)}` : ""}`}
                     onPointerMove={(e) => onPointer(e, p)}
                     onFocus={(e) => onFocus(e, p)}
                     onBlur={hide}
@@ -257,18 +257,18 @@ export function DayShape({ branch }: { branch: BranchDemand }) {
                     <p className="font-semibold text-[var(--text-primary)]">{rangeLong(tip.data.hour, tip.data.hour + 1)}</p>
                     <p>
                       <span className="inline-block h-0.5 w-3 align-middle mr-1.5" style={{ background: "var(--bv-series-1)", height: 8, width: 8, borderRadius: 2 }} />
-                      <span className="text-sm font-bold text-[var(--text-primary)]">{fmt1(tip.data.visits)}</span>{" "}
+                      <span className="text-sm font-bold text-[var(--text-primary)]">{whole(tip.data.visits)}</span>{" "}
                       <span className="text-[var(--text-secondary)]">{t("customersPerHour")}</span>
                     </p>
                     {hasStaff && (
                       <>
                         <p>
                           <span className="inline-block align-middle mr-1.5" style={{ background: "var(--bv-series-2)", height: 2, width: 12 }} />
-                          <span className="text-sm font-bold text-[var(--text-primary)]">{fmt1(cap(tip.data))}</span>{" "}
+                          <span className="text-sm font-bold text-[var(--text-primary)]">{whole(cap(tip.data))}</span>{" "}
                           <span className="text-[var(--text-secondary)]">{t("canComfortablyServe")}</span>
                         </p>
                         <p className="text-[var(--text-secondary)]">
-                          {fmt1(tip.data.staff)} {t("staffOnFloor")}
+                          {whole(tip.data.staff)} {t("staffOnFloor")}
                           {tip.data.busy != null ? ` · ${t("busyFor", { pct: tip.data.busy })}` : ""}
                         </p>
                         {tip.data.state && <p className="font-semibold text-[var(--text-primary)]">{stateText(tip.data.state)}</p>}

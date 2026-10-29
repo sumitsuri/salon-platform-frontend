@@ -26,6 +26,12 @@ export function formatInr(n: number): string {
   return `₹${Math.round(n).toLocaleString("en-IN")}`;
 }
 
+/** Whole number for customers and staff; a real flow never shows as 0. */
+export function whole(n: number): string {
+  if (!(n > 0)) return "0";
+  return String(Math.max(1, Math.round(n)));
+}
+
 export function fmt1(n: number): string {
   const r = Math.round(n * 10) / 10;
   return Number.isInteger(r) ? String(r) : r.toFixed(1);
@@ -269,7 +275,7 @@ export function niceScale(maxValue: number, targetTicks = 5): { max: number; tic
   const raw = maxValue / (targetTicks - 1);
   const pow = 10 ** Math.floor(Math.log10(raw));
   const frac = raw / pow;
-  const step = (frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10) * pow;
+  const step = Math.max(1, (frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10) * pow);
   const max = Math.ceil(maxValue / step - 1e-9) * step;
   const ticks: number[] = [];
   for (let v = 0; v <= max + step / 2; v += step) ticks.push(Math.round(v * 1000) / 1000);

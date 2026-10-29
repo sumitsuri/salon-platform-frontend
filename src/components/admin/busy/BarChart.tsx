@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { TooltipLayer, useChartTooltip } from "./ChartTooltip";
-import { fmt1, niceScale, type BarDatum } from "./busy-model";
+import { whole, niceScale, type BarDatum } from "./busy-model";
 
 const H = 190;
 const TOP = 18;
@@ -62,7 +62,7 @@ export function BarChart({
           <>
             <line x1={LEFT} x2={width - RIGHT} y1={y(avg)} y2={y(avg)} stroke="var(--bv-axis)" strokeWidth={1.5} />
             <text x={width - RIGHT} y={y(avg) - 4} textAnchor="end" fontSize={10} fill="var(--bv-muted)">
-              {t("average")} {fmt1(avg)}
+              {t("average")} {whole(avg)}
             </text>
           </>
         )}
@@ -75,7 +75,7 @@ export function BarChart({
               {h > 0 && <path d={barPath(cx - barW / 2, y(d.value), barW, h)} fill="var(--bv-series-1)" opacity={d.partial ? 0.45 : 1} />}
               {labelled && h > 0 && (
                 <text x={cx} y={y(d.value) - 5} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--text-primary)">
-                  {fmt1(d.value)}
+                  {whole(d.value)}
                 </text>
               )}
               <text x={cx} y={H - 6} textAnchor="middle" fontSize={10} fill="var(--bv-muted)">
@@ -89,7 +89,7 @@ export function BarChart({
                 fill="transparent"
                 tabIndex={0}
                 role="img"
-                aria-label={`${d.label}: ${fmt1(d.value)} ${unit}`}
+                aria-label={`${d.label}: ${whole(d.value)} ${unit}`}
                 onPointerMove={(e) => onPointer(e, d)}
                 onFocus={(e) => onFocus(e, d)}
                 onBlur={hide}
@@ -104,7 +104,7 @@ export function BarChart({
           <div className="space-y-0.5">
             <p className="font-semibold text-[var(--text-primary)]">{tip.data.label}</p>
             <p>
-              <span className="text-sm font-bold text-[var(--text-primary)]">{fmt1(tip.data.value)}</span>{" "}
+              <span className="text-sm font-bold text-[var(--text-primary)]">{whole(tip.data.value)}</span>{" "}
               <span className="text-[var(--text-secondary)]">{unit}</span>
             </p>
             {avg > 0 && !tip.data.partial && (

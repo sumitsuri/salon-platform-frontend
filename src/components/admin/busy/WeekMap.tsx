@@ -17,7 +17,7 @@ import {
   cellKey,
   cellMap,
   divBin,
-  fmt1,
+  whole,
   formatInr,
   hourLong,
   hourShort,
@@ -70,7 +70,7 @@ function ScaleLegend({ metric, max }: { metric: Metric; max: number }) {
           </span>
           <span className="font-semibold">
             {t("legendBusy")}
-            {max > 0 ? ` (${metric === "revenue" ? formatInr(max) : fmt1(max)} ${metric === "revenue" ? t("perHourBilled") : t("perHour")})` : ""}
+            {max > 0 ? ` (${metric === "revenue" ? formatInr(max) : whole(max)} ${metric === "revenue" ? t("perHourBilled") : t("perHour")})` : ""}
           </span>
         </>
       )}
@@ -120,7 +120,7 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
     }
     if (active === "revenue") return formatInr(revenue);
     if (active === "staffing") return staff > 0 ? `${Math.round(((visits * visitHours) / staff) * 100)}%` : "—";
-    return fmt1(visits);
+    return whole(visits);
   };
   const isClosed = (dow: number) => (branch.dowOccurrences[dow - 1] || 0) > 0 && hours.every((h) => !(map.get(cellKey(dow, h))?.visits));
   const isAbsent = (dow: number) => (branch.dowOccurrences[dow - 1] || 0) === 0;
@@ -144,8 +144,8 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
     s === "STRETCHED" ? t("stateStretched") : s === "IDLE" ? t("stateSpare") : s === "OK" ? t("stateRight") : "";
 
   const cellLabel = (d: TipData) =>
-    `${DAY_LONG[d.dow - 1]} ${rangeLong(d.hour, d.hour + 1)}: ${fmt1(d.customers)} ${t("customersPerHour")}` +
-    (d.staff > 0 ? `, ${fmt1(d.staff)} ${t("staffOnFloor")}` : "") +
+    `${DAY_LONG[d.dow - 1]} ${rangeLong(d.hour, d.hour + 1)}: ${whole(d.customers)} ${t("customersPerHour")}` +
+    (d.staff > 0 ? `, ${whole(d.staff)} ${t("staffOnFloor")}` : "") +
     (d.state ? `, ${stateLabel(d.state)}` : "");
 
   const options = [
@@ -201,7 +201,7 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
                     const cellText =
                       active === "staffing"
                         ? c?.busyPercent != null ? `${c.busyPercent}%` : "—"
-                        : active === "revenue" ? formatInr(avgRevenue(branch, c)) : fmt1(avgVisits(branch, c));
+                        : active === "revenue" ? formatInr(avgRevenue(branch, c)) : whole(avgVisits(branch, c));
                     return (
                       <td key={d} className="px-2 py-1 text-right tabular-nums text-[var(--text-primary)]">
                         {cellText}
@@ -318,13 +318,13 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
                   {DAY_LONG[tip.data.dow - 1]}, {rangeLong(tip.data.hour, tip.data.hour + 1)}
                 </p>
                 <p className="text-[var(--text-primary)]">
-                  <span className="text-sm font-bold">{fmt1(tip.data.customers)}</span>{" "}
+                  <span className="text-sm font-bold">{whole(tip.data.customers)}</span>{" "}
                   <span className="text-[var(--text-secondary)]">{t("customersPerHour")}</span>
                 </p>
                 <p className="text-[var(--text-secondary)]">{formatInr(tip.data.revenue)} {t("billedPerHour")}</p>
                 {tip.data.staff > 0 && (
                   <p className="text-[var(--text-secondary)]">
-                    {fmt1(tip.data.staff)} {t("staffOnFloor")}
+                    {whole(tip.data.staff)} {t("staffOnFloor")}
                     {tip.data.busy != null ? ` · ${t("busyFor", { pct: tip.data.busy })}` : ""}
                   </p>
                 )}

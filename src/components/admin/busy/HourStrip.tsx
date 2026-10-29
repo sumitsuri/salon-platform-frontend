@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { BranchDemand } from "@/lib/api";
-import { daySeries, fmt1, hourShort, openWeekdays, rangeLong, type HourPoint } from "./busy-model";
+import { daySeries, whole, hourShort, openWeekdays, rangeLong, type HourPoint } from "./busy-model";
 
 const BAR = 12;
 const GAP = 3;
@@ -84,7 +84,7 @@ export function HourStrip({
         return (
           <g key={p.hour}>
             <rect x={x} y={height - h} width={BAR} height={h} rx={3} fill={colour(p.state, known)}>
-              <title>{`${rangeLong(p.hour, p.hour + 1)}: ${fmt1(p.visits)} customers an hour`}</title>
+              <title>{`${rangeLong(p.hour, p.hour + 1)}: ${whole(p.visits)} customers an hour`}</title>
             </rect>
             {(labels === "some" ? i === 0 || i === points.length - 1 || i % 3 === 0 : labels === "ends" && (i === 0 || i === points.length - 1)) && (
               <text x={i === 0 ? x : x + BAR} y={height + 11} textAnchor={labels === "ends" ? (i === 0 ? "start" : "end") : "middle"} fontSize={8} fill="var(--bv-muted)">

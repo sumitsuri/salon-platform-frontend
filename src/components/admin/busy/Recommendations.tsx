@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
-  ArrowRightLeft,
   CalendarDays,
   CalendarX,
   Clock,
@@ -23,8 +22,6 @@ import { daysLabel, formatInr, rangeLong } from "./busy-model";
 
 const TYPE_ICON: Record<string, typeof Users> = {
   RUSH: Users,
-  STAGGER_START: ArrowRightLeft,
-  EARLY_LEAVE: ArrowRightLeft,
   QUIET: Coffee,
   OVERSTAFFED: UserMinus,
   PREMIUM_HOURS: Gem,
