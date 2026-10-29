@@ -42,6 +42,7 @@ const ADMIN_ROUTES: Record<string, string> = {
   "/admin/campaigns": "admin.campaigns",
   "/admin/whatsapp-templates": "admin.whatsapp_templates",
   "/admin/promotions": "admin.promotions",
+  "/admin/offers": "admin.offerStudio",
   "/admin/scratch-cards": "admin.scratch_cards",
   "/admin/finance": "admin.finance",
   "/admin/branches": "admin.branches",

@@ -42,6 +42,7 @@ export const FEATURE_KEY_LABELS: Record<string, string> = {
   "admin.campaigns": "Campaigns",
   "admin.whatsapp_templates": "WhatsApp templates",
   "admin.promotions": "Promotions",
+  "admin.offerStudio": "Offer studio",
   "admin.scratch_cards": "Scratch cards",
   "admin.finance": "Finance",
   "admin.branches": "Branches",
