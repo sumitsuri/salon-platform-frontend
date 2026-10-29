@@ -2951,7 +2951,7 @@ export interface CreateServicePackagePlanRequest {
   items?: { serviceId: string; quantity: number; sortOrder?: number }[];
 }
 
-export interface UpdateServicePackagePlanRequest extends CreateServicePackagePlanRequest {}
+export type UpdateServicePackagePlanRequest = CreateServicePackagePlanRequest;
 
 export interface CustomerPackageEntitlement {
   id: string;
