@@ -53,16 +53,11 @@ export function Recommendations({
   const shown = expanded ? items : items.slice(0, 3);
 
   return (
-    <section className="space-y-3" data-testid="recommendations">
-      <div>
-        <h2 className="text-base font-bold text-[var(--text-primary)]">{t("recsTitle")}</h2>
-        <p className="text-xs text-[var(--text-secondary)] mt-0.5">{t("recsHint")}</p>
-      </div>
-
+    <div className="space-y-3" data-testid="recommendations">
       {items.length === 0 ? (
-        <p className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-secondary)]">{t("recsNone")}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t("recsNone")}</p>
       ) : (
-        <ol className="space-y-3">
+        <ol className="divide-y divide-[var(--border)] -my-3">
           {shown.map((r, i) => {
             const Icon = TYPE_ICON[r.type] ?? Info;
             const priorityLabel = r.priority === "HIGH" ? t("priorityHigh") : r.priority === "MEDIUM" ? t("priorityMedium") : t("priorityLow");
@@ -71,10 +66,7 @@ export function Recommendations({
             return (
               <li
                 key={r.id}
-                className={cn(
-                  "rounded-2xl border bg-[var(--surface)] p-4 shadow-sm space-y-3 transition",
-                  active ? "border-[var(--brand)] ring-1 ring-[var(--brand)]" : "border-[var(--border)]"
-                )}
+                className={cn("space-y-2.5 py-3 transition", active && "rounded-xl bg-[var(--brand-light)]/50 px-3 -mx-3")}
                 data-testid="recommendation"
               >
                 <div className="flex items-start gap-3">
@@ -89,7 +81,7 @@ export function Recommendations({
                       </span>
                       <span className="text-[11px] font-semibold text-[var(--text-tertiary,var(--text-secondary))]">#{i + 1}</span>
                     </div>
-                    <h3 className="mt-1 text-sm sm:text-base font-bold text-[var(--text-primary)] leading-snug">{r.title}</h3>
+                    <h3 className="mt-1 text-sm font-bold text-[var(--text-primary)] leading-snug">{r.title}</h3>
                   </div>
                 </div>
 
@@ -164,6 +156,6 @@ export function Recommendations({
           {expanded ? t("showFewer") : t("showAllRecs", { n: items.length })}
         </button>
       )}
-    </section>
+    </div>
   );
 }

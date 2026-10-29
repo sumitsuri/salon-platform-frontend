@@ -2,11 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2, ChevronDown, CircleHelp, Wrench } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, CircleHelp, ListChecks, Wrench } from "lucide-react";
 import type { BranchDemand } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { CompactStatsStrip } from "@/components/CompactStatsStrip";
+import { PanelShell } from "@/components/enterprise-ui";
+import { Callout } from "@/components/ui";
+import { CustomersByHour } from "./CustomersByHour";
 import { HourStrip } from "./HourStrip";
-import { formatInr, openWeekdays } from "./busy-model";
+import { formatInr } from "./busy-model";
 
 type Status = "ACT" | "TWEAK" | "OK" | "NO_DATA";
 
@@ -50,23 +54,19 @@ function BranchRow({ branch, onOpen, defaultOpen }: { branch: BranchDemand; onOp
   const status = statusOf(branch);
   const recs = branch.recommendations;
   const top = recs[0];
-  const days = useMemo(() => openWeekdays(branch), [branch]);
-  const weekdays = days.filter((d) => d <= 5);
-  const weekends = days.filter((d) => d >= 6);
-  const split = weekdays.length > 0 && weekends.length > 0;
   const shortLabel = t("barsShort");
   const spareLabel = t("barsSpare");
 
   return (
-    <li className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm" data-testid="board-row">
+    <li data-testid="board-row">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 p-4 text-left touch-manipulation hub:grid-cols-[minmax(10rem,1fr)_minmax(11rem,15rem)_minmax(0,2fr)_auto]"
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-left transition hover:bg-[var(--surface-muted)]/60 touch-manipulation hub:grid-cols-[minmax(10rem,1fr)_minmax(11rem,15rem)_minmax(0,2fr)_auto]"
       >
         <div className="min-w-0 space-y-1.5">
-          <p className="truncate text-sm font-bold text-[var(--text-primary)]">{branch.branchName}</p>
+          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{branch.branchName}</p>
           <StatusChip status={status} />
         </div>
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--text-secondary)] transition-transform hub:order-4", open && "rotate-180")} aria-hidden />
@@ -78,7 +78,7 @@ function BranchRow({ branch, onOpen, defaultOpen }: { branch: BranchDemand; onOp
             top ? (
               <>
                 <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--brand-text)]">{t("doThis")}</p>
-                <p className="text-sm font-semibold leading-snug text-[var(--text-primary)]" data-testid="board-action">{top.action ?? top.title}</p>
+                <p className="text-[13px] font-semibold leading-snug text-[var(--text-primary)]" data-testid="board-action">{top.action ?? top.title}</p>
                 {top.impactAmount != null && top.impactAmount > 0 && (
                   <p className="mt-0.5 text-xs text-[var(--text-secondary)]">≈ {formatInr(top.impactAmount)}{t("perMonth")} · {t("estimate")}</p>
                 )}
@@ -93,33 +93,14 @@ function BranchRow({ branch, onOpen, defaultOpen }: { branch: BranchDemand; onOp
       </button>
 
       {open && branch.enoughData && (
-        <div className="space-y-4 border-t border-[var(--border)] p-4" data-testid="board-detail">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {split ? (
-              <>
-                <div>
-                  <p className="mb-1 text-xs font-semibold text-[var(--text-secondary)]">{t("daysWeekdays")}</p>
-                  <HourStrip branch={branch} days={weekdays} labels="some" shortLabel={shortLabel} spareLabel={spareLabel} />
-                </div>
-                <div>
-                  <p className="mb-1 text-xs font-semibold text-[var(--text-secondary)]">{t("daysWeekends")}</p>
-                  <HourStrip branch={branch} days={weekends} labels="some" shortLabel={shortLabel} spareLabel={spareLabel} />
-                </div>
-              </>
-            ) : (
-              <div className="sm:col-span-2">
-                <HourStrip branch={branch} labels="some" shortLabel={shortLabel} spareLabel={spareLabel} />
-              </div>
-            )}
-          </div>
-
+        <div className="space-y-4 border-t border-[var(--border)] bg-[var(--surface-muted)]/40 px-4 py-4" data-testid="board-detail">
           {recs.length > 0 && (
             <ol className="space-y-3">
               {recs.slice(0, 3).map((r, i) => (
                 <li key={r.id} className="flex gap-3">
                   <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-light)] text-[11px] font-bold text-[var(--brand-text)]">{i + 1}</span>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold leading-snug text-[var(--text-primary)]">{r.action ?? r.title}</p>
+                    <p className="text-[13px] font-semibold leading-snug text-[var(--text-primary)]">{r.action ?? r.title}</p>
                     <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-secondary)]">{r.whatWeSee}</p>
                     {r.impactAmount != null && r.impactAmount > 0 && (
                       <p className="mt-0.5 text-xs font-medium text-[var(--text-secondary)]">≈ {formatInr(r.impactAmount)}{t("perMonth")} · {t("estimate")}</p>
@@ -129,6 +110,11 @@ function BranchRow({ branch, onOpen, defaultOpen }: { branch: BranchDemand; onOp
               ))}
             </ol>
           )}
+
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">{t("customersByHourTitle")}</p>
+            <CustomersByHour branch={branch} />
+          </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-[var(--text-secondary)]">{recs.length > 3 ? t("moreSuggestions", { n: recs.length - 3 }) : ""}</p>
@@ -157,34 +143,42 @@ export function ActionBoard({ branches, onOpen }: { branches: BranchDemand[]; on
 
   return (
     <div className="space-y-4" data-testid="action-board">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-sm space-y-2" data-testid="board-summary">
+      <CompactStatsStrip
+        testId="board-stats"
+        items={[
+          { id: "act", label: t("statNeedsAction"), value: `${needAction.length} / ${branches.length}`, accent: needAction.length > 0 ? "rose" : "emerald", featured: true },
+          { id: "idle", label: t("statIdle"), value: idle > 0 ? `≈ ${formatInr(idle)}` : "—", accent: "amber" },
+          { id: "first", label: t("statStartWith"), value: first ? first.branchName : "—", accent: "violet" },
+        ]}
+      />
+
+      <div data-testid="board-summary">
         {first ? (
-          <>
-            <p className="text-lg font-bold leading-snug text-[var(--text-primary)]">
-              {t("summaryAct", { n: needAction.length, total: branches.length })}
+          <Callout variant="warning" title={t("summaryAct", { n: needAction.length, total: branches.length })}>
+            <p>
+              {t("summaryStart", { branch: first.branchName })}{" "}
+              <strong className="text-[var(--text-primary)]">{first.recommendations[0]?.action ?? first.recommendations[0]?.title}</strong>
             </p>
-            <p className="text-sm text-[var(--text-secondary)]">
-              {t("summaryStart", { branch: first.branchName })} <strong className="text-[var(--text-primary)]">{first.recommendations[0]?.action ?? first.recommendations[0]?.title}</strong>
-            </p>
-          </>
+            {idle > 0 && <p>{t("summaryIdle", { amount: formatInr(idle) })}</p>}
+          </Callout>
         ) : (
-          <p className="text-lg font-bold leading-snug text-[var(--text-primary)]">{t("summaryOk", { total: branches.length })}</p>
+          <Callout variant="success" title={t("summaryOk", { total: branches.length })} />
         )}
-        {idle > 0 && <p className="text-sm text-[var(--text-secondary)]">{t("summaryIdle", { amount: formatInr(idle) })}</p>}
       </div>
 
-      <div className="busy-viz flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-[var(--text-secondary)]" data-testid="board-legend">
-        <span className="font-semibold">{t("boardLegend")}</span>
-        <Swatch colour="var(--bv-div-s2)" label={t("barsShort")} />
-        <Swatch colour="var(--bv-div-p2)" label={t("barsSpare")} />
-        <Swatch colour="var(--bv-div-0)" label={t("barsRight")} />
-      </div>
-
-      <ul className="space-y-3">
-        {sorted.map((b, i) => (
-          <BranchRow key={b.branchId} branch={b} onOpen={() => onOpen(b.branchId)} defaultOpen={i === 0 && statusOf(b) === "ACT"} />
-        ))}
-      </ul>
+      <PanelShell title={t("boardTitle")} subtitle={t("boardSubtitle")} icon={ListChecks} variant="dashboard" padding={false}>
+        <div className="busy-viz flex flex-wrap items-center gap-x-5 gap-y-1.5 border-b border-[var(--border)] px-4 py-2 text-[11px] text-[var(--text-secondary)]" data-testid="board-legend">
+          <span className="font-semibold">{t("boardLegend")}</span>
+          <Swatch colour="var(--bv-div-s2)" label={t("barsShort")} />
+          <Swatch colour="var(--bv-div-p2)" label={t("barsSpare")} />
+          <Swatch colour="var(--bv-div-0)" label={t("barsRight")} />
+        </div>
+        <ul className="divide-y divide-[var(--border)]">
+          {sorted.map((b, i) => (
+            <BranchRow key={b.branchId} branch={b} onOpen={() => onOpen(b.branchId)} defaultOpen={i === 0 && statusOf(b) === "ACT"} />
+          ))}
+        </ul>
+      </PanelShell>
     </div>
   );
 }

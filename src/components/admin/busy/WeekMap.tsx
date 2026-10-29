@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Table2, LayoutGrid } from "lucide-react";
+import { CalendarDays, Table2, LayoutGrid } from "lucide-react";
 import type { BranchDemand, DemandRecommendation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SegmentedControl } from "@/components/ui";
+import { PanelShell } from "@/components/enterprise-ui";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { TooltipLayer, useChartTooltip } from "./ChartTooltip";
 import {
@@ -155,25 +156,24 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
   ];
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5 shadow-sm space-y-3 busy-viz" data-testid="week-map">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-bold text-[var(--text-primary)]">{t("weekMapTitle")}</h2>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-            {active === "staffing" ? t("weekMapStaffingHint") : t("weekMapHint")}
-          </p>
-        </div>
+    <PanelShell
+      title={t("weekMapTitle")}
+      subtitle={active === "staffing" ? t("weekMapStaffingHint") : t("weekMapHint")}
+      icon={CalendarDays}
+      variant="dashboard"
+      action={
         <button
           type="button"
           onClick={() => setTableView((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] touch-manipulation"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] touch-manipulation"
           aria-pressed={tableView}
         >
           {tableView ? <LayoutGrid className="h-3.5 w-3.5" /> : <Table2 className="h-3.5 w-3.5" />}
           {tableView ? t("showMap") : t("showTable")}
         </button>
-      </div>
-
+      }
+    >
+      <div className="space-y-3 busy-viz" data-testid="week-map">
       <div className="max-w-md">
         <SegmentedControl value={active} onChange={setMetric} options={options} />
       </div>
@@ -345,6 +345,7 @@ export function WeekMap({ branch, highlight }: { branch: BranchDemand; highlight
       {highlight && (
         <p className="text-xs font-semibold text-[var(--brand-text)]">{t("showingOnMap", { title: highlight.title })}</p>
       )}
-    </section>
+      </div>
+    </PanelShell>
   );
 }

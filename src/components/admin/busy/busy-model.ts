@@ -101,6 +101,12 @@ export interface HourPoint {
   state: "STRETCHED" | "OK" | "IDLE" | null;
   revenue: number;
   inHours: boolean;
+  /** Customers who arrived in this hour over the whole period (for the chosen days). */
+  visitsTotal: number;
+  /** Staff-hours on the floor in this hour over the whole period. */
+  staffHours: number;
+  /** How many of the chosen days fall in the period. */
+  occurrences: number;
 }
 
 /** One "typical day" for a set of ISO weekdays: per-hour averages across those days. */
@@ -138,6 +144,9 @@ export function daySeries(b: BranchDemand, days: number[]): HourPoint[] {
     }
     out.push({
       hour: h,
+      visitsTotal: visits,
+      staffHours: staffMin / 60,
+      occurrences: occSum,
       visits: v,
       staff: s,
       busy: b.staffDataAvailable && s > 0 ? Math.round(((v * visitHours) / Math.max(s, 0.5)) * 100) : null,
@@ -280,4 +289,40 @@ export function niceScale(maxValue: number, targetTicks = 5): { max: number; tic
   const ticks: number[] = [];
   for (let v = 0; v <= max + step / 2; v += step) ticks.push(Math.round(v * 1000) / 1000);
   return { max, ticks };
+}
+
+export interface Daypart {
+  key: string;
+  label: string;
+  from: number;
+  to: number;
+  customers: number;
+  staffHours: number;
+}
+
+/** Splits the open day into morning / afternoon / evening for the first-level pie view. */
+export function dayparts(points: HourPoint[], labels: { morning: string; afternoon: string; evening: string }): Daypart[] {
+  const hours = points.filter((p) => p.inHours);
+  if (hours.length === 0) return [];
+  const first = hours[0].hour;
+  const last = hours[hours.length - 1].hour + 1;
+  const cuts: [string, string, number, number][] = [
+    ["morning", labels.morning, first, Math.min(12, last)],
+    ["afternoon", labels.afternoon, Math.max(12, first), Math.min(16, last)],
+    ["evening", labels.evening, Math.max(16, first), last],
+  ];
+  const out: Daypart[] = [];
+  for (const [key, label, from, to] of cuts) {
+    if (to <= from) continue;
+    const inside = hours.filter((p) => p.hour >= from && p.hour < to);
+    out.push({
+      key,
+      label,
+      from,
+      to,
+      customers: inside.reduce((a, p) => a + p.visitsTotal, 0),
+      staffHours: inside.reduce((a, p) => a + p.staffHours, 0),
+    });
+  }
+  return out;
 }

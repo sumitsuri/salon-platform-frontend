@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { api, type BranchDemand } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { AlertBanner, EmptyState, PageLoader, SegmentedControl } from "@/components/ui";
+import { DashboardOverviewShell } from "@/components/enterprise-ui";
 import { Clock } from "lucide-react";
 import { ActionBoard } from "./ActionBoard";
 import { BranchDetail } from "./BranchDetail";
@@ -41,17 +42,17 @@ export function BusyHours() {
   }
 
   return (
+    <DashboardOverviewShell>
     <div className="space-y-4" data-testid="busy-hours">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="w-full sm:w-auto sm:min-w-[22rem]">
-          <p className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">{t("period")}</p>
           <SegmentedControl
             value={period}
             onChange={setPeriod}
             options={PERIODS.map((p) => ({ id: p.id, label: t(`period${p.id}`) }))}
           />
         </div>
-        <p className="text-xs text-[var(--text-secondary)] sm:pb-3">{t("periodRange", { from: data.startDate, to: data.endDate })}</p>
+        <p className="text-xs text-[var(--text-secondary)]">{t("periodRange", { from: data.startDate, to: data.endDate })}</p>
       </div>
 
       <div className={cn("space-y-4 transition-opacity", query.isFetching && "opacity-60")}>
@@ -62,5 +63,6 @@ export function BusyHours() {
         )}
       </div>
     </div>
+    </DashboardOverviewShell>
   );
 }
