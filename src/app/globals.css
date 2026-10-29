@@ -4984,3 +4984,45 @@ html[lang="pa-IN"] body {
     animation: none !important;
   }
 }
+
+/* ── Busy hours charts ─────────────────────────────────────────────────────────────────────────
+   Sequential ramp (one hue, quiet → rush) and a diverging scale for "how busy is each person"
+   (red arm = stretched, gray = about right, blue arm = spare). Series colours are the first two slots of the
+   validated data-viz palette. Dark mode re-steps the same hues for the dark surface rather than inverting. */
+.busy-viz {
+  --bv-seq-0: #eef4fc; --bv-seq-1: #cde2fb; --bv-seq-2: #9ec5f4; --bv-seq-3: #6da7ec;
+  --bv-seq-4: #3987e5; --bv-seq-5: #256abf; --bv-seq-6: #104281;
+  --bv-seq-ink-0: #0b0b0b; --bv-seq-ink-1: #0b0b0b; --bv-seq-ink-2: #0b0b0b; --bv-seq-ink-3: #0b0b0b;
+  --bv-seq-ink-4: #ffffff; --bv-seq-ink-5: #ffffff; --bv-seq-ink-6: #ffffff;
+
+  --bv-div-s3: #b3302f; --bv-div-s2: #dc5a58; --bv-div-s1: #f2a6a0; --bv-div-0: #e6e5df;
+  --bv-div-p1: #b5d3f5; --bv-div-p2: #6da7ec; --bv-div-p3: #2a78d6;
+  --bv-div-ink-s3: #ffffff; --bv-div-ink-s2: #ffffff; --bv-div-ink-s1: #0b0b0b; --bv-div-ink-0: #52514e;
+  --bv-div-ink-p1: #0b0b0b; --bv-div-ink-p2: #0b0b0b; --bv-div-ink-p3: #ffffff;
+
+  --bv-series-1: #2a78d6;
+  --bv-series-2: #eb6834;
+  --bv-grid: #e1e0d9;
+  --bv-axis: #c3c2b7;
+  --bv-muted: #6b6a65;
+  --bv-closed: repeating-linear-gradient(135deg, transparent 0 4px, rgba(137, 135, 129, 0.18) 4px 5px);
+}
+
+[data-theme="dark"] .busy-viz {
+  --bv-seq-0: #232a33; --bv-seq-1: #16385f; --bv-seq-2: #184f95; --bv-seq-3: #256abf;
+  --bv-seq-4: #3987e5; --bv-seq-5: #6da7ec; --bv-seq-6: #b7d3f6;
+  --bv-seq-ink-0: #c3c2b7; --bv-seq-ink-1: #f0efec; --bv-seq-ink-2: #f0efec; --bv-seq-ink-3: #ffffff;
+  --bv-seq-ink-4: #ffffff; --bv-seq-ink-5: #0b0b0b; --bv-seq-ink-6: #0b0b0b;
+
+  --bv-div-s3: #e66767; --bv-div-s2: #b84a49; --bv-div-s1: #7d3b3a; --bv-div-0: #383835;
+  --bv-div-p1: #2b4a73; --bv-div-p2: #3987e5; --bv-div-p3: #8cbcf2;
+  --bv-div-ink-s3: #0b0b0b; --bv-div-ink-s2: #ffffff; --bv-div-ink-s1: #f0efec; --bv-div-ink-0: #c3c2b7;
+  --bv-div-ink-p1: #f0efec; --bv-div-ink-p2: #ffffff; --bv-div-ink-p3: #0b0b0b;
+
+  --bv-series-1: #3987e5;
+  --bv-series-2: #d95926;
+  --bv-grid: #2c2c2a;
+  --bv-axis: #383835;
+  --bv-muted: #a8a79f;
+  --bv-closed: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.07) 4px 5px);
+}

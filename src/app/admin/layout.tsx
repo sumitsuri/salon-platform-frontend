@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
@@ -49,6 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ? [{ href: "/admin/local-spotlight", label: t("nav.localSpotlight"), shortLabel: t("nav.spotlight"), icon: ScanSearch }]
         : []),
       { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
+      { href: "/admin/busy-hours", label: t("nav.busyHours"), shortLabel: t("nav.busyHoursShort"), icon: Clock },
       ...(guestReviewsLicensed
         ? [{ href: "/admin/guest-voice", label: t("nav.guestVoice"), shortLabel: t("nav.voice"), icon: MessageSquareHeart }]
         : []),
@@ -121,6 +122,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         icon: Sparkles,
         description: t("nav.moreInsightsHint"),
       },
+      {
+        href: "/admin/busy-hours",
+        label: t("nav.busyHours"),
+        icon: Clock,
+        description: t("nav.moreBusyHoursHint"),
+      },
       ...(guestReviewsLicensed
         ? [{
             href: "/admin/guest-voice",
@@ -137,6 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         "/admin/market-pulse",
         "/admin/local-spotlight",
         "/admin/insights",
+        "/admin/busy-hours",
         "/admin/guest-voice",
         "/admin/leads",
         "/admin/campaigns",

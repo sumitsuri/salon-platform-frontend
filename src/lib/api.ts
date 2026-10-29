@@ -479,6 +479,15 @@ export const api = {
   deleteCategory: (id: string) =>
     request<void>(`/api/v1/catalog/categories/${id}`, { method: "DELETE" }),
 
+  getDemandInsights: (params: { startDate?: string; endDate?: string; branchId?: string }) => {
+    const q = new URLSearchParams();
+    if (params.startDate) q.set("startDate", params.startDate);
+    if (params.endDate) q.set("endDate", params.endDate);
+    if (params.branchId) q.set("branchId", params.branchId);
+    const qs = q.toString();
+    return request<DemandInsights>(`/api/v1/analytics/demand${qs ? `?${qs}` : ""}`);
+  },
+
   getCatalogServices: (includeInactive = false) =>
     request<CatalogServiceItem[]>(
       `/api/v1/catalog/services${includeInactive ? "?includeInactive=true" : ""}`
@@ -1864,6 +1873,99 @@ export interface ServiceBranchAssignment {
   displayNameOverride?: string;
   active: boolean;
   manualPriceOverride?: boolean;
+}
+
+// ── Busy hours & staffing (Admin → Intelligence → Busy hours) ──
+export interface DemandCell {
+  /** ISO weekday, 1 = Monday … 7 = Sunday. */
+  dow: number;
+  /** 0-23, branch local time. */
+  hour: number;
+  visits: number;
+  cancelled: number;
+  walkIns: number;
+  online: number;
+  revenue: number;
+  staffMinutes: number;
+  state?: "STRETCHED" | "OK" | "IDLE" | null;
+  busyPercent?: number | null;
+}
+
+export interface DemandMonth {
+  month: string;
+  visits: number;
+  revenue: number;
+  activeDays: number;
+  visitsPerDay: number;
+  partial: boolean;
+}
+
+export interface DemandRecommendation {
+  id: string;
+  type: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  title: string;
+  whatWeSee: string;
+  whatToDo: string;
+  impact?: string | null;
+  impactAmount?: number | null;
+  days: number[];
+  startHour: number;
+  endHour: number;
+}
+
+export interface DemandSummary {
+  avgVisitsPerOpenDay: number;
+  revenuePerVisit: number;
+  busiestSlot?: string;
+  busiestSlotVisitsPerHour: number;
+  busiestDay?: string;
+  quietestDay?: string;
+  dayPeakRatio?: number | null;
+  busiestHour?: string;
+  quietestHour?: string;
+  staffingFitPercent?: number | null;
+  teamBusyPercent?: number | null;
+  visitMinutes?: number | null;
+  stretchedHoursPerWeek?: number | null;
+  spareStaffHoursPerWeek?: number | null;
+  idleStaffCostPerMonth?: number | null;
+  trendPercent?: number | null;
+  outsideHoursPercent: number;
+  openDays: number;
+  closedDays?: string;
+}
+
+export interface BranchDemand {
+  branchId: string;
+  branchName: string;
+  openTime?: string;
+  closeTime?: string;
+  openHour: number;
+  closeHour: number;
+  totalVisits: number;
+  totalCancelled: number;
+  totalRevenue: number;
+  /** Occurrences of each weekday (index 0 = Monday) in the period. */
+  dowOccurrences: number[];
+  cells: DemandCell[];
+  staffDataAvailable: boolean;
+  customersPerStaffHour?: number | null;
+  visitMinutes?: number | null;
+  visitMinutesSource?: "recorded" | "estimated" | "assumed";
+  months: DemandMonth[];
+  enoughData: boolean;
+  dataNote?: string | null;
+  summary?: DemandSummary | null;
+  recommendations: DemandRecommendation[];
+}
+
+export interface DemandInsights {
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  periodDays: number;
+  branches: BranchDemand[];
 }
 
 export interface CatalogServiceItem {
