@@ -1905,6 +1905,8 @@ export interface DemandRecommendation {
   type: string;
   priority: "HIGH" | "MEDIUM" | "LOW";
   title: string;
+  /** One-line instruction for the action board. */
+  action?: string;
   whatWeSee: string;
   whatToDo: string;
   impact?: string | null;
