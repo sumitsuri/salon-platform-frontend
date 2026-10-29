@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck, Wand2 } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
@@ -85,7 +85,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           { href: "/admin/campaigns", label: t("nav.campaigns"), shortLabel: t("nav.promo"), icon: Megaphone },
           { href: "/admin/whatsapp-templates", label: t("nav.whatsappTemplates"), shortLabel: t("nav.wa"), icon: MessageCircle },
           { href: "/admin/promotions", label: t("nav.promotions"), shortLabel: t("nav.deals"), icon: BadgePercent },
-          { href: "/admin/offers", label: t("nav.offerStudio"), shortLabel: t("nav.offerStudioShort"), icon: Wand2 },
           { href: "/admin/scratch-cards", label: t("nav.scratchCards"), shortLabel: t("nav.scratch"), icon: Gift },
         ],
       },
@@ -143,7 +142,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         "/admin/campaigns",
         "/admin/whatsapp-templates",
         "/admin/promotions",
-        "/admin/offers",
         "/admin/scratch-cards",
       ],
       tabs: [
@@ -199,12 +197,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               label: t("nav.promotions"),
               icon: BadgePercent,
               description: t("nav.morePromotionsHint"),
-            },
-            {
-              href: "/admin/offers",
-              label: t("nav.offerStudio"),
-              icon: Wand2,
-              description: t("nav.moreOfferStudioHint"),
             },
             {
               href: "/admin/scratch-cards",

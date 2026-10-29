@@ -275,30 +275,6 @@ async function multipartRequest<T>(path: string, formData: FormData, retried = f
   return body.data;
 }
 
-/** Downloads a generated poster image (needs the owner's login, so it cannot be a plain <img src>). */
-export async function fetchOfferPosterBlob(posterId: string): Promise<Blob> {
-  const url = `${apiBase()}/api/v1/festive-offers/posters/${posterId}/image`;
-  const headers: Record<string, string> = {};
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  let res = await fetch(url, { headers });
-  if (res.status === 401) {
-    const refresh = await refreshAccessToken();
-    if (refresh.status === "ok") {
-      headers.Authorization = `Bearer ${refresh.token}`;
-      res = await fetch(url, { headers });
-    } else if (refresh.status === "auth_failed") {
-      await handleSessionExpired();
-      throw new Error("You were signed out. Please sign in again.");
-    } else {
-      throw new Error("Could not load the poster. Check your connection and try again.");
-    }
-  }
-  if (!res.ok) throw new Error("Could not load the poster.");
-  return res.blob();
-}
-
 export async function fetchAttendancePhotoBlob(recordId: string, type: "entry" | "exit" = "entry"): Promise<string> {
   const token = getToken();
   const headers: Record<string, string> = {};
@@ -502,23 +478,6 @@ export const api = {
 
   deleteCategory: (id: string) =>
     request<void>(`/api/v1/catalog/categories/${id}`, { method: "DELETE" }),
-
-  getOfferStudio: () => request<OfferStudioInfo>("/api/v1/festive-offers/studio"),
-  listFestiveOffers: () => request<FestiveOffer[]>("/api/v1/festive-offers"),
-  createFestiveOffer: (data: FestiveOfferInput) =>
-    request<FestiveOffer>("/api/v1/festive-offers", { method: "POST", body: JSON.stringify(data) }),
-  updateFestiveOffer: (id: string, data: FestiveOfferInput) =>
-    request<FestiveOffer>(`/api/v1/festive-offers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  deleteFestiveOffer: (id: string) =>
-    request<void>(`/api/v1/festive-offers/${id}`, { method: "DELETE" }),
-  generateOfferPoster: (offerId: string) =>
-    request<OfferPoster>(`/api/v1/festive-offers/${offerId}/posters`, { method: "POST" }),
-  listOfferPosters: (offerId: string) =>
-    request<OfferPoster[]>(`/api/v1/festive-offers/${offerId}/posters`),
-  getOfferPoster: (posterId: string) =>
-    request<OfferPoster>(`/api/v1/festive-offers/posters/${posterId}`),
-  deleteOfferPoster: (posterId: string) =>
-    request<void>(`/api/v1/festive-offers/posters/${posterId}`, { method: "DELETE" }),
 
   getCatalogServices: (includeInactive = false) =>
     request<CatalogServiceItem[]>(
@@ -1905,107 +1864,6 @@ export interface ServiceBranchAssignment {
   displayNameOverride?: string;
   active: boolean;
   manualPriceOverride?: boolean;
-}
-
-// ── Festive offer posters (Admin → Growth → Offer studio) ──
-export type OfferBlockType = "SPEND_PERCENT" | "PACKAGE" | "FREE_WITH_SPEND";
-
-export interface OfferTier {
-  minSpend: number;
-  percentOff?: number;
-  freeItem?: string;
-}
-
-export interface OfferPackageItem {
-  serviceId?: string;
-  name: string;
-  price: number;
-}
-
-export interface OfferBlock {
-  type: OfferBlockType;
-  title?: string;
-  appliesTo?: string;
-  tiers: OfferTier[];
-  items: OfferPackageItem[];
-  discountPercent?: number;
-}
-
-export interface OfferPoster {
-  id: string;
-  offerId: string;
-  status: "PENDING" | "READY" | "FAILED";
-  style?: string;
-  format?: string;
-  /** openai | preview — "preview" is a plain stand-in image, not AI artwork. */
-  provider?: string;
-  error?: string;
-  createdAt?: string;
-  completedAt?: string;
-}
-
-export interface FestiveOffer {
-  id: string;
-  branchId: string;
-  branchName?: string;
-  occasion: string;
-  occasionLabel?: string;
-  headline: string;
-  tagline?: string;
-  brandName: string;
-  address?: string;
-  phone?: string;
-  validUntil?: string;
-  terms?: string;
-  blocks: OfferBlock[];
-  includedServices: string[];
-  style: string;
-  format: string;
-  extraDirection?: string;
-  caption: string;
-  summaryLines: string[];
-  latestPoster?: OfferPoster | null;
-  posterCount: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface FestiveOfferInput {
-  branchId: string;
-  occasion: string;
-  headline: string;
-  tagline?: string;
-  brandName: string;
-  address?: string;
-  phone?: string;
-  validUntil?: string | null;
-  terms?: string;
-  blocks: OfferBlock[];
-  includedServices: string[];
-  style: string;
-  format: string;
-  extraDirection?: string;
-  /** Leave out to have the server write the WhatsApp message from the offer. */
-  caption?: string;
-}
-
-export interface OfferStudioOption {
-  id: string;
-  label: string;
-  emoji?: string;
-  description?: string;
-  suggestedHeadline?: string;
-  suggestedTagline?: string;
-}
-
-export interface OfferStudioInfo {
-  /** openai | preview | none */
-  provider: "openai" | "preview" | "none";
-  dailyLimit: number;
-  usedToday: number;
-  occasions: OfferStudioOption[];
-  styles: OfferStudioOption[];
-  formats: OfferStudioOption[];
 }
 
 export interface CatalogServiceItem {
