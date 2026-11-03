@@ -347,13 +347,15 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
             </AlertBanner>
           )}
 
-          <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[var(--surface-muted)] border border-[var(--border)]">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[var(--border)] bg-black sm:aspect-[4/3]">
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt={t("capturedPhoto")} className="w-full h-full object-cover" />
+              <img src={preview} alt={t("capturedPhoto")} className="absolute inset-0 h-full w-full object-cover object-center" />
             ) : cameraMode === "live" ? (
               <>
-                <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover mirror" />
+                <div className="absolute inset-0" style={{ transform: "scaleX(-1)" }}>
+                  <video ref={videoRef} playsInline autoPlay muted className="absolute inset-0 h-full w-full object-cover object-center" />
+                </div>
                 {!cameraStarting && (
                   <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
                     <p className="text-xs text-white/90 text-center">{t("captureHint")}</p>
@@ -361,7 +363,7 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
                 )}
               </>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-4 p-4">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[var(--surface-muted)] p-4">
                 <p className="text-xs text-center text-[var(--text-secondary)] max-w-[16rem]">{t("selfieStepHint")}</p>
                 <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
                   <button
@@ -428,11 +430,6 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
           </div>
         </div>
       </div>
-      <style jsx global>{`
-        video.mirror {
-          transform: scaleX(-1);
-        }
-      `}</style>
     </div>
     </OverlayPortal>
   );

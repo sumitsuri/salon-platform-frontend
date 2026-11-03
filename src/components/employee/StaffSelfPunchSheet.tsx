@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Camera, MapPin, X } from "lucide-react";
+import { MapPin, X } from "lucide-react";
 import { api } from "@/lib/api";
 import {
   acquireLocation,
@@ -11,8 +11,10 @@ import {
   normalizePhotoToJpeg,
   openCameraStream,
 } from "@/lib/attendance-punch-media";
+import { bakeSelfieJpeg, type SelfieFilterId } from "@/lib/selfie-filters";
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
+import { SelfieCameraStage, SelfieEffectBar } from "@/components/employee/SelfieCameraStage";
 
 interface Props {
   open: boolean;
@@ -22,47 +24,51 @@ interface Props {
 }
 
 export function StaffSelfPunchSheet({ open, action, onClose, onSuccess }: Props) {
+  if (!open) return null;
+  return <StaffSelfPunchSheetOpen action={action} onClose={onClose} onSuccess={onSuccess} />;
+}
+
+function StaffSelfPunchSheetOpen({ action, onClose, onSuccess }: Omit<Props, "open">) {
   const t = useTranslations("employee.attendance");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [filterId, setFilterId] = useState<SelfieFilterId>("normal");
 
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      stopCamera();
-      setPreview(null);
-      setError("");
-      return;
-    }
+    if (preview) return;
     let cancelled = false;
     (async () => {
       try {
         const stream = await openCameraStream("user");
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          stream.getTracks().forEach((track) => track.stop());
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play();
         }
       } catch (e) {
-        setError(t(classifyCameraError(e, window.isSecureContext) as "locationDenied"));
+        if (!cancelled) {
+          setError(t(classifyCameraError(e, window.isSecureContext) as "locationDenied"));
+        }
       }
     })();
     return () => {
       cancelled = true;
       stopCamera();
     };
-  }, [open, stopCamera]);
+  }, [preview, stopCamera, t]);
 
   function capture() {
     const video = videoRef.current;
@@ -77,6 +83,11 @@ export function StaffSelfPunchSheet({ open, action, onClose, onSuccess }: Props)
     stopCamera();
   }
 
+  function retake() {
+    setPreview(null);
+    setError("");
+  }
+
   async function submit() {
     if (!preview) {
       setError(t("photoRequired"));
@@ -86,7 +97,8 @@ export function StaffSelfPunchSheet({ open, action, onClose, onSuccess }: Props)
     setError("");
     try {
       const loc = await acquireLocation();
-      const photo = await normalizePhotoToJpeg(preview);
+      const filtered = await bakeSelfieJpeg(preview, filterId);
+      const photo = await normalizePhotoToJpeg(filtered);
       await api.staffPortalPunch(
         {
           action,
@@ -107,54 +119,68 @@ export function StaffSelfPunchSheet({ open, action, onClose, onSuccess }: Props)
     }
   }
 
-  if (!open) return null;
-
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 p-4 sm:items-center">
-        <div className="w-full max-w-md rounded-2xl bg-[var(--surface)] p-4 shadow-xl">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-bold text-[var(--text-primary)]">
-              {action === "CHECK_IN" ? t("checkIn") : t("checkOut")}
-            </h2>
-            <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-[var(--surface-muted)]">
-              <X className="h-5 w-5" />
-            </button>
+      <div className="fixed inset-0 z-[200] flex flex-col bg-black">
+        <div className="flex items-center justify-between px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          <h2 className="text-base font-bold text-white">
+            {action === "CHECK_IN" ? t("checkIn") : t("checkOut")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+            aria-label={t("cancel")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {error && (
+          <div className="px-4 pb-2">
+            <AlertBanner variant="error">{error}</AlertBanner>
           </div>
+        )}
 
-          {error && (
-            <div className="mb-3">
-              <AlertBanner variant="error">{error}</AlertBanner>
-            </div>
-          )}
+        <SelfieCameraStage videoRef={videoRef} previewUrl={preview} filterId={filterId} showGuide />
 
-          {!preview ? (
-            <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-black">
-              <video ref={videoRef} className="h-full w-full object-cover mirror" playsInline muted autoPlay />
-              <button
-                type="button"
-                onClick={capture}
-                className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-[var(--text-primary)]"
-              >
-                <Camera className="h-4 w-4" />
-                {t("capturePhoto")}
-              </button>
-            </div>
+        {!preview && (
+          <p className="py-2 text-center text-xs font-medium text-white/80">{t("selfieHint")}</p>
+        )}
+
+        <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+          <SelfieEffectBar
+            value={filterId}
+            onChange={setFilterId}
+            label={t("effects")}
+            nameFor={(id) => t(`filters.${id}`)}
+          />
+
+          {preview ? (
+            <>
+              <p className="flex items-center justify-center gap-2 text-sm text-white/80">
+                <MapPin className="h-4 w-4" />
+                {t("confirmPunch")}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={retake} className={`${btnSecondary} flex-1`} disabled={busy}>
+                  {t("retake")}
+                </button>
+                <button type="button" onClick={submit} className={`${btnPrimary} flex-1`} disabled={busy}>
+                  {busy ? t("submitting") : t("submitPunch")}
+                </button>
+              </div>
+            </>
           ) : (
-            <p className="text-sm text-[var(--text-secondary)] flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {t("confirmPunch")}
-            </p>
+            <button
+              type="button"
+              onClick={capture}
+              aria-label={t("capturePhoto")}
+              className="mx-auto flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
+            >
+              <span className="h-14 w-14 rounded-full bg-white" />
+            </button>
           )}
-
-          <div className="mt-4 flex gap-2">
-            <button type="button" onClick={onClose} className={`${btnSecondary} flex-1`} disabled={busy}>
-              {t("cancel")}
-            </button>
-            <button type="button" onClick={submit} className={`${btnPrimary} flex-1`} disabled={busy || !preview}>
-              {busy ? t("submitting") : t("submitPunch")}
-            </button>
-          </div>
         </div>
       </div>
     </OverlayPortal>
