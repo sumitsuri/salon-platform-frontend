@@ -3,7 +3,9 @@
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Camera, Clock, LogOut, MapPin, Upload, UserCheck, X } from "lucide-react";
+import { AlertTriangle, Clock, LogOut, MapPin, Upload, UserCheck, X } from "lucide-react";
+import { SelfieCameraStage, SelfieEffectBar } from "@/components/employee/SelfieCameraStage";
+import { bakeSelfieJpeg, type SelfieFilterId } from "@/lib/selfie-filters";
 import { api, AttendanceRecord, Branch, StaffItem } from "@/lib/api";
 import { evaluateGeofence, formatCoords, geoStatusLabel } from "@/lib/attendance-geo";
 import {
@@ -17,8 +19,6 @@ import {
 } from "@/lib/attendance-punch-media";
 import { cn } from "@/lib/utils";
 import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
-
-type CameraMode = "choose" | "live";
 
 interface Props {
   staff: StaffItem;
@@ -48,7 +48,12 @@ function hoursSoFar(entryTime?: string) {
   return formatDuration(mins);
 }
 
-export function AttendancePunchModal({ staff, branch, open, action, existingRecord, onClose, onSuccess }: Props) {
+export function AttendancePunchModal({ open, ...props }: Props) {
+  if (!open) return null;
+  return <AttendancePunchModalOpen {...props} />;
+}
+
+function AttendancePunchModalOpen({ staff, branch, action, existingRecord, onClose, onSuccess }: Omit<Props, "open">) {
   const t = useTranslations("manager.attendance");
   const tCommon = useTranslations("common");
   const tUi = useTranslations("components.ui");
@@ -58,13 +63,13 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   const [location, setLocation] = useState<LocationFix | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
-  const [cameraMode, setCameraMode] = useState<CameraMode>("choose");
   const [cameraError, setCameraError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  const [previewFromFile, setPreviewFromFile] = useState(false);
+  const [filterId, setFilterId] = useState<SelfieFilterId>("normal");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [confirmCheckout, setConfirmCheckout] = useState(false);
-  const [cameraStarting, setCameraStarting] = useState(false);
 
   const isCheckOut = action === "CHECK_OUT";
   const secureContext = typeof window !== "undefined" ? window.isSecureContext : true;
@@ -86,34 +91,10 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   const resetCapture = useCallback(() => {
     stopCamera();
     setPreview(null);
-    setCameraMode("choose");
+    setPreviewFromFile(false);
     setCameraError("");
     setConfirmCheckout(false);
   }, [stopCamera]);
-
-  const startCamera = useCallback(async () => {
-    if (!secureContext) {
-      setCameraError(t("cameraNeedsHttps"));
-      setCameraMode("choose");
-      return;
-    }
-    setCameraError("");
-    setCameraStarting(true);
-    setCameraMode("live");
-    try {
-      const stream = await openCameraStream();
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-    } catch (err) {
-      setCameraMode("choose");
-      setCameraError(t(classifyCameraError(err, secureContext)));
-    } finally {
-      setCameraStarting(false);
-    }
-  }, [secureContext, t]);
 
   const refreshLocation = useCallback(() => {
     setLocationLoading(true);
@@ -131,18 +112,41 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
   }, [t]);
 
   useEffect(() => {
-    if (!open) {
-      resetCapture();
-      setLocation(null);
-      setLocationLoading(false);
-      setLocationError("");
-      setSubmitError("");
-      return;
-    }
-    refreshLocation();
-  }, [open, refreshLocation, resetCapture]);
+    const id = window.setTimeout(() => refreshLocation(), 0);
+    return () => window.clearTimeout(id);
+  }, [refreshLocation]);
 
-  useEffect(() => () => stopCamera(), [stopCamera]);
+  useEffect(() => {
+    if (preview) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      if (!secureContext) {
+        setCameraError(t("cameraNeedsHttps"));
+        return;
+      }
+      try {
+        const stream = await openCameraStream("user");
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play();
+        }
+      } catch (err) {
+        if (!cancelled) setCameraError(t(classifyCameraError(err, secureContext)));
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stopCamera();
+    };
+  }, [preview, secureContext, stopCamera, t]);
 
   function capturePhoto() {
     const video = videoRef.current;
@@ -153,9 +157,9 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    setPreviewFromFile(false);
     setPreview(canvas.toDataURL("image/jpeg", 0.85));
     stopCamera();
-    setCameraMode("choose");
   }
 
   function handleFileSelected(file: File | null) {
@@ -167,9 +171,9 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
+        setPreviewFromFile(true);
         setPreview(reader.result);
         stopCamera();
-        setCameraMode("choose");
         setSubmitError("");
       }
     };
@@ -182,7 +186,8 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     setSubmitting(true);
     setSubmitError("");
     try {
-      const jpeg = await normalizePhotoToJpeg(preview);
+      const filtered = await bakeSelfieJpeg(preview, filterId);
+      const jpeg = await normalizePhotoToJpeg(filtered);
       const result = await api.verifiedPunch(
         {
           staffId: staff.id,
@@ -218,20 +223,13 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
     void submitPunch();
   }
 
-  if (!open) return null;
-
   return (
     <OverlayPortal>
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <button type="button" className="absolute inset-0 bg-black/50" onClick={onClose} aria-label={tUi("close")} />
-      <div
-        className="relative w-full sm:max-w-md bg-[var(--surface)] rounded-t-2xl sm:rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto"
-        data-testid="attendance-punch-modal"
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] sticky top-0 bg-[var(--surface)] z-10">
+    <div className="fixed inset-0 z-[200] flex flex-col bg-black" data-testid="attendance-punch-modal">
+        <div className="flex items-center justify-between px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div>
-            <p className="font-semibold text-[var(--text-primary)]">{staff.name}</p>
-            <p className="text-xs text-[var(--text-secondary)] flex items-center gap-1.5">
+            <p className="font-semibold text-white">{staff.name}</p>
+            <p className="text-xs text-white/70 flex items-center gap-1.5">
               {isCheckOut ? (
                 <>
                   <LogOut className="w-3.5 h-3.5" />
@@ -245,12 +243,18 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
               )}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--surface-muted)]" disabled={submitting}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+            disabled={submitting}
+            aria-label={tUi("close")}
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="max-h-[34%] space-y-2 overflow-y-auto px-4 pb-2">
           {isCheckOut && existingRecord?.entryTime && (
             <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 space-y-1">
               <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
@@ -347,89 +351,82 @@ export function AttendancePunchModal({ staff, branch, open, action, existingReco
             </AlertBanner>
           )}
 
-          <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-[var(--border)] bg-black sm:aspect-[4/3]">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt={t("capturedPhoto")} className="absolute inset-0 h-full w-full object-cover object-center" />
-            ) : cameraMode === "live" ? (
-              <>
-                <div className="absolute inset-0" style={{ transform: "scaleX(-1)" }}>
-                  <video ref={videoRef} playsInline autoPlay muted className="absolute inset-0 h-full w-full object-cover object-center" />
-                </div>
-                {!cameraStarting && (
-                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                    <p className="text-xs text-white/90 text-center">{t("captureHint")}</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[var(--surface-muted)] p-4">
-                <p className="text-xs text-center text-[var(--text-secondary)] max-w-[16rem]">{t("selfieStepHint")}</p>
-                <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
-                  <button
-                    type="button"
-                    onClick={() => void startCamera()}
-                    disabled={cameraStarting || submitting}
-                    className={`${btnPrimary} flex-1 text-sm`}
-                    data-testid="open-camera-button"
-                  >
-                    <Camera className="w-4 h-4" />
-                    {cameraStarting ? tCommon("processing") : t("openCamera")}
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/*"
-                    capture="user"
-                    className="hidden"
-                    onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={submitting}
-                    className={`${btnSecondary} flex-1 text-sm`}
-                    data-testid="upload-selfie-button"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {t("uploadSelfie")}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {preview ? (
-              <>
-                <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1 min-h-12`} disabled={submitting}>
-                  {t("retakePhoto")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrimaryAction}
-                  className={`${btnPrimary} flex-1 min-h-12 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
-                  disabled={submitting}
-                  data-testid="attendance-confirm-punch"
-                >
-                  {submitting
-                    ? tCommon("processing")
-                    : confirmCheckout
-                      ? t("confirmCheckoutBtn")
-                      : isCheckOut
-                        ? t("proceedCheckout")
-                        : t("confirmPunch")}
-                </button>
-              </>
-            ) : cameraMode === "live" ? (
-              <button type="button" onClick={capturePhoto} disabled={cameraStarting || submitting} className={`${btnPrimary} w-full`}>
-                <Camera className="w-4 h-4" />
-                {t("capturePhoto")}
-              </button>
-            ) : null}
-          </div>
         </div>
-      </div>
+
+        <SelfieCameraStage
+          videoRef={videoRef}
+          previewUrl={preview}
+          filterId={filterId}
+          showGuide
+          mirrored={!previewFromFile}
+        />
+
+        {!preview && (
+          <p className="py-2 text-center text-xs font-medium text-white/80">{t("selfieHint")}</p>
+        )}
+
+        <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+          <SelfieEffectBar
+            value={filterId}
+            onChange={setFilterId}
+            label={t("effects")}
+            nameFor={(id) => t(`filters.${id}`)}
+          />
+
+          {preview ? (
+            <div className="flex gap-2">
+              <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1 min-h-12`} disabled={submitting}>
+                {t("retakePhoto")}
+              </button>
+              <button
+                type="button"
+                onClick={handlePrimaryAction}
+                className={`${btnPrimary} flex-1 min-h-12 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
+                disabled={submitting}
+                data-testid="attendance-confirm-punch"
+              >
+                {submitting
+                  ? tCommon("processing")
+                  : confirmCheckout
+                    ? t("confirmCheckoutBtn")
+                    : isCheckOut
+                      ? t("proceedCheckout")
+                      : t("confirmPunch")}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-6">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/*"
+                capture="user"
+                className="hidden"
+                onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={submitting}
+                className="flex h-12 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-medium text-white"
+                data-testid="upload-selfie-button"
+              >
+                <Upload className="w-4 h-4" />
+                {t("uploadSelfie")}
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                disabled={submitting}
+                aria-label={t("capturePhoto")}
+                data-testid="open-camera-button"
+                className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
+              >
+                <span className="h-14 w-14 rounded-full bg-white" />
+              </button>
+            </div>
+          )}
+        </div>
     </div>
     </OverlayPortal>
   );

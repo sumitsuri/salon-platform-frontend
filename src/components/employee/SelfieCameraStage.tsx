@@ -14,16 +14,19 @@ export function SelfieCameraStage({
   previewUrl,
   filterId,
   showGuide,
+  mirrored = true,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>;
   previewUrl: string | null;
   filterId: SelfieFilterId;
   showGuide: boolean;
+  /** Front-camera preview is mirrored. An uploaded file is shown as saved. */
+  mirrored?: boolean;
 }) {
   const filter = selfieFilterCss(filterId);
   return (
     <div className="relative min-h-0 flex-1 bg-black">
-      <div className="absolute inset-0" style={{ transform: "scaleX(-1)" }}>
+      <div className="absolute inset-0" style={mirrored ? { transform: "scaleX(-1)" } : undefined}>
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

@@ -399,6 +399,18 @@
       "cameraUnavailable": "Camera access denied or unavailable",
       "captureHint": "Align face in frame, then capture",
       "capturePhoto": "Capture photo",
+      "selfieHint": "Center your face",
+      "effects": "Effects",
+      "filters": {
+        "normal": "Normal",
+        "warm": "Warm",
+        "cool": "Cool",
+        "mono": "Mono",
+        "fade": "Fade",
+        "vivid": "Vivid",
+        "glow": "Glow",
+        "drama": "Drama"
+      },
       "retakePhoto": "Retake",
       "confirmPunch": "Confirm punch",
       "capturedPhoto": "Captured selfie",
