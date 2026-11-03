@@ -2,13 +2,13 @@
 
 export const SELFIE_FILTERS = [
   { id: "normal", css: "none" },
-  { id: "warm", css: "sepia(0.35) saturate(1.35) contrast(1.05) brightness(1.04)" },
-  { id: "cool", css: "saturate(0.85) hue-rotate(18deg) contrast(1.05) brightness(1.06)" },
-  { id: "mono", css: "grayscale(1) contrast(1.15) brightness(1.02)" },
-  { id: "fade", css: "contrast(0.88) saturate(0.72) brightness(1.12)" },
-  { id: "vivid", css: "saturate(1.65) contrast(1.12)" },
-  { id: "glow", css: "brightness(1.16) saturate(1.2) contrast(0.92)" },
-  { id: "drama", css: "contrast(1.4) saturate(0.78) brightness(0.92)" },
+  { id: "warm", css: "sepia(0.45) saturate(1.45) contrast(1.06) brightness(1.06)" },
+  { id: "cool", css: "saturate(0.9) hue-rotate(28deg) contrast(1.08) brightness(1.05)" },
+  { id: "mono", css: "grayscale(1) contrast(1.2) brightness(1.04)" },
+  { id: "fade", css: "contrast(0.82) saturate(0.6) brightness(1.16)" },
+  { id: "vivid", css: "saturate(1.85) contrast(1.14) brightness(1.02)" },
+  { id: "glow", css: "brightness(1.2) saturate(1.15) contrast(0.9)" },
+  { id: "drama", css: "contrast(1.45) saturate(0.7) brightness(0.9)" },
 ] as const;
 
 export type SelfieFilterId = (typeof SELFIE_FILTERS)[number]["id"];

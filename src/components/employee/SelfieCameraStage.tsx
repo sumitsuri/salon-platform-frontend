@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { SELFIE_FILTERS, type SelfieFilterId, selfieFilterCss } from "@/lib/selfie-filters";
 import { cn } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ export function SelfieCameraStage({
 }) {
   const filter = selfieFilterCss(filterId);
   return (
-    <div className="relative min-h-0 flex-1 bg-black">
+    <div className="absolute inset-0 bg-black">
       <div className="absolute inset-0" style={mirrored ? { transform: "scaleX(-1)" } : undefined}>
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -47,14 +47,15 @@ export function SelfieCameraStage({
         )}
       </div>
       {showGuide && !previewUrl && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-[58%] w-[70%] max-w-[18rem] rounded-[999px] border-2 border-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]" />
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center pb-24">
+          <div className="aspect-[3/4] w-[68%] max-w-[15.5rem] rounded-[999px] border-2 border-white/80 shadow-[0_0_0_1px_rgba(0,0,0,0.2)]" />
         </div>
       )}
     </div>
   );
 }
 
+/** Instagram-style look tray: one name, round previews, the selected look is larger and centered. */
 export function SelfieEffectBar({
   value,
   onChange,
@@ -66,32 +67,36 @@ export function SelfieEffectBar({
   label: string;
   nameFor: (id: SelfieFilterId) => string;
 }) {
+  const selectedRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [value]);
+
   return (
-    <div className="w-full">
-      <p className="mb-2 text-center text-[11px] font-medium uppercase tracking-wide text-white/70">{label}</p>
-      <div className="mx-auto flex w-max max-w-full gap-3 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="w-full" role="group" aria-label={label}>
+      <p className="mb-2 text-center text-sm font-semibold text-white drop-shadow">{nameFor(value)}</p>
+      <div className="flex w-full items-center gap-4 overflow-x-auto px-[38%] pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {SELFIE_FILTERS.map((filter) => {
           const selected = filter.id === value;
           const name = nameFor(filter.id);
           return (
             <button
               key={filter.id}
+              ref={selected ? selectedRef : undefined}
               type="button"
               onClick={() => onChange(filter.id)}
               aria-pressed={selected}
               aria-label={name}
-              className="flex w-14 shrink-0 flex-col items-center gap-1"
+              className="flex shrink-0 items-center justify-center"
             >
               <span
                 className={cn(
-                  "block h-12 w-12 rounded-full bg-gradient-to-br from-amber-200 via-rose-300 to-orange-400",
-                  selected ? "ring-2 ring-white ring-offset-2 ring-offset-black" : "opacity-80",
+                  "block rounded-full bg-gradient-to-br from-amber-100 via-rose-300 to-orange-500 shadow-md transition-transform",
+                  selected ? "h-14 w-14 ring-2 ring-white" : "h-10 w-10 opacity-80",
                 )}
                 style={{ filter: filter.css === "none" ? undefined : filter.css }}
               />
-              <span className={cn("max-w-full truncate text-[10px]", selected ? "font-semibold text-white" : "text-white/70")}>
-                {name}
-              </span>
             </button>
           );
         })}

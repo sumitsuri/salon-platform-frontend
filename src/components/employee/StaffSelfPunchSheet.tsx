@@ -13,7 +13,7 @@ import {
 } from "@/lib/attendance-punch-media";
 import { bakeSelfieJpeg, type SelfieFilterId } from "@/lib/selfie-filters";
 import { OverlayPortal } from "@/components/OverlayPortal";
-import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/ui";
 import { SelfieCameraStage, SelfieEffectBar } from "@/components/employee/SelfieCameraStage";
 
 interface Props {
@@ -121,66 +121,63 @@ function StaffSelfPunchSheetOpen({ action, onClose, onSuccess }: Omit<Props, "op
 
   return (
     <OverlayPortal>
-      <div className="fixed inset-0 z-[200] flex flex-col bg-black">
-        <div className="flex items-center justify-between px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <h2 className="text-base font-bold text-white">
-            {action === "CHECK_IN" ? t("checkIn") : t("checkOut")}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
-            aria-label={t("cancel")}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+      <div className="fixed inset-0 z-[200] bg-black">
+        <div className="relative mx-auto h-full w-full max-w-[28rem]">
+          <SelfieCameraStage videoRef={videoRef} previewUrl={preview} filterId={filterId} showGuide />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 to-transparent" />
 
-        {error && (
-          <div className="px-4 pb-2">
-            <AlertBanner variant="error">{error}</AlertBanner>
+          <div className="absolute inset-0 flex flex-col">
+            <div className="flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <h2 className="text-base font-bold text-white drop-shadow">
+                {action === "CHECK_IN" ? t("checkIn") : t("checkOut")}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white"
+                aria-label={t("cancel")}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {error && <p className="truncate px-4 pt-1 text-center text-xs text-red-300">{error}</p>}
+
+            <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              {!preview && <p className="text-center text-xs font-medium text-white/90 drop-shadow">{t("selfieHint")}</p>}
+              <SelfieEffectBar
+                value={filterId}
+                onChange={setFilterId}
+                label={t("effects")}
+                nameFor={(id) => t(`filters.${id}`)}
+              />
+              {preview ? (
+                <>
+                  <p className="flex items-center justify-center gap-2 text-sm text-white/90">
+                    <MapPin className="h-4 w-4" />
+                    {t("confirmPunch")}
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={retake} className={`${btnSecondary} flex-1`} disabled={busy}>
+                      {t("retake")}
+                    </button>
+                    <button type="button" onClick={submit} className={`${btnPrimary} flex-1`} disabled={busy}>
+                      {busy ? t("submitting") : t("submitPunch")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={capture}
+                  aria-label={t("capturePhoto")}
+                  className="mx-auto flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
+                >
+                  <span className="h-[3.15rem] w-[3.15rem] rounded-full bg-white" />
+                </button>
+              )}
+            </div>
           </div>
-        )}
-
-        <SelfieCameraStage videoRef={videoRef} previewUrl={preview} filterId={filterId} showGuide />
-
-        {!preview && (
-          <p className="py-2 text-center text-xs font-medium text-white/80">{t("selfieHint")}</p>
-        )}
-
-        <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
-          <SelfieEffectBar
-            value={filterId}
-            onChange={setFilterId}
-            label={t("effects")}
-            nameFor={(id) => t(`filters.${id}`)}
-          />
-
-          {preview ? (
-            <>
-              <p className="flex items-center justify-center gap-2 text-sm text-white/80">
-                <MapPin className="h-4 w-4" />
-                {t("confirmPunch")}
-              </p>
-              <div className="flex gap-2">
-                <button type="button" onClick={retake} className={`${btnSecondary} flex-1`} disabled={busy}>
-                  {t("retake")}
-                </button>
-                <button type="button" onClick={submit} className={`${btnPrimary} flex-1`} disabled={busy}>
-                  {busy ? t("submitting") : t("submitPunch")}
-                </button>
-              </div>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={capture}
-              aria-label={t("capturePhoto")}
-              className="mx-auto flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
-            >
-              <span className="h-14 w-14 rounded-full bg-white" />
-            </button>
-          )}
         </div>
       </div>
     </OverlayPortal>

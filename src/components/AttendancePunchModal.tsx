@@ -3,7 +3,7 @@
 import { OverlayPortal } from "@/components/OverlayPortal";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Clock, LogOut, MapPin, Upload, UserCheck, X } from "lucide-react";
+import { LogOut, Upload, UserCheck, X } from "lucide-react";
 import { SelfieCameraStage, SelfieEffectBar } from "@/components/employee/SelfieCameraStage";
 import { bakeSelfieJpeg, type SelfieFilterId } from "@/lib/selfie-filters";
 import { api, AttendanceRecord, Branch, StaffItem } from "@/lib/api";
@@ -17,8 +17,7 @@ import {
   openCameraStream,
   type LocationFix,
 } from "@/lib/attendance-punch-media";
-import { cn } from "@/lib/utils";
-import { AlertBanner, btnPrimary, btnSecondary } from "@/components/ui";
+import { btnPrimary, btnSecondary } from "@/components/ui";
 
 interface Props {
   staff: StaffItem;
@@ -28,11 +27,6 @@ interface Props {
   existingRecord?: AttendanceRecord | null;
   onClose: () => void;
   onSuccess: (message: string) => void;
-}
-
-function formatTime(iso?: string) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDuration(minutes: number) {
@@ -223,211 +217,150 @@ function AttendancePunchModalOpen({ staff, branch, action, existingRecord, onClo
     void submitPunch();
   }
 
+  const gpsLine = locationLoading && !location
+    ? t("gpsLocating")
+    : location
+      ? `${t("yourLocation")}: ${formatCoords(location.latitude, location.longitude)} · ${
+          approximateLocation
+            ? t("gpsApproximate", { accuracy: Math.round(location.accuracyMeters) })
+            : t("gpsReady", { accuracy: Math.round(location.accuracyMeters) })
+        }${liveGeo.distanceMeters != null ? ` · ${liveGeo.distanceMeters}m ${t("fromBranch")}` : ""} · ${geoStatusLabel(liveGeo.status)}`
+      : locationError || t("gpsUnavailable");
+
   return (
     <OverlayPortal>
-    <div className="fixed inset-0 z-[200] flex flex-col bg-black" data-testid="attendance-punch-modal">
-        <div className="flex items-center justify-between px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]">
-          <div>
-            <p className="font-semibold text-white">{staff.name}</p>
-            <p className="text-xs text-white/70 flex items-center gap-1.5">
-              {isCheckOut ? (
-                <>
-                  <LogOut className="w-3.5 h-3.5" />
-                  {t("checkOutTitle")}
-                </>
-              ) : (
-                <>
-                  <UserCheck className="w-3.5 h-3.5" />
-                  {t("checkInTitle")}
-                </>
-              )}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
-            disabled={submitting}
-            aria-label={tUi("close")}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="fixed inset-0 z-[200] bg-black" data-testid="attendance-punch-modal">
+        <div className="relative mx-auto h-full w-full max-w-[28rem]">
+          <SelfieCameraStage
+            videoRef={videoRef}
+            previewUrl={preview}
+            filterId={filterId}
+            showGuide
+            mirrored={!previewFromFile}
+          />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 to-transparent" />
 
-        <div className="max-h-[34%] space-y-2 overflow-y-auto px-4 pb-2">
-          {isCheckOut && existingRecord?.entryTime && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-3 space-y-1">
-              <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
-                <Clock className="w-4 h-4 shrink-0" />
-                {t("checkedInAt", { time: formatTime(existingRecord.entryTime) })}
+          <div className="absolute inset-0 flex flex-col">
+            <div className="flex items-start justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-white drop-shadow">{staff.name}</p>
+                <p className="flex items-center gap-1.5 text-xs text-white/80">
+                  {isCheckOut ? <LogOut className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                  {isCheckOut ? t("checkOutTitle") : t("checkInTitle")}
+                  {isCheckOut && existingRecord?.entryTime
+                    ? ` · ${t("timeOnSiteSoFar", { duration: hoursSoFar(existingRecord.entryTime) })}`
+                    : ""}
+                </p>
               </div>
-              <p className="text-xs text-[var(--text-tertiary)]">
-                {t("timeOnSiteSoFar", { duration: hoursSoFar(existingRecord.entryTime) })}
-              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/40 text-white"
+                disabled={submitting}
+                aria-label={tUi("close")}
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          )}
 
-          {branch && (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]/40 p-3 space-y-2 text-xs">
-              <p className="font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" />
-                {t("branchGeofence")}
+            <p className="truncate px-4 pt-1 text-center text-[11px] text-white/85 drop-shadow">{gpsLine}</p>
+            {!location && !locationLoading && (
+              <button
+                type="button"
+                onClick={refreshLocation}
+                className="mx-auto text-[11px] font-semibold text-white underline"
+                data-testid="gps-retry-button"
+              >
+                {t("retryGps")}
+              </button>
+            )}
+            {outOfGeofence && (
+              <p className="truncate px-4 text-center text-[11px] font-medium text-amber-200">
+                {t("outsideGeofenceWarning")}
+                {liveGeo.distanceMeters != null
+                  ? ` · ${t("outsideGeofenceDetail", {
+                      distance: liveGeo.distanceMeters,
+                      radius: liveGeo.radius ?? branch?.geofenceRadiusMeters ?? 150,
+                    })}`
+                  : ""}
               </p>
-              <p className="text-[var(--text-secondary)]">
-                {t("expectedLocation")}: {formatCoords(branch.latitude, branch.longitude)}
-              </p>
-              <p className="text-[var(--text-secondary)]">
-                {t("allowedRadius")}: {branch.geofenceRadiusMeters ?? 150}m
-              </p>
-              {location ? (
-                <p
-                  className={cn(
-                    "font-medium",
-                    outOfGeofence ? "text-amber-700" : approximateLocation ? "text-[var(--text-secondary)]" : "text-emerald-700"
-                  )}
-                >
-                  {t("yourLocation")}: {formatCoords(location.latitude, location.longitude)} ·{" "}
-                  {approximateLocation
-                    ? t("gpsApproximate", { accuracy: Math.round(location.accuracyMeters) })
-                    : t("gpsReady", { accuracy: Math.round(location.accuracyMeters) })}{" "}
-                  {liveGeo.distanceMeters != null ? `· ${liveGeo.distanceMeters}m ${t("fromBranch")}` : ""} ·{" "}
-                  {geoStatusLabel(liveGeo.status)}
+            )}
+            {cameraError && <p className="truncate px-4 text-center text-[11px] text-amber-200">{cameraError}</p>}
+            {submitError && <p className="truncate px-4 text-center text-[11px] text-red-300">{submitError}</p>}
+
+            <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              {confirmCheckout && (
+                <p className="text-center text-xs text-white">
+                  {t("confirmCheckoutTitle")} {t("confirmCheckoutBody", { duration: hoursSoFar(existingRecord?.entryTime) })}
                 </p>
-              ) : locationLoading ? (
-                <p className="text-[var(--text-secondary)] flex items-center gap-2">
-                  <span className="inline-block w-3.5 h-3.5 border-2 border-[var(--brand)] border-t-transparent rounded-full animate-spin" />
-                  {t("gpsLocating")}
-                </p>
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-amber-700 font-medium">{locationError || t("gpsUnavailable")}</p>
-                  <p className="text-[var(--text-secondary)]">{t("gpsProceedHint")}</p>
+              )}
+              {!preview && (
+                <p className="text-center text-xs font-medium text-white/90 drop-shadow">{t("selfieHint")}</p>
+              )}
+              <SelfieEffectBar
+                value={filterId}
+                onChange={setFilterId}
+                label={t("effects")}
+                nameFor={(id) => t(`filters.${id}`)}
+              />
+              {preview ? (
+                <div className="flex gap-2">
+                  <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1 min-h-12`} disabled={submitting}>
+                    {t("retakePhoto")}
+                  </button>
                   <button
                     type="button"
-                    onClick={refreshLocation}
-                    className="text-xs font-semibold text-[var(--brand-text)] hover:opacity-80"
-                    data-testid="gps-retry-button"
+                    onClick={handlePrimaryAction}
+                    className={`${btnPrimary} flex-1 min-h-12 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
+                    disabled={submitting}
+                    data-testid="attendance-confirm-punch"
                   >
-                    {t("retryGps")}
+                    {submitting
+                      ? tCommon("processing")
+                      : confirmCheckout
+                        ? t("confirmCheckoutBtn")
+                        : isCheckOut
+                          ? t("proceedCheckout")
+                          : t("confirmPunch")}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-5">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/*"
+                    capture="user"
+                    className="hidden"
+                    onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={submitting}
+                    className="flex h-11 items-center gap-1.5 rounded-full bg-black/45 px-3 text-xs font-medium text-white"
+                    data-testid="upload-selfie-button"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {t("uploadSelfie")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    disabled={submitting}
+                    aria-label={t("capturePhoto")}
+                    data-testid="open-camera-button"
+                    className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
+                  >
+                    <span className="h-[3.15rem] w-[3.15rem] rounded-full bg-white" />
                   </button>
                 </div>
               )}
             </div>
-          )}
-
-
-          {approximateLocation && (
-            <AlertBanner variant="warning">
-              <p className="font-medium flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {t("approximateLocationWarning")}
-              </p>
-              <p className="text-sm mt-1">{t("approximateLocationDetail")}</p>
-            </AlertBanner>
-          )}
-
-          {outOfGeofence && (
-            <AlertBanner variant="warning">
-              <p className="font-medium flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                {t("outsideGeofenceWarning")}
-              </p>
-              <p className="text-sm mt-1">
-                {t("outsideGeofenceDetail", {
-                  distance: liveGeo.distanceMeters ?? 0,
-                  radius: liveGeo.radius ?? branch?.geofenceRadiusMeters ?? 150,
-                })}
-              </p>
-            </AlertBanner>
-          )}
-
-          {cameraError && <AlertBanner variant="warning">{cameraError}</AlertBanner>}
-          {submitError && <AlertBanner variant="error">{submitError}</AlertBanner>}
-
-          {confirmCheckout && (
-            <AlertBanner variant="warning">
-              <p className="font-medium">{t("confirmCheckoutTitle")}</p>
-              <p className="text-sm mt-1">{t("confirmCheckoutBody", { duration: hoursSoFar(existingRecord?.entryTime) })}</p>
-            </AlertBanner>
-          )}
-
+          </div>
         </div>
-
-        <SelfieCameraStage
-          videoRef={videoRef}
-          previewUrl={preview}
-          filterId={filterId}
-          showGuide
-          mirrored={!previewFromFile}
-        />
-
-        {!preview && (
-          <p className="py-2 text-center text-xs font-medium text-white/80">{t("selfieHint")}</p>
-        )}
-
-        <div className="mt-auto flex flex-col gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
-          <SelfieEffectBar
-            value={filterId}
-            onChange={setFilterId}
-            label={t("effects")}
-            nameFor={(id) => t(`filters.${id}`)}
-          />
-
-          {preview ? (
-            <div className="flex gap-2">
-              <button type="button" onClick={resetCapture} className={`${btnSecondary} flex-1 min-h-12`} disabled={submitting}>
-                {t("retakePhoto")}
-              </button>
-              <button
-                type="button"
-                onClick={handlePrimaryAction}
-                className={`${btnPrimary} flex-1 min-h-12 ${isCheckOut ? "bg-amber-600 hover:bg-amber-700 shadow-amber-600/20" : ""}`}
-                disabled={submitting}
-                data-testid="attendance-confirm-punch"
-              >
-                {submitting
-                  ? tCommon("processing")
-                  : confirmCheckout
-                    ? t("confirmCheckoutBtn")
-                    : isCheckOut
-                      ? t("proceedCheckout")
-                      : t("confirmPunch")}
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-6">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/*"
-                capture="user"
-                className="hidden"
-                onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={submitting}
-                className="flex h-12 items-center gap-2 rounded-full bg-white/10 px-4 text-sm font-medium text-white"
-                data-testid="upload-selfie-button"
-              >
-                <Upload className="w-4 h-4" />
-                {t("uploadSelfie")}
-              </button>
-              <button
-                type="button"
-                onClick={capturePhoto}
-                disabled={submitting}
-                aria-label={t("capturePhoto")}
-                data-testid="open-camera-button"
-                className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border-4 border-white bg-transparent"
-              >
-                <span className="h-14 w-14 rounded-full bg-white" />
-              </button>
-            </div>
-          )}
-        </div>
-    </div>
+      </div>
     </OverlayPortal>
   );
 }
