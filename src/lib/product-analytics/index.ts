@@ -33,6 +33,7 @@ function telemetryEnabled(): boolean {
 let portal: ProductAnalyticsPortal | null = null;
 let sessionId: string | null = null;
 let flushTimer: number | null = null;
+let flushing = false;
 let lastScreenKey = "";
 
 function newSessionId(): string {
@@ -70,12 +71,16 @@ function enqueue(event: QueuedEvent) {
 }
 
 async function flush() {
-  if (!telemetryEnabled()) return;
+  if (!telemetryEnabled() || flushing) return;
   const token = getStoredUser()?.accessToken;
   if (!token) return;
 
   const queue = readQueue();
   if (queue.length === 0) return;
+
+  const taken = new Set(queue.map((event) => event.clientEventId));
+  writeQueue(readQueue().filter((event) => !taken.has(event.clientEventId)));
+  flushing = true;
 
   const body = JSON.stringify({ events: queue });
   const url = `${resolveClientApiBase()}/api/v1/telemetry/events`;
@@ -91,12 +96,14 @@ async function flush() {
       keepalive: true,
     });
     if (!res.ok) {
-      writeQueue([...readQueue(), ...queue].slice(-MAX_QUEUE));
-      return;
+      const pending = readQueue().filter((event) => !taken.has(event.clientEventId));
+      writeQueue([...queue, ...pending].slice(-MAX_QUEUE));
     }
-    writeQueue([]);
   } catch {
-    writeQueue([...readQueue(), ...queue].slice(-MAX_QUEUE));
+    const pending = readQueue().filter((event) => !taken.has(event.clientEventId));
+    writeQueue([...queue, ...pending].slice(-MAX_QUEUE));
+  } finally {
+    flushing = false;
   }
 }
 
