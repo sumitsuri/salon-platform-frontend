@@ -488,6 +488,8 @@ export const api = {
     return request<DemandInsights>(`/api/v1/analytics/demand${qs ? `?${qs}` : ""}`);
   },
 
+  getAssistantStatus: () => request<{ enabled: boolean; provider: string }>("/api/v1/copilot/status"),
+
   getCatalogServices: (includeInactive = false) =>
     request<CatalogServiceItem[]>(
       `/api/v1/catalog/services${includeInactive ? "?includeInactive=true" : ""}`
@@ -4869,3 +4871,99 @@ export async function fetchFaceScanCaptureBlob(captureId: string): Promise<strin
   return fetchScanCaptureBlob(`/api/v1/face-scans/captures/${captureId}/photo`);
 }
 
+
+// ---- Assistant (owner chat) ----
+
+export type AssistantMessage = { role: "user" | "assistant"; content: string };
+
+export type AssistantEvent =
+  | { type: "text"; t: string }
+  | { type: "tool"; name: string; label?: string; phase: "start" | "end"; ok?: boolean; ms?: number }
+  | { type: "done"; rounds: number; inputTokens: number; outputTokens: number }
+  | { type: "error"; message: string };
+
+/**
+ * Sends the conversation and reports the answer as it streams in (server-sent events over fetch, so the
+ * auth header and a refresh-and-retry on 401 work like every other call). Resolves when the stream ends.
+ */
+export async function streamAssistantChat(
+  messages: AssistantMessage[],
+  onEvent: (event: AssistantEvent) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  async function post(token: string | null) {
+    const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "text/event-stream" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(`${apiBase()}/api/v1/copilot/chat`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ messages }),
+      signal,
+    });
+  }
+
+  let res = await post(getToken());
+  if (res.status === 401) {
+    const refresh = await refreshAccessToken();
+    if (refresh.status === "ok") {
+      res = await post(refresh.token);
+    } else if (refresh.status === "auth_failed") {
+      await handleSessionExpired();
+      throw new Error("Session expired. Please sign in again.");
+    }
+  }
+  if (!res.ok || !res.body) {
+    let message = `The assistant is unavailable (${res.status}).`;
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body.message) message = body.message;
+    } catch {
+      /* keep the generic message */
+    }
+    throw new Error(message);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const dispatch = (block: string) => {
+    let name = "message";
+    let data = "";
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) name = line.slice(6).trim();
+      else if (line.startsWith("data:")) data += line.slice(5).trim();
+    }
+    if (!data) return;
+    const payload = JSON.parse(data) as Record<string, unknown>;
+    if (name === "text") onEvent({ type: "text", t: String(payload.t ?? "") });
+    else if (name === "tool") {
+      onEvent({
+        type: "tool",
+        name: String(payload.name),
+        label: payload.label as string | undefined,
+        phase: payload.phase as "start" | "end",
+        ok: payload.ok as boolean | undefined,
+        ms: payload.ms as number | undefined,
+      });
+    } else if (name === "done") {
+      onEvent({
+        type: "done",
+        rounds: Number(payload.rounds ?? 0),
+        inputTokens: Number(payload.inputTokens ?? 0),
+        outputTokens: Number(payload.outputTokens ?? 0),
+      });
+    } else if (name === "error") onEvent({ type: "error", message: String(payload.message ?? "Something went wrong.") });
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let cut: number;
+    while ((cut = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      if (block.trim()) dispatch(block);
+    }
+  }
+}
