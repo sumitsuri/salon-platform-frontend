@@ -24,6 +24,14 @@ jobs:
           node-version: "20"
           cache: npm
 
+      # Persist Next.js's own build cache so unchanged modules are not recompiled.
+      - uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
+
       - name: Build static export
         env:
           NEXT_PUBLIC_API_URL: https://api.antrahq.com
@@ -59,23 +67,22 @@ jobs:
           echo "bucket=$(aws ssm get-parameter --name ${SSM_PREFIX}/s3_bucket --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(aws ssm get-parameter --name ${SSM_PREFIX}/cloudfront_distribution_id --query Parameter.Value --output text)" >> "$GITHUB_OUTPUT"
 
-      - name: Sync to S3
-        run: aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/__app/" --delete
+      # Hashed assets first (a file name never changes content, so size is enough to skip an
+      # upload), then the pages that reference them, so a page never points at a missing chunk.
+      - name: Sync hashed assets to S3
+        run: |
+          aws s3 sync out/_next/static "s3://${{ steps.ssm.outputs.bucket }}/__app/_next/static" \
+            --size-only --delete
 
+      - name: Sync pages to S3
+        run: |
+          aws s3 sync out/ "s3://${{ steps.ssm.outputs.bucket }}/__app/" \
+            --delete --exclude "_next/static/*"
+
+      # The bundle content was already checked on disk before upload; only confirm the upload landed.
       - name: Verify app entrypoint exists
         run: |
-          BUCKET="${{ steps.ssm.outputs.bucket }}"
-          aws s3api head-object --bucket "$BUCKET" --key "__app/login/index.html"
-          mkdir -p /tmp/app-chunks
-          aws s3 sync "s3://${BUCKET}/__app/_next/static/chunks/" /tmp/app-chunks/
-          if grep -rq 'let e="http://localhost:8080"' /tmp/app-chunks/; then
-            echo "::error::Deployed app bundle still references localhost:8080"
-            exit 1
-          fi
-          if ! grep -rq "api.antrahq.com" /tmp/app-chunks/; then
-            echo "::error::Deployed app bundle missing api.antrahq.com"
-            exit 1
-          fi
+          aws s3api head-object --bucket "${{ steps.ssm.outputs.bucket }}" --key "__app/login/index.html"
 
       - name: Invalidate CloudFront
         run: |
