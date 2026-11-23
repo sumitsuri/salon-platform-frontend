@@ -10,6 +10,10 @@ export type ChatMsg = {
   truncated?: boolean;
   /** The reader pressed Stop. */
   stopped?: boolean;
+  /** Antra declined or answered without the AI model (off topic, greeting, a secret in the question). */
+  blocked?: string;
+  /** The question held a password or key and was removed from this chat; it is never sent again. */
+  removed?: boolean;
 };
 
 export type Conversation = {

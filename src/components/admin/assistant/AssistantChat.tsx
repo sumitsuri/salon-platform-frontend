@@ -158,6 +158,24 @@ export function AssistantChat() {
               });
             } else if (event.type === "truncated") {
               patchMsg(convId, assistantId, (m) => ({ ...m, truncated: true }));
+            } else if (event.type === "replace") {
+              // The gateway swapped the answer for a safe one: show that, and drop anything still waiting to be painted.
+              buffer = "";
+              patchMsg(convId, assistantId, (m) => ({ ...m, content: event.text }));
+            } else if (event.type === "blocked") {
+              updateConv(convId, (c) => {
+                const at = c.messages.findIndex((m) => m.id === assistantId);
+                return {
+                  ...c,
+                  messages: c.messages.map((m, i) => {
+                    if (i === at) return { ...m, blocked: event.reason };
+                    if (event.discardUserMessage && i === at - 1 && m.role === "user") {
+                      return { ...m, content: t("removedMessage"), removed: true };
+                    }
+                    return m;
+                  }),
+                };
+              });
             } else if (event.type === "error") {
               patchMsg(convId, assistantId, (m) => ({ ...m, error: event.message }));
             }
@@ -182,7 +200,7 @@ export function AssistantChat() {
         composerRef.current?.focus();
       }
     },
-    [patchMsg, t]
+    [patchMsg, updateConv, t]
   );
 
   /** Starts an answer to {@code base} (the conversation so far, ending with a question). */
@@ -193,7 +211,7 @@ export function AssistantChat() {
       setConversations((prev) => (prev.some((c) => c.id === next.id) ? prev.map((c) => (c.id === next.id ? next : c)) : [next, ...prev]));
       setActiveId(next.id);
       stickRef.current = true;
-      const history = base.filter((m) => m.content.trim() && !m.error).map(({ role, content }) => ({ role, content }));
+      const history = base.filter((m) => m.content.trim() && !m.error && !m.removed).map(({ role, content }) => ({ role, content }));
       void runTurn(next.id, history, assistantMsg.id);
     },
     [runTurn]

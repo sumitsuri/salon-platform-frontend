@@ -99,6 +99,15 @@ function UserMessage({ msg, canEdit, onEdit }: Pick<Props, "msg" | "canEdit" | "
   const [draft, setDraft] = useState(msg.content);
   const { copied, copy } = useCopy(msg.content);
 
+  if (msg.removed) {
+    return (
+      <div className="flex justify-end">
+        <p className="max-w-[92%] rounded-3xl border border-dashed border-[var(--border-strong)] px-4 py-2 text-[13px] italic text-[var(--text-tertiary)] sm:max-w-[80%]">
+          {msg.content}
+        </p>
+      </div>
+    );
+  }
   if (editing) {
     return (
       <div className="ml-auto w-full max-w-[92%] rounded-2xl border border-[var(--brand)] bg-[var(--surface)] p-2 sm:max-w-[80%]">
@@ -136,7 +145,7 @@ function UserMessage({ msg, canEdit, onEdit }: Pick<Props, "msg" | "canEdit" | "
         <ActionButton label={copied ? t("copied") : t("copy")} onClick={() => void copy()}>
           {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
         </ActionButton>
-        {canEdit && (
+        {canEdit && !msg.removed && (
           <ActionButton label={t("edit")} onClick={() => setEditing(true)}>
             <Pencil className="h-3.5 w-3.5" aria-hidden />
           </ActionButton>
@@ -186,7 +195,7 @@ function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue }: 
                 <span className="max-sm:hidden">{copied ? t("copied") : t("copy")}</span>
               </ActionButton>
             )}
-            {isLast && (
+            {isLast && !msg.blocked && (
               <ActionButton label={t("regenerate")} onClick={onRegenerate}>
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden />
                 <span className="max-sm:hidden">{t("regenerate")}</span>

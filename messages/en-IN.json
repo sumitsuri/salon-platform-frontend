@@ -3090,6 +3090,7 @@
       "hideSidebar": "Hide chats",
       "conversation": "Conversation",
       "checked": "Checked {what}",
+      "removedMessage": "Message removed because it contained a password, key or card number",
       "errorGeneric": "Something went wrong. Please try again.",
       "suggestions": {
         "sales": "How were sales in the last 30 days?",
