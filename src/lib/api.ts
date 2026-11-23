@@ -4883,6 +4883,8 @@ export type AssistantEvent =
   | { type: "tool"; name: string; label?: string; phase: "start" | "end"; ok?: boolean; ms?: number }
   | { type: "done"; rounds: number; inputTokens: number; outputTokens: number }
   | { type: "truncated" }
+  | { type: "replace"; text: string }
+  | { type: "blocked"; reason: string; discardUserMessage: boolean }
   | { type: "error"; message: string };
 
 /**
@@ -4955,7 +4957,9 @@ export async function streamAssistantChat(
         inputTokens: Number(payload.inputTokens ?? 0),
         outputTokens: Number(payload.outputTokens ?? 0),
       });
-    } else if (name === "truncated") onEvent({ type: "truncated" });
+    } else if (name === "replace") onEvent({ type: "replace", text: String(payload.text ?? "") });
+    else if (name === "blocked") onEvent({ type: "blocked", reason: String(payload.reason ?? ""), discardUserMessage: payload.discardUserMessage === true });
+    else if (name === "truncated") onEvent({ type: "truncated" });
     else if (name === "error") onEvent({ type: "error", message: String(payload.message ?? "Something went wrong.") });
   };
 
