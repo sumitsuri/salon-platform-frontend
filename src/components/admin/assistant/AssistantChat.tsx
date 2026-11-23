@@ -382,6 +382,17 @@ export function AssistantChat() {
                   </button>
                 ))}
               </div>
+              <p className="mt-5 max-w-md text-[13px] leading-6 text-[var(--text-tertiary)]">
+                {t("hinglishTip")}{" "}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => send(t("hinglishExample"))}
+                  className="font-medium text-[var(--brand-text)] underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  &ldquo;{t("hinglishExample")}&rdquo;
+                </button>
+              </p>
             </div>
           ) : (
             <div className="mx-auto w-full max-w-3xl space-y-7">
