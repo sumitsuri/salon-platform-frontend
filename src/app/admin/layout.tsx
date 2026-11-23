@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck, Clock, Bot } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Building2, Sparkles, Scissors, Users, Contact, IndianRupee, Package, UserPlus, Megaphone, TrendingUp, BadgePercent, Gift, ScanSearch, MessageSquareHeart, MessageCircle, Briefcase, ClipboardCheck, Clock, Bot, LineChart } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore, useAuthHydrated } from "@/lib/auth-store";
@@ -52,6 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         : []),
       { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
       { href: "/admin/busy-hours", label: t("nav.busyHours"), shortLabel: t("nav.busyHoursShort"), icon: Clock },
+      { href: "/admin/forecast", label: t("nav.forecast"), shortLabel: t("nav.forecastShort"), icon: LineChart },
       ...(assistantLicensed
         ? [{ href: "/admin/assistant", label: t("nav.assistant"), shortLabel: t("nav.assistantShort"), icon: Bot }]
         : []),
@@ -133,6 +134,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         icon: Clock,
         description: t("nav.moreBusyHoursHint"),
       },
+      {
+        href: "/admin/forecast",
+        label: t("nav.forecast"),
+        icon: LineChart,
+        description: t("nav.moreForecastHint"),
+      },
       ...(assistantLicensed
         ? [{
             href: "/admin/assistant",
@@ -160,6 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         "/admin/local-spotlight",
         "/admin/insights",
         "/admin/busy-hours",
+        "/admin/forecast",
         "/admin/assistant",
         "/admin/guest-voice",
         "/admin/leads",
