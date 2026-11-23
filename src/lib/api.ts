@@ -1466,6 +1466,7 @@ export const api = {
       outboundMessagingMode?: "LIVE" | "SIMULATE";
       localSpotlightEnabled?: boolean;
       guestReviewsEnabled?: boolean;
+      assistantEnabled?: boolean;
     },
   ) =>
     request<Tenant>(`/api/v1/platform/tenants/${tenantId}/sandbox`, {
@@ -3659,6 +3660,7 @@ export interface Tenant {
   outboundMessagingMode?: "LIVE" | "SIMULATE";
   localSpotlightEnabled?: boolean;
   guestReviewsEnabled?: boolean;
+  assistantEnabled?: boolean;
 }
 
 export interface DemoDataStatus {

@@ -41,6 +41,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     user?.role === "PLATFORM_SUPER_ADMIN" || tenant?.localSpotlightEnabled === true;
   const guestReviewsLicensed =
     user?.role === "PLATFORM_SUPER_ADMIN" || tenant?.guestReviewsEnabled === true;
+  // Ask Antra needs a real brand (it reads that brand's numbers), so platform staff do not see it here.
+  const assistantLicensed = tenant?.assistantEnabled === true;
 
   const nav = useMemo((): AppNavSection[] => {
     const intelligenceItems = [
@@ -50,7 +52,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         : []),
       { href: "/admin/insights", label: t("nav.insights"), shortLabel: t("nav.tips"), icon: Sparkles },
       { href: "/admin/busy-hours", label: t("nav.busyHours"), shortLabel: t("nav.busyHoursShort"), icon: Clock },
-      { href: "/admin/assistant", label: t("nav.assistant"), shortLabel: t("nav.assistantShort"), icon: Bot },
+      ...(assistantLicensed
+        ? [{ href: "/admin/assistant", label: t("nav.assistant"), shortLabel: t("nav.assistantShort"), icon: Bot }]
+        : []),
       ...(guestReviewsLicensed
         ? [{ href: "/admin/guest-voice", label: t("nav.guestVoice"), shortLabel: t("nav.voice"), icon: MessageSquareHeart }]
         : []),
@@ -99,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ],
       },
     ];
-  }, [t, localSpotlightLicensed, guestReviewsLicensed]);
+  }, [t, localSpotlightLicensed, guestReviewsLicensed, assistantLicensed]);
 
   const mobileBottomNav = useMemo((): MobileBottomNavConfig => {
     const intelligenceLinks = [
@@ -129,12 +133,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         icon: Clock,
         description: t("nav.moreBusyHoursHint"),
       },
-      {
-        href: "/admin/assistant",
-        label: t("nav.assistant"),
-        icon: Bot,
-        description: t("nav.moreAssistantHint"),
-      },
+      ...(assistantLicensed
+        ? [{
+            href: "/admin/assistant",
+            label: t("nav.assistant"),
+            icon: Bot,
+            description: t("nav.moreAssistantHint"),
+          }]
+        : []),
       ...(guestReviewsLicensed
         ? [{
             href: "/admin/guest-voice",
@@ -224,7 +230,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         },
       ],
     };
-  }, [t, localSpotlightLicensed, guestReviewsLicensed]);
+  }, [t, localSpotlightLicensed, guestReviewsLicensed, assistantLicensed]);
 
   useEffect(() => {
     if (!hydrated) return;

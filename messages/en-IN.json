@@ -3404,6 +3404,7 @@
       "demoBrand": "Demo brand",
       "localSpotlightLicense": "Local Spotlight (license)",
       "guestReviewsLicense": "Guest reviews (license)",
+      "assistantLicense": "Ask Antra assistant (license)",
       "localSpotlightGoogleSync": "Google Places sync (branch)",
       "localSpotlightGoogleSyncHint": "Uses Google API for ranks, rivals, and GBP metrics on this branch.",
       "customerMessages": "Customer messages",

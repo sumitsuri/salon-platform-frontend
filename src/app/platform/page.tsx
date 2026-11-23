@@ -194,6 +194,7 @@ export default function PlatformPage() {
         outboundMessagingMode?: "LIVE" | "SIMULATE";
         localSpotlightEnabled?: boolean;
         guestReviewsEnabled?: boolean;
+        assistantEnabled?: boolean;
       };
     }) => api.updateTenantSandbox(tenantId, data),
     onSuccess: () => {
@@ -416,6 +417,20 @@ export default function PlatformPage() {
                         }
                       />
                       {t("guestReviewsLicense")}
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={!!selectedTenant.assistantEnabled}
+                        disabled={sandboxMutation.isPending}
+                        onChange={(e) =>
+                          sandboxMutation.mutate({
+                            tenantId: selectedTenant.id,
+                            data: { assistantEnabled: e.target.checked },
+                          })
+                        }
+                      />
+                      {t("assistantLicense")}
                     </label>
                     <label className="inline-flex items-center gap-1.5">
                       {t("customerMessages")}
