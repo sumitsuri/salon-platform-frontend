@@ -4882,6 +4882,7 @@ export type AssistantEvent =
   | { type: "text"; t: string }
   | { type: "tool"; name: string; label?: string; phase: "start" | "end"; ok?: boolean; ms?: number }
   | { type: "done"; rounds: number; inputTokens: number; outputTokens: number }
+  | { type: "truncated" }
   | { type: "error"; message: string };
 
 /**
@@ -4954,7 +4955,8 @@ export async function streamAssistantChat(
         inputTokens: Number(payload.inputTokens ?? 0),
         outputTokens: Number(payload.outputTokens ?? 0),
       });
-    } else if (name === "error") onEvent({ type: "error", message: String(payload.message ?? "Something went wrong.") });
+    } else if (name === "truncated") onEvent({ type: "truncated" });
+    else if (name === "error") onEvent({ type: "error", message: String(payload.message ?? "Something went wrong.") });
   };
 
   for (;;) {

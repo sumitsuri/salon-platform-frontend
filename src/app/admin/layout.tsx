@@ -152,6 +152,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     ];
     return {
       moreTabLabel: t("nav.tabMore"),
+      // Chat uses the whole screen on phones, like ChatGPT and Claude.
+      hideBarOnPrefixes: ["/admin/assistant"],
       menuTitle: t("nav.moreMenuTitle"),
       moreActivePrefixes: [
         "/admin/market-pulse",

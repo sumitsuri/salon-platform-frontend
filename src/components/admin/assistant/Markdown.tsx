@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
+import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -63,6 +64,37 @@ function splitRow(line: string): string[] {
 const isTableSeparator = (line: string) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
 const isTableRow = (line: string) => line.includes("|");
 
+function CodeBlock({ lang, code }: { lang: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked: the text can still be selected by hand */
+    }
+  };
+  return (
+    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-muted)]">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-1.5 text-[11px] text-[var(--text-tertiary)]">
+        <span className="font-medium uppercase tracking-wide">{lang || "text"}</span>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-[var(--surface)] hover:text-[var(--text-secondary)]"
+        >
+          {copied ? <Check className="h-3 w-3" aria-hidden /> : <Copy className="h-3 w-3" aria-hidden />}
+          {copied ? "Copied" : "Copy code"}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-3 text-[12px] leading-relaxed">
+        <code className="font-mono">{code}</code>
+      </pre>
+    </div>
+  );
+}
+
 export function Markdown({ text, className }: { text: string; className?: string }) {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
@@ -77,15 +109,12 @@ export function Markdown({ text, className }: { text: string; className?: string
     }
 
     if (line.startsWith("```")) {
+      const lang = line.slice(3).trim();
       const code: string[] = [];
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) code.push(lines[i++]);
       i++;
-      blocks.push(
-        <pre key={key++} className="overflow-x-auto rounded-lg border border-[var(--border)] bg-[var(--surface-muted)] p-3 text-[12px] leading-relaxed">
-          <code className="font-mono">{code.join("\n")}</code>
-        </pre>
-      );
+      blocks.push(<CodeBlock key={key++} lang={lang} code={code.join("\n")} />);
       continue;
     }
 
@@ -108,12 +137,12 @@ export function Markdown({ text, className }: { text: string; className?: string
       const rows: string[][] = [];
       while (i < lines.length && lines[i].trim() && isTableRow(lines[i])) rows.push(splitRow(lines[i++]));
       blocks.push(
-        <div key={key++} className="-mx-1 overflow-x-auto px-1">
+        <div key={key++} className="overflow-x-auto rounded-xl border border-[var(--border)]">
           <table className="w-full min-w-max border-collapse text-[13px]">
             <thead>
               <tr>
                 {head.map((h, c) => (
-                  <th key={c} className="border-b border-[var(--border-strong)] px-2.5 py-1.5 text-left font-semibold text-[var(--text-secondary)]" style={{ textAlign: align[c] as "left" }}>
+                  <th key={c} className="border-b border-[var(--border-strong)] bg-[var(--surface-muted)] px-3 py-2 text-left font-semibold text-[var(--text-secondary)]" style={{ textAlign: align[c] as "left" }}>
                     {inline(h, `th${key}-${c}`)}
                   </th>
                 ))}
@@ -123,7 +152,7 @@ export function Markdown({ text, className }: { text: string; className?: string
               {rows.map((r, ri) => (
                 <tr key={ri} className="border-b border-[var(--border)] last:border-0">
                   {r.map((cell, c) => (
-                    <td key={c} className="px-2.5 py-1.5 align-top tabular-nums" style={{ textAlign: align[c] as "left" }}>
+                    <td key={c} className="px-3 py-2 align-top tabular-nums" style={{ textAlign: align[c] as "left" }}>
                       {inline(cell, `td${key}-${ri}-${c}`)}
                     </td>
                   ))}

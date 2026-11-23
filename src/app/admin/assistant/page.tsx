@@ -1,16 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { AdminPageShell } from "@/components/admin/AdminPageShell";
 import { AssistantChat } from "@/components/admin/assistant/AssistantChat";
-import { PageHeader } from "@/components/ui";
 
+/** The chat owns the whole page (its own title bar, history and composer), so there is no separate page header. */
 export default function AdminAssistantPage() {
-  const t = useTranslations("admin.assistant");
   return (
-    <AdminPageShell>
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    <div className="w-full min-w-0">
       <AssistantChat />
-    </AdminPageShell>
+    </div>
   );
 }
