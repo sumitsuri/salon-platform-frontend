@@ -479,6 +479,9 @@ export const api = {
   deleteCategory: (id: string) =>
     request<void>(`/api/v1/catalog/categories/${id}`, { method: "DELETE" }),
 
+  getStockReadiness: (days: number) => request<StockReadiness>(`/api/v1/forecast/stock-readiness?days=${days}`),
+  getSalesForecast: (days: number) => request<SalesForecast>(`/api/v1/forecast/sales?days=${days}`),
+
   getDemandInsights: (params: { startDate?: string; endDate?: string; branchId?: string }) => {
     const q = new URLSearchParams();
     if (params.startDate) q.set("startDate", params.startDate);
@@ -1963,6 +1966,124 @@ export interface BranchDemand {
   dataNote?: string | null;
   summary?: DemandSummary | null;
   recommendations: DemandRecommendation[];
+}
+
+export type ForecastConfidence = "HIGH" | "MEDIUM" | "LOW" | "INSUFFICIENT";
+
+export interface ForecastDay {
+  date: string;
+  expected: number;
+  low: number;
+  high: number;
+  events: string[];
+}
+
+export interface ForecastQuality {
+  model: string;
+  confidence: ForecastConfidence;
+  backtests: number;
+  trainingDays: number;
+  /** Typical errors on days the model had not seen, as fractions (0.08 = 8%); -1 when it could not be tested. */
+  dailyError: number;
+  weekError: number;
+  monthError: number;
+  bias: number;
+}
+
+export interface ForecastTotals {
+  next7: number;
+  next7Low: number;
+  next7High: number;
+  next30: number;
+  next30Low: number;
+  next30High: number;
+}
+
+export interface ForecastPacing {
+  monthStart: string;
+  monthEnd: string;
+  monthToDate: number;
+  expectedMonthEnd: number;
+  low: number;
+  high: number;
+  target: number | null;
+  expectedVsTarget: number | null;
+}
+
+export interface ForecastScope {
+  id: string;
+  name: string;
+  forecastable: boolean;
+  note: string | null;
+  quality: ForecastQuality;
+  totals: ForecastTotals | null;
+  days: ForecastDay[];
+  history: { date: string; revenue: number }[];
+  pacing: ForecastPacing | null;
+}
+
+export interface ForecastFestival {
+  id: string;
+  name: string;
+  date: string;
+  impact: number;
+  percent: number;
+  learned: boolean;
+  timesSeen: number;
+}
+
+export interface SalesForecast {
+  generatedAt: string;
+  today: string;
+  trainedThrough: string;
+  stale: boolean;
+  horizonDays: number;
+  calendarEnds: string;
+  festivalAssumptionWeight: number;
+  brand: ForecastScope | null;
+  branches: ForecastScope[];
+  festivals: ForecastFestival[];
+}
+
+export type StockStatus = "SHORT" | "LOW" | "OK" | "UNKNOWN";
+
+export interface StockReadinessItem {
+  productId: string;
+  name: string;
+  unit: string;
+  category: string;
+  onHand: number;
+  reorderLevel: number;
+  /** What the services already booked will use. */
+  bookedNeed: number;
+  /** What bookings plus the walk-ins the forecast expects will use. */
+  expectedNeed: number;
+  runsOutOn: string | null;
+  daysOfCover: number | null;
+  suggestedOrder: number;
+  status: StockStatus;
+  basis: "NONE" | "POOLED" | "BY_CATEGORY";
+  confidence: ForecastConfidence;
+}
+
+export interface BranchStockReadiness {
+  branchId: string;
+  name: string;
+  shortCount: number;
+  lowCount: number;
+  okCount: number;
+  unknownCount: number;
+  bookedServices: number;
+  items: StockReadinessItem[];
+  note: string | null;
+}
+
+export interface StockReadiness {
+  from: string;
+  to: string;
+  days: number;
+  hasUsageHistory: boolean;
+  branches: BranchStockReadiness[];
 }
 
 export interface DemandInsights {
