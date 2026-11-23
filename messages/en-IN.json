@@ -3092,6 +3092,8 @@
       "checked": "Checked {what}",
       "removedMessage": "Message removed because it contained a password, key or card number",
       "errorGeneric": "Something went wrong. Please try again.",
+      "hinglishTip": "You can also ask in Hindi using English letters, and Antra will answer the same way. Try:",
+      "hinglishExample": "Pichle mahine ka kitna sales tha?",
       "suggestions": {
         "sales": "How were sales in the last 30 days?",
         "compare": "Why did sales change compared with the 30 days before?",
