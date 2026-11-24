@@ -3048,6 +3048,9 @@
       "greetingHint": "Antra reads your real numbers, explains what is happening and suggests what to do. It cannot change anything.",
       "notEnabled": "The assistant is not switched on for your account yet. We will let you know as soon as it is ready.",
       "placeholder": "Ask about sales, staff, busy hours, stock or profit",
+      "placeholderShort": "Ask about your business",
+      "placeholderVoice": "Ask, or tap the mic",
+      "back": "Back to the app",
       "send": "Send",
       "stop": "Stop",
       "newChat": "New chat",
@@ -3102,6 +3105,10 @@
         "listening": "Listening… speak now",
         "notice": "You can speak instead of typing. Your phone's own speech service turns your voice into text; Antra never receives or stores your voice, only the words you send.",
         "autoSend": "Send when I stop speaking",
+        "autoSendShort": "Auto-send",
+        "cancel": "Cancel and discard",
+        "tapToSpeak": "Tap to speak",
+        "speakHint": "No need to type. Speak your question in your own language.",
         "working": "Writing down what you said…",
         "noticeServer": "You can speak instead of typing. Your short recording is sent over a secure connection to a speech service to be written down, then discarded. Antra does not keep your voice, only the words you send.",
         "problem": {
@@ -3118,6 +3125,8 @@
         "good": "Good answer",
         "bad": "Not helpful",
         "thanks": "Thanks, that helps us improve.",
+        "send": "Send",
+        "close": "Close",
         "why": "What went wrong?",
         "reasons": {
           "WRONG_NUMBERS": "Numbers look wrong",
@@ -3144,6 +3153,9 @@
       }
     },
     "forecast": {
+      "askAntra": "Ask Antra about this",
+      "askAntraBrand": "Explain my sales forecast for the next {days} days. What is driving it?",
+      "askAntraBranch": "Explain the sales forecast for {branch} for the next {days} days. What is driving it?",
       "title": "Sales forecast",
       "subtitle": "What to expect for the brand and each branch, with festivals and seasons built in",
       "loadFailed": "Couldn't load the forecast. Please try again.",

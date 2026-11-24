@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { api } from "@/lib/api";
 import type { SpeechProblem } from "./voice";
 
-function canRecord(): boolean {
+export function canRecordAudio(): boolean {
   return typeof window !== "undefined" && typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
 }
 
@@ -21,10 +21,10 @@ function pickMime(): string | undefined {
  * text and forgets the audio. Used only when the server says an engine is on; it works in app-store wrappers and browsers
  * that lack the built-in recogniser. Same shape as the built-in one, so the message box treats them alike.
  */
-export function useServerSpeech(handlers: { onDone: (text: string) => void }, maxSeconds = 30) {
+export function useServerSpeech(handlers: { onDone: (text: string) => void; onCancel?: () => void }, maxSeconds = 30) {
   const supported = useSyncExternalStore(
     () => () => {},
-    () => canRecord(),
+    () => canRecordAudio(),
     () => false,
   );
   const [listening, setListening] = useState(false);
@@ -33,6 +33,7 @@ export function useServerSpeech(handlers: { onDone: (text: string) => void }, ma
   const [problemText, setProblemText] = useState<string | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cancelledRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlersRef = useRef(handlers);
   useEffect(() => {
@@ -63,11 +64,19 @@ export function useServerSpeech(handlers: { onDone: (text: string) => void }, ma
     if (rec && rec.state !== "inactive") rec.stop();
   }, []);
 
+  /** Stop and throw the recording away without sending it. */
+  const cancel = useCallback(() => {
+    cancelledRef.current = true;
+    const rec = recRef.current;
+    if (rec && rec.state !== "inactive") rec.stop();
+  }, []);
+
   const start = useCallback(
     async (lang: string) => {
-      if (recRef.current || !canRecord()) return;
+      if (recRef.current || !canRecordAudio()) return;
       setProblem(null);
       setProblemText(null);
+      cancelledRef.current = false;
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -88,6 +97,10 @@ export function useServerSpeech(handlers: { onDone: (text: string) => void }, ma
         recRef.current = null;
         setListening(false);
         release();
+        if (cancelledRef.current) {
+          handlersRef.current.onCancel?.();
+          return;
+        }
         const blob = new Blob(chunks, { type: rec.mimeType || mime || "audio/webm" });
         if (blob.size < 1500) {
           setProblem("noSpeech"); // a few hundred milliseconds of nothing
@@ -112,5 +125,5 @@ export function useServerSpeech(handlers: { onDone: (text: string) => void }, ma
     [maxSeconds, release, stop],
   );
 
-  return { supported, listening, working, problem, problemText, start, stop };
+  return { supported, listening, working, problem, problemText, start, stop, cancel };
 }

@@ -28,7 +28,7 @@ export function ChatSidebar({ conversations, activeId, disabled, onSelect, onNew
   const startRename = (c: Conversation) => {
     setConfirmId(null);
     setRenamingId(c.id);
-    setDraftTitle(c.title);
+    setDraftTitle(c.title || t("newChat"));
   };
   const commitRename = () => {
     if (renamingId && draftTitle.trim()) onRename(renamingId, draftTitle.trim());
@@ -114,13 +114,13 @@ export function ChatSidebar({ conversations, activeId, disabled, onSelect, onNew
                       onClick={() => onSelect(c.id)}
                       disabled={disabled && !active}
                       aria-current={active ? "true" : undefined}
-                      title={c.title}
+                      title={c.title || t("newChat")}
                       className={cn(
                         "block w-full truncate rounded-lg px-3 py-2 pr-[4.25rem] text-left text-[13px] transition-colors",
                         active ? "bg-[var(--brand-light)] font-semibold text-[var(--brand-text)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
                       )}
                     >
-                      {c.title}
+                      {c.title || t("newChat")}
                     </button>
                     <span className="absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 max-lg:opacity-100">
                       <button type="button" onClick={() => startRename(c)} aria-label={t("renameChat")} className="rounded-md p-1.5 text-[var(--text-tertiary)] hover:bg-[var(--surface)] hover:text-[var(--text-primary)]">

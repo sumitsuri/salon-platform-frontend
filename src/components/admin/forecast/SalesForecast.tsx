@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { CalendarDays, LineChart as LineChartIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CalendarDays, LineChart as LineChartIcon, Sparkles } from "lucide-react";
 import { api, type ForecastConfidence, type ForecastScope, type SalesForecast as SalesForecastData } from "@/lib/api";
 import { cn, formatCurrency } from "@/lib/utils";
 import { AlertBanner, EmptyState, PageLoader, SegmentedControl } from "@/components/ui";
 import { DashboardOverviewShell } from "@/components/enterprise-ui";
+import { setPrefill } from "@/components/admin/assistant/conversations";
 import { ForecastChart } from "./ForecastChart";
 import { StockReadiness } from "./StockReadiness";
 import { chartPoints, changeFrom, percent, shortDate, signedPercent, sumLast, weekday, weeklyTotals } from "./forecast-model";
@@ -56,6 +58,10 @@ export function SalesForecast() {
   const [scopeId, setScopeId] = useState<string>("brand");
   const [tableView, setTableView] = useState<"weeks" | "days">("weeks");
   const days = Number(horizon);
+  const router = useRouter();
+  // Same cache entry as the admin shell, so this costs no extra request. Only brands with Ask Antra switched on see the button.
+  const tenant = useQuery({ queryKey: ["tenant"], queryFn: () => api.getTenant(), staleTime: 300_000 });
+  const canAsk = tenant.data?.assistantEnabled === true;
 
   const query = useQuery({
     queryKey: ["sales-forecast", days],
@@ -97,6 +103,19 @@ export function SalesForecast() {
             <SegmentedControl value={horizon} onChange={setHorizon} options={HORIZONS.map((h) => ({ id: h, label: t("horizon", { days: h }) }))} />
           </div>
           <p className="text-xs text-[var(--text-secondary)]">{t("trainedOn", { date: shortDate(data.trainedThrough) })}</p>
+          {canAsk && (
+            <button
+              type="button"
+              onClick={() => {
+                // Opens the chat with the question ready in the box; the owner chooses whether to send it.
+                setPrefill(isBrand ? t("askAntraBrand", { days }) : t("askAntraBranch", { branch: scope.name, days }));
+                router.push("/admin/assistant");
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--brand-on-brand)] transition-opacity hover:opacity-90 sm:ml-auto"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden /> {t("askAntra")}
+            </button>
+          )}
         </div>
 
         {scopes.length > 1 && (

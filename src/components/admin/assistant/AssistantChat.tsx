@@ -4,7 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowLeftRight, Clock, IndianRupee, Maximize2, Menu, Minimize2, Package, PanelLeft, Plus, Sparkles, TrendingUp, Users, X } from "lucide-react";
+import { ArrowDown, ArrowLeftRight, ChevronLeft, Clock, IndianRupee, Maximize2, Menu, Mic, Minimize2, Package, PanelLeft, Plus, Sparkles, TrendingUp, Users, X } from "lucide-react";
+import Link from "next/link";
 import { api, streamAssistantChat, type AssistantMessage } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,15 @@ import {
   greetingKey,
   loadConversations,
   saveConversations,
+  takePrefill,
+  titleFrom,
   uid,
   type ChatMsg,
   type Conversation,
 } from "./conversations";
 import { useFillViewport } from "./useFillViewport";
 import type { VoiceMeta } from "./voice";
+import { useVoiceAvailable } from "./useSpeechInput";
 
 const SUGGESTIONS = [
   { key: "sales", icon: TrendingUp },
@@ -40,6 +44,8 @@ export function AssistantChat() {
 
   const status = useQuery({ queryKey: ["assistant-status"], queryFn: () => api.getAssistantStatus(), staleTime: 60_000 });
   const disabled = !!status.data && !status.data.enabled;
+  const serverSpeech = status.data?.speech?.server ? { engine: status.data.speech.engine ?? "server", maxSeconds: status.data.speech.maxSeconds } : null;
+  const voiceAvailable = useVoiceAvailable(!!serverSpeech);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -57,12 +63,12 @@ export function AssistantChat() {
   // current key, otherwise a stale empty list could overwrite the saved chats when the user id arrives late.
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const composerRef = useRef<ComposerHandle>(null);
-  // The chat fills the page, so drop the room the shell keeps for the (here hidden) tab bar; restore it on leaving.
+  // The chat fills the whole page, so nothing is left under it; restore the shell's padding on leaving.
   useLayoutEffect(() => {
     const main = document.getElementById("app-mobile-scroll");
     if (!main) return;
     const previous = main.style.paddingBottom;
-    main.style.paddingBottom = "max(0.75rem, env(safe-area-inset-bottom, 0px))";
+    main.style.paddingBottom = "0px"; // the composer keeps its own safe-area margin
     return () => {
       main.style.paddingBottom = previous;
     };
@@ -80,6 +86,15 @@ export function AssistantChat() {
   useEffect(() => {
     if (loadedKey === storageKey && !streaming) saveConversations(storageKey, conversations);
   }, [conversations, streaming, storageKey, loadedKey]);
+
+  // A question handed over by another page (the forecast) only fills the box; the person decides whether to send it.
+  useEffect(() => {
+    const q = takePrefill();
+    if (q) {
+      setDraft(q);
+      setTimeout(() => composerRef.current?.focus(), 50);
+    }
+  }, []);
 
   const active = useMemo(() => conversations.find((c) => c.id === activeId) ?? null, [conversations, activeId]);
   const messages = useMemo(() => active?.messages ?? [], [active]);
@@ -166,8 +181,12 @@ export function AssistantChat() {
             } else if (event.type === "blocked") {
               updateConv(convId, (c) => {
                 const at = c.messages.findIndex((m) => m.id === assistantId);
+                const refused = at > 0 ? c.messages[at - 1] : undefined;
+                // The chat must never be named after a message that was refused (it may hold a password).
+                const title = refused && refused.role === "user" && c.title === titleFrom(refused.content) ? "" : c.title;
                 return {
                   ...c,
+                  title,
                   messages: c.messages.map((m, i) => {
                     if (i === at) return { ...m, blocked: event.reason };
                     if (event.discardUserMessage && i === at - 1 && m.role === "user") {
@@ -224,7 +243,9 @@ export function AssistantChat() {
       if (!text || streaming || disabled) return;
       setDraft("");
       const userMsg: ChatMsg = { id: uid(), role: "user", content: text, ...(voice ? { voice } : {}) };
-      const conv: Conversation = active ?? { id: uid(), title: text.slice(0, 60), messages: [], updatedAt: Date.now() };
+      const existing: Conversation = active ?? { id: uid(), title: "", messages: [], updatedAt: Date.now() };
+      // Named after the first question; taken back if that question turns out to be refused.
+      const conv = existing.title ? existing : { ...existing, title: titleFrom(text) };
       startAnswer(conv, [...conv.messages, userMsg]);
     },
     [active, disabled, startAnswer, streaming]
@@ -344,16 +365,16 @@ export function AssistantChat() {
       ref={fillRef}
       className={cn(
         "flex w-full min-w-0 overflow-hidden bg-[var(--surface)]",
-        fullScreen ? "fixed inset-0 z-[150] h-dvh" : "rounded-2xl border border-[var(--border)]"
+        fullScreen && "fixed inset-0 z-[150] h-dvh"
       )}
     >
       <aside className={cn("hidden w-72 shrink-0 border-r border-[var(--border)] bg-[var(--surface-muted)]", !sidebarHidden && "lg:block")}>{sidebar}</aside>
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-1 border-b border-[var(--border)] px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] sm:px-3">
-          <button type="button" onClick={() => setDrawerOpen(true)} aria-label={t("openChats")} className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] lg:hidden">
-            <Menu className="h-5 w-5" aria-hidden />
-          </button>
+          <Link href="/admin" aria-label={t("back")} title={t("back")} className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] nav:hidden">
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </Link>
           <button
             type="button"
             onClick={() => setSidebarHidden((v) => !v)}
@@ -365,10 +386,13 @@ export function AssistantChat() {
           </button>
           <h1 className="flex min-w-0 flex-1 items-center gap-2 px-1 text-[15px] font-semibold text-[var(--text-primary)]">
             <Sparkles className="h-4 w-4 shrink-0 text-[var(--brand)]" aria-hidden />
-            <span className="truncate">{active?.title ?? t("title")}</span>
+            <span className="truncate">{active ? active.title || t("newChat") : t("title")}</span>
           </h1>
+          <button type="button" onClick={() => setDrawerOpen(true)} aria-label={t("openChats")} title={t("openChats")} className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] lg:hidden">
+            <Menu className="h-5 w-5" aria-hidden />
+          </button>
           <button type="button" onClick={newChat} disabled={streaming} aria-label={t("newChat")} title={`${t("newChat")} (Ctrl+Shift+O)`} className="inline-flex items-center gap-1.5 rounded-lg p-2 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-50 sm:px-3">
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />
             <span className="max-sm:hidden">{t("newChat")}</span>
           </button>
           <button
@@ -376,7 +400,7 @@ export function AssistantChat() {
             onClick={() => setFullScreen((v) => !v)}
             aria-label={fullScreen ? t("exitFullScreen") : t("fullScreen")}
             title={fullScreen ? `${t("exitFullScreen")} (Esc)` : t("fullScreen")}
-            className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]"
+            className="hidden rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] sm:block"
           >
             {fullScreen ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
           </button>
@@ -384,12 +408,24 @@ export function AssistantChat() {
 
         <div ref={scrollRef} onScroll={onScroll} onWheel={markUserInput} onTouchMove={markUserInput} onPointerDown={markUserInput} onKeyDown={markUserInput} role="log" aria-busy={streaming} aria-label={t("conversation")} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6">
           {messages.length === 0 ? (
-            <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col items-center justify-center py-4 text-center">
+            <div className="mx-auto flex min-h-full w-full max-w-[45rem] flex-col items-center justify-center py-4 text-center">
               <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-light)] text-[var(--brand-text)]" aria-hidden>
                 <Sparkles className="h-6 w-6" />
               </span>
               <h2 className="text-balance text-2xl font-semibold text-[var(--text-primary)] sm:text-3xl">{greeting}</h2>
               <p className="mt-2 max-w-md text-[14px] text-[var(--text-secondary)]">{t("emptyHint")}</p>
+              {voiceAvailable && !disabled && (
+                <div className="mt-6 w-full max-w-sm">
+                  <button
+                    type="button"
+                    onClick={() => composerRef.current?.startVoice()}
+                    className="flex w-full items-center justify-center gap-2.5 rounded-full bg-[var(--brand)] px-6 py-3.5 text-[16px] font-semibold text-[var(--brand-on-brand)] shadow-sm transition-opacity hover:opacity-90"
+                  >
+                    <Mic className="h-5 w-5" aria-hidden /> {t("voice.tapToSpeak")}
+                  </button>
+                  <p className="mt-2 text-[13px] text-[var(--text-tertiary)]">{t("voice.speakHint")}</p>
+                </div>
+              )}
               {disabled && (
                 <div className="mt-5 w-full text-left">
                   <AlertBanner variant="warning">{t("notEnabled")}</AlertBanner>
@@ -420,9 +456,10 @@ export function AssistantChat() {
                   &ldquo;{t("hinglishExample")}&rdquo;
                 </button>
               </p>
+              <p className="mt-3 max-w-md text-[12px] text-[var(--text-tertiary)]">{t("disclaimer")}</p>
             </div>
           ) : (
-            <div className="mx-auto w-full max-w-3xl space-y-7">
+            <div className="mx-auto w-full max-w-[45rem] space-y-7">
               {messages.map((m, idx) => (
                 <MessageItem
                   key={m.id}
@@ -452,7 +489,7 @@ export function AssistantChat() {
           </button>
         )}
 
-        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={(text, voice) => send(text ?? draft, voice)} onStop={stop} streaming={streaming} disabled={disabled} serverSpeech={status.data?.speech?.server ? { engine: status.data.speech.engine ?? "server", maxSeconds: status.data.speech.maxSeconds } : null} />
+        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={(text, voice) => send(text ?? draft, voice)} onStop={stop} streaming={streaming} disabled={disabled} serverSpeech={serverSpeech} />
       </section>
     </div>
   );
