@@ -42,6 +42,7 @@ export function ChatSidebar({ conversations, activeId, disabled, onSelect, onNew
           type="button"
           onClick={onNew}
           disabled={disabled}
+          title={`${t("newChat")} (Ctrl+Shift+O)`}
           className="flex w-full items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--brand-light)] hover:text-[var(--brand-text)] disabled:opacity-50"
         >
           <Plus className="h-4 w-4" aria-hidden /> {t("newChat")}

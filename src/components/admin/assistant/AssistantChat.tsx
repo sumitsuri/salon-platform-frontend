@@ -391,7 +391,11 @@ export function AssistantChat() {
           <button type="button" onClick={() => setDrawerOpen(true)} aria-label={t("openChats")} title={t("openChats")} className="rounded-lg p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] lg:hidden">
             <Menu className="h-5 w-5" aria-hidden />
           </button>
-          <button type="button" onClick={newChat} disabled={streaming} aria-label={t("newChat")} title={`${t("newChat")} (Ctrl+Shift+O)`} className="inline-flex items-center gap-1.5 rounded-lg p-2 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-50 sm:px-3">
+          <button type="button" onClick={newChat} disabled={streaming} aria-label={t("newChat")} title={`${t("newChat")} (Ctrl+Shift+O)`} className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg p-2 text-[13px] font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] disabled:opacity-50 sm:px-3",
+              // The chats panel has its own New chat button; show this one only where that panel is not on screen.
+              !sidebarHidden && "lg:hidden",
+            )}>
             <Plus className="h-5 w-5 sm:h-4 sm:w-4" aria-hidden />
             <span className="max-sm:hidden">{t("newChat")}</span>
           </button>
