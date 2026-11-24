@@ -3102,7 +3102,10 @@
         "listening": "Listening… speak now",
         "notice": "You can speak instead of typing. Your phone's own speech service turns your voice into text; Antra never receives or stores your voice, only the words you send.",
         "autoSend": "Send when I stop speaking",
+        "working": "Writing down what you said…",
+        "noticeServer": "You can speak instead of typing. Your short recording is sent over a secure connection to a speech service to be written down, then discarded. Antra does not keep your voice, only the words you send.",
         "problem": {
+          "server": "Voice typing didn't work this time. Please try again or type your question.",
           "denied": "The microphone is blocked. Allow microphone access for this site in your browser settings, then try again.",
           "noSpeech": "I didn't hear anything. Tap the microphone and speak again.",
           "noMic": "No microphone was found on this device.",
@@ -3110,6 +3113,24 @@
           "language": "This language isn't available for voice on your device. Pick another language or type your question.",
           "other": "Voice typing didn't work this time. Please try again or type your question."
         }
+      },
+      "feedback": {
+        "good": "Good answer",
+        "bad": "Not helpful",
+        "thanks": "Thanks, that helps us improve.",
+        "why": "What went wrong?",
+        "reasons": {
+          "WRONG_NUMBERS": "Numbers look wrong",
+          "WRONG_LANGUAGE": "Wrong language",
+          "NOT_ANSWERED": "Didn't answer my question",
+          "TOO_LONG": "Too long",
+          "TOO_SLOW": "Too slow",
+          "OTHER": "Something else"
+        },
+        "heardQuestion": "Did Antra hear you correctly?",
+        "heardYes": "Yes",
+        "heardNo": "No",
+        "heardThanks": "Thanks, noted."
       },
       "hinglishTip": "You can also ask in Hindi using English letters, and Antra will answer the same way. Try:",
       "hinglishExample": "Pichle mahine ka kitna sales tha?",

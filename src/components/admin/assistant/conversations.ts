@@ -14,6 +14,10 @@ export type ChatMsg = {
   blocked?: string;
   /** The question held a password or key and was removed from this chat; it is never sent again. */
   removed?: boolean;
+  /** The question was spoken: which speech engine wrote it down and in which language (for quality tracking). */
+  voice?: { engine: string; lang: string };
+  /** What the reader said about this answer. */
+  feedback?: { rating?: "UP" | "DOWN"; reasons?: string[]; heard?: boolean };
 };
 
 export type Conversation = {
