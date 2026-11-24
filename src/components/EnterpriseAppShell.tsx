@@ -40,6 +40,11 @@ export interface EnterpriseAppShellProps {
   activeNavClassName?: string;
   /** Branch manager: bottom tabs + More sheet instead of drawer nav on phone. */
   mobileBottomNav?: MobileBottomNavConfig;
+  /**
+   * Pages that use the whole screen (a chat): no phone header, no page padding, and the sidebar shows as icons on a
+   * laptop. The page supplies its own top bar. The saved sidebar choice is left alone.
+   */
+  immersivePrefixes?: string[];
 }
 
 // Keep in sync with --breakpoint-nav in globals.css (68.75rem).
@@ -73,6 +78,7 @@ function MobileTopBar({
   usesSidebar,
   drawerOpen,
   hideMenuButton,
+  hidden,
 }: {
   homeHref: string;
   homeLabel: string;
@@ -87,6 +93,8 @@ function MobileTopBar({
   usesSidebar: boolean;
   drawerOpen: boolean;
   hideMenuButton?: boolean;
+  /** The page draws its own top bar (immersive pages). */
+  hidden?: boolean;
 }) {
   const tCommon = useTranslations("common");
   const pathname = usePathname();
@@ -94,6 +102,7 @@ function MobileTopBar({
   const mobileBreadcrumbs = resolveMobileBreadcrumbs(breadcrumbs);
   const isSubPage = !isHomePath(pathname, homeHref);
 
+  if (hidden) return null;
   return (
     <header
       className="fixed top-0 left-0 right-0 z-[110] glass-header border-b border-[var(--border-brand)] shadow-sm nav:hidden"
@@ -177,13 +186,19 @@ export function EnterpriseAppShell({
   mobileNavFabColor,
   activeNavClassName,
   mobileBottomNav,
+  immersivePrefixes,
 }: EnterpriseAppShellProps) {
   const usesSidebar = useSidebarLayout();
-  const { collapsed, toggle, ready } = useSidebarCollapsed();
+  const { collapsed: savedCollapsed, toggle: toggleSaved, ready } = useSidebarCollapsed();
+  const pathname = usePathname();
+  const immersive = !!immersivePrefixes?.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // On an immersive page the sidebar starts as icons; opening it there is for this visit only and is not saved.
+  const [peek, setPeek] = useState<{ path: string; collapsed: boolean } | null>(null);
+  const collapsed = immersive ? (peek?.path === pathname ? peek.collapsed : true) : savedCollapsed;
+  const toggle = () => (immersive ? setPeek({ path: pathname, collapsed: !collapsed }) : toggleSaved());
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const closeDrawer = useCallback(() => setMobileDrawerOpen(false), []);
-  const pathname = usePathname();
   const flatNav = flattenNavItems(nav);
   const useBottomNav = !!mobileBottomNav;
   const hideBottomBarByRoute =
@@ -258,18 +273,24 @@ export function EnterpriseAppShell({
               usesSidebar={usesSidebar}
               drawerOpen={mobileDrawerOpen}
               hideMenuButton={useBottomNav}
+              hidden={immersive}
             />
 
             <main
               id="app-mobile-scroll"
               className={cn(
-                "flex-1 w-full nav:py-6 min-w-0",
-                useBottomNav
-                  ? "app-shell-main--flush-x max-md:px-0 md:px-6 lg:px-8"
-                  : "px-4 sm:px-6 md:px-6 lg:px-8",
-                "max-nav:min-h-0 max-nav:overflow-y-auto max-nav:overscroll-contain max-nav:touch-scroll-y",
-                MOBILE_TOP_BAR_OFFSET,
-                resolvedMainPadding
+                "flex-1 w-full min-w-0",
+                immersive
+                  ? "p-0 nav:py-0"
+                  : cn(
+                      "nav:py-6",
+                      useBottomNav
+                        ? "app-shell-main--flush-x max-md:px-0 md:px-6 lg:px-8"
+                        : "px-4 sm:px-6 md:px-6 lg:px-8",
+                      MOBILE_TOP_BAR_OFFSET,
+                      resolvedMainPadding
+                    ),
+                "max-nav:min-h-0 max-nav:overflow-y-auto max-nav:overscroll-contain max-nav:touch-scroll-y"
               )}
               data-touch-scroll
             >

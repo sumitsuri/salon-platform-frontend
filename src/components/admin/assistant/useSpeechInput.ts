@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { canRecordAudio } from "./useServerSpeech";
 import { speechProblem, type SpeechProblem } from "./voice";
 
 /** The small part of the browser's speech recognition interface that is used here. */
@@ -32,6 +33,15 @@ function recognitionCtor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/** Whether a microphone button can work here: the built-in recogniser, or recording for Antra's own engine when it is on. */
+export function useVoiceAvailable(serverEngineOn: boolean): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => recognitionCtor() !== null || (serverEngineOn && canRecordAudio()),
+    () => false,
+  );
+}
+
 export type SpeechUpdate = { finalText: string; interimText: string };
 
 /**
@@ -39,7 +49,7 @@ export type SpeechUpdate = { finalText: string; interimText: string };
  * until the person sends the text, so spoken words go through the same checks as typed ones. Not every browser has it
  * (Firefox and some in-app browsers do not), so `supported` says whether to show the microphone at all.
  */
-export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; onDone: (finalText: string) => void }) {
+export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; onDone: (finalText: string) => void; onCancel?: () => void }) {
   // Not supported while rendering on the server, so the first render matches in the browser too.
   const supported = useSyncExternalStore(
     () => () => {},
@@ -51,6 +61,7 @@ export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; 
   const recRef = useRef<Recognition | null>(null);
   const finalRef = useRef("");
   const interimRef = useRef("");
+  const cancelledRef = useRef(false);
   const handlersRef = useRef(handlers);
 
   useEffect(() => {
@@ -68,12 +79,19 @@ export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; 
     recRef.current?.stop();
   }, []);
 
+  /** Stop and throw away what was heard. */
+  const cancel = useCallback(() => {
+    cancelledRef.current = true;
+    recRef.current?.abort();
+  }, []);
+
   const start = useCallback((lang: string) => {
     const Ctor = recognitionCtor();
     if (!Ctor || recRef.current) return;
     setProblem(null);
     finalRef.current = "";
     interimRef.current = "";
+    cancelledRef.current = false;
     const rec = new Ctor();
     rec.lang = lang;
     rec.continuous = false; // one utterance: stops by itself when the person pauses, which is steadier on phones
@@ -98,6 +116,10 @@ export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; 
     rec.onend = () => {
       recRef.current = null;
       setListening(false);
+      if (cancelledRef.current) {
+        handlersRef.current.onCancel?.();
+        return;
+      }
       // some browsers stop with the last words still unconfirmed; they were spoken, so keep them
       handlersRef.current.onDone(finalRef.current || interimRef.current);
     };
@@ -111,5 +133,5 @@ export function useSpeechInput(handlers: { onUpdate: (u: SpeechUpdate) => void; 
     }
   }, []);
 
-  return { supported, listening, problem, start, stop, clearProblem: () => setProblem(null) };
+  return { supported, listening, problem, start, stop, cancel, clearProblem: () => setProblem(null) };
 }

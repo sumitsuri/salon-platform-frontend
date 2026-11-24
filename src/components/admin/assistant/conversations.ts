@@ -36,7 +36,7 @@ export function loadConversations(key: string): Conversation[] {
   try {
     const raw = localStorage.getItem(key);
     const parsed = raw ? (JSON.parse(raw) as Conversation[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? cleanTitles(parsed) : [];
   } catch {
     return [];
   }
@@ -92,4 +92,44 @@ export function greetingKey(now: Date = new Date()): "greetingMorning" | "greeti
   if (h < 12) return "greetingMorning";
   if (h < 17) return "greetingAfternoon";
   return "greetingEvening";
+}
+
+/** A chat's title is the start of its first safe question. Empty until there is one; the screens then say "New chat". */
+export const titleFrom = (text: string) => text.trim().replace(/\s+/g, " ").slice(0, 60);
+
+/**
+ * Chats saved before titles ignored refused messages may be named after something that was refused (a password,
+ * for example). Clear those titles: a title is kept only if it comes from a question that was answered.
+ */
+export function cleanTitles(list: Conversation[]): Conversation[] {
+  return list.map((c) => {
+    if (!c.title) return c;
+    const msgs = c.messages;
+    const refused = (i: number) => msgs[i].role === "user" && (!!msgs[i].removed || !!msgs[i + 1]?.blocked);
+    const anyRefused = msgs.some((_, i) => refused(i));
+    if (!anyRefused) return c;
+    const fromAnswered = msgs.some((m, i) => m.role === "user" && !refused(i) && titleFrom(m.content) === c.title);
+    return fromAnswered ? c : { ...c, title: "" };
+  });
+}
+
+const PREFILL_KEY = "antra.assistant.prefill";
+
+/** Another page (the forecast) hands the chat a ready question. It only fills the box; it is never sent for the person. */
+export function setPrefill(question: string) {
+  try {
+    sessionStorage.setItem(PREFILL_KEY, question);
+  } catch {
+    /* private mode: the chat just opens empty */
+  }
+}
+
+export function takePrefill(): string | null {
+  try {
+    const q = sessionStorage.getItem(PREFILL_KEY);
+    if (q) sessionStorage.removeItem(PREFILL_KEY);
+    return q;
+  } catch {
+    return null;
+  }
 }

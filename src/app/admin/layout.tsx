@@ -278,6 +278,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       mobileMainPadding={MOBILE_MAIN_PADDING_BOTTOM_TABS}
       mobileNavFabColor={brandColor}
       mobileBottomNav={mobileBottomNav}
+      immersivePrefixes={["/admin/assistant"]}
     >
       <ProductTelemetryTracker portal="admin" active />
       {children}

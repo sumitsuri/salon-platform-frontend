@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Check, CheckCircle2, ChevronDown, Copy, Loader2, Pencil, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -159,67 +160,145 @@ function UserMessage({ msg, canEdit, onEdit }: Pick<Props, "msg" | "canEdit" | "
   );
 }
 
-/** Thumbs up or down on an answer, the reasons for a thumbs down, and (for spoken questions) whether it was heard right. */
-function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onFeedback">) {
+/** Where the reasons sheet sits on a wide screen: just above the thumbs, or below them when there is no room above. */
+type Anchor = { left: number; top?: number; bottom?: number } | null;
+
+/** Reasons for a thumbs down: a bottom sheet on a phone, a small popover beside the thumbs on a laptop. */
+function ReasonsSheet({ initial, anchor, onClose, onSend }: { initial: string[]; anchor: Anchor; onClose: () => void; onSend: (reasons: string[]) => void }) {
   const t = useTranslations("admin.assistant.feedback");
-  const f = msg.feedback ?? {};
-  const toggleReason = (code: string) => {
-    const has = (f.reasons ?? []).includes(code);
-    onFeedback(msg.id, { rating: "DOWN", reasons: has ? (f.reasons ?? []).filter((r) => r !== code) : [...(f.reasons ?? []), code] });
-  };
-  return (
-    <div className="space-y-2">
-      <div className="-ml-2 flex items-center">
-        <button
-          type="button"
-          onClick={() => onFeedback(msg.id, { rating: "UP", reasons: [] })}
-          aria-pressed={f.rating === "UP"}
-          aria-label={t("good")}
-          title={t("good")}
-          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "UP" ? "text-emerald-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
-        >
-          <ThumbsUp className={cn("h-3.5 w-3.5", f.rating === "UP" && "fill-current")} aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={() => onFeedback(msg.id, { rating: "DOWN", reasons: f.reasons ?? [] })}
-          aria-pressed={f.rating === "DOWN"}
-          aria-label={t("bad")}
-          title={t("bad")}
-          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "DOWN" ? "text-red-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
-        >
-          <ThumbsDown className={cn("h-3.5 w-3.5", f.rating === "DOWN" && "fill-current")} aria-hidden />
-        </button>
-        {f.rating === "UP" && <span className="px-1 text-[12px] text-[var(--text-tertiary)]" role="status">{t("thanks")}</span>}
-      </div>
-      {f.rating === "DOWN" && (
-        <div role="group" aria-label={t("why")} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] text-[var(--text-tertiary)]">{t("why")}</span>
+  const [picked, setPicked] = useState<string[]>(initial);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const toggle = (code: string) => setPicked((p) => (p.includes(code) ? p.filter((c) => c !== code) : [...p, code]));
+  return createPortal(
+    <div className="fixed inset-0 z-[170]">
+      <button type="button" aria-label={t("close")} onClick={onClose} className={cn("absolute inset-0", anchor ? "cursor-default" : "bg-black/35")} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("why")}
+        style={anchor ? { left: anchor.left, top: anchor.top, bottom: anchor.bottom } : undefined}
+        className={cn(
+          "absolute space-y-3 border border-[var(--border)] bg-[var(--surface)] p-4 shadow-2xl",
+          anchor ? "w-80 rounded-2xl" : "inset-x-0 bottom-0 rounded-t-3xl border-b-0 pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
+        )}
+      >
+        {!anchor && <span className="mx-auto block h-1 w-9 rounded-full bg-[var(--border-strong)]" aria-hidden />}
+        <p className="text-[14px] font-semibold text-[var(--text-primary)]">{t("why")}</p>
+        <div className="flex flex-wrap gap-2">
           {FEEDBACK_REASONS.map((code) => {
-            const on = (f.reasons ?? []).includes(code);
+            const on = picked.includes(code);
             return (
               <button
                 key={code}
                 type="button"
                 aria-pressed={on}
-                onClick={() => toggleReason(code)}
-                className={cn("rounded-full border px-2.5 py-0.5 text-[12px] transition-colors", on ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand-text)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]")}
+                onClick={() => toggle(code)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[13px] transition-colors",
+                  on ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand-text)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]",
+                )}
               >
                 {t(`reasons.${code}`)}
               </button>
             );
           })}
         </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+            {t("close")}
+          </button>
+          <button type="button" onClick={() => onSend(picked)} className="rounded-lg bg-[var(--brand)] px-4 py-2 text-[13px] font-semibold text-[var(--brand-on-brand)] hover:opacity-90">
+            {t("send")}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/** Thumbs up or down on an answer, and (for spoken questions) whether it was heard right. */
+function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onFeedback">) {
+  const t = useTranslations("admin.assistant.feedback");
+  const f = msg.feedback ?? {};
+  const [sheet, setSheet] = useState<{ anchor: Anchor } | null>(null);
+  const [sent, setSent] = useState(false);
+
+  const openSheet = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    const wide = window.matchMedia("(min-width: 640px)").matches;
+    let anchor: Anchor = null;
+    if (wide) {
+      const left = Math.max(12, Math.min(r.left, window.innerWidth - 336));
+      anchor = r.top > 290 ? { left, bottom: window.innerHeight - r.top + 6 } : { left, top: r.bottom + 6 };
+    }
+    setSheet({ anchor });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="-ml-2 flex items-center">
+        <button
+          type="button"
+          onClick={() => {
+            onFeedback(msg.id, { rating: "UP", reasons: [] });
+            setSheet(null);
+            setSent(true);
+          }}
+          aria-pressed={f.rating === "UP"}
+          aria-label={t("good")}
+          title={t("good")}
+          className={cn("inline-flex h-9 items-center rounded-lg px-2.5 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "UP" ? "text-emerald-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+        >
+          <ThumbsUp className={cn("h-4 w-4", f.rating === "UP" && "fill-current")} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            onFeedback(msg.id, { rating: "DOWN", reasons: f.reasons ?? [] });
+            openSheet(e.currentTarget);
+          }}
+          aria-pressed={f.rating === "DOWN"}
+          aria-haspopup="dialog"
+          aria-label={t("bad")}
+          title={t("bad")}
+          className={cn("inline-flex h-9 items-center rounded-lg px-2.5 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "DOWN" ? "text-red-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+        >
+          <ThumbsDown className={cn("h-4 w-4", f.rating === "DOWN" && "fill-current")} aria-hidden />
+        </button>
+        {sent && f.rating && !sheet && (
+          <span className="px-1 text-[12px] text-[var(--text-tertiary)]" role="status">
+            {t("thanks")}
+          </span>
+        )}
+      </div>
+      {sheet && (
+        <ReasonsSheet
+          initial={f.reasons ?? []}
+          anchor={sheet.anchor}
+          onClose={() => setSheet(null)}
+          onSend={(reasons) => {
+            onFeedback(msg.id, { rating: "DOWN", reasons });
+            setSheet(null);
+            setSent(true);
+          }}
+        />
       )}
       {voice && (
         <div className="flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-tertiary)]" role="group" aria-label={t("heardQuestion")}>
           {f.heard === undefined ? (
             <>
               <span>{t("heardQuestion")}</span>
-              <button type="button" onClick={() => onFeedback(msg.id, { heard: true })} className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+              <button type="button" onClick={() => onFeedback(msg.id, { heard: true })} className="rounded-full border border-[var(--border)] px-3 py-1 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
                 {t("heardYes")}
               </button>
-              <button type="button" onClick={() => onFeedback(msg.id, { heard: false })} className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+              <button type="button" onClick={() => onFeedback(msg.id, { heard: false })} className="rounded-full border border-[var(--border)] px-3 py-1 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
                 {t("heardNo")}
               </button>
             </>
