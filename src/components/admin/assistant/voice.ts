@@ -35,7 +35,7 @@ export function joinTranscript(base: string, spoken: string): string {
   return b ? `${b} ${s}` : s;
 }
 
-export type SpeechProblem = "denied" | "noSpeech" | "noMic" | "network" | "language" | "other";
+export type SpeechProblem = "denied" | "noSpeech" | "noMic" | "network" | "language" | "server" | "other";
 
 /** Maps a browser's speech error code to the few things a person can actually do something about. */
 export function speechProblem(code: string): SpeechProblem | null {
@@ -57,3 +57,10 @@ export function speechProblem(code: string): SpeechProblem | null {
       return "other";
   }
 }
+
+/** Which engine wrote down a spoken question, and in which language. */
+export type VoiceMeta = { engine: string; lang: string };
+
+/** Reasons offered when an answer gets a thumbs down. The codes are what the server stores. */
+export const FEEDBACK_REASONS = ["WRONG_NUMBERS", "WRONG_LANGUAGE", "NOT_ANSWERED", "TOO_LONG", "TOO_SLOW", "OTHER"] as const;
+export type FeedbackReason = (typeof FEEDBACK_REASONS)[number];

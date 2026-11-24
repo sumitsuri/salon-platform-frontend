@@ -4,8 +4,9 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowUp, Mic, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useServerSpeech } from "./useServerSpeech";
 import { useSpeechInput } from "./useSpeechInput";
-import { VOICE_LANGUAGES, defaultVoiceLang, isVoiceLang, joinTranscript, type VoiceLang } from "./voice";
+import { VOICE_LANGUAGES, defaultVoiceLang, isVoiceLang, joinTranscript, type VoiceLang, type VoiceMeta } from "./voice";
 
 const LANG_KEY = "antra.assistant.voiceLang";
 const AUTO_SEND_KEY = "antra.assistant.voiceAutoSend";
@@ -32,17 +33,19 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   /** Sends the box's text, or {@code text} when it is given (voice sends what was just spoken before the box has updated). */
-  onSend: (text?: string) => void;
+  onSend: (text?: string, voice?: VoiceMeta) => void;
   onStop: () => void;
   streaming: boolean;
   disabled: boolean;
+  /** Set when Antra's own speech engine is switched on; the microphone then records and sends audio to it. */
+  serverSpeech?: { engine: string; maxSeconds?: number } | null;
 };
 
 export type ComposerHandle = { focus: () => void };
 
 /** The message box: grows with the text, Enter sends, Shift+Enter adds a line, the button becomes Stop while answering. */
 export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
-  { value, onChange, onSend, onStop, streaming, disabled },
+  { value, onChange, onSend, onStop, streaming, disabled, serverSpeech },
   handleRef
 ) {
   const t = useTranslations("admin.assistant");
@@ -65,19 +68,42 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     setNoticeSeen(read(NOTICE_KEY) === "1");
   }, [appLocale]);
 
-  const speech = useSpeechInput({
+  const voiceLangRef = useRef<VoiceLang>("en-IN");
+  voiceLangRef.current = voiceLang;
+
+  // How the next question was entered, so the answer can be rated together with whether the microphone heard it right.
+  const voiceRef = useRef<VoiceMeta | null>(null);
+  const sendNow = useCallback(
+    (text?: string) => {
+      onSend(text, voiceRef.current ?? undefined);
+      voiceRef.current = null;
+    },
+    [onSend],
+  );
+  const finishSpeech = useCallback(
+    (spoken: string, engine: string) => {
+      const text = joinTranscript(baseRef.current, spoken);
+      if (!spoken.trim()) return;
+      voiceRef.current = { engine, lang: voiceLangRef.current };
+      onChange(text);
+      if (autoSend && !guardRef.current.streaming && !guardRef.current.disabled && text.trim()) sendNow(text);
+      else ref.current?.focus();
+    },
+    [autoSend, onChange, sendNow],
+  );
+  const browser = useSpeechInput({
     onUpdate: useCallback(({ finalText, interimText }) => onChange(joinTranscript(baseRef.current, finalText + interimText)), [onChange]),
-    onDone: useCallback(
-      (spoken: string) => {
-        const text = joinTranscript(baseRef.current, spoken);
-        if (!spoken.trim()) return;
-        onChange(text);
-        if (autoSend && !guardRef.current.streaming && !guardRef.current.disabled && text.trim()) onSend(text);
-        else ref.current?.focus();
-      },
-      [autoSend, onChange, onSend],
-    ),
+    onDone: useCallback((spoken: string) => finishSpeech(spoken, "browser"), [finishSpeech]),
   });
+  const server = useServerSpeech(
+    { onDone: useCallback((spoken: string) => finishSpeech(spoken, serverSpeech?.engine ?? "server"), [finishSpeech, serverSpeech?.engine]) },
+    serverSpeech?.maxSeconds ?? 30,
+  );
+  // Antra's own engine, when on, is used wherever the phone can record; otherwise the built-in recogniser.
+  const useServer = !!serverSpeech && server.supported;
+  const speech = useServer
+    ? { supported: true, listening: server.listening, working: server.working, problem: server.problem, problemText: server.problemText, start: (l: string) => void server.start(l), stop: server.stop }
+    : { supported: browser.supported, listening: browser.listening, working: false, problem: browser.problem, problemText: null as string | null, start: browser.start, stop: browser.stop };
 
   const toggleMic = () => {
     if (speech.listening) {
@@ -103,17 +129,19 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
 
   return (
     <div className="px-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-2 sm:px-6">
-      {(speech.listening || speech.problem || (speech.supported && !noticeSeen)) && (
+      {(speech.listening || speech.working || speech.problem || (speech.supported && !noticeSeen)) && (
         <div className="mx-auto mb-2 max-w-3xl px-1 text-[13px]" role="status" aria-live="polite">
           {speech.listening ? (
             <p className="flex items-center gap-2 font-medium text-red-700 dark:text-red-400">
               <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" aria-hidden />
               {t("voice.listening")}
             </p>
+          ) : speech.working ? (
+            <p className="text-[var(--text-secondary)]">{t("voice.working")}</p>
           ) : speech.problem ? (
-            <p className="text-amber-800 dark:text-amber-300">{t(`voice.problem.${speech.problem}`)}</p>
+            <p className="text-amber-800 dark:text-amber-300">{speech.problemText ?? t(`voice.problem.${speech.problem}`)}</p>
           ) : (
-            <p className="text-[var(--text-secondary)]">{t("voice.notice")}</p>
+            <p className="text-[var(--text-secondary)]">{useServer ? t("voice.noticeServer") : t("voice.notice")}</p>
           )}
         </div>
       )}
@@ -121,7 +149,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
         className="mx-auto flex max-w-3xl items-end gap-2 rounded-3xl border border-[var(--border-strong)] bg-[var(--surface)] p-2 pl-4 shadow-sm transition-shadow focus-within:border-[var(--brand)] focus-within:shadow-[0_0_0_3px_var(--brand-ring)]"
         onSubmit={(e) => {
           e.preventDefault();
-          if (canSend) onSend();
+          if (canSend) sendNow();
         }}
       >
         <textarea
@@ -134,7 +162,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
-              if (canSend) onSend();
+              if (canSend) sendNow();
             }
           }}
           placeholder={t("placeholder")}
@@ -153,7 +181,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                   write(LANG_KEY, v);
                 }
               }}
-              disabled={disabled || speech.listening}
+              disabled={disabled || speech.listening || speech.working}
               aria-label={t("voice.language")}
               title={t("voice.language")}
               className="h-10 max-w-[5.5rem] shrink-0 cursor-pointer rounded-full border-0 bg-transparent px-1 text-[12px] font-medium text-[var(--text-secondary)] outline-none hover:bg-[var(--surface-muted)] disabled:opacity-50 sm:max-w-[9rem]"
@@ -167,7 +195,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             <button
               type="button"
               onClick={toggleMic}
-              disabled={disabled}
+              disabled={disabled || speech.working}
               aria-pressed={speech.listening}
               aria-label={speech.listening ? t("voice.stop") : t("voice.start")}
               title={speech.listening ? t("voice.stop") : t("voice.start")}

@@ -491,7 +491,19 @@ export const api = {
     return request<DemandInsights>(`/api/v1/analytics/demand${qs ? `?${qs}` : ""}`);
   },
 
-  getAssistantStatus: () => request<{ enabled: boolean; provider: string }>("/api/v1/copilot/status"),
+  getAssistantStatus: () =>
+    request<{ enabled: boolean; provider: string; speech?: { server: boolean; engine?: string; maxSeconds?: number } }>("/api/v1/copilot/status"),
+  /** One short recording to text, on Antra's own speech engine (only when switched on). */
+  transcribeSpeech: (audio: Blob, lang: string, seconds: number) => {
+    const form = new FormData();
+    form.append("audio", audio, "speech");
+    form.append("lang", lang);
+    form.append("seconds", String(Math.max(1, Math.round(seconds))));
+    return multipartRequest<{ text: string; engine: string }>("/api/v1/copilot/transcribe", form);
+  },
+  /** A thumbs up or down on an answer, and/or whether the microphone heard the person correctly. Holds no message text. */
+  sendAssistantFeedback: (body: AssistantFeedbackBody) =>
+    request<{ saved: boolean }>("/api/v1/copilot/feedback", { method: "POST", body: JSON.stringify(body) }),
 
   getCatalogServices: (includeInactive = false) =>
     request<CatalogServiceItem[]>(
@@ -4998,6 +5010,16 @@ export async function fetchFaceScanCaptureBlob(captureId: string): Promise<strin
 // ---- Assistant (owner chat) ----
 
 export type AssistantMessage = { role: "user" | "assistant"; content: string };
+
+export type AssistantFeedbackBody = {
+  messageId: string;
+  rating?: "UP" | "DOWN";
+  reasons?: string[];
+  inputMode: "TYPED" | "VOICE";
+  voiceEngine?: string;
+  voiceLang?: string;
+  heardCorrectly?: boolean;
+};
 
 export type AssistantEvent =
   | { type: "text"; t: string }

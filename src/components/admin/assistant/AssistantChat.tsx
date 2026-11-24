@@ -21,6 +21,7 @@ import {
   type Conversation,
 } from "./conversations";
 import { useFillViewport } from "./useFillViewport";
+import type { VoiceMeta } from "./voice";
 
 const SUGGESTIONS = [
   { key: "sales", icon: TrendingUp },
@@ -218,11 +219,11 @@ export function AssistantChat() {
   );
 
   const send = useCallback(
-    (raw: string) => {
+    (raw: string, voice?: VoiceMeta) => {
       const text = raw.trim();
       if (!text || streaming || disabled) return;
       setDraft("");
-      const userMsg: ChatMsg = { id: uid(), role: "user", content: text };
+      const userMsg: ChatMsg = { id: uid(), role: "user", content: text, ...(voice ? { voice } : {}) };
       const conv: Conversation = active ?? { id: uid(), title: text.slice(0, 60), messages: [], updatedAt: Date.now() };
       startAnswer(conv, [...conv.messages, userMsg]);
     },
@@ -247,6 +248,32 @@ export function AssistantChat() {
   );
 
   const stop = () => abortRef.current?.abort();
+
+  /** Saves what the reader said about an answer, then tells the server (which stores ratings, never the text). */
+  const giveFeedback = useCallback(
+    (msgId: string, patch: NonNullable<ChatMsg["feedback"]>) => {
+      if (!active) return;
+      const idx = active.messages.findIndex((m) => m.id === msgId);
+      if (idx < 0) return;
+      const merged = { ...active.messages[idx].feedback, ...patch };
+      patchMsg(active.id, msgId, (m) => ({ ...m, feedback: merged }));
+      const voice = [...active.messages.slice(0, idx)].reverse().find((m) => m.role === "user")?.voice;
+      void api
+        .sendAssistantFeedback({
+          messageId: msgId,
+          rating: patch.rating,
+          reasons: patch.rating === "DOWN" ? merged.reasons ?? [] : undefined,
+          heardCorrectly: patch.heard,
+          inputMode: voice ? "VOICE" : "TYPED",
+          voiceEngine: voice?.engine,
+          voiceLang: voice?.lang,
+        })
+        .catch(() => {
+          /* feedback is a courtesy: never interrupt the chat if it cannot be saved */
+        });
+    },
+    [active, patchMsg],
+  );
 
   const newChat = useCallback(() => {
     if (streaming) return;
@@ -406,6 +433,8 @@ export function AssistantChat() {
                   onEdit={editAndResend}
                   onRegenerate={regenerate}
                   onContinue={() => send(t("continueMessage"))}
+                  voice={m.role === "assistant" ? messages[idx - 1]?.voice : undefined}
+                  onFeedback={giveFeedback}
                 />
               ))}
             </div>
@@ -423,7 +452,7 @@ export function AssistantChat() {
           </button>
         )}
 
-        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={(text) => send(text ?? draft)} onStop={stop} streaming={streaming} disabled={disabled} />
+        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={(text, voice) => send(text ?? draft, voice)} onStop={stop} streaming={streaming} disabled={disabled} serverSpeech={status.data?.speech?.server ? { engine: status.data.speech.engine ?? "server", maxSeconds: status.data.speech.maxSeconds } : null} />
       </section>
     </div>
   );

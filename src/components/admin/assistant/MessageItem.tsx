@@ -2,11 +2,12 @@
 
 import { memo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, CheckCircle2, ChevronDown, Copy, Loader2, Pencil, RefreshCw, Sparkles, XCircle } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, Copy, Loader2, Pencil, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AlertBanner } from "@/components/ui";
 import { Markdown } from "./Markdown";
 import { summariseSteps, type ChatMsg } from "./conversations";
+import { FEEDBACK_REASONS, type VoiceMeta } from "./voice";
 
 type Props = {
   msg: ChatMsg;
@@ -17,6 +18,9 @@ type Props = {
   onEdit: (id: string, text: string) => void;
   onRegenerate: () => void;
   onContinue: () => void;
+  /** How the question this answers was asked, when it was spoken: then the reader is also asked if it was heard right. */
+  voice?: VoiceMeta;
+  onFeedback: (msgId: string, patch: NonNullable<ChatMsg["feedback"]>) => void;
 };
 
 function useCopy(text: string) {
@@ -155,7 +159,80 @@ function UserMessage({ msg, canEdit, onEdit }: Pick<Props, "msg" | "canEdit" | "
   );
 }
 
-function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue }: Props) {
+/** Thumbs up or down on an answer, the reasons for a thumbs down, and (for spoken questions) whether it was heard right. */
+function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onFeedback">) {
+  const t = useTranslations("admin.assistant.feedback");
+  const f = msg.feedback ?? {};
+  const toggleReason = (code: string) => {
+    const has = (f.reasons ?? []).includes(code);
+    onFeedback(msg.id, { rating: "DOWN", reasons: has ? (f.reasons ?? []).filter((r) => r !== code) : [...(f.reasons ?? []), code] });
+  };
+  return (
+    <div className="space-y-2">
+      <div className="-ml-2 flex items-center">
+        <button
+          type="button"
+          onClick={() => onFeedback(msg.id, { rating: "UP", reasons: [] })}
+          aria-pressed={f.rating === "UP"}
+          aria-label={t("good")}
+          title={t("good")}
+          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "UP" ? "text-emerald-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+        >
+          <ThumbsUp className={cn("h-3.5 w-3.5", f.rating === "UP" && "fill-current")} aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => onFeedback(msg.id, { rating: "DOWN", reasons: f.reasons ?? [] })}
+          aria-pressed={f.rating === "DOWN"}
+          aria-label={t("bad")}
+          title={t("bad")}
+          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "DOWN" ? "text-red-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+        >
+          <ThumbsDown className={cn("h-3.5 w-3.5", f.rating === "DOWN" && "fill-current")} aria-hidden />
+        </button>
+        {f.rating === "UP" && <span className="px-1 text-[12px] text-[var(--text-tertiary)]" role="status">{t("thanks")}</span>}
+      </div>
+      {f.rating === "DOWN" && (
+        <div role="group" aria-label={t("why")} className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-[var(--text-tertiary)]">{t("why")}</span>
+          {FEEDBACK_REASONS.map((code) => {
+            const on = (f.reasons ?? []).includes(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                aria-pressed={on}
+                onClick={() => toggleReason(code)}
+                className={cn("rounded-full border px-2.5 py-0.5 text-[12px] transition-colors", on ? "border-[var(--brand)] bg-[var(--brand-light)] text-[var(--brand-text)]" : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]")}
+              >
+                {t(`reasons.${code}`)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {voice && (
+        <div className="flex flex-wrap items-center gap-2 text-[12px] text-[var(--text-tertiary)]" role="group" aria-label={t("heardQuestion")}>
+          {f.heard === undefined ? (
+            <>
+              <span>{t("heardQuestion")}</span>
+              <button type="button" onClick={() => onFeedback(msg.id, { heard: true })} className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+                {t("heardYes")}
+              </button>
+              <button type="button" onClick={() => onFeedback(msg.id, { heard: false })} className="rounded-full border border-[var(--border)] px-2.5 py-0.5 text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]">
+                {t("heardNo")}
+              </button>
+            </>
+          ) : (
+            <span role="status">{t("heardThanks")}</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue, voice, onFeedback }: Props) {
   const t = useTranslations("admin.assistant");
   const running = streaming && isLast;
   const { copied, copy } = useCopy(msg.content);
@@ -203,6 +280,7 @@ function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue }: 
             )}
           </div>
         )}
+        {!running && msg.content && !msg.error && <Feedback msg={msg} voice={voice} onFeedback={onFeedback} />}
       </div>
     </div>
   );
