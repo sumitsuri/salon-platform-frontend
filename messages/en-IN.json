@@ -3095,6 +3095,22 @@
       "checked": "Checked {what}",
       "removedMessage": "Message removed because it contained a password, key or card number",
       "errorGeneric": "Something went wrong. Please try again.",
+      "voice": {
+        "start": "Speak your question",
+        "stop": "Stop listening",
+        "language": "Language you speak in",
+        "listening": "Listening… speak now",
+        "notice": "You can speak instead of typing. Your phone's own speech service turns your voice into text; Antra never receives or stores your voice, only the words you send.",
+        "autoSend": "Send when I stop speaking",
+        "problem": {
+          "denied": "The microphone is blocked. Allow microphone access for this site in your browser settings, then try again.",
+          "noSpeech": "I didn't hear anything. Tap the microphone and speak again.",
+          "noMic": "No microphone was found on this device.",
+          "network": "Voice typing needs an internet connection. Please check it and try again.",
+          "language": "This language isn't available for voice on your device. Pick another language or type your question.",
+          "other": "Voice typing didn't work this time. Please try again or type your question."
+        }
+      },
       "hinglishTip": "You can also ask in Hindi using English letters, and Antra will answer the same way. Try:",
       "hinglishExample": "Pichle mahine ka kitna sales tha?",
       "suggestions": {

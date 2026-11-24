@@ -423,7 +423,7 @@ export function AssistantChat() {
           </button>
         )}
 
-        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={() => send(draft)} onStop={stop} streaming={streaming} disabled={disabled} />
+        <Composer ref={composerRef} value={draft} onChange={setDraft} onSend={(text) => send(text ?? draft)} onStop={stop} streaming={streaming} disabled={disabled} />
       </section>
     </div>
   );
