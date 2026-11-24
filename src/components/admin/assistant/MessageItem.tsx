@@ -224,7 +224,7 @@ function ReasonsSheet({ initial, anchor, onClose, onSend }: { initial: string[];
 }
 
 /** Thumbs up or down on an answer, and (for spoken questions) whether it was heard right. */
-function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onFeedback">) {
+function Feedback({ msg, voice, onFeedback, lead }: Pick<Props, "msg" | "voice" | "onFeedback"> & { lead?: React.ReactNode }) {
   const t = useTranslations("admin.assistant.feedback");
   const f = msg.feedback ?? {};
   const [sheet, setSheet] = useState<{ anchor: Anchor } | null>(null);
@@ -243,7 +243,8 @@ function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onF
 
   return (
     <div className="space-y-2">
-      <div className="-ml-2 flex items-center">
+      <div className="-ml-2 flex flex-wrap items-center">
+        {lead}
         <button
           type="button"
           onClick={() => {
@@ -254,7 +255,7 @@ function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onF
           aria-pressed={f.rating === "UP"}
           aria-label={t("good")}
           title={t("good")}
-          className={cn("inline-flex h-9 items-center rounded-lg px-2.5 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "UP" ? "text-emerald-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "UP" ? "text-emerald-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
         >
           <ThumbsUp className={cn("h-4 w-4", f.rating === "UP" && "fill-current")} aria-hidden />
         </button>
@@ -268,7 +269,7 @@ function Feedback({ msg, voice, onFeedback }: Pick<Props, "msg" | "voice" | "onF
           aria-haspopup="dialog"
           aria-label={t("bad")}
           title={t("bad")}
-          className={cn("inline-flex h-9 items-center rounded-lg px-2.5 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "DOWN" ? "text-red-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
+          className={cn("inline-flex h-8 items-center rounded-lg px-2 transition-colors hover:bg-[var(--surface-muted)]", f.rating === "DOWN" ? "text-red-600" : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]")}
         >
           <ThumbsDown className={cn("h-4 w-4", f.rating === "DOWN" && "fill-current")} aria-hidden />
         </button>
@@ -315,6 +316,22 @@ function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue, vo
   const t = useTranslations("admin.assistant");
   const running = streaming && isLast;
   const { copied, copy } = useCopy(msg.content);
+  const actions = (
+    <>
+      {msg.content && (
+        <ActionButton label={copied ? t("copied") : t("copy")} onClick={() => void copy()}>
+          {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+          <span className="max-sm:hidden">{copied ? t("copied") : t("copy")}</span>
+        </ActionButton>
+      )}
+      {isLast && !msg.blocked && (
+        <ActionButton label={t("regenerate")} onClick={onRegenerate}>
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+          <span className="max-sm:hidden">{t("regenerate")}</span>
+        </ActionButton>
+      )}
+    </>
+  );
   return (
     <div className="flex gap-3">
       <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--brand-on-brand)]" aria-hidden>
@@ -343,23 +360,13 @@ function AssistantMessage({ msg, isLast, streaming, onRegenerate, onContinue, vo
             </button>
           </div>
         )}
-        {!running && (msg.content || msg.error) && (
-          <div className="-ml-2 flex">
-            {msg.content && (
-              <ActionButton label={copied ? t("copied") : t("copy")} onClick={() => void copy()}>
-                {copied ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
-                <span className="max-sm:hidden">{copied ? t("copied") : t("copy")}</span>
-              </ActionButton>
-            )}
-            {isLast && !msg.blocked && (
-              <ActionButton label={t("regenerate")} onClick={onRegenerate}>
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                <span className="max-sm:hidden">{t("regenerate")}</span>
-              </ActionButton>
-            )}
-          </div>
-        )}
-        {!running && msg.content && !msg.error && <Feedback msg={msg} voice={voice} onFeedback={onFeedback} />}
+        {!running && (msg.content || msg.error) &&
+          (msg.content && !msg.error ? (
+            // Copy, regenerate and the thumbs share one row; the reasons sheet and the speech check sit below it.
+            <Feedback msg={msg} voice={voice} onFeedback={onFeedback} lead={actions} />
+          ) : (
+            <div className="-ml-2 flex">{actions}</div>
+          ))}
       </div>
     </div>
   );
